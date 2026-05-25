@@ -4,7 +4,7 @@ venv/
 env/
 ENV/
 bin/
-lib/
+/lib/
 share/
 pyvenv.cfg
 include/
