@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { catalogAPI, projectsAPI, recommendationsAPI } from '@/lib/api'
@@ -23,7 +23,7 @@ const TIER_BADGE: Record<string, string> = {
   luxury:  'border-indigo-500 text-indigo-600',
 }
 
-export default function PackagesPage() {
+function PackagesContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { setSelectedPackage } = useProjectStore()
@@ -252,5 +252,13 @@ export default function PackagesPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function PackagesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <PackagesContent />
+    </Suspense>
   )
 }

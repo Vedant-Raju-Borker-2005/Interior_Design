@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { projectsAPI, authAPI } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
@@ -112,7 +112,7 @@ function ProjectCard({ project }: { project: any }) {
   )
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { isLoggedIn, user, fetchMe, setUser } = useAuthStore()
@@ -452,5 +452,13 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <DashboardContent />
+    </Suspense>
   )
 }
