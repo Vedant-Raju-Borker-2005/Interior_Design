@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
-import { Home, LayoutDashboard, LogOut, Menu, X, Sparkles, BarChart3 } from 'lucide-react'
+import { Home, LayoutDashboard, LogOut, Menu, X, Sparkles, BarChart3, User } from 'lucide-react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -56,10 +56,23 @@ export default function Navbar() {
           {/* Auth buttons */}
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
-              <div className="flex items-center gap-3">
-                <div className="text-sm text-indigo-200">
-                  Hey, <span className="text-white font-medium">{user?.name?.split(' ')[0] || 'User'}</span>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-indigo-200 flex items-center gap-1">
+                  <span>Hey,</span>
+                  <Link 
+                    href="/dashboard?edit=true" 
+                    className="text-white font-semibold hover:text-indigo-300 hover:underline transition-all"
+                    title="Click to edit profile"
+                  >
+                    {user?.name?.split(' ')[0] || 'User'}
+                  </Link>
                 </div>
+                <Link 
+                  href="/dashboard?edit=true"
+                  className="text-xs text-indigo-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-2.5 py-1 rounded-md transition-all font-medium"
+                >
+                  Edit Profile
+                </Link>
                 <button
                   onClick={logout}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-indigo-300 hover:text-white rounded-lg hover:bg-white/10 transition-all"
@@ -110,12 +123,21 @@ export default function Navbar() {
                 </Link>
               ))}
               {isLoggedIn ? (
-                <button
-                  onClick={() => { logout(); setMobileOpen(false) }}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-indigo-300 hover:text-white hover:bg-white/10 transition"
-                >
-                  <LogOut className="w-4 h-4" /> Logout
-                </button>
+                <>
+                  <Link
+                    href="/dashboard?edit=true"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-indigo-200 hover:text-white hover:bg-white/10 transition"
+                  >
+                    <User className="w-4 h-4" /> Edit Profile
+                  </Link>
+                  <button
+                    onClick={() => { logout(); setMobileOpen(false) }}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-indigo-300 hover:text-white hover:bg-white/10 transition"
+                  >
+                    <LogOut className="w-4 h-4" /> Logout
+                  </button>
+                </>
               ) : (
                 <Link
                   href="/login"

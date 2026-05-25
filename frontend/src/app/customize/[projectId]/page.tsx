@@ -128,7 +128,7 @@ export default function CustomizePage() {
 
       // Save selected products as room items
       const productSet = selectedProducts[activeRoom.id] || new Set()
-      for (const pid of productSet) {
+      for (const pid of Array.from(productSet)) {
         const p = products.find((p: any) => p.id === pid)
         if (p) {
           await projectsAPI.addRoomItem(projectId, activeRoom.id, {

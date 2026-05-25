@@ -49,6 +49,39 @@ def signup(req: SignupReq, db: Session = Depends(get_db)):
     return {"otp_sent": True, "dev_otp": otp, "message": f"OTP sent to {contact}"}
 
 
+@router.post("/login", summary="Request OTP to login (only if registered)")
+def login(req: SignupReq, db: Session = Depends(get_db)):
+    contact = req.phone or req.email
+    if not contact:
+        raise HTTPException(400, "Phone or email required")
+
+    # Check if user exists in SQLite database
+    user = None
+    if req.phone:
+        user = db.query(User).filter(User.phone == req.phone).first()
+    elif req.email:
+        user = db.query(User).filter(User.email == req.email).first()
+
+    if not user:
+        raise HTTPException(404, "This account is not registered. Please sign up first.")
+
+    rate = _otp_rate.get(contact, 0)
+    if rate >= 5:
+        raise HTTPException(429, "OTP rate limit exceeded. Try after 1 hour.")
+
+    otp = str(random.randint(100000, 999999))
+    _otp_store[contact] = otp
+    _otp_rate[contact] = rate + 1
+
+    # In dev, print OTP to console
+    print(f"\n{'='*40}")
+    print(f"[OTP] for {contact}: {otp}")
+    print(f"{'='*40}\n")
+
+    return {"otp_sent": True, "dev_otp": otp, "message": f"OTP sent to {contact}"}
+
+
+
 @router.post("/verify-otp", response_model=TokenResponse, summary="Verify OTP and get JWT")
 def verify_otp(req: VerifyOTPReq, db: Session = Depends(get_db)):
     contact = req.phone or req.email

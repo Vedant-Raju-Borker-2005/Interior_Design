@@ -8,7 +8,7 @@ import { projectsAPI } from '@/lib/api'
 import BhkSelector from '@/components/BhkSelector'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
-import { ArrowRight, ArrowLeft, CheckCircle2, Home, Sparkles, Wrench } from 'lucide-react'
+import { ArrowRight, ArrowLeft, CheckCircle2, Home, Sparkles, Wrench, Upload, FileText, Layout, Check, ShieldAlert } from 'lucide-react'
 import clsx from 'clsx'
 
 const STYLE_OPTIONS = [
@@ -48,7 +48,7 @@ const FURNISHING_OPTIONS = [
 
 const CITIES = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Ahmedabad', 'Other']
 
-const STEPS = ['Style', 'BHK', 'Budget', 'Preferences', 'Details']
+const STEPS = ['Style', 'BHK & Layout', 'Budget', 'Preferences', 'Details']
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -57,6 +57,13 @@ export default function OnboardingPage() {
 
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
+  
+  // Floor Plan upload states
+  const [floorPlanMode, setFloorPlanMode] = useState<'select' | 'upload'>('select')
+  const [selectedPlanId, setSelectedPlanId] = useState('plan-standard')
+  const [uploadFile, setUploadFile] = useState<{ name: string; size: string; type: string } | null>(null)
+  const [uploading, setUploading] = useState(false)
+
   const [local, setLocal] = useState({
     style_tags:          [] as string[],
     bhk:                 '',
@@ -74,6 +81,32 @@ export default function OnboardingPage() {
     return null
   }
 
+  // Visual Mock Plans list based on selected BHK
+  const getMockPlans = (bhk: string) => {
+    const cleanBhk = bhk || '2BHK'
+    return [
+      { id: 'plan-compact', name: `${cleanBhk} Compact Layout`, size: bhk === '1BHK' ? '550 sqft' : bhk === '2BHK' ? '950 sqft' : '1450 sqft', desc: 'Optimised space saving design with linear modular solutions.' },
+      { id: 'plan-standard', name: `${cleanBhk} Premium Layout`, size: bhk === '1BHK' ? '680 sqft' : bhk === '2BHK' ? '1120 sqft' : '1750 sqft', desc: 'Spacious common zones, dedicated work-from-home alcove.' },
+      { id: 'plan-luxury', name: `${cleanBhk} Spacious Luxury Layout`, size: bhk === '1BHK' ? '820 sqft' : bhk === '2BHK' ? '1350 sqft' : '2100 sqft', desc: 'Double balconies, master suite with walk-in wardrobe area.' }
+    ]
+  }
+
+  const handleFakeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    setTimeout(() => {
+      setUploadFile({
+        name: file.name,
+        size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+        type: file.type.includes('pdf') ? 'pdf' : 'image'
+      })
+      setUploading(false)
+      toast.success('Floor plan parsed successfully! 📐')
+    }, 1500)
+  }
+
   const toggleStyle = (id: string) => {
     setLocal((s) => ({
       ...s,
@@ -85,7 +118,12 @@ export default function OnboardingPage() {
 
   const canNext = () => {
     if (step === 0) return local.style_tags.length > 0
-    if (step === 1) return !!local.bhk
+    if (step === 1) {
+      if (!local.bhk) return false
+      if (floorPlanMode === 'select') return !!selectedPlanId
+      if (floorPlanMode === 'upload') return !!uploadFile
+      return false
+    }
     if (step === 2) return !!local.budget && !!local.timeline
     if (step === 3) return !!local.material_preference && !!local.furnishing_type
     if (step === 4) return !!local.city && !!local.property_name
@@ -96,6 +134,15 @@ export default function OnboardingPage() {
     setLoading(true)
     try {
       const budgetObj = BUDGET_RANGES.find((b) => b.id === local.budget)
+      
+      let finalPlanName = 'Standard 2D Layout Plan'
+      if (floorPlanMode === 'select') {
+        const selectedPlan = getMockPlans(local.bhk).find(p => p.id === selectedPlanId)
+        finalPlanName = selectedPlan ? `${selectedPlan.name} (${selectedPlan.size})` : 'Selected standard plan'
+      } else if (uploadFile) {
+        finalPlanName = `Uploaded Plan: ${uploadFile.name} (${uploadFile.size})`
+      }
+
       const res = await projectsAPI.create({
         bhk_type:            local.bhk,
         property_name:       local.property_name,
@@ -104,14 +151,18 @@ export default function OnboardingPage() {
         material_preference: local.material_preference,
         furnishing_type:     local.furnishing_type,
         pincode:             local.pincode || undefined,
+        floor_plan_type:     floorPlanMode,
+        floor_plan_name:     finalPlanName
       })
+      
       setOnboarding({
         bhk:       local.bhk,
         style_tags: local.style_tags,
         budget:    budgetObj?.max,
         city:      local.city,
       })
-      toast.success('Project created! 🎉')
+      
+      toast.success('Project created with floor plan! 🎉')
       router.push(`/packages?projectId=${res.data.project_id}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Failed to create project')
@@ -123,12 +174,12 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
-      <div className="max-w-3xl mx-auto px-4 pt-28 pb-16">
+      <div className="max-w-4xl mx-auto px-4 pt-28 pb-16">
 
         {/* Progress */}
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center justify-between mb-10 overflow-x-auto pb-4">
           {STEPS.map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
+            <div key={s} className="flex items-center gap-2 flex-shrink-0">
               <div className={clsx(
                 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all',
                 i < step  ? 'bg-indigo-600 text-white' :
@@ -137,9 +188,9 @@ export default function OnboardingPage() {
               )}>
                 {i < step ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
               </div>
-              <span className={clsx('text-sm font-medium hidden sm:block', i <= step ? 'text-indigo-700' : 'text-slate-400')}>{s}</span>
+              <span className={clsx('text-sm font-semibold hidden sm:block', i <= step ? 'text-indigo-700' : 'text-slate-400')}>{s}</span>
               {i < STEPS.length - 1 && (
-                <div className={clsx('flex-1 h-0.5 w-8 sm:w-16 ml-2', i < step ? 'bg-indigo-600' : 'bg-slate-200')} />
+                <div className={clsx('flex-1 h-0.5 w-6 sm:w-12 ml-2', i < step ? 'bg-indigo-600' : 'bg-slate-200')} />
               )}
             </div>
           ))}
@@ -150,62 +201,175 @@ export default function OnboardingPage() {
           {/* Step 0: Style */}
           {step === 0 && (
             <motion.div key="style" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">What's your style vibe?</h2>
-              <p className="text-slate-500 mb-8">Select one or more. We'll recommend packages that match.</p>
+              <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">What's your design vibe?</h2>
+              <p className="text-slate-500 mb-8">Select one or more. We'll curate package suggestions that fit your aesthetic.</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {STYLE_OPTIONS.map((opt) => (
                   <button
                     key={opt.id}
                     onClick={() => toggleStyle(opt.id)}
                     className={clsx(
-                      'p-4 rounded-2xl border-2 text-left transition-all duration-200',
+                      'p-5 rounded-2xl border-2 text-left transition-all duration-200 bg-white card-hover',
                       local.style_tags.includes(opt.id)
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-slate-200 bg-white hover:border-indigo-300'
+                        ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
+                        : 'border-slate-200 hover:border-indigo-300'
                     )}
                   >
-                    <div className="text-3xl mb-2">{opt.emoji}</div>
-                    <div className="font-semibold text-slate-800">{opt.label}</div>
-                    <div className="text-xs text-slate-500 mt-1">{opt.desc}</div>
+                    <div className="text-3.5xl mb-3">{opt.emoji}</div>
+                    <div className="font-bold text-slate-800 text-base">{opt.label}</div>
+                    <div className="text-xs text-slate-500 mt-1.5 leading-relaxed">{opt.desc}</div>
                   </button>
                 ))}
               </div>
             </motion.div>
           )}
 
-          {/* Step 1: BHK */}
+          {/* Step 1: BHK & Floor Plan */}
           {step === 1 && (
-            <motion.div key="bhk" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">What's your home configuration?</h2>
-              <p className="text-slate-500 mb-8">We'll auto-configure your rooms based on the selection.</p>
-              <BhkSelector selected={local.bhk} onSelect={(bhk) => setLocal((s) => ({ ...s, bhk }))} />
+            <motion.div key="bhk" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-8">
+              <div>
+                <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Home Configuration</h2>
+                <p className="text-slate-500 mb-6">Select your BHK structure. We'll automatically set up rooms for rendering.</p>
+                <BhkSelector selected={local.bhk} onSelect={(bhk) => setLocal((s) => ({ ...s, bhk }))} />
+              </div>
+
+              {local.bhk && (
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-2xl p-6 shadow-card border border-slate-100 space-y-6"
+                >
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                      <Layout className="w-5 h-5 text-indigo-600" /> Floor Plan Layout
+                    </h3>
+                    <p className="text-slate-400 text-xs mt-1">Select a pre-designed standard structural blueprint or upload yours.</p>
+                  </div>
+
+                  {/* Tabs */}
+                  <div className="flex gap-2 p-1 bg-slate-100 rounded-xl max-w-sm">
+                    <button
+                      onClick={() => setFloorPlanMode('select')}
+                      className={clsx(
+                        'flex-1 py-2 rounded-lg text-xs font-bold transition-all',
+                        floorPlanMode === 'select' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'
+                      )}
+                    >
+                      Choose Standard Layout
+                    </button>
+                    <button
+                      onClick={() => setFloorPlanMode('upload')}
+                      className={clsx(
+                        'flex-1 py-2 rounded-lg text-xs font-bold transition-all',
+                        floorPlanMode === 'upload' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'
+                      )}
+                    >
+                      Upload Blueprint
+                    </button>
+                  </div>
+
+                  {floorPlanMode === 'select' ? (
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      {getMockPlans(local.bhk).map((plan) => (
+                        <button
+                          key={plan.id}
+                          onClick={() => setSelectedPlanId(plan.id)}
+                          className={clsx(
+                            'p-4 rounded-xl border-2 text-left transition-all relative flex flex-col justify-between h-40',
+                            selectedPlanId === plan.id
+                              ? 'border-indigo-500 bg-indigo-50/30'
+                              : 'border-slate-200 hover:border-slate-300'
+                          )}
+                        >
+                          <div>
+                            <div className="flex justify-between items-start">
+                              <span className="font-bold text-slate-800 text-sm">{plan.name}</span>
+                              {selectedPlanId === plan.id && (
+                                <div className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center">
+                                  <Check className="w-2.5 h-2.5 stroke-[4px]" />
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">{plan.desc}</p>
+                          </div>
+                          <span className="inline-block mt-4 bg-indigo-100/60 text-indigo-700 text-xs font-extrabold px-2 py-0.5 rounded-md self-start">
+                            {plan.size}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-slate-50 transition relative">
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={handleFakeUpload}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          disabled={uploading}
+                        />
+                        {uploading ? (
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="spinner w-8 h-8 mb-2" />
+                            <p className="text-slate-500 font-bold text-sm">Processing & scanning floor plan...</p>
+                          </div>
+                        ) : uploadFile ? (
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+                              {uploadFile.type === 'pdf' ? <FileText className="w-6 h-6" /> : <Upload className="w-6 h-6" />}
+                            </div>
+                            <p className="text-slate-800 font-bold text-sm truncate max-w-xs">{uploadFile.name}</p>
+                            <p className="text-slate-400 text-xs mt-0.5">{uploadFile.size}</p>
+                            <span className="mt-3 bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Successfully Uploaded
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center">
+                            <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                            <p className="text-slate-800 font-bold text-sm">Click or Drag blueprint here</p>
+                            <p className="text-slate-400 text-xs mt-1">Supports PDF, PNG, JPG files up to 10MB</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {uploadFile && (
+                        <div className="text-xs text-indigo-600 flex items-center gap-1.5 bg-indigo-50/50 p-2 rounded-lg font-medium">
+                          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                          <span>AI will match your packages and renders to this uploaded floor plan layout!</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              )}
             </motion.div>
           )}
 
           {/* Step 2: Budget & Timeline */}
           {step === 2 && (
             <motion.div key="budget" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">Budget & Timeline</h2>
-              <p className="text-slate-500 mb-6">This helps us recommend the right packages.</p>
-              <div className="mb-8">
-                <div className="text-sm font-semibold text-slate-700 mb-3">Total Interior Budget</div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Budget & Timeline</h2>
+              <p className="text-slate-500 mb-6">Helps us curate package price tiers aligned with your goals.</p>
+              <div className="mb-8 bg-white p-6 rounded-2xl border border-slate-100 shadow-card">
+                <div className="text-sm font-bold text-slate-800 mb-3.5 uppercase tracking-wider">Total Interior Budget</div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   {BUDGET_RANGES.map((b) => (
                     <button key={b.id} onClick={() => setLocal((s) => ({ ...s, budget: b.id }))}
-                      className={clsx('p-3 rounded-xl border-2 text-sm font-medium transition-all',
-                        local.budget === b.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:border-indigo-300')}>
+                      className={clsx('p-3 rounded-xl border-2 text-xs font-bold transition-all text-center',
+                        local.budget === b.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-black' : 'border-slate-200 text-slate-600 hover:border-indigo-300 bg-white')}>
                       {b.label}
                     </button>
                   ))}
                 </div>
               </div>
-              <div>
-                <div className="text-sm font-semibold text-slate-700 mb-3">When do you want to start?</div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-card">
+                <div className="text-sm font-bold text-slate-800 mb-3.5 uppercase tracking-wider">When do you want to start?</div>
                 <div className="grid grid-cols-2 gap-3">
                   {TIMELINE_OPTIONS.map((t) => (
                     <button key={t.id} onClick={() => setLocal((s) => ({ ...s, timeline: t.id }))}
-                      className={clsx('p-3 rounded-xl border-2 text-sm font-medium transition-all',
-                        local.timeline === t.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:border-indigo-300')}>
+                      className={clsx('p-3.5 rounded-xl border-2 text-sm font-bold transition-all',
+                        local.timeline === t.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:border-indigo-300 bg-white')}>
                       {t.label}
                     </button>
                   ))}
@@ -217,38 +381,38 @@ export default function OnboardingPage() {
           {/* Step 3: Preferences */}
           {step === 3 && (
             <motion.div key="prefs" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">Your Preferences</h2>
-              <p className="text-slate-500 mb-8">Help us tailor the perfect interior for you.</p>
+              <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Your Preferences</h2>
+              <p className="text-slate-500 mb-8">Refine the build qualities and scope of works.</p>
 
               <div className="mb-8">
-                <div className="text-sm font-semibold text-slate-700 mb-3">Material Quality Preference</div>
+                <div className="text-sm font-bold text-slate-800 mb-3.5 uppercase tracking-wider">Material Quality Preference</div>
                 <div className="grid grid-cols-3 gap-4">
                   {MATERIAL_OPTIONS.map((m) => (
                     <button key={m.id} onClick={() => setLocal((s) => ({ ...s, material_preference: m.id }))}
-                      className={clsx('p-4 rounded-2xl border-2 text-center transition-all',
-                        local.material_preference === m.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300')}>
-                      <div className="text-2xl mb-2">{m.emoji}</div>
-                      <div className="font-semibold text-slate-800 text-sm">{m.label}</div>
-                      <div className="text-xs text-slate-500 mt-1">{m.desc}</div>
+                      className={clsx('p-5 rounded-2xl border-2 text-center transition-all bg-white card-hover',
+                        local.material_preference === m.id ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-300')}>
+                      <div className="text-3xl mb-2">{m.emoji}</div>
+                      <div className="font-bold text-slate-800 text-sm">{m.label}</div>
+                      <div className="text-xs text-slate-500 mt-1.5 leading-relaxed">{m.desc}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <div className="text-sm font-semibold text-slate-700 mb-3">Are you furnishing a new home or upgrading?</div>
+                <div className="text-sm font-bold text-slate-800 mb-3.5 uppercase tracking-wider">Scope of Furnishing</div>
                 <div className="grid grid-cols-2 gap-4">
                   {FURNISHING_OPTIONS.map((f) => (
                     <button key={f.id} onClick={() => setLocal((s) => ({ ...s, furnishing_type: f.id }))}
-                      className={clsx('p-4 rounded-2xl border-2 text-left transition-all flex items-center gap-3',
-                        local.furnishing_type === f.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300')}>
-                      <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center',
+                      className={clsx('p-5 rounded-2xl border-2 text-left transition-all flex items-center gap-4 bg-white card-hover',
+                        local.furnishing_type === f.id ? 'border-indigo-500 bg-indigo-50/40' : 'border-slate-200 hover:border-indigo-300')}>
+                      <div className={clsx('w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0',
                         local.furnishing_type === f.id ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-500')}>
-                        <f.icon className="w-5 h-5" />
+                        <f.icon className="w-6 h-6" />
                       </div>
                       <div>
-                        <div className="font-semibold text-slate-800 text-sm">{f.label}</div>
-                        <div className="text-xs text-slate-500">{f.desc}</div>
+                        <div className="font-bold text-slate-800 text-sm">{f.label}</div>
+                        <div className="text-xs text-slate-500 mt-0.5 leading-normal">{f.desc}</div>
                       </div>
                     </button>
                   ))}
@@ -260,30 +424,30 @@ export default function OnboardingPage() {
           {/* Step 4: Property Details */}
           {step === 4 && (
             <motion.div key="details" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">Property Details</h2>
-              <p className="text-slate-500 mb-8">Tell us a little about your property.</p>
-              <div className="space-y-5">
+              <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Property Details</h2>
+              <p className="text-slate-500 mb-8">Almost there! Finalize your location and project address details.</p>
+              <div className="space-y-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-card">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Property Name / Society</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Property Name / Society</label>
                   <input id="property-name" type="text" placeholder="e.g. Prestige Lakeside Unit 4B"
                     value={local.property_name} onChange={(e) => setLocal((s) => ({ ...s, property_name: e.target.value }))}
-                    className="input" />
+                    className="input w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium text-slate-800" />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Pincode <span className="text-slate-400">(optional)</span></label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Pincode <span className="text-slate-400 font-normal">(optional)</span></label>
                   <input id="pincode" type="text" placeholder="e.g. 560001"
                     value={local.pincode} onChange={(e) => setLocal((s) => ({ ...s, pincode: e.target.value }))}
-                    className="input" maxLength={6} />
+                    className="input w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium text-slate-800" maxLength={6} />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">City</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">City</label>
                   <div className="grid grid-cols-3 gap-2">
                     {CITIES.map((city) => (
                       <button key={city} onClick={() => setLocal((s) => ({ ...s, city }))}
-                        className={clsx('p-2.5 rounded-xl border-2 text-sm font-medium transition-all',
-                          local.city === city ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:border-indigo-300')}>
+                        className={clsx('p-3 rounded-xl border-2 text-xs font-bold transition-all text-center',
+                          local.city === city ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-black' : 'border-slate-200 text-slate-600 hover:border-indigo-300 bg-white')}>
                         {city}
                       </button>
                     ))}
@@ -303,15 +467,15 @@ export default function OnboardingPage() {
 
           {step < STEPS.length - 1 ? (
             <button onClick={() => setStep((s) => s + 1)} disabled={!canNext()}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 shadow-glow-indigo text-white flex items-center gap-1.5">
               Next <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <button onClick={handleSubmit} disabled={!canNext() || loading}
-              className="btn-primary disabled:opacity-50">
+              className="btn-primary disabled:opacity-50 px-6 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 shadow-glow-indigo text-white flex items-center gap-1.5">
               {loading
                 ? <div className="spinner w-5 h-5" />
-                : <><Sparkles className="w-4 h-4" /> Find Packages <ArrowRight className="w-4 h-4" /></>
+                : <><Sparkles className="w-4 h-4 animate-pulse" /> Find Packages <ArrowRight className="w-4 h-4" /></>
               }
             </button>
           )}

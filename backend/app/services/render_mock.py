@@ -43,6 +43,50 @@ RENDER_IMAGES: dict[str, list[str]] = {
     ],
 }
 
+ROOM_RENDER_IMAGES: dict[str, dict[str, list[str]]] = {
+    "kitchen": {
+        "modern": [
+            f"{UNSPLASH}/photo-1556909114-f6e7ad7d3136?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1556911220-bff31c812dba?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1600489000022-c2086d79f9d4?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1600585152220-90363fe7e115?w=1200&h=800&fit=crop&q=85",
+        ],
+        "scandinavian": [
+            f"{UNSPLASH}/photo-1556909114-f6e7ad7d3136?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1600489000022-c2086d79f9d4?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1556912173-3bb406ef7e77?w=1200&h=800&fit=crop&q=85",
+        ],
+        "indian_contemporary": [
+            f"{UNSPLASH}/photo-1556911220-bff31c812dba?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1600585152220-90363fe7e115?w=1200&h=800&fit=crop&q=85",
+        ],
+        "luxury": [
+            f"{UNSPLASH}/photo-1600585152220-90363fe7e115?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1556911220-bff31c812dba?w=1200&h=800&fit=crop&q=85",
+        ],
+        "mediterranean": [
+            f"{UNSPLASH}/photo-1556912173-3bb406ef7e77?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1556909114-f6e7ad7d3136?w=1200&h=800&fit=crop&q=85",
+        ],
+        "boho": [
+            f"{UNSPLASH}/photo-1556909114-f6e7ad7d3136?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1556911220-bff31c812dba?w=1200&h=800&fit=crop&q=85",
+        ],
+    },
+    "bathroom": {
+        "modern": [
+            f"{UNSPLASH}/photo-1552321554-5fefe8c9ef14?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1584622650111-993a426fbf0a?w=1200&h=800&fit=crop&q=85",
+        ],
+    },
+    "balcony": {
+        "modern": [
+            f"{UNSPLASH}/photo-1595526114035-0d45ed16cfbf?w=1200&h=800&fit=crop&q=85",
+            f"{UNSPLASH}/photo-1600607687939-ce8a6c25118c?w=1200&h=800&fit=crop&q=85",
+        ],
+    },
+}
+
 STYLE_PROMPTS = {
     "modern":               "modern minimalist, clean lines, neutral tones, open space",
     "scandinavian":         "scandinavian hygge, light wood, white walls, cozy textures, natural light",
@@ -52,6 +96,16 @@ STYLE_PROMPTS = {
     "boho":                 "boho chic, rattan, macrame, plants, layered rugs, warm amber",
     "industrial":           "industrial loft, exposed brick, steel beams, leather, dark palette",
 }
+
+
+def get_render_images(style: str, room_type: str) -> list[str]:
+    room_images = ROOM_RENDER_IMAGES.get(room_type, {})
+    return (
+        room_images.get(style)
+        or room_images.get("modern")
+        or RENDER_IMAGES.get(style)
+        or RENDER_IMAGES["modern"]
+    )
 
 
 def build_prompt(style: str, color_palette: list, room_type: str = "living room") -> str:

@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import { authAPI } from '@/lib/api'
 
 interface User {
-  id: string
+  id?: string
   name?: string
   phone?: string
   email?: string
@@ -11,6 +11,8 @@ interface User {
   style_tags?: string[]
   budget_min?: number
   budget_max?: number
+  furnishing_preference?: string
+  furnishing_type?: string
 }
 
 interface AuthState {
