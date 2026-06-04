@@ -21,7 +21,7 @@ def signup(req: SignupReq, db: Session = Depends(get_db)):
         raise HTTPException(400, "Phone or email required")
 
     rate = _otp_rate.get(contact, 0)
-    if rate >= 5:
+    if rate >= 100:
         raise HTTPException(429, "OTP rate limit exceeded. Try after 1 hour.")
 
     otp = str(random.randint(100000, 999999))
