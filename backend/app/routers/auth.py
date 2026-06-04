@@ -171,22 +171,23 @@ def verify_otp(req: VerifyOTPReq, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(404, "User not found")
 
-    # Determine user role based on linked profiles
-    role = "customer"  # default
-    vendor = db.query(Vendor).filter(Vendor.user_id == user.id).first()
-    if vendor:
-        role = "vendor"
-    team_member = db.query(ProjectTeamMember).filter(ProjectTeamMember.user_id == user.id).first()
-    if team_member:
-        if team_member.role in ("MANAGER", "ADMIN"):
+    # Determine user role - check user.role first, then derive from profiles
+    role = user.role or "customer"  # Use user.role if set, default to customer
+    if role == "customer":  # Only derive if not explicitly set
+        vendor = db.query(Vendor).filter(Vendor.user_id == user.id).first()
+        if vendor:
+            role = "vendor"
+        team_member = db.query(ProjectTeamMember).filter(ProjectTeamMember.user_id == user.id).first()
+        if team_member:
+            if team_member.role in ("MANAGER", "ADMIN"):
+                role = "admin"
+            else:
+                role = "team"
+        # admin override if name/email contains 'admin'
+        if user.name and "admin" in user.name.lower():
             role = "admin"
-        else:
-            role = "team"
-    # admin override if name/email contains 'admin'
-    if user.name and "admin" in user.name.lower():
-        role = "admin"
-    if user.email and "admin" in user.email.lower():
-        role = "admin"
+        if user.email and "admin" in user.email.lower():
+            role = "admin"
 
     token = create_access_token(user.id)
     return {
@@ -208,21 +209,22 @@ def verify_otp(req: VerifyOTPReq, db: Session = Depends(get_db)):
 @router.get("/me", summary="Get current user profile")
 def me(db: Session = Depends(get_db),
        user: User = Depends(current_user)):
-    # Determine role from linked profiles
-    role = "customer"
-    vendor = db.query(Vendor).filter(Vendor.user_id == user.id).first()
-    if vendor:
-        role = "vendor"
-    team_member = db.query(ProjectTeamMember).filter(ProjectTeamMember.user_id == user.id).first()
-    if team_member:
-        if team_member.role in ("MANAGER", "ADMIN"):
+    # Determine role - check user.role first, then derive from profiles
+    role = user.role or "customer"
+    if role == "customer":  # Only derive if not explicitly set
+        vendor = db.query(Vendor).filter(Vendor.user_id == user.id).first()
+        if vendor:
+            role = "vendor"
+        team_member = db.query(ProjectTeamMember).filter(ProjectTeamMember.user_id == user.id).first()
+        if team_member:
+            if team_member.role in ("MANAGER", "ADMIN"):
+                role = "admin"
+            else:
+                role = "team"
+        if user.name and "admin" in user.name.lower():
             role = "admin"
-        else:
-            role = "team"
-    if user.name and "admin" in user.name.lower():
-        role = "admin"
-    if user.email and "admin" in user.email.lower():
-        role = "admin"
+        if user.email and "admin" in user.email.lower():
+            role = "admin"
 
     return {
         "id": user.id,

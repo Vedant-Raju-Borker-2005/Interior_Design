@@ -111,7 +111,7 @@ export const catalogAPI = {
 
 // AI Rendering API
 export const aiAPI = {
-  render: (data: { room_id: string; mode?: string; style?: string; color_palette?: string[]; products?: any[] }) =>
+  render: (data: { room_id: string; mode?: string; style?: string; color_palette?: string[]; products?: any[]; layout_image?: string | null }) =>
     axiosInstance.post('/api/v1/ai/render', data),
   
   renderStatus: (jobId: string) =>
@@ -230,9 +230,11 @@ export const customerAPI = {
     return axiosInstance.post(`/api/v1/customer/projects/${projectId}/quotations/revisions`, fd)
   },
   updateQuotationStatus: (projectId: string, quotationId: string, status: string) => {
-    const fd = new FormData()
+    const fd = new URLSearchParams()
     fd.append('status', status)
-    return axiosInstance.put(`/api/v1/customer/projects/${projectId}/quotations/${quotationId}/status`, fd)
+    return axiosInstance.put(`/api/v1/customer/projects/${projectId}/quotations/${quotationId}/status`, fd, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
   },
 
   getActivity: () =>
@@ -379,4 +381,3 @@ export const vendorAPI = {
 }
 
 export default axiosInstance
-

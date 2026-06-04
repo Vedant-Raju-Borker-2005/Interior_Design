@@ -24,6 +24,7 @@ class User(Base):
     style_tags = Column(JSON, default=list)
     budget_min = Column(Float, default=0)
     budget_max = Column(Float, default=0)
+    role = Column(String, default="customer", nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     projects = relationship("Project", back_populates="user")
 

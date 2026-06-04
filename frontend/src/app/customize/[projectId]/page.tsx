@@ -70,6 +70,22 @@ export default function CustomizePage() {
       try {
         const res = await projectsAPI.get(projectId)
         setProject(res.data)
+        
+        // Populate initial state from backend room items
+        const initialSelected: Record<string, Set<string>> = {}
+        const initialStyles: Record<string, string> = {}
+        const initialColors: Record<string, string> = {}
+        
+        res.data.rooms?.forEach((room: any) => {
+          initialSelected[room.id] = new Set(room.items?.map((it: any) => it.product_id) || [])
+          initialStyles[room.id] = room.style_preference || 'modern'
+          initialColors[room.id] = room.color_palette?.[0] || '#ffffff'
+        })
+        
+        setSelectedProducts(initialSelected)
+        setRoomStyles(initialStyles)
+        setWallColors(initialColors)
+
         if (res.data.rooms?.length > 0) {
           fetchProducts(res.data.rooms[0].room_type)
         }
@@ -126,17 +142,33 @@ export default function CustomizePage() {
         color_palette: color,
       })
 
-      // Save selected products as room items
+      // Get current items in room from backend
+      const res = await projectsAPI.get(projectId)
+      const freshRoom = res.data.rooms?.find((r: any) => r.id === activeRoom.id)
+      const existingProductIds = freshRoom?.items?.map((it: any) => it.product_id) || []
       const productSet = selectedProducts[activeRoom.id] || new Set()
+
+      // Remove items no longer selected
+      for (const item of freshRoom?.items || []) {
+        if (!productSet.has(item.product_id)) {
+          await projectsAPI.removeRoomItem(projectId, activeRoom.id, item.id)
+        }
+      }
+
+      // Add newly selected items
       for (const pid of Array.from(productSet)) {
-        const p = products.find((p: any) => p.id === pid)
-        if (p) {
+        if (!existingProductIds.includes(pid)) {
           await projectsAPI.addRoomItem(projectId, activeRoom.id, {
             product_id: pid,
             qty: 1,
           })
         }
       }
+
+      // Re-fetch project to update header subtotal price and internal structures
+      const updatedRes = await projectsAPI.get(projectId)
+      setProject(updatedRes.data)
+
       toast.success(`${ROOM_LABELS[activeRoom.room_type] || 'Room'} saved!`)
     } catch {
       toast.error('Failed to save')
@@ -223,6 +255,8 @@ export default function CustomizePage() {
                 roomType={activeRoom.room_type}
                 wallColor={wallColors[activeRoom.id] || '#ffffff'}
                 style={roomStyles[activeRoom.id]}
+                selectedProducts={Array.from(selectedProducts[activeRoom.id] || [])}
+                allProducts={products}
               />
             )}
           </div>

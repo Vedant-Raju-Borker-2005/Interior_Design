@@ -59,6 +59,9 @@ interface ProjectTeamState {
   photos: ExecutionPhoto[]
   dashboard: any | null
   tracking: any[]
+  projectDetail: any | null
+  customerDetail: any | null
+  vendorDetail: any[]
   isLoading: boolean
   error: string | null
 
@@ -89,6 +92,9 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
   photos: [],
   dashboard: null,
   tracking: [],
+  projectDetail: null,
+  customerDetail: null,
+  vendorDetail: [],
   isLoading: false,
   error: null,
 

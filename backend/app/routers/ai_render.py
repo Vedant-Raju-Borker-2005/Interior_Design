@@ -42,7 +42,7 @@ def queue_render(
         mode=req.mode,
         style=req.style,
         color_palette=req.color_palette,
-        prompt=build_prompt(req.style, req.color_palette, room.room_type),
+        prompt=build_prompt(req.style, req.color_palette, room.room_type, req.products),
         status="queued",
     )
     db.add(render)

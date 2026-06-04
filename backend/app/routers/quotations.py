@@ -1,26 +1,28 @@
 import uuid
 import datetime
+import os
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Project, Room, RoomItem, Product, Quotation, User
-from ..schemas import GenerateQuotationReq
 from ..auth_utils import current_user
 from ..services.pdf_service import generate_quotation_pdf
 
 router = APIRouter()
 
 GST_RATE = 0.18
+PDF_DIR = os.getenv("PDF_OUTPUT_DIR", "./pdfs")
 
 
-@router.post("/generate", summary="Generate quotation PDF for a project")
+@router.post("/{project_id}/generate", summary="Generate quotation PDF for a project")
 def generate_quotation(
-    req: GenerateQuotationReq,
+    project_id: str,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == req.project_id, Project.user_id == user.id).first()
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
     if not project:
         raise HTTPException(404, "Project not found")
 
@@ -90,7 +92,6 @@ def generate_quotation(
         valid_until=valid_until,
     )
 
-    import os
     pdf_url = f"http://localhost:8000/static/pdfs/{os.path.basename(pdf_path)}"
 
     # Save to DB
@@ -112,19 +113,26 @@ def generate_quotation(
     db.commit()
 
     return {
+        "id": quot_id,
         "quotation_id": quot_id,
+        "project_id": project.id,
         "subtotal": subtotal,
         "gst": gst,
         "total": total,
         "pdf_url": pdf_url,
         "valid_until": valid_until,
+        "status": quotation.status,
         "line_items": line_items,
     }
 
 
-@router.get("/{quotation_id}", summary="Get quotation details")
-def get_quotation(quotation_id: str, db: Session = Depends(get_db)):
-    q = db.query(Quotation).filter(Quotation.id == quotation_id).first()
+@router.get("/{quotation_id_or_project_id}", summary="Get quotation details")
+def get_quotation(quotation_id_or_project_id: str, db: Session = Depends(get_db)):
+    q = db.query(Quotation).filter(
+        (Quotation.id == quotation_id_or_project_id) |
+        (Quotation.project_id == quotation_id_or_project_id)
+    ).order_by(Quotation.created_at.desc()).first()
+    
     if not q:
         raise HTTPException(404, "Quotation not found")
     return {
@@ -139,3 +147,25 @@ def get_quotation(quotation_id: str, db: Session = Depends(get_db)):
         "line_items": q.line_items or [],
         "created_at": q.created_at.isoformat() if q.created_at else None,
     }
+
+
+@router.get("/{project_id_or_quotation_id}/download", summary="Download quotation PDF file")
+def download_quotation(project_id_or_quotation_id: str, db: Session = Depends(get_db)):
+    q = db.query(Quotation).filter(
+        (Quotation.id == project_id_or_quotation_id) |
+        (Quotation.project_id == project_id_or_quotation_id)
+    ).order_by(Quotation.created_at.desc()).first()
+    
+    if not q:
+        raise HTTPException(404, "Quotation not found")
+        
+    pdf_filename = f"quotation_{q.id[:8]}.pdf"
+    filepath = os.path.join(PDF_DIR, pdf_filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(404, f"Quotation PDF file not found on disk: {pdf_filename}")
+        
+    return FileResponse(
+        filepath,
+        media_type="application/pdf",
+        filename=f"Quotation_{q.id[:8]}.pdf"
+    )

@@ -24,6 +24,7 @@ interface VendorState {
     panNumber?: string
     warehouseAddress?: string
     serviceLocations: string[]
+    categories?: string[]
   }) => Promise<any>
   uploadDocuments: (formData: FormData) => Promise<any>
   loadDashboard: () => Promise<void>

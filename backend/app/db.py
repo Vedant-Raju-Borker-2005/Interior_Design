@@ -67,10 +67,143 @@ def init_db():
                     if ticket_columns and "user_id" not in ticket_columns:
                         cursor.execute("ALTER TABLE support_tickets ADD COLUMN user_id VARCHAR")
 
+                # Migrate users table to add role column if missing
+                cursor.execute("PRAGMA table_info(users)")
+                user_columns = [row[1] for row in cursor.fetchall()]
+                if "role" not in user_columns:
+                    cursor.execute("ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'customer'")
+
                 conn.commit()
                 conn.close()
             except Exception as e:
                 print(f"Database auto-migration failed: {e}")
+
+
+def sync_demo_data(db):
+    from .models import User, Project, Vendor, ProjectTeamMember, ProjectAssignment, VendorAssignment, Room
+    import uuid
+    import datetime
+
+    # 1. Ensure test users exist with correct roles
+    users_data = [
+        {"name": "Seeded Customer", "phone": "+919900004444", "email": "customer@example.com", "role": "customer"},
+        {"name": "Seeded Vendor", "phone": "+919900001111", "email": "vendor@example.com", "role": "vendor"},
+        {"name": "Seeded Team Member", "phone": "+919900002222", "email": "team@example.com", "role": "team"},
+        {"name": "Seeded Admin", "phone": "+919900003333", "email": "admin@example.com", "role": "admin"}
+    ]
+
+    users = {}
+    for ud in users_data:
+        u = db.query(User).filter(User.phone == ud["phone"]).first()
+        if not u:
+            u = User(
+                id=str(uuid.uuid4()),
+                name=ud["name"],
+                phone=ud["phone"],
+                email=ud["email"],
+                role=ud["role"],
+                city="Bangalore"
+            )
+            db.add(u)
+            db.commit()
+            db.refresh(u)
+        elif u.role != ud["role"]:
+            u.role = ud["role"]
+            db.commit()
+        users[ud["role"]] = u
+
+    # 2. Ensure Vendor record exists and is linked to the vendor user
+    vendor_user = users.get("vendor")
+    vendor = None
+    if vendor_user:
+        vendor = db.query(Vendor).filter(Vendor.user_id == vendor_user.id).first()
+        if not vendor:
+            # Let's see if there is an unlinked vendor record
+            unlinked_vendor = db.query(Vendor).filter(Vendor.user_id.is_(None)).first()
+            if unlinked_vendor:
+                unlinked_vendor.user_id = vendor_user.id
+                unlinked_vendor.status = "APPROVED"
+                vendor = unlinked_vendor
+                db.commit()
+            else:
+                # Create a new vendor record
+                vendor = Vendor(
+                    id=str(uuid.uuid4()),
+                    user_id=vendor_user.id,
+                    name=vendor_user.name,
+                    phone=vendor_user.phone,
+                    email=vendor_user.email,
+                    gst_no="29AABCS1429B1Z1",
+                    categories=["Carpentry", "Modular Furniture"],
+                    rating=4.7,
+                    active=True,
+                    serviceable_pincodes=["560001", "560002", "560078", "560100"],
+                    business_name="HomeCraft Carpentry Pvt Ltd",
+                    owner_name=vendor_user.name,
+                    status="APPROVED"
+                )
+                db.add(vendor)
+                db.commit()
+                db.refresh(vendor)
+        elif vendor.status != "APPROVED":
+            vendor.status = "APPROVED"
+            db.commit()
+
+    # 3. Auto-assign all existing projects to the team user and the vendor
+    team_user = users.get("team")
+    all_projects = db.query(Project).all()
+    roles = ["MANAGER", "COORDINATOR", "TECHNICIAN"]
+    for i, proj in enumerate(all_projects):
+        # Assign to Team User
+        if team_user:
+            role = roles[i % len(roles)]
+            member = db.query(ProjectTeamMember).filter(
+                ProjectTeamMember.project_id == proj.id,
+                ProjectTeamMember.user_id == team_user.id
+            ).first()
+            if not member:
+                member = ProjectTeamMember(
+                    id=str(uuid.uuid4()),
+                    project_id=proj.id,
+                    user_id=team_user.id,
+                    role=role,
+                    status="ACTIVE"
+                )
+                db.add(member)
+                # Also add project assignment
+                assignment = ProjectAssignment(
+                    id=str(uuid.uuid4()),
+                    project_id=proj.id,
+                    assignee_id=team_user.id,
+                    assigned_by_id=team_user.id,
+                    role=role
+                )
+                db.add(assignment)
+                db.commit()
+            elif member.role != role:
+                member.role = role
+                db.commit()
+
+        # Assign rooms of the project to Vendor
+        if vendor_user and vendor:
+            rooms = db.query(Room).filter(Room.project_id == proj.id).all()
+            for room in rooms:
+                va = db.query(VendorAssignment).filter(
+                    VendorAssignment.project_id == proj.id,
+                    VendorAssignment.vendor_id == vendor.id,
+                    VendorAssignment.item_id == room.id
+                ).first()
+                if not va:
+                    va = VendorAssignment(
+                        id=str(uuid.uuid4()),
+                        project_id=proj.id,
+                        item_id=room.id,
+                        vendor_id=vendor.id,
+                        status="ASSIGNED",
+                        remarks=f"Auto-allocated room {room.room_type} for project {proj.property_name}"
+                    )
+                    db.add(va)
+                    db.commit()
 
 
 def get_db():

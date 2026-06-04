@@ -1,12 +1,16 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { projectsAPI, aiAPI } from '@/lib/api'
+import dynamic from 'next/dynamic'
+import { projectsAPI, aiAPI, catalogAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
+import type { RoomCanvas3DRef } from '@/components/RoomCanvas3D'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, ArrowRight, ChevronDown, Clock, CheckCircle2, Download, Image as ImageIcon } from 'lucide-react'
 import clsx from 'clsx'
+
+const RoomCanvas3D = dynamic(() => import('@/components/RoomCanvas3D'), { ssr: false })
 
 const STYLES = [
   { id: 'modern',              label: 'Modern',              emoji: '🔲' },
@@ -46,6 +50,8 @@ export default function VisualizePage() {
   const [generating, setGenerating] = useState(false)
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null)
   const [showComparison, setShowComparison] = useState(false)
+  const [roomProducts, setRoomProducts] = useState<any[]>([])
+  const canvasRef = useRef<RoomCanvas3DRef>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -64,6 +70,11 @@ export default function VisualizePage() {
 
   const activeRoom = project?.rooms?.[activeRoomIdx]
 
+  const selectedRoomItems = (activeRoom?.items || []).map((item: any) => {
+    const product = roomProducts.find((p: any) => p.id === item.product_id)
+    return { ...item, product }
+  })
+
   const loadRoomRenders = async (roomId: string) => {
     try {
       const res = await aiAPI.roomRenders(roomId)
@@ -75,6 +86,9 @@ export default function VisualizePage() {
     if (activeRoom) {
       loadRoomRenders(activeRoom.id)
       setCurrentRender(null)
+      catalogAPI.products({ room_type: activeRoom.room_type, limit: 100 })
+        .then((res) => setRoomProducts(res.data.items || []))
+        .catch(() => setRoomProducts([]))
     }
   }, [activeRoomIdx, activeRoom?.id])
 
@@ -85,12 +99,18 @@ export default function VisualizePage() {
 
     try {
       const palette = PALETTES[selectedPalette].colors
+      const layoutImage = canvasRef.current?.takeScreenshot()
+      const products = selectedRoomItems.map((item: any) => ({
+        name: item.product?.name || 'Selected product',
+        category: item.product?.category || 'furniture',
+      }))
       const res = await aiAPI.render({
         room_id: activeRoom.id,
         mode: 'sdxl',
         style: selectedStyle,
         color_palette: palette,
-        products: [],
+        products,
+        layout_image: layoutImage,
       })
 
       const jobId = res.data.job_id
@@ -119,6 +139,70 @@ export default function VisualizePage() {
     }
   }
 
+  const handleDownloadPlanPdf = () => {
+    if (!activeRoom || typeof window === 'undefined') return
+
+    const screenshot = canvasRef.current?.takeScreenshot()
+    const roomLabel = ROOM_LABELS[activeRoom.room_type] || activeRoom.room_type
+    const palette = PALETTES[selectedPalette]
+    const itemRows = selectedRoomItems.length > 0
+      ? selectedRoomItems.map((item: any) => {
+          const product = item.product || {}
+          return `<tr><td>${product.name || 'Selected product'}</td><td>${product.category || 'Furniture'}</td><td>${item.qty || 1}</td><td>INR ${(item.unit_price || product.price || 0).toLocaleString('en-IN')}</td></tr>`
+        }).join('')
+      : '<tr><td colspan="4">No saved products selected for this room yet.</td></tr>'
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toast.error('Please allow popups to download the PDF plan')
+      return
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>${project?.property_name || 'Interior'} - ${roomLabel} Visual Plan</title>
+          <style>
+            @page { size: A4; margin: 16mm; }
+            body { font-family: Arial, sans-serif; color: #0f172a; }
+            h1 { margin: 0 0 4px; font-size: 24px; }
+            h2 { margin: 20px 0 8px; font-size: 15px; text-transform: uppercase; letter-spacing: .04em; color: #4f46e5; }
+            .meta { color: #475569; font-size: 12px; margin-bottom: 18px; }
+            .preview { width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #111827; }
+            .preview img { width: 100%; display: block; }
+            .empty { padding: 64px 20px; text-align: center; color: #64748b; background: #f8fafc; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { padding: 9px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+            th { background: #eef2ff; color: #312e81; }
+            .chips { display: flex; gap: 8px; margin-top: 8px; }
+            .chip { border: 1px solid #e2e8f0; padding: 6px 8px; border-radius: 999px; font-size: 11px; }
+            .print { position: fixed; top: 12px; right: 12px; padding: 9px 12px; border: 0; border-radius: 8px; background: #4f46e5; color: white; font-weight: 700; }
+            @media print { .print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <button class="print" onclick="window.print()">Download / Save PDF</button>
+          <h1>${project?.property_name || 'Interior Visual Plan'}</h1>
+          <div class="meta">${roomLabel} | ${STYLES.find(s => s.id === selectedStyle)?.label || selectedStyle} | ${palette.name} palette</div>
+          <div class="preview">
+            ${screenshot ? `<img src="${screenshot}" alt="3D room layout" />` : '<div class="empty">3D preview snapshot unavailable. Please try again after the room finishes loading.</div>'}
+          </div>
+          ${currentRender?.image_url ? `<h2>AI Render</h2><div class="preview"><img src="${currentRender.image_url}" alt="AI render" /></div>` : ''}
+          <h2>Selected Products</h2>
+          <table>
+            <thead><tr><th>Product</th><th>Category</th><th>Qty</th><th>Price</th></tr></thead>
+            <tbody>${itemRows}</tbody>
+          </table>
+          <h2>Palette</h2>
+          <div class="chips">${palette.colors.map(c => `<span class="chip">${c}</span>`).join('')}</div>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.focus()
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -138,12 +222,20 @@ export default function VisualizePage() {
             <h1 className="text-3xl font-bold text-white mb-1">AI Visualisation</h1>
             <p className="text-slate-400 text-sm">{project?.property_name} • {project?.bhk_type}</p>
           </div>
-          <button
-            onClick={() => router.push(`/quotation/${projectId}`)}
-            className="btn-primary"
-          >
-            Generate Quotation <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleDownloadPlanPdf}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/15 text-sm font-bold transition"
+            >
+              <Download className="w-4 h-4" /> Download Visual PDF
+            </button>
+            <button
+              onClick={() => router.push(`/quotation/${projectId}`)}
+              className="btn-primary"
+            >
+              Generate Quotation <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -233,10 +325,47 @@ export default function VisualizePage() {
                 </div>
               </div>
             )}
+            <div className="bg-slate-800 rounded-2xl p-4 border border-white/10">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                Saved Products in 3D
+              </div>
+              {selectedRoomItems.length > 0 ? (
+                <div className="space-y-2">
+                  {selectedRoomItems.map((item: any) => (
+                    <div key={item.id} className="flex items-center justify-between gap-3 text-xs text-slate-300 border border-white/10 rounded-xl px-3 py-2">
+                      <span className="font-semibold truncate">{item.product?.name || 'Selected product'}</span>
+                      <span className="text-indigo-300 whitespace-nowrap">Qty {item.qty || 1}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Save products from Customise first, then they will appear in this room layout and AI prompt.
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Right: Render output */}
           <div className="lg:col-span-2 space-y-4">
+
+            <div className="bg-slate-800 rounded-2xl overflow-hidden border border-white/10 aspect-video relative">
+              {activeRoom && (
+                <RoomCanvas3D
+                  ref={canvasRef}
+                  roomType={activeRoom.room_type}
+                  wallColor={activeRoom.color_palette?.[0] || '#ffffff'}
+                  style={selectedStyle}
+                  roomItems={selectedRoomItems}
+                  allProducts={roomProducts}
+                />
+              )}
+              <div className="absolute bottom-3 left-3 glass px-3 py-1.5 rounded-lg">
+                <span className="text-white text-xs font-medium">
+                  {ROOM_LABELS[activeRoom?.room_type] || 'Room'} 3D Layout | {selectedRoomItems.length} selected products
+                </span>
+              </div>
+            </div>
 
             {/* Main render view */}
             <div className="bg-slate-800 rounded-2xl overflow-hidden border border-white/10 aspect-video relative">
