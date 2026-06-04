@@ -15,7 +15,7 @@ interface User {
   budget_max?: number
   furnishing_preference?: string
   furnishing_type?: string
-  role?: string
+  role?: UserRole
 }
 
 interface AuthState {

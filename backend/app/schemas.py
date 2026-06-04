@@ -15,12 +15,14 @@ class VerifyOTPReq(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     otp: str
+    role: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user_id: str
+    role: str
 
 
 # ── Projects ──────────────────────────────────────────────────────────────────
@@ -125,7 +127,8 @@ class RenderReq(BaseModel):
     mode: str = "sdxl"
     style: str = "modern"
     color_palette: List[str] = []
-    products: List[str] = []
+    products: List[Any] = []
+    layout_image: Optional[str] = None
 
 
 class RenderOut(BaseModel):

@@ -245,6 +245,8 @@ function DashboardContent() {
     return 'Good evening'
   }
 
+  const activeProjects = projects.filter((p: any) => p.status !== 'draft')
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
@@ -284,7 +286,7 @@ function DashboardContent() {
           {[
             { icon: MessageSquare, label: 'Inquiries', value: stats?.totalInquiries ?? inquiries.length, color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
             { icon: FileText,      label: 'Quotations', value: stats?.totalQuotations ?? 0, color: 'bg-amber-50 text-amber-700 border-amber-100' },
-            { icon: Home,          label: 'Active Projects', value: stats?.activeProjects ?? projects.length, color: 'bg-blue-50 text-blue-600 border-blue-100' },
+            { icon: Home,          label: 'Active Projects', value: stats?.activeProjects ?? activeProjects.length, color: 'bg-blue-50 text-blue-600 border-blue-100' },
             { icon: CreditCard,    label: 'Total Payments', value: stats?.totalPayments ?? 0, color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-2xl p-5 shadow-card border border-slate-100 text-center relative overflow-hidden card-hover">
@@ -339,7 +341,7 @@ function DashboardContent() {
                     <div key={i} className="bg-white rounded-2xl shadow-card h-60 shimmer" />
                   ))}
                 </div>
-              ) : projects.length === 0 ? (
+              ) : activeProjects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
@@ -359,7 +361,7 @@ function DashboardContent() {
                 </div>
               ) : (
                 <div className="grid md:grid-cols-2 gap-6">
-                  {projects.map((project) => (
+                  {activeProjects.map((project) => (
                     <ProjectCard key={project.id} project={project} />
                   ))}
                 </div>

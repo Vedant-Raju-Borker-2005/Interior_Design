@@ -38,6 +38,39 @@ out/
 # OS files
 .DS_Store
 Thumbs.db
+share/
+pyvenv.cfg
+include/
+pip-selfcheck.json
+
+# Python bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node dependencies
+node_modules/
+
+# Next.js build output and caching
+.next/
+out/
+
+# Environment files (sensitive keys)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
 desktop.ini
 
 # IDE config files
@@ -50,3 +83,6 @@ backend/pdfs/floor_plans/*.pdf
 backend/pdfs/floor_plans/*.png
 backend/pdfs/floor_plans/*.jpg
 backend/pdfs/floor_plans/*.jpeg
+backend/.env
+frontend/.env
+frontend/.env.local

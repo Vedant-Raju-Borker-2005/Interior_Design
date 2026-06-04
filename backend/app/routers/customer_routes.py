@@ -1,6 +1,7 @@
 import uuid
 import datetime
 import random
+import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -174,6 +175,9 @@ def update_quotation_status(
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
 ):
+    if status not in {"approved", "rejected", "under_revision"}:
+        raise HTTPException(400, "Invalid quotation status")
+
     project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
     if not project:
         raise HTTPException(404, "Project not found")
@@ -562,6 +566,10 @@ def create_service_request(
 # ── HELPERS ───────────────────────────────────────────────────────────────────
 
 def _populate_default_tracking(project_id: str, project: Project, db: Session):
+    existing = db.query(ItemTracking).filter(ItemTracking.project_id == project_id).all()
+    if existing:
+        return existing
+
     trackings = []
     # Try using room items first
     for room in project.rooms:

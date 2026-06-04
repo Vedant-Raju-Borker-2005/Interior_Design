@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
-import { Home, LayoutDashboard, LogOut, Menu, X, Sparkles, BarChart3, User, Briefcase } from 'lucide-react'
+import { Home, LayoutDashboard, LogOut, Menu, X, Sparkles, BarChart3, User, Briefcase, HelpCircle } from 'lucide-react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
@@ -15,9 +15,32 @@ export default function Navbar() {
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  const handleLogout = () => {
+    logout()
+    router.push('/')
+  }
+
+  // Dynamically build navigation links based on user role
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
   ]
+
+  if (isLoggedIn) {
+    const role = user?.role || 'customer'
+    if (role === 'admin') {
+      navLinks.push({ href: '/admin', label: 'Admin Portal', icon: LayoutDashboard })
+    } else if (role === 'vendor') {
+      navLinks.push({ href: '/vendor/dashboard', label: 'Vendor Hub', icon: Briefcase })
+    } else if (role === 'team') {
+      navLinks.push({ href: '/team', label: 'Project Team', icon: BarChart3 })
+    } else {
+      navLinks.push({ href: '/dashboard', label: 'Customer Portal', icon: LayoutDashboard })
+    }
+  }
+
+  // Re-add Support link to navigation bar
+  navLinks.push({ href: '/support', label: 'Support', icon: HelpCircle })
+
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 backdrop-blur-xl bg-indigo-950/80">
@@ -55,8 +78,6 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
               <div className="flex items-center gap-4">
-
-
                 <NotificationCenter />
                 <div className="text-sm text-indigo-200 flex items-center gap-1">
                   <span>Hey,</span>
@@ -75,7 +96,7 @@ export default function Navbar() {
                   Edit Profile
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-indigo-300 hover:text-white rounded-lg hover:bg-white/10 transition-all"
                 >
                   <LogOut className="w-4 h-4" /> Logout
@@ -125,41 +146,6 @@ export default function Navbar() {
               ))}
               {isLoggedIn ? (
                 <>
-                  {/* Mobile Role Switcher */}
-                  <div className="border-t border-white/10 pt-2 pb-1">
-                    <span className="block px-3 py-1.5 text-[9px] font-bold text-indigo-300 uppercase tracking-wider">Switch Portal View</span>
-                    <div className="grid grid-cols-2 gap-2 px-3 pb-2.5">
-                      {[
-                        { val: 'customer', label: 'Customer', path: '/dashboard' },
-                        { val: 'vendor', label: 'Vendor Hub', path: '/vendor/dashboard' },
-                        { val: 'team', label: 'Project Team', path: '/team' },
-                        { val: 'admin', label: 'Admin', path: '/admin' },
-                      ].map((item) => {
-                        const active = (item.val === 'admin' && pathname.startsWith('/admin')) ||
-                                       (item.val === 'vendor' && pathname.startsWith('/vendor')) ||
-                                       (item.val === 'team' && pathname.startsWith('/team')) ||
-                                       (item.val === 'customer' && !pathname.startsWith('/admin') && !pathname.startsWith('/vendor') && !pathname.startsWith('/team'))
-                        return (
-                          <button
-                            key={item.val}
-                            onClick={() => {
-                              router.push(item.path)
-                              setMobileOpen(false)
-                            }}
-                            className={clsx(
-                              'py-2 px-2.5 rounded-lg text-xs font-bold text-center border text-white transition',
-                              active
-                                ? 'bg-indigo-600 border-indigo-500'
-                                : 'bg-indigo-900 border-white/10 hover:bg-indigo-800'
-                            )}
-                          >
-                            {item.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
                   <Link
                     href="/dashboard?edit=true"
                     onClick={() => setMobileOpen(false)}
@@ -168,7 +154,7 @@ export default function Navbar() {
                     <User className="w-4 h-4" /> Edit Profile
                   </Link>
                   <button
-                    onClick={() => { logout(); setMobileOpen(false) }}
+                    onClick={() => { handleLogout(); setMobileOpen(false) }}
                     className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-indigo-300 hover:text-white hover:bg-white/10 transition"
                   >
                     <LogOut className="w-4 h-4" /> Logout

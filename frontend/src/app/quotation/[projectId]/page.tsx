@@ -79,9 +79,13 @@ export default function QuotationPage() {
   }
 
   const handleApprove = async () => {
+    const quotationId = quotation?.id || quotation?.quotation_id
+    if (!quotationId) return toast.error('Quotation ID missing. Please reload and try again.')
+
     try {
-      await updateQuotationStatus(projectId, quotation.id, 'approved')
+      await updateQuotationStatus(projectId, quotationId, 'approved')
       setQuotation({ ...quotation, status: 'approved' })
+      setProject((prev: any) => ({ ...prev, status: 'ordered' }))
       toast.success('Quotation approved! Project status is now set to ordered.')
     } catch {
       toast.error('Failed to approve quotation')
@@ -89,8 +93,11 @@ export default function QuotationPage() {
   }
 
   const handleReject = async () => {
+    const quotationId = quotation?.id || quotation?.quotation_id
+    if (!quotationId) return toast.error('Quotation ID missing. Please reload and try again.')
+
     try {
-      await updateQuotationStatus(projectId, quotation.id, 'rejected')
+      await updateQuotationStatus(projectId, quotationId, 'rejected')
       setQuotation({ ...quotation, status: 'rejected' })
       toast.success('Quotation rejected')
     } catch {

@@ -107,13 +107,25 @@ def get_render_images(style: str, room_type: str) -> list[str]:
     )
 
 
-def build_prompt(style: str, color_palette: list, room_type: str = "living room") -> str:
+def build_prompt(style: str, color_palette: list, room_type: str = "living room", products: list | None = None) -> str:
     style_desc = STYLE_PROMPTS.get(style, style)
     room_label = room_type.replace("_", " ")
     colors = ", ".join(color_palette) if color_palette else "neutral palette"
+    product_names = []
+    for product in products or []:
+        if isinstance(product, dict):
+            name = product.get("name") or product.get("label")
+            category = product.get("category")
+            if name and category:
+                product_names.append(f"{name} ({category})")
+            elif name:
+                product_names.append(str(name))
+        elif product:
+            product_names.append(str(product))
+    product_text = f", include these exact furniture selections: {', '.join(product_names)}" if product_names else ""
     return (
         f"photorealistic interior of a {room_label}, {style_desc}, "
-        f"color palette: {colors}, natural daylight, 8k resolution, architectural digest style, "
+        f"color palette: {colors}{product_text}, natural daylight, 8k resolution, architectural digest style, "
         f"professional interior photography"
     )
 
