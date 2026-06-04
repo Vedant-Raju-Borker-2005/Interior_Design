@@ -187,10 +187,10 @@ export default function CustomizePage() {
         </div>
       </div>
 
-      <div className="flex flex-1 pt-28">
+      <div className="flex flex-1 pt-32">
 
         {/* Left: Room tabs */}
-        <div className="w-52 bg-slate-900 border-r border-white/10 fixed left-0 top-28 bottom-0 overflow-y-auto z-30">
+        <div className="w-52 bg-slate-900 border-r border-white/10 fixed left-0 top-32 bottom-0 overflow-y-auto z-30">
           <div className="p-3">
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-2">Rooms</div>
             {project?.rooms?.map((room: any, i: number) => (
@@ -217,7 +217,7 @@ export default function CustomizePage() {
 
         {/* Center: 3D Canvas */}
         <div className="flex-1 ml-52 mr-80">
-          <div className="h-full min-h-[calc(100vh-112px)]">
+          <div className="h-full min-h-[calc(100vh-128px)]">
             {activeRoom && (
               <RoomCanvas3D
                 roomType={activeRoom.room_type}
@@ -236,7 +236,7 @@ export default function CustomizePage() {
         </div>
 
         {/* Right: Controls panel */}
-        <div className="w-80 bg-slate-900 border-l border-white/10 fixed right-0 top-28 bottom-0 overflow-y-auto z-30">
+        <div className="w-80 bg-slate-900 border-l border-white/10 fixed right-0 top-32 bottom-0 overflow-y-auto z-30">
 
           {/* Panel tabs */}
           <div className="flex border-b border-white/10">

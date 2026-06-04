@@ -5,12 +5,13 @@ import { projectsAPI, quotationsAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 import InquiryModal from '@/components/InquiryModal'
 import { useAuthStore } from '@/stores/authStore'
+import { useCustomerStore } from '@/stores/customerStore'
 import toast from 'react-hot-toast'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileText, Download, CheckCircle2, ArrowLeft, ArrowRight,
   Phone, Mail, MessageCircle, Sparkles, Building2, MapPin,
-  Share2, Activity
+  Share2, Activity, X, CreditCard
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -19,26 +20,37 @@ export default function QuotationPage() {
   const router = useRouter()
   const projectId = params.projectId as string
   const { user } = useAuthStore()
+  const { revisions, fetchRevisions, requestRevision, updateQuotationStatus } = useCustomerStore()
 
   const [project, setProject] = useState<any>(null)
   const [quotation, setQuotation] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [inquiryOpen, setInquiryOpen] = useState(false)
+  
+  // Revision Modal States
+  const [showRevModal, setShowRevModal] = useState(false)
+  const [revNotes, setRevNotes] = useState('')
+  const [submittingRev, setSubmittingRev] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await projectsAPI.get(projectId)
-        setProject(res.data)
+        const [projRes, quoteRes] = await Promise.allSettled([
+          projectsAPI.get(projectId),
+          quotationsAPI.get(projectId)
+        ])
+        if (projRes.status === 'fulfilled') setProject(projRes.value.data)
+        if (quoteRes.status === 'fulfilled') setQuotation(quoteRes.value.data)
+        fetchRevisions(projectId)
       } catch {
-        toast.error('Failed to load project')
+        toast.error('Failed to load project data')
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [projectId])
+  }, [projectId, fetchRevisions])
 
   const handleGenerate = async () => {
     setGenerating(true)
@@ -64,6 +76,43 @@ export default function QuotationPage() {
       `Check InteriorAI: http://localhost:3000`
     )
     window.open(`https://wa.me/?text=${text}`, '_blank')
+  }
+
+  const handleApprove = async () => {
+    try {
+      await updateQuotationStatus(projectId, quotation.id, 'approved')
+      setQuotation({ ...quotation, status: 'approved' })
+      toast.success('Quotation approved! Project status is now set to ordered.')
+    } catch {
+      toast.error('Failed to approve quotation')
+    }
+  }
+
+  const handleReject = async () => {
+    try {
+      await updateQuotationStatus(projectId, quotation.id, 'rejected')
+      setQuotation({ ...quotation, status: 'rejected' })
+      toast.success('Quotation rejected')
+    } catch {
+      toast.error('Failed to reject quotation')
+    }
+  }
+
+  const handleRevSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!revNotes.trim()) return
+    setSubmittingRev(true)
+    try {
+      await requestRevision(projectId, revNotes)
+      setQuotation({ ...quotation, status: 'under_revision' })
+      toast.success('Revision request logged successfully')
+      setRevNotes('')
+      setShowRevModal(false)
+    } catch {
+      toast.error('Failed to request revision')
+    } finally {
+      setSubmittingRev(false)
+    }
   }
 
   const formatINR = (n: number) =>
@@ -204,8 +253,7 @@ export default function QuotationPage() {
                 </table>
               </div>
             </div>
-
-            {/* Validity and actions */}
+             {/* Validity and actions */}
             <div className="bg-white rounded-2xl shadow-card p-6 mb-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
@@ -221,25 +269,109 @@ export default function QuotationPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     id="download-pdf-btn"
-                    className="btn-primary"
+                    className="btn-primary animate-glow"
                   >
                     <Download className="w-4 h-4" /> Download PDF
                   </a>
                   <button
                     onClick={handleWhatsAppShare}
-                    className="flex items-center gap-2 bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-green-600 transition"
+                    className="flex items-center gap-2 bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-green-600 transition shadow-sm font-bold text-xs"
                   >
                     <Share2 className="w-4 h-4" /> Share via WhatsApp
                   </button>
+                  <a
+                    href={`mailto:?subject=Interior Design Quotation&body=${encodeURIComponent(
+                      `Hi! I've designed my ${project?.bhk_type} at ${project?.property_name} using InteriorAI.\n` +
+                      `📋 Quotation Total: ₹${quotation.total?.toLocaleString('en-IN')}\n` +
+                      `📅 Valid until: ${quotation.valid_until}\n\n` +
+                      `Check InteriorAI: http://localhost:3000`
+                    )}`}
+                    className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-2.5 rounded-xl transition border border-slate-200 shadow-sm font-bold text-xs"
+                  >
+                    <Mail className="w-4 h-4 text-indigo-600" /> Share via Email
+                  </a>
                   <Link
                     href={`/track/${projectId}`}
-                    className="flex items-center gap-2 bg-indigo-50 text-indigo-700 font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-100 transition"
+                    className="flex items-center gap-2 bg-indigo-50 text-indigo-700 font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-100 transition border border-indigo-200/50 font-bold text-xs shadow-sm"
                   >
                     <Activity className="w-4 h-4" /> Track Project
                   </Link>
                 </div>
               </div>
             </div>
+
+            {/* Quotation Status & Approval Actions */}
+            <div className="bg-white rounded-2xl shadow-card p-6 mb-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider">Quotation Decision</h3>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                  quotation.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                  quotation.status === 'rejected' ? 'bg-rose-100 text-rose-700' :
+                  quotation.status === 'under_revision' ? 'bg-amber-100 text-amber-700' :
+                  'bg-slate-100 text-slate-650'
+                }`}>
+                  Status: {quotation.status?.replace('_', ' ')}
+                </span>
+              </div>
+
+              {quotation.status !== 'approved' && quotation.status !== 'rejected' ? (
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={handleApprove}
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm"
+                  >
+                    ✓ Approve Quotation
+                  </button>
+                  <button
+                    onClick={handleReject}
+                    className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-sm"
+                  >
+                    ✕ Reject Quotation
+                  </button>
+                  <button
+                    onClick={() => setShowRevModal(true)}
+                    className="px-6 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-150 font-bold rounded-xl text-xs transition"
+                  >
+                    ✎ Request Changes / Revision
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <p className="text-xs text-slate-500 font-semibold">
+                    This quotation has been <span className="font-bold text-slate-700 uppercase">{quotation.status}</span>. You can track progress, make milestone payments, or download receipts.
+                  </p>
+                  {quotation.status === 'approved' && (
+                    <Link
+                      href={`/track/${projectId}/payments`}
+                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white font-bold rounded-xl text-xs transition shadow-glow-indigo flex items-center gap-1.5 whitespace-nowrap"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" /> Make Milestone Payment
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Revision History timeline */}
+            {revisions.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-card p-6 mb-6 space-y-4">
+                <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider border-b border-slate-100 pb-3">Revision History</h3>
+                <div className="space-y-4 relative">
+                  {revisions.map((rev: any, idx: number) => (
+                    <div key={rev.id} className="p-4 bg-slate-50 border border-slate-150 rounded-xl flex justify-between items-start text-xs shadow-sm">
+                      <div className="space-y-1">
+                        <div className="font-bold text-slate-800">Revision #{rev.revision_number}</div>
+                        <p className="text-slate-600 leading-relaxed italic">"Notes: {rev.customer_notes}"</p>
+                        <p className="text-[10px] text-slate-400 font-medium">Requested: {new Date(rev.created_at).toLocaleString()}</p>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 border border-indigo-200">
+                        {rev.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Inquiry CTA */}
             <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white">
@@ -269,6 +401,73 @@ export default function QuotationPage() {
           </motion.div>
         )}
       </div>
+
+      {/* Revision Modal Dialog */}
+      <AnimatePresence>
+        {showRevModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowRevModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative z-10 p-6"
+            >
+              <button
+                onClick={() => setShowRevModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <h2 className="text-xl font-extrabold text-slate-900 mb-2 flex items-center gap-2">
+                Request Quote Revision
+              </h2>
+              <p className="text-slate-400 text-xs mb-4">Provide detailed feedback or changes needed in your furniture catalog rates.</p>
+
+              <form onSubmit={handleRevSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Revision Notes</label>
+                  <textarea
+                    required
+                    placeholder="e.g. Please swap the velvet sofa for oak fabric, and reduce bedroom wardrobe quantity to 1."
+                    value={revNotes}
+                    onChange={(e) => setRevNotes(e.target.value)}
+                    rows={4}
+                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 outline-none text-slate-800 focus:ring-1 focus:ring-indigo-500 resize-none font-medium"
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowRevModal(false)}
+                    className="px-4 py-2 rounded-lg border border-slate-250 text-slate-500 text-xs font-bold hover:bg-slate-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingRev}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-850 text-white text-xs font-bold rounded-lg transition"
+                  >
+                    {submittingRev ? 'Submitting...' : 'Submit Request'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Inquiry Modal */}
       <InquiryModal

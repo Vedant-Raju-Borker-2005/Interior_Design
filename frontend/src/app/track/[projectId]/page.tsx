@@ -7,7 +7,7 @@ import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import {
   CheckCircle2, Clock, Circle, ArrowLeft, Sparkles,
-  CalendarDays, User2, FileText, Phone, ChevronRight
+  CalendarDays, User2, FileText, Phone, ChevronRight, Wrench, Map, CreditCard
 } from 'lucide-react'
 import clsx from 'clsx'
 import Link from 'next/link'
@@ -170,9 +170,9 @@ export default function TrackPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <Link href={`/quotation/${projectId}`}
-            className="bg-white rounded-2xl shadow-card p-5 flex items-center gap-4 hover:shadow-card-hover transition-all card-hover">
+            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
               <FileText className="w-5 h-5 text-indigo-600" />
             </div>
@@ -180,32 +180,62 @@ export default function TrackPage() {
               <div className="font-semibold text-slate-800 text-sm">View Quotation</div>
               <div className="text-xs text-slate-400">Download PDF</div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 ml-auto" />
           </Link>
 
           <Link href={`/visualize/${projectId}`}
-            className="bg-white rounded-2xl shadow-card p-5 flex items-center gap-4 hover:shadow-card-hover transition-all card-hover">
+            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
             <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-purple-600" />
             </div>
             <div>
               <div className="font-semibold text-slate-800 text-sm">AI Visualise</div>
-              <div className="text-xs text-slate-400">Regenerate renders</div>
+              <div className="text-xs text-slate-400">Renders</div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 ml-auto" />
           </Link>
 
-          <a href="tel:+919876543210"
-            className="bg-white rounded-2xl shadow-card p-5 flex items-center gap-4 hover:shadow-card-hover transition-all card-hover">
+          <Link href={`/track/${projectId}/payments`}
+            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
+              <CreditCard className="w-5 h-5 text-rose-600" />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-800 text-sm">Payments</div>
+              <div className="text-xs text-slate-400">Invoices & Receipts</div>
+            </div>
+          </Link>
+
+          <Link href={`/track/${projectId}/execution`}
+            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+              <Wrench className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-800 text-sm">Execution</div>
+              <div className="text-xs text-slate-400">Status & Photos</div>
+            </div>
+          </Link>
+
+          <Link href={`/track/${projectId}/floorplans`}
+            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+              <Map className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-800 text-sm">Floor Plans</div>
+              <div className="text-xs text-slate-400">Upload & Manage</div>
+            </div>
+          </Link>
+
+          <Link href="/support"
+            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
               <Phone className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <div className="font-semibold text-slate-800 text-sm">Contact Support</div>
-              <div className="text-xs text-slate-400">+91 98765 43210</div>
+              <div className="font-semibold text-slate-800 text-sm">Support Center</div>
+              <div className="text-xs text-slate-400">Tickets & Help</div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 ml-auto" />
-          </a>
+          </Link>
         </div>
       </div>
     </div>

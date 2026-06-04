@@ -1,9 +1,11 @@
 'use client'
 import { useState } from 'react'
+
+import { useAuthStore, UserRole } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { authAPI } from '@/lib/api'
-import { useAuthStore } from '@/stores/authStore'
+
 import toast from 'react-hot-toast'
 import { Sparkles, Phone, Mail, ArrowRight, RefreshCw, MapPin, User, Compass, HelpCircle, Check, Info } from 'lucide-react'
 import Link from 'next/link'
@@ -21,9 +23,10 @@ export default function LoginPage() {
 
   const [mode, setMode] = useState<FormMode>('signin')
   const [step, setStep] = useState<VerificationStep>('form')
-  const [method, setMethod] = useState<LoginMethod>('phone')
+  const [selectedRole, setSelectedRole] = useState<UserRole>('customer')
   const [loading, setLoading] = useState(false)
-  const [devOtp, setDevOtp] = useState('')
+
+  const [method, setMethod] = useState<LoginMethod>('phone')
 
   // Form Fields
   const [contact, setContact] = useState('')
@@ -31,6 +34,7 @@ export default function LoginPage() {
   const [city, setCity] = useState('Bangalore')
   const [furnishingPreference, setFurnishingPreference] = useState<'new' | 'upgrade'>('new')
   const [otp, setOtp] = useState('')
+  const [devOtp, setDevOtp] = useState('')
 
   const handleSendOtp = async () => {
     if (!contact.trim()) {
@@ -50,7 +54,8 @@ export default function LoginPage() {
           email: method === 'email' ? contact : `${name.replace(/\s+/g, '').toLowerCase()}@example.com`,
           phone: method === 'phone' ? contact : '+91 99999 88888',
           city,
-          furnishing_preference: furnishingPreference
+          furnishing_preference: furnishingPreference,
+          role: selectedRole
         }
         const res = await authAPI.signup(payload)
         setDevOtp(res.data.dev_otp || '')
@@ -58,7 +63,9 @@ export default function LoginPage() {
         setStep('otp')
       } else {
         // Sign In - Strictly requires registered user
-        const payload = method === 'phone' ? { phone: contact } : { email: contact }
+        const payload = method === 'phone' 
+          ? { phone: contact, role: selectedRole } 
+          : { email: contact, role: selectedRole }
         const res = await authAPI.login(payload)
         setDevOtp(res.data.dev_otp || '')
         toast.success(`Sign-in OTP sent! Check hint below.`)
@@ -78,32 +85,41 @@ export default function LoginPage() {
       const payload = method === 'phone'
         ? { phone: contact, otp }
         : { email: contact, otp }
-      
+
       const res = await authAPI.verifyOtp(payload)
-      
-      // Auto Login & Set token
+
+      // Set token in store
       setToken(res.data.access_token, res.data.user_id)
-      
-      // If they just registered, update their profile details in the authStore
-      if (mode === 'signup' && res.data.user) {
+
+      // Use backend-determined role (authoritative based on linked profiles)
+      const backendRole = (res.data.user?.role as UserRole) || selectedRole
+      useAuthStore.getState().setRole(backendRole)
+
+      // Store user profile
+      if (res.data.user) {
         const updatedUser = {
           id: res.data.user_id,
-          name,
-          email: method === 'email' ? contact : `${name.replace(/\s+/g, '').toLowerCase()}@example.com`,
-          phone: method === 'phone' ? contact : '',
-          city,
-          furnishing_preference: furnishingPreference,
-          style_tags: []
+          name: mode === 'signup' ? name : res.data.user.name,
+          email: mode === 'signup'
+            ? (method === 'email' ? contact : `${name.replace(/\s+/g, '').toLowerCase()}@example.com`)
+            : res.data.user.email,
+          phone: mode === 'signup'
+            ? (method === 'phone' ? contact : '')
+            : res.data.user.phone,
+          city: mode === 'signup' ? city : res.data.user.city,
+          furnishing_preference: mode === 'signup' ? furnishingPreference : (res.data.user.furnishing_preference || ''),
+          style_tags: res.data.user.style_tags || [],
+          role: backendRole
         }
-        // Force set user profile details
         useAuthStore.getState().setUser(updatedUser)
         localStorage.setItem('active_user', JSON.stringify(updatedUser))
       }
 
       toast.success(mode === 'signup' ? 'Account created successfully! 🎉' : 'Welcome back to InteriorAI! 👋')
-      
-      // Directly redirect to dashboard (home page when logged in)
-      router.push('/dashboard')
+
+      // Redirect based on role returned by backend
+      const portal = useAuthStore.getState().getPortalPath()
+      router.push(portal)
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Invalid OTP code')
     } finally {
@@ -148,7 +164,24 @@ export default function LoginPage() {
                   </>
                 )}
 
-                {/* Method selector */}
+                {/* View As */}
+                <p className="text-sm font-medium text-slate-700 mb-2 text-center">View As</p>
+                <div className="flex gap-2 mb-4 justify-center">
+                  {['customer', 'vendor', 'team', 'admin'].map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setSelectedRole(r as UserRole)}
+                      className={clsx(
+                        'px-3 py-1 rounded-full text-sm font-medium transition',
+                        selectedRole === r ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-800'
+                      )}
+                    >
+                      {r.charAt(0).toUpperCase() + r.slice(1)}
+                    </button>
+                  ))}
+                </div>
+
+
                 <div className="flex gap-2 mb-4 bg-slate-100 p-1 rounded-xl">
                   <button
                     onClick={() => { setMethod('phone'); setContact('') }}
@@ -235,7 +268,7 @@ export default function LoginPage() {
                               <div className="text-[10px] text-slate-500 mt-0.5">Brand new shell property</div>
                             </div>
                           </button>
-                          
+
                           <button
                             type="button"
                             onClick={() => setFurnishingPreference('upgrade')}
@@ -389,7 +422,7 @@ export default function LoginPage() {
           style={{ animationDuration: '2s' }}
         />
         <div className="absolute inset-0 bg-gradient-to-l from-indigo-950/60 via-indigo-950/20 to-transparent" />
-        
+
         <div className="absolute bottom-12 left-8 right-8 glass rounded-2xl p-6 border border-white/20 shadow-glow-indigo">
           <p className="text-white font-medium text-lg leading-relaxed">&quot;Designed my entire 3BHK in under 20 minutes with InteriorAI. The renders and budget calculator were incredibly accurate!&quot;</p>
           <div className="flex items-center gap-3 mt-4">

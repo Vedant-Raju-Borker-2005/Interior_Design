@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 
 from .db import init_db, SessionLocal
 from .seed_data import seed_database
-from .routers import auth, projects, catalog, ai_render, quotations, vendors, inquiry, tracking, admin, recommendations
+from .routers import auth, projects, catalog, ai_render, quotations, vendors, inquiry, tracking, admin, recommendations, customer_routes, vendor_routes, project_team
 
 DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
 CORS_ORIGINS = [
@@ -66,6 +66,10 @@ app.include_router(inquiry.router,          prefix="/api/v1/inquiry",         ta
 app.include_router(tracking.router,         prefix="/api/v1/tracking",        tags=["Tracking"])
 app.include_router(admin.router,            prefix="/api/v1/admin",           tags=["Admin"])
 app.include_router(recommendations.router,  prefix="/api/v1/recommendations", tags=["Recommendations"])
+app.include_router(customer_routes.router,  prefix="/api/v1/customer",        tags=["Customer"])
+app.include_router(vendor_routes.router,    prefix="/api/v1/vendor",          tags=["Vendor"])
+app.include_router(project_team.router,     prefix="/api",                    tags=["Project Team Legacy"])
+app.include_router(project_team.router,     prefix="/api/v1/team",            tags=["Project Team"])
 
 
 @app.get("/health", tags=["Health"])

@@ -1,24 +1,22 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
-import { Home, LayoutDashboard, LogOut, Menu, X, Sparkles, BarChart3, User } from 'lucide-react'
+import { Home, LayoutDashboard, LogOut, Menu, X, Sparkles, BarChart3, User, Briefcase } from 'lucide-react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import clsx from 'clsx'
+
+import NotificationCenter from '@/components/NotificationCenter'
 
 export default function Navbar() {
   const { isLoggedIn, user, logout } = useAuthStore()
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
-    ...(isLoggedIn
-      ? [
-          { href: '/dashboard', label: 'My Projects', icon: LayoutDashboard },
-          { href: '/admin',     label: 'Admin',       icon: BarChart3 },
-        ]
-      : []),
   ]
 
   return (
@@ -57,6 +55,9 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
               <div className="flex items-center gap-4">
+
+
+                <NotificationCenter />
                 <div className="text-sm text-indigo-200 flex items-center gap-1">
                   <span>Hey,</span>
                   <Link 
@@ -124,6 +125,41 @@ export default function Navbar() {
               ))}
               {isLoggedIn ? (
                 <>
+                  {/* Mobile Role Switcher */}
+                  <div className="border-t border-white/10 pt-2 pb-1">
+                    <span className="block px-3 py-1.5 text-[9px] font-bold text-indigo-300 uppercase tracking-wider">Switch Portal View</span>
+                    <div className="grid grid-cols-2 gap-2 px-3 pb-2.5">
+                      {[
+                        { val: 'customer', label: 'Customer', path: '/dashboard' },
+                        { val: 'vendor', label: 'Vendor Hub', path: '/vendor/dashboard' },
+                        { val: 'team', label: 'Project Team', path: '/team' },
+                        { val: 'admin', label: 'Admin', path: '/admin' },
+                      ].map((item) => {
+                        const active = (item.val === 'admin' && pathname.startsWith('/admin')) ||
+                                       (item.val === 'vendor' && pathname.startsWith('/vendor')) ||
+                                       (item.val === 'team' && pathname.startsWith('/team')) ||
+                                       (item.val === 'customer' && !pathname.startsWith('/admin') && !pathname.startsWith('/vendor') && !pathname.startsWith('/team'))
+                        return (
+                          <button
+                            key={item.val}
+                            onClick={() => {
+                              router.push(item.path)
+                              setMobileOpen(false)
+                            }}
+                            className={clsx(
+                              'py-2 px-2.5 rounded-lg text-xs font-bold text-center border text-white transition',
+                              active
+                                ? 'bg-indigo-600 border-indigo-500'
+                                : 'bg-indigo-900 border-white/10 hover:bg-indigo-800'
+                            )}
+                          >
+                            {item.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
                   <Link
                     href="/dashboard?edit=true"
                     onClick={() => setMobileOpen(false)}

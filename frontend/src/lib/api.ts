@@ -35,10 +35,10 @@ axiosInstance.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  signup: (data: { name?: string; email?: string; phone?: string }) =>
+  signup: (data: { name?: string; email?: string; phone?: string; role?: string; city?: string; furnishing_preference?: string }) =>
     axiosInstance.post('/api/v1/auth/signup', data),
   
-  login: (data: { email?: string; phone?: string }) =>
+  login: (data: { email?: string; phone?: string; role?: string }) =>
     axiosInstance.post('/api/v1/auth/login', data),
   
   verifyOtp: (data: { email?: string; phone?: string; otp: string }) =>
@@ -211,4 +211,172 @@ export const adminAPI = {
     axiosInstance.put(`/api/v1/admin/inquiries/${inquiryId}`, data),
 }
 
+// Customer Module API
+export const customerAPI = {
+  getFloorplans: (projectId: string) =>
+    axiosInstance.get(`/api/v1/customer/projects/${projectId}/floorplans`),
+  uploadFloorplan: (projectId: string, formData: FormData) =>
+    axiosInstance.post(`/api/v1/customer/projects/${projectId}/floorplans`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  deleteFloorplan: (projectId: string, floorplanId: string) =>
+    axiosInstance.delete(`/api/v1/customer/projects/${projectId}/floorplans/${floorplanId}`),
+
+  getRevisions: (projectId: string) =>
+    axiosInstance.get(`/api/v1/customer/projects/${projectId}/quotations/revisions`),
+  requestRevision: (projectId: string, notes: string) => {
+    const fd = new FormData()
+    fd.append('customer_notes', notes)
+    return axiosInstance.post(`/api/v1/customer/projects/${projectId}/quotations/revisions`, fd)
+  },
+  updateQuotationStatus: (projectId: string, quotationId: string, status: string) => {
+    const fd = new FormData()
+    fd.append('status', status)
+    return axiosInstance.put(`/api/v1/customer/projects/${projectId}/quotations/${quotationId}/status`, fd)
+  },
+
+  getActivity: () =>
+    axiosInstance.get('/api/v1/customer/activity'),
+
+  getTracking: (projectId: string) =>
+    axiosInstance.get(`/api/v1/customer/projects/${projectId}/tracking`),
+  updateTracking: (projectId: string, trackingId: string, status: string, remarks?: string, actualDate?: string) => {
+    const fd = new FormData()
+    fd.append('status', status)
+    if (remarks) fd.append('remarks', remarks)
+    if (actualDate) fd.append('actual_date', actualDate)
+    return axiosInstance.put(`/api/v1/customer/projects/${projectId}/tracking/${trackingId}`, fd)
+  },
+
+  getPhotos: (projectId: string) =>
+    axiosInstance.get(`/api/v1/customer/projects/${projectId}/photos`),
+  uploadPhoto: (projectId: string, formData: FormData) =>
+    axiosInstance.post(`/api/v1/customer/projects/${projectId}/photos`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+
+  getIssues: (projectId: string) =>
+    axiosInstance.get(`/api/v1/customer/projects/${projectId}/issues`),
+  createIssue: (projectId: string, type: string, priority: string, description: string, itemId?: string) => {
+    const fd = new FormData()
+    fd.append('type', type)
+    fd.append('priority', priority)
+    fd.append('description', description)
+    if (itemId) fd.append('item_id', itemId)
+    return axiosInstance.post(`/api/v1/customer/projects/${projectId}/issues`, fd)
+  },
+
+  getTickets: () =>
+    axiosInstance.get('/api/v1/customer/support/tickets'),
+  createTicket: (projectId: string, subject: string, description: string) => {
+    const fd = new FormData()
+    fd.append('project_id', projectId)
+    fd.append('subject', subject)
+    fd.append('description', description)
+    return axiosInstance.post('/api/v1/customer/support/tickets', fd)
+  },
+
+  getServices: () =>
+    axiosInstance.get('/api/v1/customer/services'),
+  createServiceRequest: (serviceType: string, requirements: string) => {
+    const fd = new FormData()
+    fd.append('service_type', serviceType)
+    fd.append('requirements', requirements)
+    return axiosInstance.post('/api/v1/customer/services', fd)
+  },
+
+  getNotifications: () =>
+    axiosInstance.get('/api/v1/customer/notifications'),
+  markNotificationRead: (notificationId: string) =>
+    axiosInstance.patch(`/api/v1/customer/notifications/${notificationId}`),
+  markAllNotificationsRead: () =>
+    axiosInstance.post('/api/v1/customer/notifications/mark-all-read'),
+
+  getStats: () =>
+    axiosInstance.get('/api/v1/customer/stats'),
+  getInquiries: () =>
+    axiosInstance.get('/api/v1/customer/inquiries'),
+  closeInquiry: (inquiryId: string) =>
+    axiosInstance.put(`/api/v1/customer/inquiries/${inquiryId}/close`),
+  getProjectPayments: (projectId: string) =>
+    axiosInstance.get(`/api/v1/customer/projects/${projectId}/payments`),
+  makeMilestonePayment: (projectId: string, milestoneName: string, amount: number) =>
+    axiosInstance.post(`/api/v1/customer/projects/${projectId}/payments`, { milestoneName, amount }),
+}
+
+// Project Team API
+export const teamAPI = {
+  getMembers: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/team`),
+  assignMember: (projectId: string, userId: string, role: string) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/assign`, { userId, role }),
+  getProgress: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/progress`),
+  updateProgress: (projectId: string, progress: number, reason?: string) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/progress`, { progress, reason }),
+  getIssues: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/issues`),
+  createIssue: (projectId: string, data: { type: string; priority: string; description: string; itemId?: string }) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/issues`, data),
+  getPhotos: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/photos`),
+  uploadPhoto: (projectId: string, data: { roomName?: string; category: string; imageUrl: string }) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/photos`, data),
+  getDashboard: () =>
+    axiosInstance.get('/api/v1/team/team/dashboard'),
+  getTracking: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/tracking`),
+  updateTracking: (projectId: string, trackingId: string, status: string, remarks?: string) =>
+    axiosInstance.put(`/api/v1/team/projects/${projectId}/tracking/${trackingId}`, { status, remarks }),
+}
+
+// Vendor Module API
+export const vendorAPI = {
+  getOnboarding: () =>
+    axiosInstance.get('/api/v1/vendor/onboarding'),
+  register: (data: { businessName: string; ownerName: string; email: string; phone?: string; gstNumber?: string; panNumber?: string; warehouseAddress?: string; serviceLocations: string[] }) =>
+    axiosInstance.post('/api/v1/vendor/onboarding', data),
+  uploadDocuments: (formData: FormData) =>
+    axiosInstance.put('/api/v1/vendor/onboarding', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  
+  getDashboard: () =>
+    axiosInstance.get('/api/v1/vendor/dashboard'),
+
+  getProducts: () =>
+    axiosInstance.get('/api/v1/vendor/products'),
+  createProduct: (data: { name: string; category: string; subcategory: string; sku: string; description?: string; basePrice: number; images?: string[]; variants?: any[] }) =>
+    axiosInstance.post('/api/v1/vendor/products', data),
+  updateProduct: (productId: string, data: { name?: string; category?: string; subcategory?: string; description?: string; basePrice?: number; images?: string[]; availableQty?: number }) =>
+    axiosInstance.put(`/api/v1/vendor/products/${productId}`, data),
+
+  getInventory: () =>
+    axiosInstance.get('/api/v1/vendor/inventory'),
+  adjustInventory: (data: { productId: string; quantity: number; type: string; notes?: string }) =>
+    axiosInstance.post('/api/v1/vendor/inventory', data),
+
+  getAssignments: () =>
+    axiosInstance.get('/api/v1/vendor/assignments'),
+  updateAssignment: (assignmentId: string, status: string, remarks?: string) =>
+    axiosInstance.patch(`/api/v1/vendor/assignments/${assignmentId}`, { status, remarks }),
+  addMilestone: (assignmentId: string, formData: FormData) =>
+    axiosInstance.post(`/api/v1/vendor/assignments/${assignmentId}/milestones`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  uploadProof: (assignmentId: string, formData: FormData) =>
+    axiosInstance.post(`/api/v1/vendor/assignments/${assignmentId}/proof`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+
+  getPayouts: () =>
+    axiosInstance.get('/api/v1/vendor/payouts'),
+
+  getNotifications: () =>
+    axiosInstance.get('/api/v1/vendor/notifications'),
+  markNotificationsRead: (notificationIds?: string[]) =>
+    axiosInstance.patch('/api/v1/vendor/notifications', { notificationIds }),
+}
+
 export default axiosInstance
+

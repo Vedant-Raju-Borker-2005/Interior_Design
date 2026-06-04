@@ -107,13 +107,33 @@ def get_room_renders(room_id: str, db: Session = Depends(get_db)):
 
 
 async def _process_render(job_id: str, style: str, mode: str, room_type: str):
-    """Simulate GPU processing delay, then pick a curated image."""
-    delay = random.uniform(3, 6) if mode == "template" else random.uniform(6, 12)
-    await asyncio.sleep(delay)
+    """Simulate GPU processing, calling Gemini Imagen or fallback to mock."""
+    db = SessionLocal()
+    prompt = ""
+    try:
+        render = db.query(Render).filter(Render.id == job_id).first()
+        if render:
+            prompt = render.prompt
+    except Exception as e:
+        print(f"Failed to query render prompt: {e}")
+    finally:
+        db.close()
 
-    images = get_render_images(style, room_type)
-    image_url = random.choice(images)
-    thumb_url = image_url.replace("w=1200&h=800", "w=400&h=267")
+    image_url = None
+    if prompt:
+        from ..services.render_mock import get_gemini_render
+        image_url = get_gemini_render(prompt)
+
+    if image_url:
+        thumb_url = image_url
+    else:
+        # Fallback to local mockup
+        delay = random.uniform(3, 6) if mode == "template" else random.uniform(6, 12)
+        await asyncio.sleep(delay)
+        from ..services.render_mock import get_render_images
+        images = get_render_images(style, room_type)
+        image_url = random.choice(images)
+        thumb_url = image_url.replace("w=1200&h=800", "w=400&h=267")
 
     # Update in-memory
     _job_status[job_id] = {

@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import Navbar from '@/components/Navbar'
+import { useAuthStore } from '@/stores/authStore'
 import {
   Sparkles, ArrowRight, Star, CheckCircle2, Zap, Shield, Palette,
   LayoutGrid, Clock, Image as ImageIcon, FileText, Users
@@ -11,7 +12,7 @@ const HERO_IMAGES = [
   'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&h=400&fit=crop&q=85',
   'https://images.unsplash.com/photo-1616137466211-f939a420be84?w=600&h=400&fit=crop&q=85',
   'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=400&fit=crop&q=85',
-  'https://images.unsplash.com/photo-1618219940994-1408d1f62ee7?w=600&h=400&fit=crop&q=85',
+  'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=600&h=400&fit=crop&q=85',
 ]
 
 const STEPS = [
@@ -38,6 +39,9 @@ const TESTIMONIALS = [
 ]
 
 export default function LandingPage() {
+  const { isLoggedIn } = useAuthStore()
+  const ctaHref = isLoggedIn ? '/dashboard' : '/login'
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -83,7 +87,7 @@ export default function LandingPage() {
             </p>
 
             <div className="flex flex-wrap gap-4 mb-10">
-              <Link href="/login" id="hero-cta" className="btn-primary text-base px-8 py-4">
+              <Link href={ctaHref} id="hero-cta" className="btn-primary text-base px-8 py-4">
                 Start Designing Free <ArrowRight className="w-5 h-5" />
               </Link>
               <Link href="#how-it-works" className="btn-secondary text-base px-8 py-4" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}>
@@ -257,7 +261,7 @@ export default function LandingPage() {
           <p className="text-indigo-200 text-lg mb-8 max-w-xl mx-auto">
             Join 50,000+ homeowners who designed with InteriorAI. It&apos;s free to start.
           </p>
-          <Link href="/login" className="inline-flex items-center gap-2 bg-white text-indigo-700 font-bold px-10 py-4 rounded-2xl hover:bg-indigo-50 transition-all shadow-glow-indigo text-lg">
+          <Link href={ctaHref} className="inline-flex items-center gap-2 bg-white text-indigo-700 font-bold px-10 py-4 rounded-2xl hover:bg-indigo-50 transition-all shadow-glow-indigo text-lg">
             Start for Free <ArrowRight className="w-5 h-5" />
           </Link>
           <div className="mt-6 flex justify-center gap-6 text-sm text-indigo-200">
@@ -276,7 +280,7 @@ export default function LandingPage() {
           <Sparkles className="w-4 h-4 text-indigo-400" />
           <span className="text-white font-bold">InteriorAI</span>
         </div>
-        <p>© 2024 InteriorAI Platform. Built with ❤️ for Indian homeowners.</p>
+        <p>© 2026 InteriorAI Platform. Built with ❤️ for Indian homeowners.</p>
       </footer>
     </div>
   )

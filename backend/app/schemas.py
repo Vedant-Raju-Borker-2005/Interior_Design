@@ -8,6 +8,7 @@ class SignupReq(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     name: Optional[str] = None
+    role: Optional[str] = None
 
 
 class VerifyOTPReq(BaseModel):

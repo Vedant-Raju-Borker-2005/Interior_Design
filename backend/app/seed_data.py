@@ -8,8 +8,8 @@ UNSPLASH = "https://images.unsplash.com"
 
 PACKAGE_THUMBNAILS = {
     ("1BHK", "basic"):    f"{UNSPLASH}/photo-1493809842364-78817add7ffb?w=800&q=80&fit=crop",
-    ("1BHK", "premium"):  f"{UNSPLASH}/photo-1600210492486-724fe5c67fb3?w=800&q=80&fit=crop",
-    ("1BHK", "luxury"):   f"{UNSPLASH}/photo-1618219940994-1408d1f62ee7?w=800&q=80&fit=crop",
+    ("1BHK", "premium"):  f"{UNSPLASH}/photo-1616486338812-3dadae4b4ace?w=800&q=80&fit=crop",
+    ("1BHK", "luxury"):   f"{UNSPLASH}/photo-1613977257363-707ba9348227?w=800&q=80&fit=crop",
     ("2BHK", "basic"):    f"{UNSPLASH}/photo-1556909114-f6e7ad7d3136?w=800&q=80&fit=crop",
     ("2BHK", "premium"):  f"{UNSPLASH}/photo-1600585154340-be6161a56a0c?w=800&q=80&fit=crop",
     ("2BHK", "luxury"):   f"{UNSPLASH}/photo-1618220179428-22790b461013?w=800&q=80&fit=crop",

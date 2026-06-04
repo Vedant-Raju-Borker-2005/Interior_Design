@@ -1,0 +1,870 @@
+EPIC NO	STAKEHOLDER	EPIC NAME	FEATURE NO	FEATURE NAME	STORY NUMBER	STORY NAME	STORY DETAILS	NOTES
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.1	User Registration & Login	SC001	User Registration - UI	As a user, I want to sign up using phone/email with OTP so that I can securely access the platform	Login or Sign-up	
+•	Register via phone/email (OTP)
+•	Capture: Name, Email, Phone, Location (Pincode)
+•	Optional - Are you furnishing a new home or upgrading?”
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.1	User Registration & Login	SC002	User Registration - API	Create API for OTP generation and verification
+Create user registration API	Login or Sign-up	
+•	Register via phone/email (OTP)
+•	Capture: Name, Email, Phone, Location (Pincode)
+•	Optional - Are you furnishing a new home or upgrading?”
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.1	User Registration & Login	SC003	User Registration - Integration	Integrate with SMS gateway for OTP
+Integrate email service for verification
+Integrate authentication service (OAuth/Firebase optional)	Login or Sign-up	
+•	Register via phone/email (OTP)
+•	Capture: Name, Email, Phone, Location (Pincode)
+•	Optional - Are you furnishing a new home or upgrading?”
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.1	User Registration & Login	SC004	User Login - UI	As a user, I want a simple login screen with OTP verification
+As a user, I want to edit my profile details	
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.1	User Registration & Login	SC005	User Login - API	Create login/authentication API (JWT/session-based)
+Create profile update API	
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.1	User Registration & Login	SC006	User Login - Integration	Login validation API	
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.2	Home Configuration Setup	SC007	Home Configuration Setup - UI	As a user, I want to select BHK type (1–5)	•	Select BHK (1–5)
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.2	Home Configuration Setup	SC008	Home Configuration Setup - API	Create API to fetch BHK templates	•	Select BHK (1–5)
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.2	Home Configuration Setup	SC009	Home Configuration Setup - Integration	Integrate Home Configuration	•	Select BHK (1–5)
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.3	Home Items Setup	SC010	Home Items - UI	As a user, I want to customize room configuration
+As a user, I want to upload floor plan (PDF/image)	•	Auto-generate details based on rooms - e.g. bedroom, kitchen, dining - Bedrooms (based on BHK), Living room, Kitchen, Bathrooms, Dining
+•	Editable room configuration - Add/remove rooms, Adjust counts
+•	Optional: select floor plan or Upload floor plan (PDF/image)
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.3	Home Items Setup	SC011	Home Items - API	Create API to save home configuration
+Create file upload API for floor plans	•	Auto-generate details based on rooms - e.g. bedroom, kitchen, dining - Bedrooms (based on BHK), Living room, Kitchen, Bathrooms, Dining
+•	Editable room configuration - Add/remove rooms, Adjust counts
+•	Optional: select floor plan or Upload floor plan (PDF/image)
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.3	Home Items Setup	SC012	Home Items - Integration	Integrate floor plan parsing (optional AI service)	•	Auto-generate details based on rooms - e.g. bedroom, kitchen, dining - Bedrooms (based on BHK), Living room, Kitchen, Bathrooms, Dining
+•	Editable room configuration - Add/remove rooms, Adjust counts
+•	Optional: select floor plan or Upload floor plan (PDF/image)
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.4	Preference Capture	SC013	Preference Capture - UI	As a user, I want to select style, color, and material preferences
+As a user, I want a guided questionnaire	•	Style selection (modern/minimal/classic)
+•	Color preferences
+•	Material preferences (Budget / Durable / Premium)
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.4	Preference Capture	SC014	Preference Capture - API	Create API to store preferences
+Create API to fetch predefined styles/materials	•	Style selection (modern/minimal/classic)
+•	Color preferences
+•	Material preferences (Budget / Durable / Premium)
+1	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	1.4	Preference Capture	SC015	Preference Capture - Integration	Integrate recommendation engine input pipeline	•	Style selection (modern/minimal/classic)
+•	Color preferences
+•	Material preferences (Budget / Durable / Premium)
+2	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	2.1	Package Recommendation	SC016	Package Recommendation - UI	As a user, I want to see Basic, Premium, Luxury packages
+As a user, I want to view pricing, items, and timelines	•	Slider or predefined ranges
+•	Suggest: Package (Basic/Premium/Luxury)
+•	Product bundles per room
+•	Show: Price, Items included, Timeline
+2	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	2.1	Package Recommendation	SC017	Package Recommendation - API	Create API to fetch packages based on preferences
+Create pricing calculation API	•	Slider or predefined ranges
+•	Suggest: Package (Basic/Premium/Luxury)
+•	Product bundles per room
+•	Show: Price, Items included, Timeline
+2	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	2.1	Package Recommendation	SC018	Package Recommendation - Integration	Integrate AI recommendation engine (budget + preference-based)	•	Slider or predefined ranges
+•	Suggest: Package (Basic/Premium/Luxury)
+•	Product bundles per room
+•	Show: Price, Items included, Timeline
+2	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	2.2	Product Customization	SC019	Product Customization - UI	As a user, I want to customize items room-wise
+As a user, I want to choose variants (color, size, material)
+As a user, I want to compare alternatives	•	Room-wise selection
+•	Each item:
+•	Default selection
+•	Alternatives (max 3–5)
+•	Color / size options
+2	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	2.2	Product Customization	SC020	Product Customization - API	Create API to fetch product catalog
+Create API to update selected items
+Create API for variant selection	•	Room-wise selection
+•	Each item:
+•	Default selection
+•	Alternatives (max 3–5)
+•	Color / size options
+2	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	2.2	Product Customization	SC021	Product Customization - Integration	Integrate product inventory system
+Integrate vendor product feeds	•	Room-wise selection
+•	Each item:
+•	Default selection
+•	Alternatives (max 3–5)
+•	Color / size options
+3	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	3.1	AI Rendering (2D/3D)	SC022	AI Rendering - UI	As a user, I want to see room-wise rendered visuals
+As a user, I want to toggle between design options	•	Template-based rendering
+•	User image-based rendering (optional) - Places selected furniture into real images
+•	Bedroom view, Kitchen view, Living room 
+•	Based on: Selected items, Colors
+3	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	3.1	AI Rendering (2D/3D)	SC023	AI Rendering - API	Create API to trigger rendering job
+Create API to fetch rendered images	•	Template-based rendering
+•	User image-based rendering (optional) - Places selected furniture into real images
+•	Bedroom view, Kitchen view, Living room 
+•	Based on: Selected items, Colors
+3	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	3.1	AI Rendering (2D/3D)	SC024	AI Rendering - Integration	Integrate Generative AI rendering engine
+Integrate 3D visualization service	•	Template-based rendering
+•	User image-based rendering (optional) - Places selected furniture into real images
+•	Bedroom view, Kitchen view, Living room 
+•	Based on: Selected items, Colors
+3	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	3.2	Image-based Rendering	SC025	Image-based Rendering - UI	As a user, I want to upload room images
+As a user, I want AI to place furniture in my real room	•	Template-based rendering
+•	User image-based rendering (optional) - Places selected furniture into real images
+•	Bedroom view, Kitchen view, Living room 
+•	Based on: Selected items, Colors
+3	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	3.2	Image-based Rendering	SC026	Image-based Rendering - API	Create API for image upload
+Create API for AI transformation request	•	Template-based rendering
+•	User image-based rendering (optional) - Places selected furniture into real images
+•	Bedroom view, Kitchen view, Living room 
+•	Based on: Selected items, Colors
+3	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	3.2	Image-based Rendering	SC027	Image-based Rendering - Integration	Integrate computer vision AI
+Integrate image processing pipeline	•	Template-based rendering
+•	User image-based rendering (optional) - Places selected furniture into real images
+•	Bedroom view, Kitchen view, Living room 
+•	Based on: Selected items, Colors
+4	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	4.1	Quotation Generation	SC028	Quotation Generation - UI	As a user, I want to view itemized quotation
+As a user, I want to download/share PDF	•	Generate PDF - Selected items list, Package details, Total estimated cost
+•	Share/download
+4	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	4.1	Quotation Generation	SC029	Quotation Generation - API	Create quotation generation API
+Create PDF generation API	•	Generate PDF - Selected items list, Package details, Total estimated cost
+•	Share/download
+4	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	4.1	Quotation Generation	SC030	Quotation Generation - Integration	Integrate PDF service
+Integrate WhatsApp/email sharing	•	Generate PDF - Selected items list, Package details, Total estimated cost
+•	Share/download
+4	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	4.2	Inquiry Management	SC031	Inquiry Management - UI	As a user, I want to submit inquiry
+As a user, I want to track inquiry status	•	Submit inquiry
+•	Notifications via SMS/email
+4	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	4.2	Inquiry Management	SC032	Inquiry Management - API	Create inquiry creation API
+Create inquiry status API	•	Submit inquiry
+•	Notifications via SMS/email
+4	CUSTOMER	CUSTOMER ONBOARDING & CONFIGURATION	4.2	Inquiry Management	SC033	Inquiry Management - Integration	Integrate notification system (SMS/email)	•	Submit inquiry
+•	Notifications via SMS/email
+5	CUSTOMER	CUSTOMER SERVICING	5.1	Dashboard Overview	SC034	Dashboard Overview - UI	As a user, I want to see projects, quotes, payments
+As a user, I want recent activity feed	Customer Dashboard
+•	Total Inquiries
+•	Total Quotations
+•	Active Projects
+•	Total Payments
+•	Additional: Recent activity feed,
+5	CUSTOMER	CUSTOMER SERVICING	5.1	Dashboard Overview	SC035	Dashboard Overview - API	Create dashboard aggregation API	Customer Dashboard
+•	Total Inquiries
+•	Total Quotations
+•	Active Projects
+•	Total Payments
+•	Additional: Recent activity feed,
+5	CUSTOMER	CUSTOMER SERVICING	5.1	Dashboard Overview	SC036	Dashboard Overview - Integration	Integrate analytics engine	Customer Dashboard
+•	Total Inquiries
+•	Total Quotations
+•	Active Projects
+•	Total Payments
+•	Additional: Recent activity feed,
+5	CUSTOMER	CUSTOMER SERVICING	5.2	Customer Enquiries	SC037	Customer Enquiries - UI		Inquiry List
+•	Inquiry ID 
+•	Date & Time 
+•	Project Type (e.g., 2 BHK Interior) 
+•	Budget Range 
+•	Status (Open / In Progress / Closed)
+Actions per Inquiry: View Details, Close Inquiry, Send Reminder, Contact Support
+Inquiry Detail Screen:
+•	Selected configuration (BHK, rooms) 
+•	Preferences 
+•	Budget 
+•	Notes 
+•	AI-generated suggestions (optional)
+5	CUSTOMER	CUSTOMER SERVICING	5.2	Customer Enquiries	SC038	Customer Enquiries - API		Inquiry List
+•	Inquiry ID 
+•	Date & Time 
+•	Project Type (e.g., 2 BHK Interior) 
+•	Budget Range 
+•	Status (Open / In Progress / Closed)
+Actions per Inquiry: View Details, Close Inquiry, Send Reminder, Contact Support
+Inquiry Detail Screen:
+•	Selected configuration (BHK, rooms) 
+•	Preferences 
+•	Budget 
+•	Notes 
+•	AI-generated suggestions (optional)
+5	CUSTOMER	CUSTOMER SERVICING	5.2	Customer Enquiries	SC039	Customer Enquiries - INTEGRATION		Inquiry List
+•	Inquiry ID 
+•	Date & Time 
+•	Project Type (e.g., 2 BHK Interior) 
+•	Budget Range 
+•	Status (Open / In Progress / Closed)
+Actions per Inquiry: View Details, Close Inquiry, Send Reminder, Contact Support
+Inquiry Detail Screen:
+•	Selected configuration (BHK, rooms) 
+•	Preferences 
+•	Budget 
+•	Notes 
+•	AI-generated suggestions (optional)
+5	CUSTOMER	CUSTOMER SERVICING	5.3	Customer Quotations	SC040	Customer Quotations - UI		All Quotations
+Show:
+•	Quote ID 
+•	Linked Inquiry 
+•	Price 
+•	Date 
+•	Status (Pending / Approved / Expired)
+Actions:
+•	Download Quotation (PDF)
+•	Make Payment
+•	Share (WhatsApp/email)
+•	Request Changes
+Quote Detail Screen:
+•	Itemized breakdown: 
+o	Bedroom → Bed, Wardrobe 
+o	Hall → Sofa, TV unit 
+•	Pricing per item 
+•	Total cost
+5	CUSTOMER	CUSTOMER SERVICING	5.3	Customer Quotations	SC041	Customer Quotations - API		All Quotations
+Show:
+•	Quote ID 
+•	Linked Inquiry 
+•	Price 
+•	Date 
+•	Status (Pending / Approved / Expired)
+Actions:
+•	Download Quotation (PDF)
+•	Make Payment
+•	Share (WhatsApp/email)
+•	Request Changes
+Quote Detail Screen:
+•	Itemized breakdown: 
+o	Bedroom → Bed, Wardrobe 
+o	Hall → Sofa, TV unit 
+•	Pricing per item 
+•	Total cost
+5	CUSTOMER	CUSTOMER SERVICING	5.3	Customer Quotations	SC042	Customer Quotations - INTEGRATION		All Quotations
+Show:
+•	Quote ID 
+•	Linked Inquiry 
+•	Price 
+•	Date 
+•	Status (Pending / Approved / Expired)
+Actions:
+•	Download Quotation (PDF)
+•	Make Payment
+•	Share (WhatsApp/email)
+•	Request Changes
+Quote Detail Screen:
+•	Itemized breakdown: 
+o	Bedroom → Bed, Wardrobe 
+o	Hall → Sofa, TV unit 
+•	Pricing per item 
+•	Total cost
+5	CUSTOMER	CUSTOMER SERVICING	5.4	2D Plan AI Rendering	SC043	2D Plan AI Rendering - UI		Upload Inputs:
+•	2D floor plan 
+•	Room images 
+AI Rendering:
+•	Generate final interior view 
+•	Show: 
+o	Room-wise visuals 
+o	Product placements
+5	CUSTOMER	CUSTOMER SERVICING	5.4	2D Plan AI Rendering	SC044	2D Plan AI Rendering - API		Upload Inputs:
+•	2D floor plan 
+•	Room images 
+AI Rendering:
+•	Generate final interior view 
+•	Show: 
+o	Room-wise visuals 
+o	Product placements
+5	CUSTOMER	CUSTOMER SERVICING	5.4	2D Plan AI Rendering	SC045	2D Plan AI Rendering - Integration		Upload Inputs:
+•	2D floor plan 
+•	Room images 
+AI Rendering:
+•	Generate final interior view 
+•	Show: 
+o	Room-wise visuals 
+o	Product placements
+5	CUSTOMER	CUSTOMER SERVICING	5.5	Project Tracking	SC046	Project Tracking - UI	As a user, I want to track item-level progress
+As a user, I want to view images uploaded by coordinator
+As a user, I want to raise issues	Only visible after payment
+Project List
+Show:
+•	Project ID 
+•	Type (2 BHK Interior) 
+•	Start Date 
+•	Estimated Completion 
+•	Status
+Project Detail (Very Important)
+Room-wise Breakdown:
+Hall
+•	Sofa → Status: Delivered 
+•	TV Unit → In Production 
+Bedroom
+•	Bed → Installed 
+•	Wardrobe → Dispatch Pending
+For EACH Item:
+•	Status: 
+o	Ordered 
+o	In Production 
+o	Dispatched 
+o	Installed 
+•	Expected delivery date 
+•	Actual image (uploaded by coordinator)
+Additional Features:
+•	Progress photos 
+•	Contact coordinator 
+•	Raise issue
+5	CUSTOMER	CUSTOMER SERVICING	5.5	Project Tracking	SC047	Project Tracking - API	Create project tracking API
+Create item status API
+Create issue API	Only visible after payment
+Project List
+Show:
+•	Project ID 
+•	Type (2 BHK Interior) 
+•	Start Date 
+•	Estimated Completion 
+•	Status
+Project Detail (Very Important)
+Room-wise Breakdown:
+Hall
+•	Sofa → Status: Delivered 
+•	TV Unit → In Production 
+Bedroom
+•	Bed → Installed 
+•	Wardrobe → Dispatch Pending
+For EACH Item:
+•	Status: 
+o	Ordered 
+o	In Production 
+o	Dispatched 
+o	Installed 
+•	Expected delivery date 
+•	Actual image (uploaded by coordinator)
+Additional Features:
+•	Progress photos 
+•	Contact coordinator 
+•	Raise issue
+5	CUSTOMER	CUSTOMER SERVICING	5.5	Project Tracking	SC048	Project Tracking - Integration	Integrate real-time updates (WebSockets)
+Integrate image storage	Only visible after payment
+Project List
+Show:
+•	Project ID 
+•	Type (2 BHK Interior) 
+•	Start Date 
+•	Estimated Completion 
+•	Status
+Project Detail (Very Important)
+Room-wise Breakdown:
+Hall
+•	Sofa → Status: Delivered 
+•	TV Unit → In Production 
+Bedroom
+•	Bed → Installed 
+•	Wardrobe → Dispatch Pending
+For EACH Item:
+•	Status: 
+o	Ordered 
+o	In Production 
+o	Dispatched 
+o	Installed 
+•	Expected delivery date 
+•	Actual image (uploaded by coordinator)
+Additional Features:
+•	Progress photos 
+•	Contact coordinator 
+•	Raise issue
+5	CUSTOMER	CUSTOMER SERVICING	5.6	Payments	SC049	Payments - UI	As a user, I want to pay online
+As a user, I want invoices/receipts	Payment Overview
+Show:
+•	Total paid 
+•	Pending amount 
+•	Upcoming milestones
+Actions:
+•	Make Payment 
+•	Download Invoice 
+•	Download Receipt
+5	CUSTOMER	CUSTOMER SERVICING	5.6	Payments	SC050	Payments - API	Create payment API
+Create invoice API	Payment Overview
+Show:
+•	Total paid 
+•	Pending amount 
+•	Upcoming milestones
+Actions:
+•	Make Payment 
+•	Download Invoice 
+•	Download Receipt
+5	CUSTOMER	CUSTOMER SERVICING	5.6	Payments	SC051	Payments - Integration	Integrate payment gateway (Razorpay/Stripe)
+Integrate accounting system	Payment Overview
+Show:
+•	Total paid 
+•	Pending amount 
+•	Upcoming milestones
+Actions:
+•	Make Payment 
+•	Download Invoice 
+•	Download Receipt
+5	CUSTOMER	CUSTOMER SERVICING	5.7	Special Services	SC052	Special Services - UI		This is a separate revenue stream 
+Services:
+•	3D Rendering 
+•	Custom Design 
+•	Advanced Modeling 
+•	Consultation 
+Flow:
+1.	User selects service 
+2.	Pays separately 
+3.	Created as new project
+5	CUSTOMER	CUSTOMER SERVICING	5.7	Special Services	SC053	Special Services - API		This is a separate revenue stream 
+Services:
+•	3D Rendering 
+•	Custom Design 
+•	Advanced Modeling 
+•	Consultation 
+Flow:
+1.	User selects service 
+2.	Pays separately 
+3.	Created as new project
+5	CUSTOMER	CUSTOMER SERVICING	5.7	Special Services	SC054	Special Services - Integration		This is a separate revenue stream 
+Services:
+•	3D Rendering 
+•	Custom Design 
+•	Advanced Modeling 
+•	Consultation 
+Flow:
+1.	User selects service 
+2.	Pays separately 
+3.	Created as new project
+6	VENDOR	VENDOR MANAGEMENT	6.1	Vendor Onboarding	SC055	Vendor Onboarding - UI	As a vendor, I want to register and upload documents
+As a vendor, I want approval status tracking	5.1 Onboarding
+•	Business details, GST, PAN, bank details
+•	Approval workflow
+•	Business Name, Owner Name, Phone / Email, GST Number, Address (pickup / warehouse), Serviceable locations (pincode-based) 
+•	Category:  Furniture, Kitchen, Lighting, Décor
+Document Upload:
+•	GST Certificate 
+•	PAN Card 
+•	Bank Details (for payouts) 
+Status Flow:
+•	Submitted → Under Review → Approved / Rejected 
+•	Only after approval:
+Partner gets dashboard access
+Fields:
+•	Product Name 
+•	Category (Bed / Sofa / Wardrobe etc.) 
+•	Subcategory 
+•	Price (base price to platform) 
+•	Variants: 
+o	Size 
+o	Color 
+o	Material
+5.2 Product Management
+•	Add/edit products
+•	Upload images
+•	Define variants
+•	Manage inventory
+6	VENDOR	VENDOR MANAGEMENT	6.1	Vendor Onboarding	SC056	Vendor Onboarding - API	Create vendor registration API
+Create document upload API	5.1 Onboarding
+•	Business details, GST, PAN, bank details
+•	Approval workflow
+•	Business Name, Owner Name, Phone / Email, GST Number, Address (pickup / warehouse), Serviceable locations (pincode-based) 
+•	Category:  Furniture, Kitchen, Lighting, Décor
+Document Upload:
+•	GST Certificate 
+•	PAN Card 
+•	Bank Details (for payouts) 
+Status Flow:
+•	Submitted → Under Review → Approved / Rejected 
+•	Only after approval:
+Partner gets dashboard access
+Fields:
+•	Product Name 
+•	Category (Bed / Sofa / Wardrobe etc.) 
+•	Subcategory 
+•	Price (base price to platform) 
+•	Variants: 
+o	Size 
+o	Color 
+o	Material
+5.2 Product Management
+•	Add/edit products
+•	Upload images
+•	Define variants
+•	Manage inventory
+6	VENDOR	VENDOR MANAGEMENT	6.1	Vendor Onboarding	SC057	Vendor Onboarding - Integration	Integrate KYC verification
+Integrate admin approval workflow	5.1 Onboarding
+•	Business details, GST, PAN, bank details
+•	Approval workflow
+•	Business Name, Owner Name, Phone / Email, GST Number, Address (pickup / warehouse), Serviceable locations (pincode-based) 
+•	Category:  Furniture, Kitchen, Lighting, Décor
+Document Upload:
+•	GST Certificate 
+•	PAN Card 
+•	Bank Details (for payouts) 
+Status Flow:
+•	Submitted → Under Review → Approved / Rejected 
+•	Only after approval:
+Partner gets dashboard access
+Fields:
+•	Product Name 
+•	Category (Bed / Sofa / Wardrobe etc.) 
+•	Subcategory 
+•	Price (base price to platform) 
+•	Variants: 
+o	Size 
+o	Color 
+o	Material
+5.2 Product Management
+•	Add/edit products
+•	Upload images
+•	Define variants
+•	Manage inventory
+6	VENDOR	VENDOR MANAGEMENT	6.2	Vendor Dashboard	SC058	Vendor Dashboard - UI		Metrics:
+•	Total Projects 
+•	Total Items Assigned 
+•	Pending Items 
+•	Completed Items 
+•	Earnings
+6	VENDOR	VENDOR MANAGEMENT	6.2	Vendor Dashboard	SC059	Vendor Dashboard - API		Metrics:
+•	Total Projects 
+•	Total Items Assigned 
+•	Pending Items 
+•	Completed Items 
+•	Earnings
+6	VENDOR	VENDOR MANAGEMENT	6.2	Vendor Dashboard	SC060	Vendor Dashboard - Integration		Metrics:
+•	Total Projects 
+•	Total Items Assigned 
+•	Pending Items 
+•	Completed Items 
+•	Earnings
+6	VENDOR	VENDOR MANAGEMENT	6.3	Product Management	SC061	Product Management - UI	As a vendor, I want to add/edit products
+As a vendor, I want to manage inventory	
+6	VENDOR	VENDOR MANAGEMENT	6.3	Product Management	SC062	Product Management - API	Create product CRUD APIs
+Create inventory API	
+6	VENDOR	VENDOR MANAGEMENT	6.3	Product Management	SC063	Product Management - Integration	Integrate catalog management system	
+6	VENDOR	VENDOR MANAGEMENT	6.4	Project Management	SC064	Project Management - UI		Show:
+•	Project ID 
+•	Customer name 
+•	Location 
+•	Total items 
+•	Status
+Items Breakdown:
+Grouped by room:
+•	Bedroom → Bed, Wardrobe 
+•	Hall → Sofa, TV Unit
+Status Flow:
+1.	Assigned 
+2.	Accepted 
+3.	In Production 
+4.	Ready 
+5.	Dispatched 
+6.	Delivered 
+7.	Installed
+Actions per Item:
+•	Accept / Reject item 
+•	Update status 
+•	Upload images
+6	VENDOR	VENDOR MANAGEMENT	6.4	Project Management	SC065	Project Management - API		Show:
+•	Project ID 
+•	Customer name 
+•	Location 
+•	Total items 
+•	Status
+Items Breakdown:
+Grouped by room:
+•	Bedroom → Bed, Wardrobe 
+•	Hall → Sofa, TV Unit
+Status Flow:
+1.	Assigned 
+2.	Accepted 
+3.	In Production 
+4.	Ready 
+5.	Dispatched 
+6.	Delivered 
+7.	Installed
+Actions per Item:
+•	Accept / Reject item 
+•	Update status 
+•	Upload images
+6	VENDOR	VENDOR MANAGEMENT	6.4	Project Management	SC066	Project Management - Integration		Show:
+•	Project ID 
+•	Customer name 
+•	Location 
+•	Total items 
+•	Status
+Items Breakdown:
+Grouped by room:
+•	Bedroom → Bed, Wardrobe 
+•	Hall → Sofa, TV Unit
+Status Flow:
+1.	Assigned 
+2.	Accepted 
+3.	In Production 
+4.	Ready 
+5.	Dispatched 
+6.	Delivered 
+7.	Installed
+Actions per Item:
+•	Accept / Reject item 
+•	Update status 
+•	Upload images
+6	VENDOR	VENDOR MANAGEMENT	6.5	Item Execution	SC067	Item Execution - UI	As a vendor, I want to update item status
+As a vendor, I want to upload delivery images	•	View assigned items
+•	Update status:
+•	Accepted → Production → Shipped/Delivered
+•	Upload images
+6	VENDOR	VENDOR MANAGEMENT	6.5	Item Execution	SC068	Item Execution - API	Create item status update API
+Create image upload API	•	View assigned items
+•	Update status:
+•	Accepted → Production → Shipped/Delivered
+•	Upload images
+6	VENDOR	VENDOR MANAGEMENT	6.5	Item Execution	SC069	Item Execution - Integration	Integrate logistics tracking (optional)	•	View assigned items
+•	Update status:
+•	Accepted → Production → Shipped/Delivered
+•	Upload images
+6	VENDOR	VENDOR MANAGEMENT	6.6	Payments	SC070	Payments - UI		•	View payouts
+•	Payment history
+•	Download Receipt / Invoice
+6	VENDOR	VENDOR MANAGEMENT	6.6	Payments	SC071	Payments - API		•	View payouts
+•	Payment history
+•	Download Receipt / Invoice
+6	VENDOR	VENDOR MANAGEMENT	6.6	Payments	SC072	Payments - Integration		•	View payouts
+•	Payment history
+•	Download Receipt / Invoice
+7	PROJECT TEAM	PROJECT TEAM MODULE	7	Dashboard	SC073	Dashboard - UI		•	Total Projects Assigned
+•	Active Projects
+•	Pending Items
+•	Completed Items
+7	PROJECT TEAM	PROJECT TEAM MODULE	7	Dashboard	SC074	Dashboard - API		•	Total Projects Assigned
+•	Active Projects
+•	Pending Items
+•	Completed Items
+7	PROJECT TEAM	PROJECT TEAM MODULE	7	Dashboard	SC075	Dashboard - Integration		•	Total Projects Assigned
+•	Active Projects
+•	Pending Items
+•	Completed Items
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.1	Project Management	SC076	Project Management - UI	As a manager, I want to assign vendors and team
+As a coordinator, I want to manage assigned projects	•	View project details
+•	Customer + vendor info
+Show:
+•	Project ID 
+•	Customer Name 
+•	Location 
+•	Start Date 
+•	Status (On Track / Delayed / Completed)
+Customer Details:
+•	Name 
+•	Address 
+•	Phone number 
+Vendor Details:
+•	Vendor name 
+•	Contact number 
+•	Items assigned
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.1	Project Management	SC077	Project Management - API	Create project assignment API
+Create role-based access API	•	View project details
+•	Customer + vendor info
+Show:
+•	Project ID 
+•	Customer Name 
+•	Location 
+•	Start Date 
+•	Status (On Track / Delayed / Completed)
+Customer Details:
+•	Name 
+•	Address 
+•	Phone number 
+Vendor Details:
+•	Vendor name 
+•	Contact number 
+•	Items assigned
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.1	Project Management	SC078	Project Management - Integration	Integrate RBAC system	•	View project details
+•	Customer + vendor info
+Show:
+•	Project ID 
+•	Customer Name 
+•	Location 
+•	Start Date 
+•	Status (On Track / Delayed / Completed)
+Customer Details:
+•	Name 
+•	Address 
+•	Phone number 
+Vendor Details:
+•	Vendor name 
+•	Contact number 
+•	Items assigned
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.2	Item Update	SC079			•	Update status
+•	Upload proof images
+Status Flow (Editable by Project Team):
+1.	Ordered 
+2.	In Production 
+3.	Dispatched 
+4.	Delivered 
+5.	Installed ✅
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.2	Item Update	SC080			•	Update status
+•	Upload proof images
+Status Flow (Editable by Project Team):
+1.	Ordered 
+2.	In Production 
+3.	Dispatched 
+4.	Delivered 
+5.	Installed ✅
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.2	Item Update	SC081			•	Update status
+•	Upload proof images
+Status Flow (Editable by Project Team):
+1.	Ordered 
+2.	In Production 
+3.	Dispatched 
+4.	Delivered 
+5.	Installed ✅
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.3	Task & Issue Management	SC082	Task & Issue Management - UI	As a coordinator, I want to assign tasks
+As a user, I want to raise issues	Issue & Escalation Management
+Project Team Can:
+•	Raise issue: 
+o	Vendor delay 
+o	Damaged item 
+o	Wrong product
+Scheduling & Task Management
+Features:
+•	Assign tasks: 
+o	“Install bed – 12th May” 
+•	Daily checklist 
+•	Visit planning 
+
+Optional (Phase 2):
+•	Calendar view 
+•	Route optimization
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.3	Task & Issue Management	SC083	Task & Issue Management - API	Create task API
+Create issue tracking API	Issue & Escalation Management
+Project Team Can:
+•	Raise issue: 
+o	Vendor delay 
+o	Damaged item 
+o	Wrong product
+Scheduling & Task Management
+Features:
+•	Assign tasks: 
+o	“Install bed – 12th May” 
+•	Daily checklist 
+•	Visit planning 
+
+Optional (Phase 2):
+•	Calendar view 
+•	Route optimization
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.3	Task & Issue Management	SC084	Task & Issue Management - Integration	Integrate ticketing system	Issue & Escalation Management
+Project Team Can:
+•	Raise issue: 
+o	Vendor delay 
+o	Damaged item 
+o	Wrong product
+Scheduling & Task Management
+Features:
+•	Assign tasks: 
+o	“Install bed – 12th May” 
+•	Daily checklist 
+•	Visit planning 
+
+Optional (Phase 2):
+•	Calendar view 
+•	Route optimization
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.4	Project Team	SC085	Project Team - UI		Users:
+•	Project Manager (overview + control) 
+•	Project Coordinator (on-ground execution) 
+•	Installer / Technician (item-level updates) 
+Access Control:
+•	Role-based permissions 
+o	Manager → All projects 
+o	Coordinator → Assigned projects 
+o	Technician → Assigned items
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.4	Project Team	SC086	Project Team - API		Users:
+•	Project Manager (overview + control) 
+•	Project Coordinator (on-ground execution) 
+•	Installer / Technician (item-level updates) 
+Access Control:
+•	Role-based permissions 
+o	Manager → All projects 
+o	Coordinator → Assigned projects 
+o	Technician → Assigned items
+7	PROJECT TEAM	PROJECT TEAM MODULE	7.4	Project Team	SC087	Project Team - Integration		Users:
+•	Project Manager (overview + control) 
+•	Project Coordinator (on-ground execution) 
+•	Installer / Technician (item-level updates) 
+Access Control:
+•	Role-based permissions 
+o	Manager → All projects 
+o	Coordinator → Assigned projects 
+o	Technician → Assigned items
+8	ADMIN	ADMIN MODULE	8.1	Admin Dashboard	SC088	Admin Dashboard - UI		KPI Cards (Top Section):
+•	Total Clients 
+•	Active Projects 
+•	Revenue (MTD / Total) 
+•	Pending Payments 
+•	Delayed Projects
+8	ADMIN	ADMIN MODULE	8.1	Admin Dashboard	SC089	Admin Dashboard - API		KPI Cards (Top Section):
+•	Total Clients 
+•	Active Projects 
+•	Revenue (MTD / Total) 
+•	Pending Payments 
+•	Delayed Projects
+8	ADMIN	ADMIN MODULE	8.1	Admin Dashboard	SC090	Admin Dashboard - Integration		KPI Cards (Top Section):
+•	Total Clients 
+•	Active Projects 
+•	Revenue (MTD / Total) 
+•	Pending Payments 
+•	Delayed Projects
+8	ADMIN	ADMIN MODULE	8.2	Admin - Client	SC091	Admin - Client - UI		•	View all clients
+•	Access client dashboard view
+8	ADMIN	ADMIN MODULE	8.2	Admin - Client	SC092	Admin - Client - API		•	View all clients
+•	Access client dashboard view
+8	ADMIN	ADMIN MODULE	8.2	Admin - Client	SC093	Admin - Client - Integration		•	View all clients
+•	Access client dashboard view
+8	ADMIN	ADMIN MODULE	8.3	Admin - Vendor	SC094	Admin - Vendor - UI		•	Approve/reject vendors
+•	Monitor performance
+8	ADMIN	ADMIN MODULE	8.3	Admin - Vendor	SC095	Admin - Vendor - API		•	Approve/reject vendors
+•	Monitor performance
+8	ADMIN	ADMIN MODULE	8.3	Admin - Vendor	SC096	Admin - Vendor - Integration		•	Approve/reject vendors
+•	Monitor performance
+8	ADMIN	ADMIN MODULE	8.4	Admin - Quotations	SC097	Admin - Quotations - UI		•	Create/edit quotes
+•	Upload plans/images
+•	Generate payment links
+•	Convert to project
+8	ADMIN	ADMIN MODULE	8.4	Admin - Quotations	SC098	Admin - Quotations - API		•	Create/edit quotes
+•	Upload plans/images
+•	Generate payment links
+•	Convert to project
+8	ADMIN	ADMIN MODULE	8.4	Admin - Quotations	SC099	Admin - Quotations - Integration		•	Create/edit quotes
+•	Upload plans/images
+•	Generate payment links
+•	Convert to project
+8	ADMIN	ADMIN MODULE	8.5	Admin - Projects	SC100	Admin - Projects - UI		•	Assign vendors
+•	Assign project team
+•	Track progress
+•	Close projects
+8	ADMIN	ADMIN MODULE	8.5	Admin - Projects	SC101	Admin - Projects - API		•	Assign vendors
+•	Assign project team
+•	Track progress
+•	Close projects
+8	ADMIN	ADMIN MODULE	8.5	Admin - Projects	SC102	Admin - Projects - Integration		•	Assign vendors
+•	Assign project team
+•	Track progress
+•	Close projects
+8	ADMIN	ADMIN MODULE	8.6	Master Data & Configuration	SC103	Master Data & Configuration - UI		As admin, I want to manage SKUs, pricing, packages
+•	SKU definitions
+•	Package configurations
+•	Default Data
+•	Picklist
+•	Pricing rules
+•	Roles & permissions
+8	ADMIN	ADMIN MODULE	8.6	Master Data & Configuration	SC104	Master Data & Configuration - API		As admin, I want to manage SKUs, pricing, packages
+•	SKU definitions
+•	Package configurations
+•	Default Data
+•	Picklist
+•	Pricing rules
+•	Roles & permissions
+8	ADMIN	ADMIN MODULE	8.6	Master Data & Configuration	SC105	Master Data & Configuration - Integration		As admin, I want to manage SKUs, pricing, packages
+•	SKU definitions
+•	Package configurations
+•	Default Data
+•	Picklist
+•	Pricing rules
+•	Roles & permissions
+9	ADMIN	AI ENGINE LAYER	9.1	Recommendation Engine	SC106	Recommendation Engine - UI	As a user, I want smart suggestions	
+9	ADMIN	AI ENGINE LAYER	9.1	Recommendation Engine	SC107	Recommendation Engine - API	Create recommendation API	
+9	ADMIN	AI ENGINE LAYER	9.1	Recommendation Engine	SC108	Recommendation Engine - Integration	Integrate ML model	
+9	ADMIN	AI ENGINE LAYER	9.2	Agentic AI	SC109	Agentic AI - UI		
+9	ADMIN	AI ENGINE LAYER	9.2	Agentic AI	SC110	Agentic AI - API		
+9	ADMIN	AI ENGINE LAYER	9.2	Agentic AI	SC111	Agentic AI - Integration		
+9	ADMIN	AI ENGINE LAYER	9.3	Execution AI	SC112	Execution AI - UI	As admin, I want auto vendor assignment	
+9	ADMIN	AI ENGINE LAYER	9.3	Execution AI	SC113	Execution AI - API	Create assignment API	
+9	ADMIN	AI ENGINE LAYER	9.3	Execution AI	SC114	Execution AI - Integration	Integrate optimization engine	
+10	ADMIN	ADMIN MODULE	10.1	Reports	SC115	Reports - UI		As admin, I want sales/project/vendor reports
+•	Sales report
+•	Project report
+•	Vendor report
+•	NPS report
+10	ADMIN	ADMIN MODULE	10.1	Reports	SC116	Reports - API		As admin, I want sales/project/vendor reports
+•	Sales report
+•	Project report
+•	Vendor report
+•	NPS report
+10	ADMIN	ADMIN MODULE	10.1	Reports	SC117	Reports - Integration		As admin, I want sales/project/vendor reports
+•	Sales report
+•	Project report
+•	Vendor report
+•	NPS report

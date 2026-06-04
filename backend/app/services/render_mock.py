@@ -1,8 +1,7 @@
-"""
-Render mock service — simulates SDXL+ControlNet pipeline.
-Returns curated Unsplash interior images per style.
-Swap this file for real GPU inference in production.
-"""
+import os
+import base64
+import datetime
+import httpx
 
 UNSPLASH = "https://images.unsplash.com"
 
@@ -10,7 +9,7 @@ RENDER_IMAGES: dict[str, list[str]] = {
     "modern": [
         f"{UNSPLASH}/photo-1586023492125-27b2c045efd7?w=1200&h=800&fit=crop&q=85",
         f"{UNSPLASH}/photo-1555041469-a586c61ea9bc?w=1200&h=800&fit=crop&q=85",
-        f"{UNSPLASH}/photo-1600210492486-724fe5c67fb3?w=1200&h=800&fit=crop&q=85",
+        f"{UNSPLASH}/photo-1600607687939-ce8a6c25118c?w=1200&h=800&fit=crop&q=85",
         f"{UNSPLASH}/photo-1618220179428-22790b461013?w=1200&h=800&fit=crop&q=85",
     ],
     "scandinavian": [
@@ -117,3 +116,46 @@ def build_prompt(style: str, color_palette: list, room_type: str = "living room"
         f"color palette: {colors}, natural daylight, 8k resolution, architectural digest style, "
         f"professional interior photography"
     )
+
+
+def get_gemini_render(prompt: str) -> str:
+    api_key = os.getenv("GEMINI_KEY")
+    if not api_key:
+        print("Gemini rendering skipped: GEMINI_KEY not found in environment")
+        return None
+
+    # Google AI Studio Imagen 3 endpoint
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "prompt": prompt,
+        "numberOfImages": 1,
+        "outputMimeType": "image/jpeg",
+        "aspectRatio": "3:2"
+    }
+
+    try:
+        print(f"Requesting Gemini Imagen rendering: {prompt[:60]}...")
+        response = httpx.post(url, headers=headers, json=payload, timeout=25.0)
+        if response.status_code == 200:
+            data = response.json()
+            images = data.get("generatedImages", [])
+            if images:
+                img_bytes = base64.b64decode(images[0]["image"]["imageBytes"])
+                
+                os.makedirs(os.path.join("pdfs", "renders"), exist_ok=True)
+                filename = f"gen_{int(datetime.datetime.utcnow().timestamp())}.jpg"
+                filepath = os.path.join("pdfs", "renders", filename)
+                with open(filepath, "wb") as f:
+                    f.write(img_bytes)
+                
+                print(f"Gemini render completed and saved: /static/pdfs/renders/{filename}")
+                return f"/static/pdfs/renders/{filename}"
+            else:
+                print(f"Gemini Imagen returned empty image list: {response.text}")
+        else:
+            print(f"Gemini Imagen API error: status {response.status_code}, details: {response.text}")
+    except Exception as e:
+        print(f"Failed to fetch render from Gemini Imagen API: {e}")
+        
+    return None
