@@ -156,6 +156,11 @@ def add_room_item(
         existing.qty = req.qty
         existing.custom_color = req.custom_color
         existing.custom_material = req.custom_material
+        existing.custom_size = req.custom_size
+        existing.custom_fabric = req.custom_fabric
+        existing.custom_wood_finish = req.custom_wood_finish
+        existing.custom_texture = req.custom_texture
+        existing.custom_cushion_style = req.custom_cushion_style
         existing.unit_price = product.price
         db.commit()
         return {"message": "item updated", "item_id": existing.id}
@@ -167,6 +172,11 @@ def add_room_item(
         qty=req.qty,
         custom_color=req.custom_color,
         custom_material=req.custom_material,
+        custom_size=req.custom_size,
+        custom_fabric=req.custom_fabric,
+        custom_wood_finish=req.custom_wood_finish,
+        custom_texture=req.custom_texture,
+        custom_cushion_style=req.custom_cushion_style,
         unit_price=product.price,
     )
     db.add(item)
@@ -283,7 +293,22 @@ def _room_detail(r: Room, db: Session) -> dict:
                 "product_id": it.product_id,
                 "qty": it.qty,
                 "custom_color": it.custom_color,
+                "custom_material": it.custom_material,
+                "custom_size": it.custom_size,
+                "custom_fabric": it.custom_fabric,
+                "custom_wood_finish": it.custom_wood_finish,
+                "custom_texture": it.custom_texture,
+                "custom_cushion_style": it.custom_cushion_style,
                 "unit_price": it.unit_price,
+                "product": {
+                    "id": it.product.id,
+                    "sku": it.product.sku,
+                    "name": it.product.name,
+                    "category": it.product.category,
+                    "thumbnail_url": it.product.thumbnail_url,
+                    "price": it.product.price,
+                    "variants": it.product.variants or {},
+                } if it.product else None,
             }
             for it in items
         ],

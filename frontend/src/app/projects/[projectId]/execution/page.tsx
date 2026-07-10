@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useProjectTeamStore } from '@/stores/projectTeamStore';
+import { useAuthStore } from '@/stores/authStore';
 import { ExecutionProgressBar } from '@/components/vendor/ExecutionProgressBar';
 import { IssueTracker } from '@/components/vendor/IssueTracker';
 import { TimelineView } from '@/components/vendor/TimelineView';
@@ -13,12 +14,16 @@ import toast from 'react-hot-toast';
 export default function ProjectExecutionPage() {
   const { projectId } = useParams() as { projectId: string };
   const router = useRouter();
+  const { user: authUser } = useAuthStore();
   
   const {
     progress,
     photos,
     members,
     tracking,
+    projectDetail,
+    customerDetail,
+    vendorDetail,
     fetchProgress,
     fetchPhotos,
     fetchMembers,
@@ -82,6 +87,39 @@ export default function ProjectExecutionPage() {
     createdAt: new Date(),
   }));
 
+  // Access Control check (6.1)
+  const projectMember = members.find((m) => m.user.id === authUser?.id && m.status === 'ACTIVE');
+  const userRole = projectMember?.role || (authUser?.role?.toUpperCase() === 'ADMIN' ? 'MANAGER' : 'COORDINATOR');
+  const isManager = userRole === 'MANAGER';
+  const isCoordinator = userRole === 'COORDINATOR';
+  const isTechnician = userRole === 'TECHNICIAN';
+  const isAssigned = !!projectMember;
+  const hasAccess = isManager || isAssigned;
+
+  if (members.length > 0 && !hasAccess) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">
+        <Navbar />
+        <div className="max-w-md mx-auto px-4 pt-32 text-center space-y-4">
+          <div className="bg-red-50 border border-red-200/80 text-red-800 rounded-2xl p-6 shadow-sm space-y-3">
+            <h2 className="text-sm font-black uppercase tracking-wider text-red-700">Access Denied</h2>
+            <p className="text-xs text-red-650 font-semibold leading-relaxed">
+              {isCoordinator 
+                ? 'Access Denied: You are not assigned to coordinate this project.' 
+                : 'Access Denied: You are not assigned as a technician for this project.'}
+            </p>
+            <button
+              onClick={() => router.push('/team')}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition shadow-sm"
+            >
+              Back to Team Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">
       <Navbar />
@@ -89,18 +127,49 @@ export default function ProjectExecutionPage() {
       <div className="max-w-7xl mx-auto px-4 pt-24 space-y-8">
         {/* Back Button */}
         <button
-          onClick={() => router.push(`/dashboard`)}
+          onClick={() => router.push(`/team`)}
           className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 transition-colors text-sm font-semibold"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </button>
 
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Project Execution Center</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Monitor construction milestones, items shipping status, and site visit photos.
-          </p>
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Active Project</span>
+              <span className="text-xs font-mono text-slate-500">ID: {projectId}</span>
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Project Execution Center</h1>
+            <p className="text-xs text-slate-400">
+              Monitor construction milestones, items shipping status, and site visit photos.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:flex md:items-center gap-x-8 gap-y-2 text-xs">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Customer</span>
+              <span className="font-extrabold text-slate-700">{customerDetail?.name || 'N/A'}</span>
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Location</span>
+              <span className="font-extrabold text-slate-700">{projectDetail?.city || 'N/A'} ({projectDetail?.pincode || 'N/A'})</span>
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Start Date</span>
+              <span className="font-extrabold text-slate-700">{projectDetail?.startDate || 'N/A'}</span>
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block font-bold">Project Status</span>
+              <span className={`px-2.5 py-0.5 text-[10px] font-black rounded-full uppercase inline-block border mt-0.5 ${
+                projectDetail?.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                projectDetail?.status === 'Delayed' ? 'bg-red-50 text-red-755 border-red-100' :
+                'bg-indigo-50 text-indigo-700 border-indigo-100'
+              }`}>
+                {projectDetail?.status || 'On Track'}
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -161,10 +230,74 @@ export default function ProjectExecutionPage() {
             </div>
           </div>
 
-          {/* Right Column: Issues Tracker, Photo Uploads and Brief Team */}
+          {/* Right Column: Issues Tracker, Details Sidebars, Photo Uploads and Brief Team */}
           <div className="space-y-6">
             {/* Issue Tracker */}
             <IssueTracker projectId={projectId} />
+
+            {/* Customer Profile Card */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+              <div>
+                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">
+                  Customer Profile
+                </h3>
+                <p className="text-[10px] text-slate-450 font-medium">Primary contact details for this project.</p>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-2.5 text-xs">
+                <div className="flex justify-between font-semibold">
+                  <span className="text-slate-450">Name</span>
+                  <span className="text-slate-800 font-extrabold">{customerDetail?.name || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between font-semibold">
+                  <span className="text-slate-450">Phone</span>
+                  <span className="text-slate-800 font-extrabold">{customerDetail?.phone || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between font-semibold">
+                  <span className="text-slate-450">Email</span>
+                  <span className="text-slate-600 font-mono font-bold">{customerDetail?.email || 'N/A'}</span>
+                </div>
+                <div className="border-t border-slate-200/60 pt-2 font-semibold">
+                  <span className="text-slate-450 block mb-1">Site Address</span>
+                  <span className="text-slate-700 text-[11px] leading-relaxed block">{customerDetail?.address || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Vendor Directory Card */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+              <div>
+                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">
+                  Vendor Directory
+                </h3>
+                <p className="text-[10px] text-slate-450 font-medium">Assigned manufacturing & supply partners.</p>
+              </div>
+
+              <div className="space-y-3">
+                {vendorDetail && vendorDetail.length > 0 ? (
+                  vendorDetail.map((vendor: any) => (
+                    <div key={vendor.id} className="border border-slate-150 rounded-xl p-3.5 bg-slate-50/50 space-y-2 text-xs">
+                      <div className="flex justify-between items-start font-bold">
+                        <span className="text-slate-800 text-[11px]">{vendor.businessName}</span>
+                        <span className="text-[10px] text-indigo-650 font-mono">{vendor.phone}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                        Assigned Items:
+                      </div>
+                      <ul className="list-disc pl-4 text-[10px] text-slate-650 space-y-0.5">
+                        {vendor.items.map((itemStr: string, idx: number) => (
+                          <li key={idx} className="font-semibold">{itemStr}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-slate-400 text-xs font-semibold border border-dashed border-slate-200 rounded-xl">
+                    No vendors assigned to project elements yet.
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Photo Gallery & Upload */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-5">

@@ -101,6 +101,8 @@ class Product(Base):
     sku = Column(String, unique=True)
     name = Column(String)
     category = Column(String)
+    subcategory = Column(String, nullable=True)
+    vendor_id = Column(String, ForeignKey("vendors.id"), nullable=True)
     room_type = Column(String)
     price = Column(Float)
     dimensions_l = Column(Float, default=0)
@@ -108,9 +110,12 @@ class Product(Base):
     dimensions_h = Column(Float, default=0)
     materials = Column(JSON, default=list)
     color_variants = Column(JSON, default=list)
+    variants = Column(JSON, default=dict) # Options dictionary (color, fabric, size, texture, wood_finish, cushion_style)
     thumbnail_url = Column(String)
     model_url = Column(String)
     style_tags = Column(JSON, default=list)
+
+    vendor = relationship("Vendor", backref="catalog_products")
 
 
 class RoomItem(Base):
@@ -121,6 +126,11 @@ class RoomItem(Base):
     qty = Column(Integer, default=1)
     custom_color = Column(String)
     custom_material = Column(String)
+    custom_size = Column(String, nullable=True)
+    custom_fabric = Column(String, nullable=True)
+    custom_wood_finish = Column(String, nullable=True)
+    custom_texture = Column(String, nullable=True)
+    custom_cushion_style = Column(String, nullable=True)
     unit_price = Column(Float)
 
     room = relationship("Room", back_populates="items")
@@ -421,6 +431,18 @@ class VendorAssignment(Base):
     accepted_at = Column(DateTime, nullable=True)
     rejected_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    # Shipment tracking details
+    shipment_id = Column(String, nullable=True)
+    courier = Column(String, nullable=True)
+    vehicle_details = Column(String, nullable=True)
+    tracking_number = Column(String, nullable=True)
+    dispatch_date = Column(String, nullable=True)
+    expected_arrival = Column(String, nullable=True)
+    shipment_status = Column(String, default="Pending") # Pending, Dispatched, In Transit, Delivered
+
+    # Milestone based payments status
+    milestones_status = Column(JSON, default=dict) # e.g. {"po_approved": "paid", "design_approved": "pending", etc.}
 
     vendor = relationship("Vendor", back_populates="assignments")
     project = relationship("Project", backref=backref("vendor_assignments", cascade="all, delete-orphan"))

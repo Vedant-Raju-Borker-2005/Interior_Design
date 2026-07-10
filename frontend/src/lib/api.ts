@@ -35,10 +35,10 @@ axiosInstance.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  signup: (data: { name?: string; email?: string; phone?: string; role?: string; city?: string; furnishing_preference?: string }) =>
+  signup: (data: { name?: string; email?: string; phone?: string }) =>
     axiosInstance.post('/api/v1/auth/signup', data),
   
-  login: (data: { email?: string; phone?: string; role?: string }) =>
+  login: (data: { email?: string; phone?: string }) =>
     axiosInstance.post('/api/v1/auth/login', data),
   
   verifyOtp: (data: { email?: string; phone?: string; otp: string }) =>
@@ -81,7 +81,17 @@ export const projectsAPI = {
   updateRoom: (projectId: string, roomId: string, data: { style_preference?: string; color_palette?: string[]; length_ft?: number; width_ft?: number; height_ft?: number }) =>
     axiosInstance.put(`/api/v1/projects/${projectId}/rooms/${roomId}`, data),
 
-  addRoomItem: (projectId: string, roomId: string, data: { product_id: string; qty: number; custom_color?: string; custom_material?: string }) =>
+  addRoomItem: (projectId: string, roomId: string, data: {
+    product_id: string;
+    qty: number;
+    custom_color?: string;
+    custom_material?: string;
+    custom_size?: string;
+    custom_fabric?: string;
+    custom_wood_finish?: string;
+    custom_texture?: string;
+    custom_cushion_style?: string;
+  }) =>
     axiosInstance.post(`/api/v1/projects/${projectId}/rooms/${roomId}/items`, data),
 
   removeRoomItem: (projectId: string, roomId: string, itemId: string) =>
@@ -99,7 +109,7 @@ export const catalogAPI = {
   packages: (params?: { bhk?: string; tier?: string; budget?: number; style?: string }) =>
     axiosInstance.get('/api/v1/catalog/packages', { params }),
   
-  products: (params?: { room_type?: string; category?: string; style?: string; max_price?: number; limit?: number; skip?: number }) =>
+  products: (params: { room_type?: string; category?: string; style?: string; limit?: number; skip?: number; pincode?: string }) =>
     axiosInstance.get('/api/v1/catalog/products', { params }),
 
   productsByRoom: (roomType: string) =>
@@ -111,7 +121,7 @@ export const catalogAPI = {
 
 // AI Rendering API
 export const aiAPI = {
-  render: (data: { room_id: string; mode?: string; style?: string; color_palette?: string[]; products?: any[]; layout_image?: string | null }) =>
+  render: (data: { room_id: string; mode?: string; style?: string; color_palette?: string[]; products?: any[]; layout_prompt?: string; base_image_url?: string; base_image_data?: string; base_image_mime?: string }) =>
     axiosInstance.post('/api/v1/ai/render', data),
   
   renderStatus: (jobId: string) =>
@@ -119,6 +129,9 @@ export const aiAPI = {
 
   roomRenders: (roomId: string) =>
     axiosInstance.get(`/api/v1/ai/renders/${roomId}`),
+
+  renderPdf: (projectId: string) =>
+    `${API_BASE_URL}/api/v1/ai/render-pdf/${projectId}`,
 
   // Legacy mappings
   renderProject: (projectId: string, data: { style: string }) =>
@@ -230,11 +243,9 @@ export const customerAPI = {
     return axiosInstance.post(`/api/v1/customer/projects/${projectId}/quotations/revisions`, fd)
   },
   updateQuotationStatus: (projectId: string, quotationId: string, status: string) => {
-    const fd = new URLSearchParams()
+    const fd = new FormData()
     fd.append('status', status)
-    return axiosInstance.put(`/api/v1/customer/projects/${projectId}/quotations/${quotationId}/status`, fd, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    })
+    return axiosInstance.put(`/api/v1/customer/projects/${projectId}/quotations/${quotationId}/status`, fd)
   },
 
   getActivity: () =>
@@ -336,7 +347,7 @@ export const teamAPI = {
 export const vendorAPI = {
   getOnboarding: () =>
     axiosInstance.get('/api/v1/vendor/onboarding'),
-  register: (data: { businessName: string; ownerName: string; email: string; phone?: string; gstNumber?: string; panNumber?: string; warehouseAddress?: string; serviceLocations: string[] }) =>
+  register: (data: { businessName: string; ownerName: string; email: string; phone?: string; gstNumber?: string; panNumber?: string; warehouseAddress?: string; serviceLocations: string[]; categories?: string[] }) =>
     axiosInstance.post('/api/v1/vendor/onboarding', data),
   uploadDocuments: (formData: FormData) =>
     axiosInstance.put('/api/v1/vendor/onboarding', formData, {
@@ -352,6 +363,9 @@ export const vendorAPI = {
     axiosInstance.post('/api/v1/vendor/products', data),
   updateProduct: (productId: string, data: { name?: string; category?: string; subcategory?: string; description?: string; basePrice?: number; images?: string[]; availableQty?: number }) =>
     axiosInstance.put(`/api/v1/vendor/products/${productId}`, data),
+  deleteProduct: (productId: string) =>
+    axiosInstance.delete(`/api/v1/vendor/products/${productId}`),
+
 
   getInventory: () =>
     axiosInstance.get('/api/v1/vendor/inventory'),
@@ -362,6 +376,10 @@ export const vendorAPI = {
     axiosInstance.get('/api/v1/vendor/assignments'),
   updateAssignment: (assignmentId: string, status: string, remarks?: string) =>
     axiosInstance.patch(`/api/v1/vendor/assignments/${assignmentId}`, { status, remarks }),
+  updateShipment: (assignmentId: string, data: { courier: string; vehicle_details?: string; tracking_number: string; dispatch_date?: string; expected_arrival?: string; shipment_status: string }) =>
+    axiosInstance.put(`/api/v1/vendor/assignments/${assignmentId}/shipment`, data),
+  updateMilestone: (assignmentId: string, milestoneName: string, status: string) =>
+    axiosInstance.put(`/api/v1/vendor/assignments/${assignmentId}/milestones`, { milestone_name: milestoneName, status }),
   addMilestone: (assignmentId: string, formData: FormData) =>
     axiosInstance.post(`/api/v1/vendor/assignments/${assignmentId}/milestones`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -381,3 +399,4 @@ export const vendorAPI = {
 }
 
 export default axiosInstance
+

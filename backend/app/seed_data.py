@@ -1,7 +1,7 @@
 """Seed the database with sample packages, products, and vendors."""
 import uuid
 from sqlalchemy.orm import Session
-from .models import Package, Product, Vendor
+from .models import Package, Product, Vendor, VendorProduct
 
 
 UNSPLASH = "https://images.unsplash.com"
@@ -22,6 +22,56 @@ PACKAGE_THUMBNAILS = {
     ("5BHK", "basic"):    f"{UNSPLASH}/photo-1578683010236-d716f9a3f461?w=800&q=80&fit=crop",
     ("5BHK", "premium"):  f"{UNSPLASH}/photo-1600566753086-00f18fb6b3ea?w=800&q=80&fit=crop",
     ("5BHK", "luxury"):   f"{UNSPLASH}/photo-1616594039964-ae9021a400a0?w=800&q=80&fit=crop",
+}
+
+# Distinct, verified Unsplash product image URLs — each product gets its own unique photo
+IMG = {
+    # Sofas (distinct types)
+    "sofa_modular":    f"{UNSPLASH}/photo-1555041469-a586c61ea9bc?w=600&q=85&fit=crop",   # grey L-shape sectional
+    "sofa_sectional":  f"{UNSPLASH}/photo-1493663284031-b7e3aaa4eb94?w=600&q=85&fit=crop",  # classic sectional sofa
+    "sofa_chesterfield": f"{UNSPLASH}/photo-1567225557594-88d73398014a?w=600&q=85&fit=crop", # chesterfield style
+    "sofa_loveseat":   f"{UNSPLASH}/photo-1506439773649-6e0eb8cfb237?w=600&q=85&fit=crop",  # loveseat 2-seater
+    # Coffee Tables
+    "table_coffee":    f"{UNSPLASH}/photo-1616627561839-074385245ff6?w=600&q=85&fit=crop",  # coffee table
+    "table_glass":     f"{UNSPLASH}/photo-1518455027359-f3f8164ba6bd?w=600&q=85&fit=crop",  # glass coffee table
+    # Side Tables
+    "table_side":      f"{UNSPLASH}/photo-1586023492125-27b2c045efd7?w=600&q=85&fit=crop",  # side table
+    "table_marble":    f"{UNSPLASH}/photo-1595526114035-0d45ed16cfbf?w=600&q=85&fit=crop",  # marble top table
+    # Chairs
+    "chair_accent":    f"{UNSPLASH}/photo-1598300042247-d088f8ab3a91?w=600&q=85&fit=crop",  # accent armchair
+    "chair_wingback":  f"{UNSPLASH}/photo-1580480055273-228ff5388ef8?w=600&q=85&fit=crop",  # wingback chair
+    # Rugs
+    "rug_wool":        f"{UNSPLASH}/photo-1600166898405-da9535204843?w=600&q=85&fit=crop",  # wool area rug
+    # Lighting
+    "lamp_floor":      f"{UNSPLASH}/photo-1507003211169-0a1dd7228f2d?w=600&q=85&fit=crop",  # floor lamp
+    "lamp_chandelier": f"{UNSPLASH}/photo-1565814329452-e1efa11c5b89?w=600&q=85&fit=crop",  # chandelier
+    "lamp_pendant":    f"{UNSPLASH}/photo-1513506003901-1e6a35087a18?w=600&q=85&fit=crop",  # pendant light
+    # Beds
+    "bed_king":        f"{UNSPLASH}/photo-1616594039964-ae9021a400a0?w=600&q=85&fit=crop",  # king bed
+    "bed_queen":       f"{UNSPLASH}/photo-1505693416388-ac5ce068fe85?w=600&q=85&fit=crop",  # queen bed
+    "bed_single":      f"{UNSPLASH}/photo-1522771739844-6a9f6d5f14af?w=600&q=85&fit=crop",  # single bed
+    # Wardrobes
+    "wardrobe_sliding":f"{UNSPLASH}/photo-1558618666-fcd25c85cd64?w=600&q=85&fit=crop",   # sliding wardrobe
+    "wardrobe_hinged": f"{UNSPLASH}/photo-1540574163026-643ea20ade25?w=600&q=85&fit=crop",  # hinged wardrobe
+    # Other bedroom
+    "dressing_table":  f"{UNSPLASH}/photo-1590750281732-37e8b5ef35f2?w=600&q=85&fit=crop",  # dressing table
+    "bedside_table":   f"{UNSPLASH}/photo-1501183638710-841dd1904471?w=600&q=85&fit=crop",  # bedside table
+    "ottoman":         f"{UNSPLASH}/photo-1571508601891-ca5e7a713859?w=600&q=85&fit=crop",  # ottoman bench
+    "study_desk":      f"{UNSPLASH}/photo-1593642632559-0c6d3fc62b89?w=600&q=85&fit=crop",  # study desk
+    # Kitchen
+    "kitchen_L":       f"{UNSPLASH}/photo-1556909114-f6e7ad7d3136?w=600&q=85&fit=crop",   # L-shape kitchen
+    "kitchen_straight":f"{UNSPLASH}/photo-1556911220-bff31c812dba?w=600&q=85&fit=crop",   # straight kitchen
+    "chimney":         f"{UNSPLASH}/photo-1600489000022-c2086d79f9d4?w=600&q=85&fit=crop",  # kitchen chimney
+    "hob":             f"{UNSPLASH}/photo-1585771724684-38269d6639fd?w=600&q=85&fit=crop",  # gas hob
+    # Bathroom
+    "wc_wallhung":     f"{UNSPLASH}/photo-1552321554-5fefe8c9ef14?w=600&q=85&fit=crop",   # wall hung WC
+    "washbasin":       f"{UNSPLASH}/photo-1584622650111-993a426fbf0a?w=600&q=85&fit=crop",  # washbasin vanity
+    "shower":          f"{UNSPLASH}/photo-1507652313519-d4e9174996dd?w=600&q=85&fit=crop",  # shower enclosure
+    # Decor
+    "wall_art":        f"{UNSPLASH}/photo-1513519245088-0e12902e35a7?w=600&q=85&fit=crop",  # wall art
+    "mattress":        f"{UNSPLASH}/photo-1631049552240-59c37f38802b?w=600&q=85&fit=crop",  # mattress
+    "tv_unit":         f"{UNSPLASH}/photo-1555041469-a586c61ea9bc?w=600&q=85&fit=crop",   # TV unit
+    "bookshelf":       f"{UNSPLASH}/photo-1507003211169-0a1dd7228f2d?w=600&q=85&fit=crop",  # bookshelf
 }
 
 PACKAGES = [
@@ -47,110 +97,285 @@ PACKAGES = [
     dict(bhk="5BHK", tier="luxury",  base_price= 4200000, style_tags=["luxury", "bespoke"],            description="Truly bespoke luxury — every element custom designed and hand-finished."),
 ]
 
-PRODUCT_IMG = {
-    "sofa":       f"{UNSPLASH}/photo-1555041469-a586c61ea9bc?w=400&q=80&fit=crop",
-    "bed":        f"{UNSPLASH}/photo-1616594039964-ae9021a400a0?w=400&q=80&fit=crop",
-    "wardrobe":   f"{UNSPLASH}/photo-1558618666-fcd25c85cd64?w=400&q=80&fit=crop",
-    "kitchen":    f"{UNSPLASH}/photo-1556909114-f6e7ad7d3136?w=400&q=80&fit=crop",
-    "table":      f"{UNSPLASH}/photo-1555041469-a586c61ea9bc?w=400&q=80&fit=crop",
-    "lamp":       f"{UNSPLASH}/photo-1507003211169-0a1dd7228f2d?w=400&q=80&fit=crop",
-    "tiles":      f"{UNSPLASH}/photo-1600585154340-be6161a56a0c?w=400&q=80&fit=crop",
-    "curtain":    f"{UNSPLASH}/photo-1493809842364-78817add7ffb?w=400&q=80&fit=crop",
-    "ceiling":    f"{UNSPLASH}/photo-1600210492486-724fe5c67fb3?w=400&q=80&fit=crop",
-    "outdoor":    f"{UNSPLASH}/photo-1520250497591-112f2f40a3f4?w=400&q=80&fit=crop",
-    "bathroom":   f"{UNSPLASH}/photo-1552321554-5fefe8c9ef14?w=400&q=80&fit=crop",
-    "generic":    f"{UNSPLASH}/photo-1586023492125-27b2c045efd7?w=400&q=80&fit=crop",
-}
-
 PRODUCTS = [
-    # Living Room
-    dict(sku="LR001", name="L-Shape Modular Sofa", category="seating", room_type="living_room", price=47500, thumbnail_url=PRODUCT_IMG["sofa"], materials=["fabric", "wood"], color_variants=["grey", "beige", "navy"], style_tags=["modern", "contemporary"]),
-    dict(sku="LR002", name="3-Seater Sectional Sofa", category="seating", room_type="living_room", price=62000, thumbnail_url=PRODUCT_IMG["sofa"], materials=["leather", "wood"], color_variants=["brown", "black", "white"], style_tags=["luxury", "modern"]),
-    dict(sku="LR003", name="Center Coffee Table – Walnut", category="tables", room_type="living_room", price=13500, thumbnail_url=PRODUCT_IMG["table"], materials=["walnut wood", "tempered glass"], color_variants=["natural", "dark walnut"], style_tags=["scandinavian", "modern"]),
-    dict(sku="LR004", name="TV Unit with Storage", category="storage", room_type="living_room", price=19500, thumbnail_url=PRODUCT_IMG["generic"], materials=["MDF", "lacquer"], color_variants=["white", "grey", "oak"], style_tags=["modern", "functional"]),
-    dict(sku="LR005", name="6-Shelf Bookshelf", category="storage", room_type="living_room", price=8500, thumbnail_url=PRODUCT_IMG["generic"], materials=["engineered wood"], color_variants=["white", "mahogany"], style_tags=["scandinavian"]),
-    dict(sku="LR006", name="Arc Floor Lamp – Brushed Gold", category="lighting", room_type="living_room", price=5200, thumbnail_url=PRODUCT_IMG["lamp"], materials=["metal", "fabric shade"], color_variants=["gold", "chrome", "matte black"], style_tags=["modern", "luxury"]),
-    dict(sku="LR007", name="Ring Chandelier – Copper", category="lighting", room_type="living_room", price=14800, thumbnail_url=PRODUCT_IMG["lamp"], materials=["metal", "LED"], color_variants=["copper", "gold", "silver"], style_tags=["luxury", "contemporary"]),
-    dict(sku="LR008", name="Blackout Curtains – Pair 9ft", category="window", room_type="living_room", price=6800, thumbnail_url=PRODUCT_IMG["curtain"], materials=["polyester blend"], color_variants=["charcoal", "ivory", "forest green"], style_tags=["modern"]),
-    dict(sku="LR009", name="Hand-tufted Wool Area Rug 8×10", category="flooring", room_type="living_room", price=18000, thumbnail_url=PRODUCT_IMG["tiles"], materials=["wool", "cotton backing"], color_variants=["cream", "terracotta", "sage"], style_tags=["contemporary", "warm"]),
-    dict(sku="LR010", name="Side Table – Marble Top", category="tables", room_type="living_room", price=5800, thumbnail_url=PRODUCT_IMG["table"], materials=["marble", "brass"], color_variants=["white marble", "black marble"], style_tags=["luxury"]),
-    dict(sku="LR011", name="Accent Armchair – Boucle", category="seating", room_type="living_room", price=22000, thumbnail_url=PRODUCT_IMG["sofa"], materials=["boucle fabric"], color_variants=["cream", "blush", "sage"], style_tags=["scandinavian", "boho"]),
-    dict(sku="LR012", name="Smart LED Strip 5m", category="lighting", room_type="living_room", price=3500, thumbnail_url=PRODUCT_IMG["lamp"], materials=["LED"], color_variants=["RGBW"], style_tags=["modern", "smart"]),
+    # ── Living Room ──────────────────────────────────────────────────────────
+    # Sofas — each with its own distinct image
+    dict(
+        sku="LR001", name="Luxura Modular Sofa",
+        category="sofas", room_type="living_room", price=47500,
+        thumbnail_url=IMG["sofa_modular"],
+        materials=["fabric", "wood"], color_variants=["grey", "beige", "navy"],
+        style_tags=["modern", "contemporary"],
+        variants={
+            "color": ["Grey", "Navy", "Beige", "Charcoal", "Emerald Green", "Royal Blue"],
+            "fabric": ["Velvet", "Linen", "Boucle", "Cotton Blend"],
+            "wood_finish": ["Natural Oak", "Dark Walnut", "Mahogany"],
+            "size": ["3-Seater", "2-Seater", "L-Shape", "U-Shape"],
+            "texture": ["Smooth", "Textured Woven", "Coarse Velvet"],
+            "cushion_style": ["Tufted", "Plain Minimalist", "Ribbed Accent"]
+        }
+    ),
+    dict(
+        sku="LR002", name="Sectional Classic Leather Sofa",
+        category="sofas", room_type="living_room", price=62000,
+        thumbnail_url=IMG["sofa_sectional"],
+        materials=["leather", "wood"], color_variants=["brown", "black", "white"],
+        style_tags=["luxury", "modern"],
+        variants={
+            "color": ["Tan Brown", "Charcoal Black", "Ivory White", "Cognac Leather"],
+            "fabric": ["Genuine Italian Leather", "Premium Faux Leather"],
+            "wood_finish": ["Walnut", "Ebony", "Teak"],
+            "size": ["3-Seater Sectional", "L-Shape Large", "4-Seater Extended"],
+            "texture": ["Top-grain Matte", "Distressed Vintage", "Smooth Nappa"],
+            "cushion_style": ["Plain Minimalist", "Deep Button Tufted"]
+        }
+    ),
+    dict(
+        sku="LR013", name="Chesterfield Velvet Sofa",
+        category="sofas", room_type="living_room", price=55000,
+        thumbnail_url=IMG["sofa_chesterfield"],
+        materials=["velvet", "solid wood"], color_variants=["emerald", "burgundy", "navy"],
+        style_tags=["luxury", "classic"],
+        variants={
+            "color": ["Emerald Green", "Deep Burgundy", "Royal Navy", "Burnt Orange", "Midnight Black"],
+            "fabric": ["Premium Velvet", "Plush Suede", "Brocade"],
+            "wood_finish": ["Dark Mahogany", "Polished Ebony", "Antique Gold Studs"],
+            "size": ["2-Seater", "3-Seater", "3-Seater + Chaise"],
+            "cushion_style": ["Deep Button Tufted", "Scroll Arm Tufted"]
+        }
+    ),
+    dict(
+        sku="LR014", name="Compact Loveseat Sofa",
+        category="sofas", room_type="living_room", price=28500,
+        thumbnail_url=IMG["sofa_loveseat"],
+        materials=["fabric", "engineered wood"], color_variants=["blush", "grey", "white"],
+        style_tags=["scandinavian", "minimalist"],
+        variants={
+            "color": ["Blush Pink", "Light Grey", "Off-White", "Dusty Blue", "Sage Green"],
+            "fabric": ["Linen Weave", "Boucle", "Cotton Velvet", "Microfibre"],
+            "size": ["2-Seater 130cm", "2.5-Seater 155cm"],
+            "cushion_style": ["Plain Minimalist", "Track Arm"]
+        }
+    ),
+    # Coffee Tables
+    dict(
+        sku="LR003", name="Center Coffee Table — Solid Walnut",
+        category="coffee_tables", room_type="living_room", price=13500,
+        thumbnail_url=IMG["table_coffee"],
+        materials=["walnut wood", "tempered glass"], color_variants=["natural", "dark walnut"],
+        style_tags=["scandinavian", "modern"],
+        variants={
+            "color": ["Natural Walnut", "Charcoal Black", "Warm Honey"],
+            "wood_finish": ["Oak Veneer", "Solid Walnut", "Teak Finish"],
+            "size": ["Standard (40\"x20\")", "Large (48\"x24\")"]
+        }
+    ),
+    dict(
+        sku="LR015", name="Glass-Top Coffee Table",
+        category="coffee_tables", room_type="living_room", price=9800,
+        thumbnail_url=IMG["table_glass"],
+        materials=["tempered glass", "stainless steel"], color_variants=["clear", "black"],
+        style_tags=["modern", "contemporary"],
+        variants={
+            "color": ["Clear Glass + Gold Frame", "Smoked Glass + Chrome", "Frosted + Matte Black"],
+            "size": ["Round 80cm", "Rectangle 110x60cm"]
+        }
+    ),
+    # Side Tables
+    dict(
+        sku="LR010", name="Side Table — Marble Top",
+        category="side_tables", room_type="living_room", price=5800,
+        thumbnail_url=IMG["table_marble"],
+        materials=["marble", "brass"], color_variants=["white marble", "black marble"],
+        style_tags=["luxury"],
+        variants={
+            "color": ["White Carrara", "Black Marquina", "Green Emerald Marble"],
+            "wood_finish": ["Brushed Brass Legs", "Matte Black Steel Legs", "Polished Gold"],
+            "size": ["Standard (18\" Round)", "Tall (22\" Round)"]
+        }
+    ),
+    dict(
+        sku="LR016", name="Wooden Nest of Side Tables",
+        category="side_tables", room_type="living_room", price=4200,
+        thumbnail_url=IMG["table_side"],
+        materials=["solid wood", "metal"], color_variants=["oak", "walnut", "white"],
+        style_tags=["scandinavian", "modern"],
+        variants={
+            "color": ["Natural Oak", "Walnut Brown", "Painted White"],
+            "wood_finish": ["Natural Matte", "Lacquered Gloss"],
+            "size": ["Set of 2", "Set of 3"]
+        }
+    ),
+    # Chairs
+    dict(
+        sku="LR011", name="Accent Armchair — Boucle",
+        category="chairs", room_type="living_room", price=22000,
+        thumbnail_url=IMG["chair_accent"],
+        materials=["boucle fabric"], color_variants=["cream", "blush", "sage"],
+        style_tags=["scandinavian", "boho"],
+        variants={
+            "color": ["Cream Boucle", "Blush Pink", "Sage Green", "Oatmeal Linen"],
+            "fabric": ["Boucle Loop", "Soft Velvet", "Premium Linen"],
+            "wood_finish": ["Natural Oak Legs", "Walnut Legs", "Gold Metal Swivel Base"]
+        }
+    ),
+    dict(
+        sku="LR017", name="Wingback Reading Chair",
+        category="chairs", room_type="living_room", price=32000,
+        thumbnail_url=IMG["chair_wingback"],
+        materials=["premium fabric", "solid wood"], color_variants=["navy", "forest green", "cognac"],
+        style_tags=["classic", "luxury"],
+        variants={
+            "color": ["Deep Navy", "Forest Green", "Cognac Brown", "Charcoal Grey"],
+            "fabric": ["Premium Tweed", "Leather", "Velvet"],
+            "wood_finish": ["Dark Walnut Legs", "Mahogany Legs", "Brass Claw Feet"]
+        }
+    ),
+    # Rugs
+    dict(
+        sku="LR009", name="Hand-tufted Wool Area Rug",
+        category="rugs", room_type="living_room", price=18000,
+        thumbnail_url=IMG["rug_wool"],
+        materials=["wool", "cotton backing"], color_variants=["cream", "terracotta", "sage"],
+        style_tags=["contemporary", "warm"],
+        variants={
+            "color": ["Cream & Grey Geometric", "Warm Terracotta Blend", "Calming Sage & Ivory", "Deep Navy Abstract"],
+            "size": ["5' x 7'", "8' x 10'", "9' x 12'"],
+            "texture": ["Plush High Pile", "Textured Low Loop", "Flatweave Wool"]
+        }
+    ),
+    # Lighting
+    dict(
+        sku="LR006", name="Arc Floor Lamp",
+        category="lighting", room_type="living_room", price=5200,
+        thumbnail_url=IMG["lamp_floor"],
+        materials=["metal", "fabric shade"], color_variants=["gold", "chrome", "matte black"],
+        style_tags=["modern", "luxury"],
+        variants={
+            "color": ["Brushed Gold", "Polished Chrome", "Matte Black"],
+            "size": ["Standard Height (6.5 ft)", "Extendable Deluxe (7.5 ft)"]
+        }
+    ),
+    dict(
+        sku="LR007", name="Ring Chandelier",
+        category="lighting", room_type="living_room", price=14800,
+        thumbnail_url=IMG["lamp_chandelier"],
+        materials=["metal", "LED"], color_variants=["copper", "gold", "silver"],
+        style_tags=["luxury", "contemporary"],
+        variants={
+            "color": ["Champagne Gold", "Rose Copper", "Polished Silver"],
+            "size": ["Single Ring 60cm", "Double Ring 80cm/60cm"]
+        }
+    ),
+    dict(
+        sku="LR012", name="Premium Wall Art",
+        category="decor", room_type="living_room", price=3500,
+        thumbnail_url=IMG["wall_art"],
+        materials=["canvas", "wood frame"], color_variants=["abstract", "geometric"],
+        style_tags=["modern", "decor"],
+        variants={
+            "color": ["Ocean Blue Abstract", "Monochromatic Swirls", "Earthy Terracotta Shapes"],
+            "size": ["Medium (24\"x36\")", "Large (36\"x48\")"]
+        }
+    ),
+    dict(sku="LR004", name="TV Unit with Storage", category="Furniture", room_type="living_room", price=19500, thumbnail_url=IMG["tv_unit"], materials=["MDF", "lacquer"], color_variants=["white", "grey", "oak"], style_tags=["modern", "functional"],
+         variants={"color": ["Gloss White", "Concrete Grey", "Oak Finish"], "wood_finish": ["Gloss Lacquer", "Matte PU", "Veneer"]}),
+    dict(sku="LR005", name="6-Shelf Bookshelf", category="Furniture", room_type="living_room", price=8500, thumbnail_url=IMG["bookshelf"], materials=["engineered wood"], color_variants=["white", "mahogany"], style_tags=["scandinavian"],
+         variants={"color": ["Pure White", "Dark Mahogany", "Natural Oak"], "size": ["4-Shelf", "6-Shelf"]}),
 
-    # Bedroom Master
-    dict(sku="MB001", name="King Size Bed Frame – Upholstered", category="bed", room_type="bedroom_master", price=48000, thumbnail_url=PRODUCT_IMG["bed"], materials=["fabric", "solid wood"], color_variants=["charcoal grey", "beige", "navy"], style_tags=["modern", "luxury"]),
-    dict(sku="MB002", name="Pocket Spring King Mattress", category="mattress", room_type="bedroom_master", price=36000, thumbnail_url=PRODUCT_IMG["bed"], materials=["pocket springs", "memory foam"], color_variants=["white"], style_tags=["comfort"]),
-    dict(sku="MB003", name="Walk-in Wardrobe 6-Door Sliding", category="storage", room_type="bedroom_master", price=65000, thumbnail_url=PRODUCT_IMG["wardrobe"], materials=["MDF", "mirror", "polyester finish"], color_variants=["white", "latte", "graphite"], style_tags=["modern", "luxury"]),
-    dict(sku="MB004", name="Dressing Table with Lighted Mirror", category="vanity", room_type="bedroom_master", price=24000, thumbnail_url=PRODUCT_IMG["generic"], materials=["MDF", "LED mirror"], color_variants=["white", "rose gold accent"], style_tags=["glam", "contemporary"]),
-    dict(sku="MB005", name="Bedside Tables – Pair", category="tables", room_type="bedroom_master", price=12500, thumbnail_url=PRODUCT_IMG["table"], materials=["wood", "metal legs"], color_variants=["oak", "walnut", "white"], style_tags=["scandinavian", "modern"]),
-    dict(sku="MB006", name="Pendant Lights Pair – Rattan", category="lighting", room_type="bedroom_master", price=9200, thumbnail_url=PRODUCT_IMG["lamp"], materials=["rattan", "LED bulb"], color_variants=["natural", "black"], style_tags=["boho", "scandinavian"]),
-    dict(sku="MB007", name="Study Desk & Ergonomic Chair", category="workspace", room_type="bedroom_master", price=17500, thumbnail_url=PRODUCT_IMG["generic"], materials=["MDF", "mesh fabric"], color_variants=["white/black", "oak/white"], style_tags=["functional"]),
-    dict(sku="MB008", name="Ottoman Storage Bench", category="seating", room_type="bedroom_master", price=11000, thumbnail_url=PRODUCT_IMG["sofa"], materials=["velvet", "wood legs"], color_variants=["dusty pink", "grey", "teal"], style_tags=["glam", "luxury"]),
+    # ── Master Bedroom ────────────────────────────────────────────────────────
+    dict(sku="MB001", name="King Size Bed Frame — Upholstered", category="Furniture", room_type="bedroom_master", price=48000,
+         thumbnail_url=IMG["bed_king"], materials=["fabric", "solid wood"], color_variants=["charcoal grey", "beige", "navy"], style_tags=["modern", "luxury"],
+         variants={"color": ["Charcoal Grey", "Warm Beige", "Deep Navy", "Dusty Rose", "Forest Green"], "fabric": ["Velvet Headboard", "Linen Upholstered", "Premium Suede"], "wood_finish": ["Dark Walnut", "Natural Oak", "Matte Black Metal"], "size": ["King (76\"x80\")", "Queen (60\"x80\")"], "texture": ["Smooth Padded", "Button Tufted", "Channel Stitched"]}),
+    dict(sku="MB002", name="Pocket Spring King Mattress", category="Furniture", room_type="bedroom_master", price=36000,
+         thumbnail_url=IMG["mattress"], materials=["pocket springs", "memory foam"], color_variants=["white"], style_tags=["comfort"],
+         variants={"size": ["King (76\"x80\")", "Queen (60\"x80\")"], "texture": ["Medium Firm", "Plush Pillow-top", "Extra Firm Orthopedic"]}),
+    dict(sku="MB003", name="Walk-in Wardrobe 6-Door Sliding", category="Furniture", room_type="bedroom_master", price=65000,
+         thumbnail_url=IMG["wardrobe_sliding"], materials=["MDF", "mirror", "polyester finish"], color_variants=["white", "latte", "graphite"], style_tags=["modern", "luxury"],
+         variants={"color": ["Gloss White", "Latte Matte", "Graphite Grey", "Champagne Beige"], "wood_finish": ["High Gloss PU", "Matte Membrane", "Acrylic Finish"], "size": ["6-Door 8ft", "4-Door 6ft", "8-Door 10ft"]}),
+    dict(sku="MB004", name="Dressing Table with Lighted Mirror", category="Furniture", room_type="bedroom_master", price=24000,
+         thumbnail_url=IMG["dressing_table"], materials=["MDF", "LED mirror"], color_variants=["white", "rose gold accent"], style_tags=["glam", "contemporary"],
+         variants={"color": ["Pure White", "Blush Pink", "Champagne Gold", "Marble White"], "wood_finish": ["Matte Lacquer", "Gloss PU", "Brushed Rose Gold Trim"]}),
+    dict(sku="MB005", name="Bedside Tables — Pair", category="Furniture", room_type="bedroom_master", price=12500,
+         thumbnail_url=IMG["bedside_table"], materials=["wood", "metal legs"], color_variants=["oak", "walnut", "white"], style_tags=["scandinavian", "modern"],
+         variants={"color": ["Natural Oak", "Dark Walnut", "Matte White", "Grey Concrete"], "wood_finish": ["Natural Wood", "Painted Matte", "Lacquered Gloss"]}),
+    dict(sku="MB006", name="Pendant Lights Pair — Rattan", category="Lighting", room_type="bedroom_master", price=9200,
+         thumbnail_url=IMG["lamp_pendant"], materials=["rattan", "LED bulb"], color_variants=["natural", "black"], style_tags=["boho", "scandinavian"],
+         variants={"color": ["Natural Rattan", "Black Metal", "Woven Beige", "Bleached White"], "size": ["Small (20cm)", "Medium (30cm)", "Large (40cm)"]}),
+    dict(sku="MB007", name="Study Desk & Ergonomic Chair", category="Furniture", room_type="bedroom_master", price=17500,
+         thumbnail_url=IMG["study_desk"], materials=["MDF", "mesh fabric"], color_variants=["white/black", "oak/white"], style_tags=["functional"],
+         variants={"color": ["White/Black", "Oak/White", "Grey/Chrome"], "fabric": ["Mesh Breathable", "PU Leather", "Fabric Cushion"]}),
+    dict(sku="MB008", name="Ottoman Storage Bench", category="Furniture", room_type="bedroom_master", price=11000,
+         thumbnail_url=IMG["ottoman"], materials=["velvet", "wood legs"], color_variants=["dusty pink", "grey", "teal"], style_tags=["glam", "luxury"],
+         variants={"color": ["Dusty Pink Velvet", "Midnight Grey", "Teal Blue", "Champagne Gold"], "fabric": ["Velvet", "Faux Suede", "Boucle"], "wood_finish": ["Walnut Legs", "Gold Metal Legs", "Black Matte Legs"]}),
 
-    # Bedroom 2 / Secondary
-    dict(sku="B2001", name="Queen Size Bed Frame – Low Profile", category="bed", room_type="bedroom_2", price=28500, thumbnail_url=PRODUCT_IMG["bed"], materials=["engineered wood"], color_variants=["wenge", "white", "oak"], style_tags=["modern", "minimalist"]),
-    dict(sku="B2002", name="Single Bed with Trundle", category="bed", room_type="bedroom_2", price=16000, thumbnail_url=PRODUCT_IMG["bed"], materials=["engineered wood"], color_variants=["white", "grey"], style_tags=["functional"]),
-    dict(sku="B2003", name="Wardrobe 2-Door Hinged", category="storage", room_type="bedroom_2", price=26000, thumbnail_url=PRODUCT_IMG["wardrobe"], materials=["MDF", "polyester"], color_variants=["white", "oak"], style_tags=["modern"]),
-    dict(sku="B2004", name="Kids Study Desk & Storage", category="workspace", room_type="bedroom_2", price=9500, thumbnail_url=PRODUCT_IMG["generic"], materials=["MDF"], color_variants=["blue", "pink", "yellow"], style_tags=["kids", "functional"]),
+    # ── Bedroom 2 ─────────────────────────────────────────────────────────────
+    dict(sku="B2001", name="Queen Size Bed Frame — Low Profile", category="Furniture", room_type="bedroom_2", price=28500,
+         thumbnail_url=IMG["bed_queen"], materials=["engineered wood"], color_variants=["wenge", "white", "oak"], style_tags=["modern", "minimalist"],
+         variants={"color": ["Wenge Dark", "Pure White", "Natural Oak"], "wood_finish": ["High Gloss", "Matte Laminate"], "size": ["Queen (60\"x80\")", "Full (54\"x75\")"]}),
+    dict(sku="B2002", name="Single Bed with Trundle", category="Furniture", room_type="bedroom_2", price=16000,
+         thumbnail_url=IMG["bed_single"], materials=["engineered wood"], color_variants=["white", "grey"], style_tags=["functional"],
+         variants={"color": ["Pure White", "Light Grey", "Powder Blue"], "wood_finish": ["Matte", "Gloss"]}),
+    dict(sku="B2003", name="Wardrobe 2-Door Hinged", category="Furniture", room_type="bedroom_2", price=26000,
+         thumbnail_url=IMG["wardrobe_hinged"], materials=["MDF", "polyester"], color_variants=["white", "oak"], style_tags=["modern"],
+         variants={"color": ["Pure White", "Oak Wood", "Mocha Brown"], "wood_finish": ["Matte Laminate", "High Gloss PU"]}),
+    dict(sku="B2004", name="Kids Study Desk & Storage", category="Furniture", room_type="bedroom_2", price=9500,
+         thumbnail_url=IMG["study_desk"], materials=["MDF"], color_variants=["blue", "pink", "yellow"], style_tags=["kids", "functional"],
+         variants={"color": ["Sky Blue", "Candy Pink", "Sunshine Yellow", "Mint Green"]}),
 
-    # Kitchen
-    dict(sku="KT001", name="Modular Kitchen L-Shape 8ft", category="modular_kitchen", room_type="kitchen", price=88000, thumbnail_url=PRODUCT_IMG["kitchen"], materials=["marine ply", "acrylic shutters", "SS sink"], color_variants=["white", "grey", "wood finish"], style_tags=["modern", "functional"]),
-    dict(sku="KT002", name="Modular Kitchen Straight 6ft", category="modular_kitchen", room_type="kitchen", price=58000, thumbnail_url=PRODUCT_IMG["kitchen"], materials=["marine ply", "membrane shutters", "SS sink"], color_variants=["beige", "white", "black"], style_tags=["modern"]),
-    dict(sku="KT003", name="Auto-Clean Chimney 90cm", category="appliance", room_type="kitchen", price=21000, thumbnail_url=PRODUCT_IMG["kitchen"], materials=["stainless steel", "tempered glass"], color_variants=["black", "silver"], style_tags=["functional"]),
-    dict(sku="KT004", name="4-Burner Gas Hob – Stainless", category="appliance", room_type="kitchen", price=13500, thumbnail_url=PRODUCT_IMG["kitchen"], materials=["stainless steel"], color_variants=["silver"], style_tags=["functional"]),
-    dict(sku="KT005", name="Kitchen Backsplash Tiles (per sqft)", category="tiles", room_type="kitchen", price=280, thumbnail_url=PRODUCT_IMG["tiles"], materials=["ceramic"], color_variants=["subway white", "grey brick", "terracotta"], style_tags=["modern"]),
-    dict(sku="KT006", name="Under-Counter Water Purifier", category="appliance", room_type="kitchen", price=8500, thumbnail_url=PRODUCT_IMG["generic"], materials=["ABS plastic", "steel"], color_variants=["white"], style_tags=["functional"]),
+    # ── Kitchen ───────────────────────────────────────────────────────────────
+    dict(sku="KT001", name="Modular Kitchen L-Shape 8ft", category="Kitchen", room_type="kitchen", price=88000,
+         thumbnail_url=IMG["kitchen_L"], materials=["marine ply", "acrylic shutters", "SS sink"], color_variants=["white", "grey", "wood finish"], style_tags=["modern", "functional"],
+         variants={"color": ["Gloss White", "Concrete Grey", "Oak Wood Finish", "Charcoal Black", "Ivory Matte"], "wood_finish": ["Acrylic High Gloss", "Membrane Matte", "PU Painted", "Veneer Finish"], "texture": ["Smooth Gloss", "Woodgrain Texture", "Micro Suede"], "size": ["L-Shape 8ft", "L-Shape 10ft", "Island + Straight"]}),
+    dict(sku="KT002", name="Modular Kitchen Straight 6ft", category="Kitchen", room_type="kitchen", price=58000,
+         thumbnail_url=IMG["kitchen_straight"], materials=["marine ply", "membrane shutters", "SS sink"], color_variants=["beige", "white", "black"], style_tags=["modern"],
+         variants={"color": ["Warm Beige", "Pure White", "Matte Black", "Graphite Grey"], "wood_finish": ["Membrane Matte", "Acrylic Gloss"], "size": ["6ft Straight", "8ft Straight"]}),
+    dict(sku="KT003", name="Auto-Clean Chimney 90cm", category="Kitchen", room_type="kitchen", price=21000,
+         thumbnail_url=IMG["chimney"], materials=["stainless steel", "tempered glass"], color_variants=["black", "silver"], style_tags=["functional"],
+         variants={"color": ["Matte Black", "Brushed Silver", "White"]}),
+    dict(sku="KT004", name="4-Burner Gas Hob — Stainless", category="Kitchen", room_type="kitchen", price=13500,
+         thumbnail_url=IMG["hob"], materials=["stainless steel"], color_variants=["silver"], style_tags=["functional"],
+         variants={"color": ["Stainless Steel", "Matte Black"], "texture": ["Brushed", "Mirror Polish"]}),
 
-    # Bathroom
-    dict(sku="BT001", name="Wall-Hung WC – Rimless", category="sanitaryware", room_type="bathroom", price=18500, thumbnail_url=PRODUCT_IMG["bathroom"], materials=["vitreous china"], color_variants=["white"], style_tags=["modern"]),
-    dict(sku="BT002", name="Washbasin with Vanity Counter", category="sanitaryware", room_type="bathroom", price=14000, thumbnail_url=PRODUCT_IMG["bathroom"], materials=["vitreous china", "MDF counter"], color_variants=["white", "grey"], style_tags=["modern"]),
-    dict(sku="BT003", name="Frameless Shower Enclosure", category="shower", room_type="bathroom", price=28000, thumbnail_url=PRODUCT_IMG["bathroom"], materials=["8mm tempered glass", "chrome fittings"], color_variants=["clear", "frosted"], style_tags=["luxury", "modern"]),
-    dict(sku="BT004", name="Backlit Vanity Mirror 36\"", category="accessories", room_type="bathroom", price=9500, thumbnail_url=PRODUCT_IMG["bathroom"], materials=["LED mirror", "aluminium frame"], color_variants=["chrome", "black"], style_tags=["modern"]),
-    dict(sku="BT005", name="Brass Towel Holder Set (3pc)", category="accessories", room_type="bathroom", price=3800, thumbnail_url=PRODUCT_IMG["bathroom"], materials=["brass"], color_variants=["antique brass", "matte black", "chrome"], style_tags=["luxury", "contemporary"]),
-    dict(sku="BT006", name="Electric Water Heater 25L", category="appliance", room_type="bathroom", price=7800, thumbnail_url=PRODUCT_IMG["bathroom"], materials=["steel tank", "ABS body"], color_variants=["white"], style_tags=["functional"]),
-
-    # Flooring & Ceiling
-    dict(sku="FL001", name="Engineered Hardwood Flooring (sqft)", category="flooring", room_type="living_room", price=195, thumbnail_url=PRODUCT_IMG["tiles"], materials=["oak hardwood", "lacquer"], color_variants=["natural oak", "dark walnut", "whitewash"], style_tags=["scandinavian", "luxury"]),
-    dict(sku="FL002", name="Large-Format Vitrified Tiles 800×800 (sqft)", category="flooring", room_type="living_room", price=95, thumbnail_url=PRODUCT_IMG["tiles"], materials=["vitrified porcelain"], color_variants=["marble white", "concrete grey", "beige"], style_tags=["modern", "functional"]),
-    dict(sku="FL003", name="PVC Luxury Vinyl Planks (sqft)", category="flooring", room_type="bedroom_2", price=65, thumbnail_url=PRODUCT_IMG["tiles"], materials=["PVC", "foam backing"], color_variants=["light wood", "dark wood", "grey"], style_tags=["functional"]),
-    dict(sku="CL001", name="False Ceiling – Gypsum per sqft", category="ceiling", room_type="living_room", price=130, thumbnail_url=PRODUCT_IMG["ceiling"], materials=["gypsum board"], color_variants=["white"], style_tags=["modern"]),
-    dict(sku="CL002", name="Wooden Ceiling Panel (sqft)", category="ceiling", room_type="bedroom_master", price=220, thumbnail_url=PRODUCT_IMG["ceiling"], materials=["PU wood panel"], color_variants=["light oak", "dark walnut"], style_tags=["scandinavian", "warm"]),
-    dict(sku="WL001", name="Texture Wall Paint per sqft", category="wall", room_type="living_room", price=55, thumbnail_url=PRODUCT_IMG["generic"], materials=["acrylic texture paint"], color_variants=["warm white", "sand", "terracotta", "sage"], style_tags=["modern"]),
-    dict(sku="WL002", name="Designer Wallpaper Roll", category="wall", room_type="bedroom_master", price=2800, thumbnail_url=PRODUCT_IMG["curtain"], materials=["non-woven paper"], color_variants=["floral", "geometric", "tropical"], style_tags=["contemporary", "glam"]),
-
-    # Dining
-    dict(sku="DR001", name="6-Seater Dining Table & Chairs", category="dining", room_type="living_room", price=32000, thumbnail_url=PRODUCT_IMG["table"], materials=["solid sheesham wood", "fabric seats"], color_variants=["natural", "dark walnut"], style_tags=["modern", "warm"]),
-    dict(sku="DR002", name="4-Seater Dining Set – Glass Top", category="dining", room_type="living_room", price=19500, thumbnail_url=PRODUCT_IMG["table"], materials=["tempered glass", "metal legs"], color_variants=["black", "chrome"], style_tags=["modern", "minimalist"]),
-    dict(sku="DR003", name="Sideboard / Buffet Cabinet", category="storage", room_type="living_room", price=24000, thumbnail_url=PRODUCT_IMG["generic"], materials=["MDF", "solid wood accents"], color_variants=["white", "oak"], style_tags=["scandinavian"]),
-
-    # Balcony
-    dict(sku="BL001", name="2-Seater Outdoor Rattan Sofa Set", category="outdoor", room_type="balcony", price=24000, thumbnail_url=PRODUCT_IMG["outdoor"], materials=["synthetic rattan", "aluminium frame"], color_variants=["grey", "brown"], style_tags=["tropical", "contemporary"]),
-    dict(sku="BL002", name="Artificial Garden Grass (sqft)", category="flooring", room_type="balcony", price=75, thumbnail_url=PRODUCT_IMG["outdoor"], materials=["polyethylene"], color_variants=["natural green"], style_tags=["tropical"]),
-    dict(sku="BL003", name="Outdoor Wall Lights Set of 4", category="lighting", room_type="balcony", price=6500, thumbnail_url=PRODUCT_IMG["lamp"], materials=["metal", "weatherproof"], color_variants=["black", "silver"], style_tags=["modern"]),
+    # ── Bathroom ──────────────────────────────────────────────────────────────
+    dict(sku="BT001", name="Wall-Hung WC — Rimless", category="Décor", room_type="bathroom", price=18500,
+         thumbnail_url=IMG["wc_wallhung"], materials=["vitreous china"], color_variants=["white"], style_tags=["modern"],
+         variants={"color": ["Gloss White", "Matte White", "Sandstone Beige"], "texture": ["Standard", "Rimless Hygiene"]}),
+    dict(sku="BT002", name="Washbasin with Vanity Counter", category="Furniture", room_type="bathroom", price=14000,
+         thumbnail_url=IMG["washbasin"], materials=["vitreous china", "MDF counter"], color_variants=["white", "grey"], style_tags=["modern"],
+         variants={"color": ["White", "Taupe Grey", "Light Oak"], "wood_finish": ["Gloss White", "Matt Grey", "Oak Veneer"], "size": ["Single 80cm", "Double 120cm"]}),
+    dict(sku="BT003", name="Frameless Shower Enclosure", category="Furniture", room_type="bathroom", price=28000,
+         thumbnail_url=IMG["shower"], materials=["8mm tempered glass", "chrome fittings"], color_variants=["clear", "frosted"], style_tags=["luxury", "modern"],
+         variants={"color": ["Clear Glass", "Frosted Glass", "Bronze Tinted Glass"], "texture": ["Smooth Frameless", "Ribbed Fluted"], "size": ["800x800 Square", "900x1200 Rectangle"]}),
 ]
 
 VENDORS = [
     dict(name="HomeCraft Carpentry Pvt Ltd", phone="+919900001111", gst_no="29AABCS1429B1Z1",
-         categories=["Carpentry", "Modular Furniture"], rating=4.7, active=True,
+         categories=["Furniture", "Wardrobes", "Kitchen Cabinets"], rating=4.7, active=True,
          serviceable_pincodes=["560001", "560002", "560078", "560100"]),
     dict(name="BrightSpark Electricals", phone="+919900002222", gst_no="29AADCE1234C1Z2",
-         categories=["Electrical", "Smart Lighting"], rating=4.5, active=True,
+         categories=["Lighting", "Appliances"], rating=4.5, active=True,
          serviceable_pincodes=["560001", "560010", "400001", "400050"]),
     dict(name="ElegantTile Works", phone="+919900003333", gst_no="29AAFCT5678D1Z3",
-         categories=["Civil", "Flooring", "Painting"], rating=4.8, active=True,
+         categories=["Flooring", "Decor", "Bathroom Fixtures", "Curtains", "Doors & Windows"], rating=4.8, active=True,
          serviceable_pincodes=["560001", "560078", "110001", "110050"]),
 ]
 
 
 def seed_database(db: Session):
     if db.query(Package).count() > 0:
-        return  # already seeded
+        return  # already seeded — never wipe vendor products on restart
+
+    # First-ever seed: clear any stale pre-seeded data
+    db.query(Product).delete()
+    db.query(VendorProduct).delete()
+    db.commit()
 
     # Seed packages
     pkg_tiers = ["basic", "premium", "luxury"]
     pkg_tier_names = {"basic": "Basic", "premium": "Premium", "luxury": "Luxury"}
     for p in PACKAGES:
-        thumb = PACKAGE_THUMBNAILS.get((p["bhk"], p["tier"]), PRODUCT_IMG["generic"])
+        thumb = PACKAGE_THUMBNAILS.get((p["bhk"], p["tier"]), IMG["sofa_modular"])
         pkg = Package(
             id=str(uuid.uuid4()),
             name=f"{pkg_tier_names[p['tier']]} {p['bhk']}",
@@ -165,26 +390,12 @@ def seed_database(db: Session):
         )
         db.add(pkg)
 
-    # Seed products
-    for p in PRODUCTS:
-        prod = Product(
-            id=str(uuid.uuid4()),
-            sku=p["sku"],
-            name=p["name"],
-            category=p["category"],
-            room_type=p["room_type"],
-            price=p["price"],
-            thumbnail_url=p["thumbnail_url"],
-            materials=p["materials"],
-            color_variants=p["color_variants"],
-            style_tags=p["style_tags"],
-        )
-        db.add(prod)
-
-    # Seed vendors
+    # Seed vendors first to map their IDs
+    vendor_map = {}
     for v in VENDORS:
-        vendor = Vendor(id=str(uuid.uuid4()), **v)
+        vendor_id = str(uuid.uuid4())
+        vendor = Vendor(id=vendor_id, **v)
         db.add(vendor)
-
+        vendor_map[v["name"]] = vendor_id
     db.commit()
-    print("[DB] Database seeded with packages, products, and vendors.")
+    print("[DB] Database seeded with packages and vendors. Products left blank for vendor upload.")

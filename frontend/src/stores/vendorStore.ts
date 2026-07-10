@@ -31,6 +31,7 @@ interface VendorState {
   loadProducts: () => Promise<void>
   createProduct: (data: any) => Promise<any>
   updateProduct: (productId: string, data: any) => Promise<any>
+  deleteProduct: (productId: string) => Promise<void>
   loadInventory: () => Promise<void>
   adjustInventory: (data: { productId: string; quantity: number; type: string; notes?: string }) => Promise<void>
   loadAssignments: () => Promise<void>
@@ -141,6 +142,19 @@ export const useVendorStore = create<VendorState>()(
           return res.data
         } catch (err: any) {
           const errorMsg = err.response?.data?.detail || 'Failed to update product'
+          set({ loading: false, error: errorMsg })
+          throw new Error(errorMsg)
+        }
+      },
+
+      deleteProduct: async (productId) => {
+        set({ loading: true, error: null })
+        try {
+          await vendorAPI.deleteProduct(productId)
+          await get().loadProducts()
+          set({ loading: false })
+        } catch (err: any) {
+          const errorMsg = err.response?.data?.detail || 'Failed to delete product'
           set({ loading: false, error: errorMsg })
           throw new Error(errorMsg)
         }

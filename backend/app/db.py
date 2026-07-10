@@ -1,6 +1,6 @@
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from .models import Base
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./interior_ai.db")
@@ -184,26 +184,53 @@ def sync_demo_data(db):
                 member.role = role
                 db.commit()
 
-        # Assign rooms of the project to Vendor
-        if vendor_user and vendor:
-            rooms = db.query(Room).filter(Room.project_id == proj.id).all()
-            for room in rooms:
-                va = db.query(VendorAssignment).filter(
-                    VendorAssignment.project_id == proj.id,
-                    VendorAssignment.vendor_id == vendor.id,
-                    VendorAssignment.item_id == room.id
-                ).first()
-                if not va:
-                    va = VendorAssignment(
-                        id=str(uuid.uuid4()),
-                        project_id=proj.id,
-                        item_id=room.id,
-                        vendor_id=vendor.id,
-                        status="ASSIGNED",
-                        remarks=f"Auto-allocated room {room.room_type} for project {proj.property_name}"
-                    )
-                    db.add(va)
-                    db.commit()
+        # Sync assignments per RoomItem
+        sync_project_vendor_assignments(proj.id, db)
+
+
+def sync_project_vendor_assignments(project_id: str, db: Session):
+    from .models import Room, RoomItem, VendorAssignment, Product, Vendor
+    import uuid
+
+    rooms = db.query(Room).filter(Room.project_id == project_id).all()
+    for room in rooms:
+        items = db.query(RoomItem).filter(RoomItem.room_id == room.id).all()
+        for item in items:
+            product = db.query(Product).filter(Product.id == item.product_id).first()
+            if not product or not product.vendor_id:
+                continue
+
+            vendor = db.query(Vendor).filter(Vendor.id == product.vendor_id).first()
+            if not vendor:
+                continue
+
+            # Verify if VendorAssignment already exists for this RoomItem
+            va = db.query(VendorAssignment).filter(
+                VendorAssignment.project_id == project_id,
+                VendorAssignment.vendor_id == vendor.id,
+                VendorAssignment.item_id == item.id
+            ).first()
+
+            if not va:
+                milestones = {
+                    "po_approved": "paid" if item.unit_price and item.unit_price > 0 else "pending",
+                    "design_approved": "pending",
+                    "manufacturing_started": "pending",
+                    "material_delivered": "pending",
+                    "installation_complete": "pending"
+                }
+                va = VendorAssignment(
+                    id=str(uuid.uuid4()),
+                    project_id=project_id,
+                    vendor_id=vendor.id,
+                    item_id=item.id,
+                    status="RECEIVED_ORDER",
+                    remarks=f"Fulfillment started for {product.name}",
+                    milestones_status=milestones,
+                    shipment_status="Pending"
+                )
+                db.add(va)
+                db.commit()
 
 
 def get_db():
