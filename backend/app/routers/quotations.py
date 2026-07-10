@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Project, Room, RoomItem, Product, Quotation, User
+from ..schemas import GenerateQuotationReq
 from ..auth_utils import current_user
 from ..services.pdf_service import generate_quotation_pdf
 
@@ -107,21 +108,19 @@ def generate_quotation(
         line_items=line_items,
     )
     db.add(quotation)
+    db.commit()
 
     # Update project status
     project.status = "quoted"
     db.commit()
 
     return {
-        "id": quot_id,
         "quotation_id": quot_id,
-        "project_id": project.id,
         "subtotal": subtotal,
         "gst": gst,
         "total": total,
         "pdf_url": pdf_url,
         "valid_until": valid_until,
-        "status": quotation.status,
         "line_items": line_items,
     }
 

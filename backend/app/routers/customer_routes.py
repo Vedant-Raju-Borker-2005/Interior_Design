@@ -1,7 +1,7 @@
+import os
 import uuid
 import datetime
 import random
-import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -175,9 +175,6 @@ def update_quotation_status(
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
 ):
-    if status not in {"approved", "rejected", "under_revision"}:
-        raise HTTPException(400, "Invalid quotation status")
-
     project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
     if not project:
         raise HTTPException(404, "Project not found")
@@ -192,6 +189,49 @@ def update_quotation_status(
         
         # Populate trackings
         _populate_default_tracking(project_id, project, db)
+
+        # Trigger Vendor Assignments based on item owners on approval
+        from ..models import Vendor, VendorAssignment, VendorNotification, Product
+        if quotation.line_items:
+            for item in quotation.line_items:
+                if item.get("sku") in ["PKG", "SVC"]: continue
+                
+                prod_id = item.get("product_id")
+                assigned_vendor_id = None
+                
+                # 1. Attempt to match the actual vendor who registered this product
+                if prod_id:
+                    product_obj = db.query(Product).filter(Product.id == prod_id).first()
+                    if product_obj and product_obj.vendor_id:
+                        assigned_vendor_id = product_obj.vendor_id
+                
+                # 2. Pincode/General vendor fallback if product is a generic catalog template
+                if not assigned_vendor_id:
+                    vendors = db.query(Vendor).filter(Vendor.active == True).all()
+                    matching_vendors = [v for v in vendors if project.pincode in (v.serviceable_pincodes or [])]
+                    if not matching_vendors and vendors:
+                        matching_vendors = vendors
+                    if matching_vendors:
+                        assigned_vendor_id = matching_vendors[0].id
+                
+                if assigned_vendor_id:
+                    assignment = VendorAssignment(
+                        project_id=project.id,
+                        item_id=prod_id or item.get("sku"),
+                        vendor_id=assigned_vendor_id,
+                        status="ASSIGNED",
+                        remarks=f"Auto-assigned upon quotation approval. Quantity: {item.get('qty', 1)}"
+                    )
+                    db.add(assignment)
+                    
+                    # Notify vendor
+                    notif = VendorNotification(
+                        vendor_id=assigned_vendor_id,
+                        type="NEW_ASSIGNMENT",
+                        message=f"New assignment for Project {project.property_name}: {item.get('name')}"
+                    )
+                    db.add(notif)
+
 
     notif = Notification(
         user_id=user.id,
@@ -566,10 +606,6 @@ def create_service_request(
 # ── HELPERS ───────────────────────────────────────────────────────────────────
 
 def _populate_default_tracking(project_id: str, project: Project, db: Session):
-    existing = db.query(ItemTracking).filter(ItemTracking.project_id == project_id).all()
-    if existing:
-        return existing
-
     trackings = []
     # Try using room items first
     for room in project.rooms:
@@ -618,6 +654,8 @@ def get_customer_stats(
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
 ):
+    from ..db import sync_demo_data
+    sync_demo_data(db)
     projects = db.query(Project).filter(Project.user_id == user.id).all()
     project_ids = [p.id for p in projects]
     
@@ -844,3 +882,39 @@ def create_project_payment(
     
     db.commit()
     return {"status": "success", "transactionId": tx_id}
+
+
+@router.get("/notifications")
+def get_customer_notifications(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    notifs = db.query(Notification).filter(Notification.user_id == user.id).order_by(Notification.created_at.desc()).all()
+    return notifs
+
+
+@router.patch("/notifications/{notification_id}")
+def mark_customer_notification_read(
+    notification_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    notif = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user.id).first()
+    if not notif:
+        raise HTTPException(404, "Notification not found")
+    notif.read = True
+    db.commit()
+    return {"success": True}
+
+
+@router.post("/notifications/mark-all-read")
+def mark_all_customer_notifications_read(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    notifs = db.query(Notification).filter(Notification.user_id == user.id, Notification.read == False).all()
+    for n in notifs:
+        n.read = True
+    db.commit()
+    return {"success": True}
+

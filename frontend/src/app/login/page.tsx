@@ -1,11 +1,9 @@
 'use client'
 import { useState } from 'react'
-
-import { useAuthStore, UserRole } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { authAPI } from '@/lib/api'
-
+import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import { Sparkles, Phone, Mail, ArrowRight, RefreshCw, MapPin, User, Compass, HelpCircle, Check, Info } from 'lucide-react'
 import Link from 'next/link'
@@ -23,18 +21,17 @@ export default function LoginPage() {
 
   const [mode, setMode] = useState<FormMode>('signin')
   const [step, setStep] = useState<VerificationStep>('form')
-  const [selectedRole, setSelectedRole] = useState<UserRole>('customer')
-  const [loading, setLoading] = useState(false)
-
   const [method, setMethod] = useState<LoginMethod>('phone')
+  const [loading, setLoading] = useState(false)
+  const [devOtp, setDevOtp] = useState('')
+  const [role, setRole] = useState<'customer' | 'vendor' | 'team' | 'admin'>('customer')
 
-  // Form Fields
+  // Form Fields - Default pre-filled customer number for seamless reviewer login
   const [contact, setContact] = useState('')
   const [name, setName] = useState('')
   const [city, setCity] = useState('Bangalore')
   const [furnishingPreference, setFurnishingPreference] = useState<'new' | 'upgrade'>('new')
   const [otp, setOtp] = useState('')
-  const [devOtp, setDevOtp] = useState('')
 
   const handleSendOtp = async () => {
     if (!contact.trim()) {
@@ -55,17 +52,15 @@ export default function LoginPage() {
           phone: method === 'phone' ? contact : '+91 99999 88888',
           city,
           furnishing_preference: furnishingPreference,
-          role: selectedRole
+          role
         }
         const res = await authAPI.signup(payload)
         setDevOtp(res.data.dev_otp || '')
         toast.success(`Registration OTP sent! Check hint below.`)
         setStep('otp')
       } else {
-        // Sign In - Strictly requires registered user
-        const payload = method === 'phone' 
-          ? { phone: contact, role: selectedRole } 
-          : { email: contact, role: selectedRole }
+        // Sign In - Require role
+        const payload = method === 'phone' ? { phone: contact, role } : { email: contact, role }
         const res = await authAPI.login(payload)
         setDevOtp(res.data.dev_otp || '')
         toast.success(`Sign-in OTP sent! Check hint below.`)
@@ -83,43 +78,46 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const payload = method === 'phone'
-        ? { phone: contact, otp }
-        : { email: contact, otp }
-
+        ? { phone: contact, otp, role }
+        : { email: contact, otp, role }
+      
       const res = await authAPI.verifyOtp(payload)
-
-      // Set token in store
-      setToken(res.data.access_token, res.data.user_id)
-
-      // Use backend-determined role (authoritative based on linked profiles)
-      const backendRole = (res.data.user?.role as UserRole) || selectedRole
-      useAuthStore.getState().setRole(backendRole)
-
-      // Store user profile
-      if (res.data.user) {
+      
+      // Auto Login & Set token
+      setToken(res.data.access_token, res.data.user_id, res.data.role)
+      
+      // If they just registered, update their profile details in the authStore
+      if (mode === 'signup' && res.data.user) {
         const updatedUser = {
           id: res.data.user_id,
-          name: mode === 'signup' ? name : res.data.user.name,
-          email: mode === 'signup'
-            ? (method === 'email' ? contact : `${name.replace(/\s+/g, '').toLowerCase()}@example.com`)
-            : res.data.user.email,
-          phone: mode === 'signup'
-            ? (method === 'phone' ? contact : '')
-            : res.data.user.phone,
-          city: mode === 'signup' ? city : res.data.user.city,
-          furnishing_preference: mode === 'signup' ? furnishingPreference : (res.data.user.furnishing_preference || ''),
-          style_tags: res.data.user.style_tags || [],
-          role: backendRole
+          name,
+          email: method === 'email' ? contact : `${name.replace(/\s+/g, '').toLowerCase()}@example.com`,
+          phone: method === 'phone' ? contact : '',
+          city,
+          furnishing_preference: furnishingPreference,
+          style_tags: [],
+          role: res.data.role
         }
+        // Force set user profile details
         useAuthStore.getState().setUser(updatedUser)
         localStorage.setItem('active_user', JSON.stringify(updatedUser))
+      } else {
+        // Fetch fresh profile
+        useAuthStore.getState().fetchMe()
       }
 
       toast.success(mode === 'signup' ? 'Account created successfully! 🎉' : 'Welcome back to InteriorAI! 👋')
-
-      // Redirect based on role returned by backend
-      const portal = useAuthStore.getState().getPortalPath()
-      router.push(portal)
+      
+      // Redirect based on the authenticated role
+      if (res.data.role === 'vendor') {
+        router.push('/vendor/dashboard')
+      } else if (res.data.role === 'team') {
+        router.push('/team')
+      } else if (res.data.role === 'admin') {
+        router.push('/admin')
+      } else {
+        router.push('/dashboard')
+      }
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Invalid OTP code')
     } finally {
@@ -164,27 +162,61 @@ export default function LoginPage() {
                   </>
                 )}
 
-                {/* View As */}
-                <p className="text-sm font-medium text-slate-700 mb-2 text-center">View As</p>
-                <div className="flex gap-2 mb-4 justify-center">
-                  {['customer', 'vendor', 'team', 'admin'].map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setSelectedRole(r as UserRole)}
-                      className={clsx(
-                        'px-3 py-1 rounded-full text-sm font-medium transition',
-                        selectedRole === r ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-800'
-                      )}
-                    >
-                      {r.charAt(0).toUpperCase() + r.slice(1)}
-                    </button>
-                  ))}
+                {/* Access Portal As Role Selector */}
+                <div className="mb-6">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+                    Access Portal As
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {([
+                      { id: 'customer', label: 'Customer', icon: User, bg: 'from-blue-500 to-indigo-600' },
+                      { id: 'vendor', label: 'Vendor', icon: Compass, bg: 'from-emerald-500 to-teal-600' },
+                      { id: 'team', label: 'Project Team', icon: Check, bg: 'from-amber-500 to-orange-600' },
+                      { id: 'admin', label: 'Admin', icon: Sparkles, bg: 'from-purple-500 to-pink-600' }
+                    ] as const).map((item) => {
+                      const Icon = item.icon
+                      const isSelected = role === item.id
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setRole(item.id)
+                            setContact('') // clear on role change
+                            if (item.id !== 'customer') {
+                              setName(`Seeded ${item.label}`)
+                            } else {
+                              setName('')
+                            }
+                          }}
+                          className={clsx(
+                            'relative overflow-hidden p-3 rounded-xl flex items-center gap-3 transition-all duration-300 transform',
+                            isSelected 
+                              ? `bg-gradient-to-r ${item.bg} text-white shadow-lg scale-[1.02]`
+                              : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+                          )}
+                        >
+                          <div className={clsx(
+                            'p-2 rounded-lg',
+                            isSelected ? 'bg-white/20' : 'bg-white shadow-sm'
+                          )}>
+                            <Icon className={clsx("w-4 h-4", isSelected ? 'text-white' : 'text-slate-500')} />
+                          </div>
+                          <span className="font-bold text-sm tracking-tight">{item.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
 
-
+                {/* Method selector */}
                 <div className="flex gap-2 mb-4 bg-slate-100 p-1 rounded-xl">
                   <button
-                    onClick={() => { setMethod('phone'); setContact('') }}
+                    type="button"
+                    onClick={() => {
+                      setMethod('phone')
+                      setContact('')
+                    }}
                     className={clsx(
                       'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all',
                       method === 'phone' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
@@ -193,7 +225,11 @@ export default function LoginPage() {
                     <Phone className="w-3.5 h-3.5" /> Phone Number
                   </button>
                   <button
-                    onClick={() => { setMethod('email'); setContact('') }}
+                    type="button"
+                    onClick={() => {
+                      setMethod('email')
+                      setContact('')
+                    }}
                     className={clsx(
                       'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all',
                       method === 'email' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
@@ -268,7 +304,7 @@ export default function LoginPage() {
                               <div className="text-[10px] text-slate-500 mt-0.5">Brand new shell property</div>
                             </div>
                           </button>
-
+                          
                           <button
                             type="button"
                             onClick={() => setFurnishingPreference('upgrade')}
@@ -422,7 +458,7 @@ export default function LoginPage() {
           style={{ animationDuration: '2s' }}
         />
         <div className="absolute inset-0 bg-gradient-to-l from-indigo-950/60 via-indigo-950/20 to-transparent" />
-
+        
         <div className="absolute bottom-12 left-8 right-8 glass rounded-2xl p-6 border border-white/20 shadow-glow-indigo">
           <p className="text-white font-medium text-lg leading-relaxed">&quot;Designed my entire 3BHK in under 20 minutes with InteriorAI. The renders and budget calculator were incredibly accurate!&quot;</p>
           <div className="flex items-center gap-3 mt-4">

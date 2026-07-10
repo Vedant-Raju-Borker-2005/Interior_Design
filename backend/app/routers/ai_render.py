@@ -3,6 +3,7 @@ AI Render Router — async job queue simulation.
 In production this would publish to RabbitMQ/Kafka and GPU workers would process.
 Here we simulate with asyncio background tasks and real interior image URLs.
 """
+import os
 import asyncio
 import uuid
 import random
@@ -42,7 +43,7 @@ def queue_render(
         mode=req.mode,
         style=req.style,
         color_palette=req.color_palette,
-        prompt=build_prompt(req.style, req.color_palette, room.room_type, req.products),
+        prompt=build_prompt(req.style, req.color_palette, room.room_type, req.products, req.layout_prompt),
         status="queued",
     )
     db.add(render)
@@ -52,7 +53,10 @@ def queue_render(
 
     # Schedule mock processing in background
     eta = 4 if req.mode == "template" else (8 if req.mode == "sdxl" else 12)
-    background_tasks.add_task(_process_render, job_id, req.style, req.mode, room.room_type)
+    background_tasks.add_task(
+        _process_render, job_id, req.style, req.mode, room.room_type,
+        req.base_image_data, req.base_image_mime or "image/jpeg"
+    )
 
     return {
         "job_id": job_id,
@@ -106,8 +110,9 @@ def get_room_renders(room_id: str, db: Session = Depends(get_db)):
     }
 
 
-async def _process_render(job_id: str, style: str, mode: str, room_type: str):
-    """Simulate GPU processing, calling Gemini Imagen or fallback to mock."""
+async def _process_render(job_id: str, style: str, mode: str, room_type: str,
+                          base_image_data: str = None, base_image_mime: str = "image/jpeg"):
+    """Simulate GPU processing, calling Gemini img2img or text-only, or fallback to mock."""
     db = SessionLocal()
     prompt = ""
     try:
@@ -121,8 +126,15 @@ async def _process_render(job_id: str, style: str, mode: str, room_type: str):
 
     image_url = None
     if prompt:
-        from ..services.render_mock import get_gemini_render
-        image_url = get_gemini_render(prompt)
+        if base_image_data:
+            # Image-to-image: redesign the actual uploaded room
+            from ..services.render_mock import get_gemini_render_with_image
+            print(f"[Render] img2img mode — base image provided ({len(base_image_data)} chars b64)")
+            image_url = get_gemini_render_with_image(prompt, base_image_data, base_image_mime)
+        else:
+            # Text-to-image: generate from prompt only
+            from ..services.render_mock import get_gemini_render
+            image_url = get_gemini_render(prompt)
 
     if image_url:
         thumb_url = image_url
@@ -153,3 +165,51 @@ async def _process_render(job_id: str, style: str, mode: str, room_type: str):
             db.commit()
     finally:
         db.close()
+
+from fastapi.responses import FileResponse
+from ..models import Project, RoomItem, Product
+from ..services.pdf_service import generate_renders_pdf
+
+@router.get("/render-pdf/{project_id}", summary="Generate a PDF with all renders for a project")
+def get_render_pdf(project_id: str, db: Session = Depends(get_db)):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    renders_data = []
+    for room in project.rooms:
+        # Get latest completed render for room
+        render = db.query(Render).filter(Render.room_id == room.id, Render.status == "completed").order_by(Render.created_at.desc()).first()
+        
+        # Get products in room
+        room_items = db.query(RoomItem).filter(RoomItem.room_id == room.id).all()
+        products = []
+        for ri in room_items:
+            prod = db.query(Product).filter(Product.id == ri.product_id).first()
+            if prod:
+                products.append({
+                    "name": prod.name,
+                    "category": prod.category,
+                    "custom_color": ri.custom_color,
+                    "custom_size": ri.custom_size
+                })
+        
+        if render:
+            renders_data.append({
+                "room_name": room.room_type.replace("_", " ").title(),
+                "image_url": render.image_url,
+                "products": products
+            })
+
+    if not renders_data:
+        raise HTTPException(400, "No completed renders found for this project")
+
+    pdf_path = generate_renders_pdf(project.id, project.property_name, renders_data)
+    if not pdf_path or not os.path.exists(pdf_path):
+        raise HTTPException(500, "Failed to generate PDF")
+
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename=os.path.basename(pdf_path)
+    )

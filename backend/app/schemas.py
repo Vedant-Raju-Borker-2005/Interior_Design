@@ -79,6 +79,11 @@ class AddRoomItemReq(BaseModel):
     qty: int = 1
     custom_color: Optional[str] = None
     custom_material: Optional[str] = None
+    custom_size: Optional[str] = None
+    custom_fabric: Optional[str] = None
+    custom_wood_finish: Optional[str] = None
+    custom_texture: Optional[str] = None
+    custom_cushion_style: Optional[str] = None
 
 
 class AddRoomReq(BaseModel):
@@ -114,6 +119,7 @@ class ProductOut(BaseModel):
     price: float
     materials: List[str]
     color_variants: List[str]
+    variants: Optional[dict] = {}
     thumbnail_url: Optional[str] = None
     style_tags: List[str]
 
@@ -128,7 +134,11 @@ class RenderReq(BaseModel):
     style: str = "modern"
     color_palette: List[str] = []
     products: List[Any] = []
-    layout_image: Optional[str] = None
+    layout_prompt: str = ""
+    base_image_url: Optional[str] = None
+    # Base64-encoded image data for img2img redesign
+    base_image_data: Optional[str] = None
+    base_image_mime: Optional[str] = "image/jpeg"
 
 
 class RenderOut(BaseModel):
@@ -251,3 +261,18 @@ class AdminStatsOut(BaseModel):
     revenue_pipeline: float
     projects_by_status: dict
     inquiries_by_status: dict
+
+
+# ── Vendor Shipments & Milestones ─────────────────────────────────────────────
+class UpdateShipmentReq(BaseModel):
+    courier: str
+    vehicle_details: Optional[str] = None
+    tracking_number: str
+    dispatch_date: Optional[str] = None
+    expected_arrival: Optional[str] = None
+    shipment_status: str # Pending, Dispatched, In Transit, Delivered
+
+
+class UpdateVendorMilestoneReq(BaseModel):
+    milestone_name: str # po_approved, design_approved, etc.
+    status: str # pending, approved, paid

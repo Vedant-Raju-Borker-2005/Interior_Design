@@ -187,7 +187,17 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
     set({ isLoading: true })
     try {
       const res = await teamAPI.getTracking(projectId)
-      set({ tracking: res.data, isLoading: false })
+      if (res.data && typeof res.data === 'object' && 'trackings' in res.data) {
+        set({
+          tracking: res.data.trackings,
+          projectDetail: res.data.project,
+          customerDetail: res.data.customer,
+          vendorDetail: res.data.vendors,
+          isLoading: false
+        })
+      } else {
+        set({ tracking: res.data, isLoading: false })
+      }
     } catch (e: any) {
       set({ error: e.response?.data?.detail || 'Failed to load tracking items', isLoading: false })
     }

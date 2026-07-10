@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, UserCheck, Briefcase, Bell, CreditCard, LogOut, ArrowLeft, ShoppingBag, Archive } from 'lucide-react'
+import { LayoutDashboard, UserCheck, Briefcase, Bell, CreditCard, LogOut, ArrowLeft, ShoppingBag, Archive, Menu, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useVendorStore } from '@/stores/vendorStore'
 import Navbar from '@/components/Navbar'
@@ -13,6 +13,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   const router = useRouter()
   const { isLoggedIn, user, logout } = useAuthStore()
   const { profile, loadOnboarding } = useVendorStore()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -21,6 +22,11 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       loadOnboarding()
     }
   }, [isLoggedIn, router, loadOnboarding])
+
+  // Close sidebar on navigation change
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [pathname])
 
   const navLinks = [
     { href: '/vendor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -33,7 +39,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
 
   const handleLogout = () => {
     logout()
-    router.push('/login')
+    router.push('/')
   }
 
   if (!isLoggedIn) {
@@ -44,9 +50,28 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     <div className="min-h-screen bg-slate-50/50 flex flex-col">
       <Navbar />
       
-      <div className="flex flex-1 pt-16">
+      <div className="flex flex-1 pt-16 flex-col lg:flex-row relative">
+        {/* Mobile Header Bar */}
+        <div className="lg:hidden flex items-center justify-between bg-white border-b border-slate-200/60 px-6 py-3.5 sticky top-16 z-30 shadow-sm">
+          <div className="flex items-center space-x-3">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-500 to-indigo-700 text-white flex items-center justify-center shadow">
+              <span className="font-bold text-sm">💡</span>
+            </div>
+            <span className="font-bold text-xs text-slate-800 uppercase tracking-wider">Vendor Hub</span>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition"
+          >
+            {sidebarOpen ? <X className="w-4 h-4 text-slate-600" /> : <Menu className="w-4 h-4 text-slate-600" />}
+          </button>
+        </div>
+
         {/* Sidebar Navigation */}
-        <aside className="w-64 bg-white border-r border-slate-200/60 p-6 flex flex-col justify-between shadow-sm sticky top-16 h-[calc(100vh-4rem)]">
+        <aside className={`w-64 bg-white border-r border-slate-200/60 p-6 flex flex-col justify-between shadow-sm fixed lg:sticky top-16 h-[calc(100vh-4rem)] left-0 z-40 transition-transform duration-300 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}>
+
           <div>
             {/* Logo / Portal Brand */}
             <div className="flex items-center space-x-3 mb-8">
@@ -84,14 +109,6 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
 
           {/* User Info & Footer */}
           <div className="space-y-4">
-            <Link
-              href="/dashboard"
-              className="flex items-center justify-center space-x-2 w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Go to Customer Portal</span>
-            </Link>
-
             <div className="border-t border-slate-150 pt-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
@@ -120,8 +137,16 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
           </div>
         </aside>
 
+        {/* Mobile Overlay Backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Main Workspace Panel */}
-        <main className="flex-1 p-8 overflow-y-auto max-h-[calc(100vh-4rem)]">
+        <main className="flex-1 p-4 sm:p-8 overflow-y-auto lg:max-h-[calc(100vh-4rem)]">
           {children}
         </main>
       </div>

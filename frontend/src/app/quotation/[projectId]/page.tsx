@@ -58,8 +58,6 @@ export default function QuotationPage() {
       const res = await quotationsAPI.generate(projectId)
       setQuotation(res.data)
       toast.success('Quotation generated! 🎉')
-      // Auto-open inquiry modal after 1.5s
-      setTimeout(() => setInquiryOpen(true), 1500)
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Failed to generate quotation')
     } finally {
@@ -79,13 +77,9 @@ export default function QuotationPage() {
   }
 
   const handleApprove = async () => {
-    const quotationId = quotation?.id || quotation?.quotation_id
-    if (!quotationId) return toast.error('Quotation ID missing. Please reload and try again.')
-
     try {
-      await updateQuotationStatus(projectId, quotationId, 'approved')
+      await updateQuotationStatus(projectId, quotation.id, 'approved')
       setQuotation({ ...quotation, status: 'approved' })
-      setProject((prev: any) => ({ ...prev, status: 'ordered' }))
       toast.success('Quotation approved! Project status is now set to ordered.')
     } catch {
       toast.error('Failed to approve quotation')
@@ -93,11 +87,8 @@ export default function QuotationPage() {
   }
 
   const handleReject = async () => {
-    const quotationId = quotation?.id || quotation?.quotation_id
-    if (!quotationId) return toast.error('Quotation ID missing. Please reload and try again.')
-
     try {
-      await updateQuotationStatus(projectId, quotationId, 'rejected')
+      await updateQuotationStatus(projectId, quotation.id, 'rejected')
       setQuotation({ ...quotation, status: 'rejected' })
       toast.success('Quotation rejected')
     } catch {
@@ -145,7 +136,7 @@ export default function QuotationPage() {
 
         {/* Project header */}
         <div className="bg-gradient-to-r from-indigo-700 to-indigo-900 rounded-2xl p-8 text-white mb-6">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
               <div className="flex items-center gap-2 text-indigo-300 text-sm mb-2">
                 <Building2 className="w-4 h-4" /> {project?.bhk_type}
@@ -155,9 +146,17 @@ export default function QuotationPage() {
               <h1 className="text-3xl font-bold mb-1">{project?.property_name}</h1>
               <p className="text-indigo-200 text-sm">Budget: {formatINR(project?.budget || 0)}</p>
             </div>
-            <div className="text-right">
-              <div className="text-4xl font-black">{project?.rooms?.length || 0}</div>
-              <div className="text-indigo-300 text-sm">Rooms</div>
+            <div className="text-right flex flex-col items-end gap-3">
+              <div>
+                <div className="text-4xl font-black">{project?.rooms?.length || 0}</div>
+                <div className="text-indigo-300 text-sm">Rooms</div>
+              </div>
+              <button
+                onClick={() => setInquiryOpen(true)}
+                className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl transition border border-white/25 text-xs shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" /> Talk to a Design Expert
+              </button>
             </div>
           </div>
         </div>
@@ -475,6 +474,20 @@ export default function QuotationPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Floating Action Button for Inquiry */}
+      {quotation && (
+        <button
+          onClick={() => setInquiryOpen(true)}
+          className="fixed bottom-6 right-6 z-40 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center border border-white/10 group"
+          title="Talk to a Design Expert"
+        >
+          <Sparkles className="w-6 h-6 text-amber-400" />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-350 ease-out text-xs font-bold whitespace-nowrap">
+            Talk to Expert
+          </span>
+        </button>
+      )}
 
       {/* Inquiry Modal */}
       <InquiryModal

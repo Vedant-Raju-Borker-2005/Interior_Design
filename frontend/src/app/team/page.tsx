@@ -51,7 +51,7 @@ export default function TeamDashboardPage() {
     roles: ['MANAGER']
   };
 
-  const rolesList = stats.roles && stats.roles.length > 0 ? stats.roles : ['MANAGER', 'COORDINATOR', 'TECHNICIAN'];
+  const rolesList = ['MANAGER', 'COORDINATOR', 'TECHNICIAN'];
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">

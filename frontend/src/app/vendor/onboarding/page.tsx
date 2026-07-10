@@ -14,6 +14,7 @@ export default function VendorOnboardingPage() {
   const { profile, documents, loading, error, loadOnboarding, registerVendor, uploadDocuments } = useVendorStore()
   
   const [step, setStep] = useState(1)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [form, setForm] = useState({
     businessName: '',
     ownerName: '',
@@ -48,6 +49,9 @@ export default function VendorOnboardingPage() {
         warehouseAddress: profile.warehouseAddress || '',
         serviceLocations: Array.isArray(profile.serviceLocations) ? profile.serviceLocations.join(', ') : '',
       })
+      if (Array.isArray(profile.categories)) {
+        setSelectedCategories(profile.categories)
+      }
       
       // If approved, don't force step 1
       if (profile.status === 'APPROVED') {
@@ -67,6 +71,10 @@ export default function VendorOnboardingPage() {
         toast.error('Please fill out all required fields marked with *')
         return
       }
+      if (selectedCategories.length === 0) {
+        toast.error('Please select at least one product category')
+        return
+      }
       setStep(2)
     }
   }
@@ -83,6 +91,7 @@ export default function VendorOnboardingPage() {
         panNumber: form.panNumber || undefined,
         warehouseAddress: form.warehouseAddress || undefined,
         serviceLocations: form.serviceLocations.split(',').map(s => s.trim()).filter(Boolean),
+        categories: selectedCategories,
       }
       await registerVendor(payload)
       toast.success('Business profile registered successfully!')
@@ -151,6 +160,7 @@ export default function VendorOnboardingPage() {
               { label: 'PAN Number', value: profile.panNumber || 'N/A', icon: FileText },
               { label: 'Warehouse Address', value: profile.warehouseAddress || 'N/A', icon: MapPin },
               { label: 'Serviceable Pincodes', value: Array.isArray(profile.serviceLocations) ? profile.serviceLocations.join(', ') : 'All Locations', icon: MapPin },
+              { label: 'Specialization Categories', value: Array.isArray(profile.categories) && profile.categories.length > 0 ? profile.categories.join(', ') : 'None', icon: CheckCircle2 },
             ].map((field, idx) => {
               const Icon = field.icon
               return (
@@ -327,6 +337,40 @@ export default function VendorOnboardingPage() {
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl text-xs focus:outline-none focus:bg-white text-slate-800 transition"
                   />
                 </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-6">
+              <h2 className="text-sm font-black uppercase text-indigo-600 tracking-wider mb-4">Product Specialization Categories</h2>
+              <p className="text-xs text-slate-400 mb-3">Select one or more categories that you provide or manufacture *</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {['Furniture', 'Kitchen', 'Lighting', 'Décor'].map((category) => {
+                  const isChecked = selectedCategories.includes(category)
+                  return (
+                    <label 
+                      key={category} 
+                      className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition select-none ${
+                        isChecked 
+                          ? 'bg-indigo-50/50 border-indigo-200 text-indigo-900' 
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedCategories([...selectedCategories, category])
+                          } else {
+                            setSelectedCategories(selectedCategories.filter(c => c !== category))
+                          }
+                        }}
+                        className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                      />
+                      <span className="text-xs font-bold">{category}</span>
+                    </label>
+                  )
+                })}
               </div>
             </div>
 

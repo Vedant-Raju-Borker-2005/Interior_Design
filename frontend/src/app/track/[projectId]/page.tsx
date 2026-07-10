@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { customerAPI, projectsAPI } from '@/lib/api'
+import { trackingAPI, projectsAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import {
@@ -13,9 +13,9 @@ import clsx from 'clsx'
 import Link from 'next/link'
 
 const STATUS_CONFIG = {
-  delivered:   { color: 'bg-emerald-500', ring: 'ring-emerald-200', text: 'text-emerald-700', bg: 'bg-emerald-50', icon: CheckCircle2 },
-  in_transit:  { color: 'bg-indigo-500',  ring: 'ring-indigo-200',  text: 'text-indigo-700',  bg: 'bg-indigo-50',  icon: Sparkles },
-  ordered:     { color: 'bg-slate-300',   ring: 'ring-slate-200',   text: 'text-slate-500',   bg: 'bg-slate-50',   icon: Clock },
+  completed:   { color: 'bg-emerald-500', ring: 'ring-emerald-200', text: 'text-emerald-700', bg: 'bg-emerald-50', icon: CheckCircle2 },
+  in_progress: { color: 'bg-indigo-500',  ring: 'ring-indigo-200',  text: 'text-indigo-700',  bg: 'bg-indigo-50',  icon: Sparkles },
+  pending:     { color: 'bg-slate-300',   ring: 'ring-slate-200',   text: 'text-slate-500',   bg: 'bg-slate-50',   icon: Clock },
 }
 
 const PROJECT_STATUS_COLORS: Record<string, string> = {
@@ -29,21 +29,18 @@ export default function TrackPage() {
   const { projectId } = useParams() as { projectId: string }
   const router = useRouter()
   const [project, setProject] = useState<any>(null)
-  const [trackings, setTrackings] = useState<any[]>([])
+  const [milestones, setMilestones] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState<string | null>(null)
-  const [selectedTracking, setSelectedTracking] = useState<string | null>(null)
-  const [updateForm, setUpdateForm] = useState({ status: '', remarks: '', actual_date: '' })
 
   useEffect(() => {
     const load = async () => {
       try {
         const [projRes, trackRes] = await Promise.all([
           projectsAPI.get(projectId),
-          customerAPI.getTracking(projectId),
+          trackingAPI.getMilestones(projectId),
         ])
         setProject(projRes.data)
-        setTrackings(trackRes.data)
+        setMilestones(trackRes.data.milestones || [])
       } catch {
         toast.error('Failed to load tracking data')
       } finally {
@@ -53,33 +50,8 @@ export default function TrackPage() {
     load()
   }, [projectId])
 
-  const handleUpdateTracking = async (trackingId: string) => {
-    setUpdating(trackingId)
-    try {
-      await customerAPI.updateTracking(
-        projectId,
-        trackingId,
-        updateForm.status,
-        updateForm.remarks,
-        updateForm.actual_date
-      )
-      setTrackings(trackings.map(t => 
-        t.id === trackingId 
-          ? { ...t, ...updateForm }
-          : t
-      ))
-      toast.success('Tracking updated!')
-      setSelectedTracking(null)
-      setUpdateForm({ status: '', remarks: '', actual_date: '' })
-    } catch {
-      toast.error('Failed to update tracking')
-    } finally {
-      setUpdating(null)
-    }
-  }
-
-  const deliveredCount = trackings.filter(t => t.status === 'delivered').length
-  const progressPct = trackings.length > 0 ? Math.round((deliveredCount / trackings.length) * 100) : 0
+  const completedCount = milestones.filter(m => m.status === 'completed').length
+  const progressPct = milestones.length > 0 ? Math.round((completedCount / milestones.length) * 100) : 0
 
   if (loading) {
     return (
@@ -126,121 +98,74 @@ export default function TrackPage() {
                 className="h-full bg-gradient-to-r from-indigo-400 to-emerald-400 rounded-full"
               />
             </div>
-            <p className="text-indigo-300 text-xs mt-2">{deliveredCount} of {trackings.length} items delivered</p>
+            <p className="text-indigo-300 text-xs mt-2">{completedCount} of {milestones.length} milestones completed</p>
           </div>
         </div>
 
         {/* Milestones timeline */}
         <div className="bg-white rounded-2xl shadow-card p-6 mb-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-6">Delivery Tracking</h2>
-          <div className="space-y-4">
-            {trackings.map((track) => (
-              <motion.div
-                key={track.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-slate-50 rounded-xl p-4"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{track.item_name}</h3>
-                    <p className="text-sm text-slate-500">{track.room_name}</p>
-                  </div>
-                  <span className={clsx('badge text-xs capitalize', 
-                    track.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' :
-                    track.status === 'in_transit' ? 'bg-indigo-100 text-indigo-700' :
-                    'bg-slate-100 text-slate-600'
-                  )}>
-                    {track.status}
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
-                  <div>
-                    <p className="text-slate-500 text-xs mb-0.5">Expected Delivery</p>
-                    <p className="text-slate-900 font-medium">{track.expected_date}</p>
-                  </div>
-                  {track.actual_date && (
-                    <div>
-                      <p className="text-slate-500 text-xs mb-0.5">Actual Delivery</p>
-                      <p className="text-emerald-700 font-medium">{track.actual_date}</p>
-                    </div>
-                  )}
-                </div>
+          <h2 className="text-lg font-bold text-slate-900 mb-6">Execution Timeline</h2>
+          <div className="relative">
+            {milestones.map((ms, i) => {
+              const cfg = STATUS_CONFIG[ms.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending
+              const Icon = cfg.icon
+              const isLast = i === milestones.length - 1
 
-                {track.remarks && (
-                  <p className="text-sm text-slate-600 border-l-2 border-slate-200 pl-3 mb-3">{track.remarks}</p>
-                )}
-
-                {/* Update button */}
-                <button
-                  onClick={() => {
-                    setSelectedTracking(selectedTracking === track.id ? null : track.id)
-                    if (selectedTracking !== track.id) {
-                      setUpdateForm({ 
-                        status: track.status, 
-                        remarks: track.remarks || '',
-                        actual_date: track.actual_date || ''
-                      })
-                    }
-                  }}
-                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+              return (
+                <motion.div
+                  key={ms.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="relative flex gap-5 pb-8"
                 >
-                  {selectedTracking === track.id ? 'Cancel' : 'Update Status'}
-                </button>
+                  {/* Vertical line */}
+                  {!isLast && (
+                    <div className={clsx(
+                      'absolute left-5 top-10 bottom-0 w-0.5',
+                      ms.status === 'completed' ? 'bg-emerald-300' : 'bg-slate-200'
+                    )} />
+                  )}
 
-                {/* Update Form */}
-                {selectedTracking === track.id && (
-                  <div className="mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-                    <div className="grid gap-3 mb-4">
-                      <div>
-                        <label className="text-xs font-semibold text-slate-700">Status</label>
-                        <select
-                          value={updateForm.status}
-                          onChange={(e) => setUpdateForm({...updateForm, status: e.target.value})}
-                          className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm"
-                        >
-                          <option value="ordered">Ordered</option>
-                          <option value="in_transit">In Transit</option>
-                          <option value="delivered">Delivered</option>
-                        </select>
-                      </div>
-
-                      {updateForm.status === 'delivered' && (
-                        <div>
-                          <label className="text-xs font-semibold text-slate-700">Delivery Date</label>
-                          <input
-                            type="date"
-                            value={updateForm.actual_date}
-                            onChange={(e) => setUpdateForm({...updateForm, actual_date: e.target.value})}
-                            className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm"
-                          />
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="text-xs font-semibold text-slate-700">Remarks (optional)</label>
-                        <textarea
-                          value={updateForm.remarks}
-                          onChange={(e) => setUpdateForm({...updateForm, remarks: e.target.value})}
-                          placeholder="Add notes about delivery..."
-                          className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-sm"
-                          rows={2}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleUpdateTracking(track.id)}
-                      disabled={updating === track.id}
-                      className="w-full btn-primary py-2 text-sm"
-                    >
-                      {updating === track.id ? 'Updating...' : 'Update Tracking'}
-                    </button>
+                  {/* Icon + ring */}
+                  <div className={clsx('relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ring-4 z-10', cfg.color, cfg.ring)}>
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
-                )}
-              </motion.div>
-            ))}
+
+                  {/* Content */}
+                  <div className={clsx('flex-1 rounded-xl p-4 border', ms.status === 'completed' ? 'bg-emerald-50 border-emerald-100' : ms.status === 'in_progress' ? 'bg-indigo-50 border-indigo-100' : 'bg-slate-50 border-slate-100')}>
+                    <div className="flex items-start justify-between mb-1">
+                      <h3 className={clsx('font-semibold', cfg.text)}>{ms.title}</h3>
+                      <span className={clsx('badge text-xs capitalize', cfg.bg, cfg.text)}>{ms.status.replace('_', ' ')}</span>
+                    </div>
+                    <p className="text-slate-500 text-sm mb-3">{ms.description}</p>
+                    <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+                      {ms.due_date && (
+                        <span className="flex items-center gap-1">
+                          <CalendarDays className="w-3 h-3" />
+                          Due: {ms.due_date}
+                        </span>
+                      )}
+                      {ms.completed_date && (
+                        <span className="flex items-center gap-1 text-emerald-600">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Completed: {ms.completed_date}
+                        </span>
+                      )}
+                      {ms.vendor_name && (
+                        <span className="flex items-center gap-1">
+                          <User2 className="w-3 h-3" />
+                          {ms.vendor_name}
+                        </span>
+                      )}
+                    </div>
+                    {ms.notes && (
+                      <p className="mt-2 text-xs text-slate-500 italic border-t border-slate-200 pt-2">{ms.notes}</p>
+                    )}
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
         </div>
 

@@ -12,14 +12,34 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
     Powered by **Three.js** and **React Three Fiber (R3F)**. Live 3D environment to customize walls, flooring, and adjust furniture arrangements (sofas, beds, wardrobes, kitchen counters, vanity units) in real time.
 *   **AI Photorealistic Rendering**  
     Simulated **Stable Diffusion XL + ControlNet** rendering pipeline. Generate stunning, high-resolution photorealistic renders of your customized rooms under various interior styles (Modern, Scandinavian, Art-Deco, Luxury, Mediterranean, Tropical) in less than 15 seconds.
+*   **Normalized Product Catalog & Variant Customization (New)**  
+    Group catalog entries under single base models (e.g., Sofa A) instead of duplicate rows. Customize specific parameters (Color, Fabric, Wood Finish, Size, Texture, Cushion Style) dynamically from the configuration panel, with configurations stored in SQLAlchemy database JSON schemas.
+*   **Mandatory Room Layout Completeness (New)**  
+    Validates room progress checklists against mandatory categories (e.g., Living Room requires at least a Sofa, Coffee Table, and Rug) before enabling AI visualization. Displays visual alerts and missing requirements checklists.
+*   **Iterative Swap & Background Re-render (New)**  
+    Allow users to swap room products or modify customization parameters directly from the AI rendering canvas sidebar, auto-triggering background perspective re-rendering without losing other room selections.
 *   **Smart AI Recommendation Engine**  
     Scores and ranks catalog items and furniture packages using dynamic style compatibility matrices and budget-fitting algorithms to present the most cost-effective and aesthetic choices for your home.
 *   **Real-Time Pricing & Dynamic Budgeting**  
     Every furniture addition, finish change, or room size modification instantly updates your total cost. Maintain granular control over your budget with zero price surprises.
 *   **ReportLab PDF Quotation Generator**  
     Dynamically generates professional, bank-compliant PDF quotes with detailed room-by-room line items, GST breakdown, terms and conditions, and customized styling.
-*   **Milestone & Contractor Tracker**  
-    Assign projects to KYC-verified local contractors based on geo-matching (pincodes) and rating systems, then track project milestones (Demolition, Electrical, False Ceiling, Woodwork, Painting) with photo updates.
+*   **Role-Based Login & Routing Flow**  
+    True role-based authentication separating Customer, Vendor, Project Team, and Admin portals. Accessing a role dynamically updates the navigation bar options, restricting views and links contextually (Home, Portal Link, and Support).
+*   **Reviewer Auto-Fill Test Profiles**  
+    Select your desired role tab (Customer, Vendor, Project Team, or Admin) on the login screen to automatically fill pre-registered reviewer test credentials, enabling instant login and walkthroughs.
+*   **Integrated Milestone Payments Portal**  
+    Granular timeline checklist (Booking Advance 10%, Production 40%, Installation 40%, Handover 10%) supporting mockup checkouts, invoice downloads, and receipt tracking.
+*   **Special Services Project Spawning**  
+    Simulates immediate card/UPI payment checkout for services (e.g. 3D rendering) to automatically spawn matching projects, quotations, and active milestones tracking logs.
+*   **Sourcing Progression & Vendor Payouts**  
+    Coordinators log item-by-item status updates (ordered to installed) that automatically recalculate overall project progress. Marking items as "Installed" triggers automated vendor payout logs.
+*   **Adaptive Landing Page CTA & Header:**  
+    Landing page CTA buttons ("Start Designing Free") dynamically detect login sessions to route authenticated users directly to their active portals instead of displaying redundant login forms.
+*   **Grouped Vendor Assignments & Onboarding (New):**  
+    Onboarding wizard category specialization checkboxes (Furniture, Kitchen, Lighting, Décor). Re-architected project-wise grouped assignments cards featuring inline milestone status update selects, immediate verification photo proof uploads, live shipment logistics tracking (Courier, Vehicle details, Tracking AWB), and interactive 5-stage milestone payouts checklist.
+*   **Project Workspace Details Sidebars & Access Control (New):**  
+    Enforces project-wise member access validation (Coordinator/Technician roles check against project assignments). Automatically calculates project-level status ("On Track", "Delayed", "Completed"). Added Customer Profile and Vendor directory sidebar grids directly into the team execution panel workspace.
 
 ---
 
@@ -140,7 +160,9 @@ graph TD
 
 ## 🛡️ Security & Environment Settings
 
-The backend configuration is managed via `backend/.env`. In production environments, make sure to change the default values:
+The configuration is managed via a `.env` file in the root directory. The batch launcher (`1_Click_Run.bat`) automatically synchronizes this file into the `backend/` directory during startup.
+
+In production environments, make sure to change the default values:
 
 ```env
 DATABASE_URL=sqlite:///./interior_ai.db
@@ -148,6 +170,9 @@ JWT_SECRET=your_secure_production_jwt_secret_key_here
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 PDF_OUTPUT_DIR=./pdfs
+
+# Google AI Studio API Key for AI Photorealistic Room Rendering (Imagen 3)
+GEMINI_KEY=your_gemini_api_key_here
 ```
 
 ---

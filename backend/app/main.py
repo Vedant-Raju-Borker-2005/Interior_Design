@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
-from .db import init_db, SessionLocal, sync_demo_data
+from .db import init_db, SessionLocal
 from .seed_data import seed_database
 from .routers import auth, projects, catalog, ai_render, quotations, vendors, inquiry, tracking, admin, recommendations, customer_routes, vendor_routes, project_team
 
@@ -31,6 +31,7 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         seed_database(db)
+        from .db import sync_demo_data
         sync_demo_data(db)
     finally:
         db.close()
@@ -81,7 +82,8 @@ def health():
 @app.get("/", tags=["Root"])
 def root():
     return {
-        "message": "Interior AI Platform API v2",
+        "message": "Interior AI Platform API v2 — Reloaded",
         "docs": "/docs",
         "health": "/health",
     }
+

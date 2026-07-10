@@ -75,6 +75,19 @@ echo.
 :: [3/5] Backend - Python virtual env + dependencies
 :: ============================================================
 echo [3/5] Setting up backend...
+
+:: Pre-create static directories
+if not exist "%BACKEND%\pdfs" mkdir "%BACKEND%\pdfs"
+if not exist "%BACKEND%\pdfs\floor_plans" mkdir "%BACKEND%\pdfs\floor_plans"
+if not exist "%BACKEND%\pdfs\documents" mkdir "%BACKEND%\pdfs\documents"
+if not exist "%BACKEND%\pdfs\proofs" mkdir "%BACKEND%\pdfs\proofs"
+if not exist "%BACKEND%\pdfs\renders" mkdir "%BACKEND%\pdfs\renders"
+
+:: Sync .env file if it exists in root to backend folder
+if exist "%ROOT%\.env" (
+    copy /y "%ROOT%\.env" "%BACKEND%\.env" >nul
+)
+
 cd /d "%BACKEND%"
 
 if not exist ".venv" (

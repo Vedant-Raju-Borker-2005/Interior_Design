@@ -8,7 +8,7 @@ from ..db import get_db
 from ..models import (
     User, Project, ProjectTeamMember, ProjectAssignment, ProjectProgressHistory,
     Task, DailyChecklist, SiteVisit, ProjectDelay, CommunicationLog, ProjectDocument,
-    Issue, ProjectPhoto, ItemTracking, ActivityLog
+    Issue, ProjectPhoto, ItemTracking, ActivityLog, Vendor, VendorAssignment, RoomItem
 )
 from ..auth_utils import current_user
 
@@ -252,13 +252,16 @@ def get_team_dashboard_stats(
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
 ):
+    from ..db import sync_demo_data
+    sync_demo_data(db)
     # Determine user roles across all projects
     memberships = db.query(ProjectTeamMember).filter(
         ProjectTeamMember.user_id == user.id,
         ProjectTeamMember.status == "ACTIVE"
     ).all()
     
-    roles = [m.role for m in memberships]
+    all_possible_roles = ["MANAGER", "COORDINATOR", "TECHNICIAN"]
+    roles = [r for r in all_possible_roles if r in {m.role for m in memberships}]
     
     total_projects = db.query(Project).count()
     active_projects = db.query(Project).filter(Project.status != "completed").count()
@@ -354,7 +357,62 @@ def get_team_project_tracking(
     trackings = db.query(ItemTracking).filter(ItemTracking.project_id == project_id).all()
     if not trackings:
         trackings = _populate_default_tracking(project_id, project, db)
-    return trackings
+        
+    # Calculate Project Status
+    active_delays = db.query(ProjectDelay).filter(
+        ProjectDelay.project_id == project_id,
+        ProjectDelay.resolved_date == None
+    ).count()
+    
+    progress_rec = db.query(ProjectProgressHistory).filter(ProjectProgressHistory.project_id == project_id).order_by(ProjectProgressHistory.timestamp.desc()).first()
+    progress_val = progress_rec.progress if progress_rec else 0.0
+    
+    if progress_val >= 100.0 or project.status.lower() == "completed":
+        proj_status = "Completed"
+    elif active_delays > 0:
+        proj_status = "Delayed"
+    else:
+        proj_status = "On Track"
+
+    # Query assigned vendors for this project's items
+    assignments = db.query(VendorAssignment).filter(VendorAssignment.project_id == project_id).all()
+    vendors_map = {}
+    for a in assignments:
+        if a.vendor_id and a.vendor_id not in vendors_map:
+            vendor = db.query(Vendor).filter(Vendor.id == a.vendor_id).first()
+            if vendor:
+                vendors_map[a.vendor_id] = {
+                    "id": vendor.id,
+                    "businessName": vendor.business_name or vendor.name or "Partner",
+                    "ownerName": vendor.owner_name or vendor.name or "N/A",
+                    "phone": vendor.phone or "N/A",
+                    "items": []
+                }
+        if a.vendor_id and a.vendor_id in vendors_map:
+            item = db.query(RoomItem).filter(RoomItem.id == a.item_id).first()
+            item_name = item.product.name if (item and item.product) else "Custom Item"
+            vendors_map[a.vendor_id]["items"].append(f"{item_name} ({a.status})")
+
+    vendors_list = list(vendors_map.values())
+
+    return {
+        "trackings": trackings,
+        "project": {
+            "id": project.id,
+            "propertyName": project.property_name,
+            "city": project.city,
+            "pincode": project.pincode,
+            "startDate": project.created_at.strftime("%d-%b-%Y") if project.created_at else "N/A",
+            "status": proj_status
+        },
+        "customer": {
+            "name": project.user.name if project.user else "N/A",
+            "phone": project.user.phone if project.user else "N/A",
+            "email": project.user.email if project.user else "N/A",
+            "address": f"{project.property_name}, {project.city} - {project.pincode}"
+        },
+        "vendors": vendors_list
+    }
 
 
 @router.put("/projects/{project_id}/tracking/{tracking_id}")

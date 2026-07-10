@@ -193,3 +193,86 @@ def generate_quotation_pdf(
     doc.build(story)
     print(f"[PDF] Generated: {filepath}")
     return filepath
+
+
+def generate_renders_pdf(project_id: str, project_name: str, renders_data: list) -> str:
+    """
+    Generates a multi-page PDF with all room renders and their associated product lists.
+    renders_data: list of dicts like {"room_name": "Living Room", "image_url": "...", "products": [...]}
+    """
+    from reportlab.platypus import Image as RLImage
+    import urllib.request
+    import tempfile
+
+    os.makedirs(PDF_DIR, exist_ok=True)
+    filename = f"renders_{project_id[:8]}.pdf"
+    filepath = os.path.join(PDF_DIR, filename)
+
+    doc = SimpleDocTemplate(
+        filepath, pagesize=A4, rightMargin=15*mm, leftMargin=15*mm,
+        topMargin=15*mm, bottomMargin=15*mm
+    )
+    styles = getSampleStyleSheet()
+    story = []
+
+    # Title Page
+    story.append(Spacer(1, 40*mm))
+    story.append(Paragraph(f"<b><font size='24' color='#4F46E5'>Design Proposal & Renders</font></b>", ParagraphStyle('Title', alignment=TA_CENTER)))
+    story.append(Spacer(1, 10*mm))
+    story.append(Paragraph(f"<font size='14' color='#1E1B4B'>{project_name}</font>", ParagraphStyle('SubTitle', alignment=TA_CENTER)))
+    story.append(Spacer(1, 20*mm))
+    story.append(Paragraph(f"<font size='10' color='#6B7280'>Generated on {datetime.datetime.utcnow().strftime('%d %b %Y')}</font>", ParagraphStyle('Date', alignment=TA_CENTER)))
+    story.append(Spacer(1, 40*mm))
+    
+    # Renders pages
+    for r in renders_data:
+        story.append(Paragraph(f"<b><font size='16' color='#1E1B4B'>{r['room_name']}</font></b>", styles["Heading2"]))
+        story.append(Spacer(1, 5*mm))
+
+        img_url = r.get("image_url")
+        if img_url:
+            # Handle local static paths vs remote URLs
+            try:
+                if img_url.startswith("/static/"):
+                    local_path = img_url.replace("/static/", "")
+                    if os.path.exists(local_path):
+                        story.append(RLImage(local_path, width=170*mm, height=113*mm))
+                else:
+                    # Download remote image temp
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tf:
+                        urllib.request.urlretrieve(img_url, tf.name)
+                        story.append(RLImage(tf.name, width=170*mm, height=113*mm))
+            except Exception as e:
+                print(f"[PDF] Could not add image {img_url}: {e}")
+                story.append(Paragraph("<i>[Image could not be loaded]</i>", styles["Normal"]))
+        
+        story.append(Spacer(1, 10*mm))
+
+        if r.get("products"):
+            story.append(Paragraph("<b>Featured Items</b>", styles["Heading4"]))
+            story.append(Spacer(1, 2*mm))
+            
+            headers = ["Item", "Category", "Specs"]
+            table_data = [headers]
+            for p in r["products"]:
+                specs = f"Color: {p.get('custom_color','-')}"
+                if p.get('custom_size'): specs += f" | Size: {p.get('custom_size')}"
+                table_data.append([
+                    Paragraph(p.get("name", ""), styles["Normal"]),
+                    p.get("category", ""),
+                    Paragraph(specs, styles["Normal"])
+                ])
+            
+            t = Table(table_data, colWidths=[60*mm, 35*mm, 75*mm])
+            t.setStyle(TableStyle([
+                ("BACKGROUND", (0,0), (-1,0), INDIGO_LIGHT),
+                ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+                ("GRID", (0,0), (-1,-1), 0.5, colors.HexColor("#E5E7EB")),
+                ("PADDING", (0,0), (-1,-1), 5),
+            ]))
+            story.append(t)
+            
+        story.append(Spacer(1, 20*mm))
+
+    doc.build(story)
+    return filepath
