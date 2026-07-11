@@ -438,11 +438,7 @@ export default function VendorAssignmentsPage() {
                           )}
                         </td>
                         <td className="py-4 px-4">
-                          {item.status === 'ASSIGNED' || item.status === 'RECEIVED_ORDER' ? (
-                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] font-black rounded-full uppercase tracking-wider">
-                              New Request
-                            </span>
-                          ) : item.status === 'REJECTED' ? (
+                          {item.status === 'REJECTED' ? (
                             <span className="px-2 py-0.5 bg-red-50 text-red-700 border border-red-100 text-[10px] font-black rounded-full uppercase tracking-wider">
                               Declined
                             </span>
@@ -452,6 +448,7 @@ export default function VendorAssignmentsPage() {
                               onChange={(e) => handleStatusChange(item.id, e.target.value)}
                               className="px-2.5 py-1 bg-white border border-slate-200 text-slate-750 text-[11px] font-bold rounded-lg cursor-pointer hover:border-slate-350 focus:outline-none transition"
                             >
+                              <option value="RECEIVED_ORDER">RECEIVED ORDER (New)</option>
                               <option value="ACCEPTED">ACCEPTED (Ready to process)</option>
                               <option value="PRODUCTION">PRODUCTION (In progress)</option>
                               <option value="READY">READY (QA complete)</option>
@@ -486,22 +483,7 @@ export default function VendorAssignmentsPage() {
                           </div>
                         </td>
                         <td className="py-4 px-5 text-right">
-                          {item.status === 'ASSIGNED' || item.status === 'RECEIVED_ORDER' ? (
-                            <div className="flex justify-end gap-1.5">
-                              <button
-                                onClick={() => handleReject(item.id)}
-                                className="px-2.5 py-1.5 border border-red-200 text-red-650 hover:bg-red-50 text-[10px] font-bold rounded-lg transition"
-                              >
-                                Decline
-                              </button>
-                              <button
-                                onClick={() => handleAccept(item.id)}
-                                className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded-lg transition shadow-sm"
-                              >
-                                Accept
-                              </button>
-                            </div>
-                          ) : item.status === 'REJECTED' || item.status === 'DECLINED' ? (
+                          {item.status === 'REJECTED' || item.status === 'DECLINED' ? (
                             <span className="text-xs font-bold text-red-500 uppercase pr-4">Declined</span>
                           ) : (
                             <button
@@ -619,6 +601,7 @@ export default function VendorAssignmentsPage() {
                           onChange={(e) => handleStatusChange(selectedAssignment.id, e.target.value)}
                           className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-indigo-500 rounded-xl text-xs focus:outline-none text-slate-800 transition"
                         >
+                          <option value="RECEIVED_ORDER">RECEIVED ORDER (New)</option>
                           <option value="ACCEPTED">ACCEPTED (Ready to process)</option>
                           <option value="PRODUCTION">PRODUCTION (Factory manufacturing)</option>
                           <option value="READY">READY (Finished fabrication)</option>

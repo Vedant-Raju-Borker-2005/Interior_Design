@@ -2,12 +2,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { trackingAPI, projectsAPI } from '@/lib/api'
+import { trackingAPI, projectsAPI, customerExtrasAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import {
   CheckCircle2, Clock, Circle, ArrowLeft, Sparkles,
-  CalendarDays, User2, FileText, Phone, ChevronRight, Wrench, Map, CreditCard
+  CalendarDays, User2, FileText, Phone, ChevronRight, Wrench, Map, CreditCard, Camera
 } from 'lucide-react'
 import clsx from 'clsx'
 import Link from 'next/link'
@@ -30,17 +30,20 @@ export default function TrackPage() {
   const router = useRouter()
   const [project, setProject] = useState<any>(null)
   const [milestones, setMilestones] = useState<any[]>([])
+  const [proofPhotos, setProofPhotos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [projRes, trackRes] = await Promise.all([
+        const [projRes, trackRes, proofsRes] = await Promise.all([
           projectsAPI.get(projectId),
           trackingAPI.getMilestones(projectId),
+          customerExtrasAPI.getProofPhotos(projectId),
         ])
         setProject(projRes.data)
         setMilestones(trackRes.data.milestones || [])
+        setProofPhotos(proofsRes.data.proof_photos || [])
       } catch {
         toast.error('Failed to load tracking data')
       } finally {
@@ -168,6 +171,58 @@ export default function TrackPage() {
             })}
           </div>
         </div>
+
+        {/* Vendor Photo Proofs Gallery */}
+        {proofPhotos && proofPhotos.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-card p-6 mb-8">
+            <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+              <Camera className="w-5 h-5 text-indigo-650" /> Vendor Execution Photo Proofs
+            </h2>
+            <p className="text-xs text-slate-400 mb-6">Real-time photos uploaded by our verified vendors during manufacturing, transit, and installation.</p>
+            
+            <div className="space-y-6">
+              {proofPhotos.map((item) => (
+                <div key={item.assignment_id} className="border-t border-slate-100 pt-4 first:border-0 first:pt-0">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-bold text-slate-800 text-sm">{item.product_name}</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-150">
+                      Status: {item.status?.replace('_', ' ')}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {item.proofs.map((proof: any) => {
+                      const fullUrl = proof.image_url.startsWith('/') 
+                        ? `http://localhost:8000${proof.image_url}` 
+                        : proof.image_url;
+                      return (
+                        <div key={proof.id} className="relative group border border-slate-100 rounded-xl overflow-hidden bg-slate-50">
+                          <img
+                            src={fullUrl}
+                            alt={proof.caption || "Proof"}
+                            className="w-full h-28 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-slate-900/70 opacity-0 group-hover:opacity-100 flex flex-col justify-end p-2.5 transition duration-200">
+                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block">{proof.image_type}</span>
+                            <span className="text-[10px] text-white font-medium truncate block mt-0.5">{proof.caption}</span>
+                            <a
+                              href={fullUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 text-center py-1 bg-indigo-600 hover:bg-indigo-750 text-white rounded-lg text-[9px] font-bold transition"
+                            >
+                              Open Full Photo
+                            </a>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

@@ -696,6 +696,49 @@ def delete_vendor_product(
     return {"success": True, "message": "Product deleted successfully"}
 
 
+@router.post("/products/{product_id}/image", summary="Upload product photo for vendor catalog")
+async def upload_product_image(
+    product_id: str,
+    file: UploadFile = File(...),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload a real product photo — this image will be shown to customers in the catalog."""
+    vendor = db.query(Vendor).filter(Vendor.user_id == user.id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor profile not found")
+
+    product = db.query(VendorProduct).filter(VendorProduct.id == product_id, VendorProduct.vendor_id == vendor.id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found or access denied")
+
+    # Save image file
+    ext = os.path.splitext(file.filename or "product.jpg")[1].lower() or ".jpg"
+    allowed = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+    if ext not in allowed:
+        raise HTTPException(400, "Invalid image format. Use JPG, PNG, or WebP.")
+
+    os.makedirs(os.path.join("pdfs", "product_images"), exist_ok=True)
+    filename = f"product_{product_id}_{int(datetime.datetime.utcnow().timestamp())}{ext}"
+    filepath = os.path.join("pdfs", "product_images", filename)
+
+    contents = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(contents)
+
+    image_url = f"/static/pdfs/product_images/{filename}"
+
+    # Update vendor product images
+    product.images = [image_url]
+    
+    # Update customer-facing catalog Product table thumbnail
+    cust_product = db.query(Product).filter(Product.id == product_id).first()
+    if cust_product:
+        cust_product.thumbnail_url = image_url
+
+    db.commit()
+    return {"success": True, "image_url": image_url}
+
 
 # --- INVENTORY MANAGEMENT ENDPOINTS ---
 

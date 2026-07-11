@@ -55,6 +55,8 @@ export const authAPI = {
 export const projectsAPI = {
   list: () =>
     axiosInstance.get('/api/v1/projects'),
+  delete: (projectId: string) =>
+    axiosInstance.delete(`/api/v1/customer/projects/${projectId}`),  
   
   create: (data: { 
     bhk_type: string; 
@@ -365,6 +367,13 @@ export const vendorAPI = {
     axiosInstance.put(`/api/v1/vendor/products/${productId}`, data),
   deleteProduct: (productId: string) =>
     axiosInstance.delete(`/api/v1/vendor/products/${productId}`),
+  uploadProductImage: (productId: string, file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return axiosInstance.post(`/api/v1/vendor/products/${productId}/image`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
 
 
   getInventory: () =>
@@ -396,6 +405,12 @@ export const vendorAPI = {
     axiosInstance.get('/api/v1/vendor/notifications'),
   markNotificationsRead: (notificationIds?: string[]) =>
     axiosInstance.patch('/api/v1/vendor/notifications', { notificationIds }),
+}
+
+// Customer extras
+export const customerExtrasAPI = {
+  getProofPhotos: (projectId: string) =>
+    axiosInstance.get(`/api/v1/customer/projects/${projectId}/proof-photos`),
 }
 
 export default axiosInstance

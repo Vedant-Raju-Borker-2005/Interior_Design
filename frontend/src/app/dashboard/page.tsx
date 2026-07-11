@@ -11,7 +11,7 @@ import ActivityFeed from '@/components/ActivityFeed'
 import {
   Plus, ArrowRight, Clock, CheckCircle2, FileText,
   Home, Sparkles, TrendingUp, Edit3, Activity, MapPin, User, Mail, Phone, Settings, X, Check,
-  MessageSquare, CreditCard
+  MessageSquare, CreditCard, Trash2
 } from 'lucide-react'
 import Link from 'next/link'
 import clsx from 'clsx'
@@ -25,7 +25,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
 
 const CITIES = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Ahmedabad', 'Other']
 
-function ProjectCard({ project }: { project: any }) {
+function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: string) => void }) {
   const status = STATUS_CONFIG[project.status] || STATUS_CONFIG.draft
   const isExecution = ['ordered', 'done'].includes(project.status)
 
@@ -55,9 +55,23 @@ function ProjectCard({ project }: { project: any }) {
               <span>{project.city}</span>
             </div>
           </div>
-          <span className={clsx('badge ml-2 flex-shrink-0', status.color)}>
-            <status.icon className="w-3 h-3 inline mr-1" />{status.label}
-          </span>
+          <div className="flex items-center gap-2">
+            {['draft', 'quoted'].includes(project.status) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(project.id)
+                }}
+                title="Delete Project"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+            <span className={clsx('badge flex-shrink-0', status.color)}>
+              <status.icon className="w-3 h-3 inline mr-1" />{status.label}
+            </span>
+          </div>
         </div>
 
         {project.floor_plan_name && (
@@ -360,7 +374,23 @@ function DashboardContent() {
               ) : (
                 <div className="grid md:grid-cols-2 gap-6">
                   {projects.map((project) => (
-                    <ProjectCard key={project.id} project={project} />
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      onDelete={async (id) => {
+                        if (window.confirm("Are you sure you want to delete this project? All associated designs, files and details will be lost forever.")) {
+                          try {
+                            await projectsAPI.delete(id)
+                            toast.success("Project deleted successfully! 🗑️")
+                            // Refresh list
+                            const res = await projectsAPI.list()
+                            setProjects(res.data.projects || [])
+                          } catch (err: any) {
+                            toast.error(err.response?.data?.detail || "Failed to delete project")
+                          }
+                        }
+                      }}
+                    />
                   ))}
                 </div>
               )

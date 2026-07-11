@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useVendorStore } from '@/stores/vendorStore'
-import { Plus, Edit3, X, Package, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { vendorAPI } from '@/lib/api'
+import { Plus, Edit3, X, Package, Trash2, Camera, Image as ImageIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+
 
 // ── Category / Subcategory map ────────────────────────────────────────────────
 const CATEGORIES = ['Furniture', 'Lighting', 'Appliances', 'Decor', 'Flooring', 'Kitchen Cabinets', 'Wardrobes', 'Curtains', 'Bathroom Fixtures']
@@ -77,6 +79,12 @@ export default function VendorProductsPage() {
   const [editingProduct, setEditingProduct] = useState<any | null>(null)
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
 
+  // Product image state
+  const [productImageFile, setProductImageFile] = useState<File | null>(null)
+  const [productImagePreview, setProductImagePreview] = useState<string>('')
+  const [uploadingImage, setUploadingImage] = useState(false)
+
+
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this product? It will be removed from customer catalogs.')) {
       try {
@@ -126,6 +134,8 @@ export default function VendorProductsPage() {
       setTextureOptions(v.texture || [])
       setWoodFinishOptions(v.wood_finish || [])
       setCushionStyleOptions(v.cushion_style || [])
+      setProductImagePreview(editingProduct.images?.[0] || '')
+      setProductImageFile(null)
     } else {
       resetForm()
     }
@@ -147,6 +157,7 @@ export default function VendorProductsPage() {
     setColors([])
     setFabricOptions([]); setSizeOptions([]); setTextureOptions([])
     setWoodFinishOptions([]); setCushionStyleOptions([])
+    setProductImageFile(null); setProductImagePreview('')
   }
 
   const toggleTag = (list: string[], setList: (v: string[]) => void, val: string) =>
@@ -167,14 +178,34 @@ export default function VendorProductsPage() {
       colorStock: {}, // No longer color-wise stock, send empty
     }
     try {
+      let productId = editingProduct?.id
       if (editingProduct) {
         await updateProduct(editingProduct.id, payload)
         toast.success('Product updated! 🎉')
       } else {
-        await createProduct(payload)
+        const res = await createProduct(payload)
+        productId = res?.productId
         toast.success('Product added! 🚀')
       }
-      setShowModal(false); setEditingProduct(null)
+
+      // Upload product image if one was selected
+      if (productImageFile && productId) {
+        setUploadingImage(true)
+        try {
+          await vendorAPI.uploadProductImage(productId, productImageFile)
+          toast.success('Product photo uploaded! 📸')
+        } catch (uploadErr) {
+          console.error("Photo upload error:", uploadErr)
+          toast.error('Product details saved, but photo upload failed.')
+        } finally {
+          setUploadingImage(false)
+        }
+      }
+
+      // Refresh product list
+      await loadProducts()
+      setShowModal(false)
+      setEditingProduct(null)
     } catch (err: any) { toast.error(err.message || 'Failed') }
   }
 
@@ -210,8 +241,19 @@ export default function VendorProductsPage() {
             const v = p.variants || {}
             const totalQty = p.inventory?.availableQty ?? 0
             const isExp = expandedCard === p.id
+            const displayImage = p.images?.[0] || ''
             return (
               <div key={p.id} className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                {displayImage && (
+                  <div className="relative w-full h-36 bg-slate-100 overflow-hidden flex-shrink-0">
+                    <img
+                      src={displayImage.startsWith('/') ? `http://localhost:8000${displayImage}` : displayImage}
+                      alt={p.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  </div>
+                )}
                 <div className="p-4 space-y-2.5 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -363,6 +405,62 @@ export default function VendorProductsPage() {
                   <TagSection label="🖐 Texture" options={spec.textureOptions} selected={textureOptions}
                     onToggle={v => toggleTag(textureOptions, setTextureOptions, v)} />
                 )}
+              </div>
+
+              {/* Product Photo Upload Section */}
+              <div className="border border-indigo-150 bg-indigo-50/20 rounded-2xl p-4 space-y-3">
+                <label className="block text-[10px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-indigo-500" />
+                  <span>Real Product Photo (Shown to Customers)</span>
+                </label>
+                <div className="flex items-center gap-4">
+                  {productImagePreview ? (
+                    <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-indigo-200 bg-slate-50 flex-shrink-0">
+                      <img
+                        src={productImagePreview.startsWith('/') ? `http://localhost:8000${productImagePreview}` : productImagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { setProductImageFile(null); setProductImagePreview('') }}
+                        className="absolute top-1 right-1 bg-red-600 hover:bg-red-750 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-black shadow-md"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-xl border-2 border-dashed border-indigo-200 bg-white flex items-center justify-center flex-shrink-0">
+                      <ImageIcon className="w-6 h-6 text-indigo-300" />
+                    </div>
+                  )}
+
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      id="product-image-file-input"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          setProductImageFile(file)
+                          setProductImagePreview(URL.createObjectURL(file))
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="product-image-file-input"
+                      className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-750 text-white text-xs font-bold rounded-xl transition shadow-sm"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      {productImagePreview ? 'Replace Photo' : 'Upload Photo'}
+                    </label>
+                    <p className="text-[10px] text-slate-450 mt-1 font-medium">
+                      Select JPG, PNG or WebP image. This real photo will show up for customization.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Description */}

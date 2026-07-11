@@ -185,14 +185,17 @@ def update_quotation_status(
         
     quotation.status = status
     if status == "approved":
+        # Idempotency: skip if project already ordered (prevents double-assign)
+        already_ordered = project.status == "ordered"
         project.status = "ordered"
         
-        # Populate trackings
-        _populate_default_tracking(project_id, project, db)
+        # Populate trackings (only once)
+        if not already_ordered:
+            _populate_default_tracking(project_id, project, db)
 
-        # Trigger Vendor Assignments based on item owners on approval
+        # Trigger Vendor Assignments — only if not already ordered
         from ..models import Vendor, VendorAssignment, VendorNotification, Product
-        if quotation.line_items:
+        if quotation.line_items and not already_ordered:
             for item in quotation.line_items:
                 if item.get("sku") in ["PKG", "SVC"]: continue
                 
@@ -215,12 +218,13 @@ def update_quotation_status(
                         assigned_vendor_id = matching_vendors[0].id
                 
                 if assigned_vendor_id:
+                    # Auto-assign directly to RECEIVED_ORDER — vendor does not need to accept/decline
                     assignment = VendorAssignment(
                         project_id=project.id,
                         item_id=prod_id or item.get("sku"),
                         vendor_id=assigned_vendor_id,
-                        status="ASSIGNED",
-                        remarks=f"Auto-assigned upon quotation approval. Quantity: {item.get('qty', 1)}"
+                        status="RECEIVED_ORDER",
+                        remarks=f"Auto-assigned upon customer quotation approval. Qty: {item.get('qty', 1)}. Vendor action required: update production status."
                     )
                     db.add(assignment)
                     
@@ -228,7 +232,7 @@ def update_quotation_status(
                     notif = VendorNotification(
                         vendor_id=assigned_vendor_id,
                         type="NEW_ASSIGNMENT",
-                        message=f"New assignment for Project {project.property_name}: {item.get('name')}"
+                        message=f"New order received for Project '{project.property_name}': {item.get('name')}. Please update production status."
                     )
                     db.add(notif)
 
@@ -918,3 +922,70 @@ def mark_all_customer_notifications_read(
     db.commit()
     return {"success": True}
 
+
+# ── DELETE PROJECT (only draft/quoted) ───────────────────────────────────────
+
+@router.delete("/projects/{project_id}", summary="Delete a project (only draft or quoted)")
+def delete_project(
+    project_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+    
+    if project.status not in ["draft", "quoted"]:
+        raise HTTPException(
+            400,
+            f"Cannot delete a project in '{project.status}' status. Only draft or quoted projects can be deleted."
+        )
+    
+    # Cascade delete: rooms, room_items, quotations, trackings, renders are handled by DB relationships
+    db.delete(project)
+    db.commit()
+    return {"success": True, "message": f"Project '{project.property_name}' deleted successfully."}
+
+
+# ── VENDOR PROOF PHOTOS FOR CUSTOMER ─────────────────────────────────────────
+
+@router.get("/projects/{project_id}/proof-photos", summary="Get vendor proof photos for a project (customer view)")
+def get_proof_photos(
+    project_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    from ..models import VendorAssignment, ItemProofImage, Product
+    assignments = db.query(VendorAssignment).filter(VendorAssignment.project_id == project_id).all()
+    
+    result = []
+    for assignment in assignments:
+        proofs = db.query(ItemProofImage).filter(ItemProofImage.assignment_id == assignment.id).all()
+        if proofs:
+            # Get product name
+            product_name = assignment.item_id
+            prod = db.query(Product).filter(Product.id == assignment.item_id).first()
+            if prod:
+                product_name = prod.name
+
+            result.append({
+                "assignment_id": assignment.id,
+                "product_name": product_name,
+                "status": assignment.status,
+                "proofs": [
+                    {
+                        "id": p.id,
+                        "image_url": p.image_url,
+                        "image_type": p.image_type,
+                        "caption": p.caption,
+                        "created_at": p.created_at.isoformat() if p.created_at else None,
+                    }
+                    for p in proofs
+                ]
+            })
+    
+    return {"proof_photos": result}
