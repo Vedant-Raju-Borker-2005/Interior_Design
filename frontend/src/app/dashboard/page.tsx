@@ -380,7 +380,7 @@ function DashboardContent() {
                       onDelete={async (id) => {
                         if (window.confirm("Are you sure you want to delete this project? All associated designs, files and details will be lost forever.")) {
                           try {
-                            await projectsAPI.delete(id)
+                            await projectsAPI.deleteCustomerProject(id)
                             toast.success("Project deleted successfully! 🗑️")
                             // Refresh list
                             const res = await projectsAPI.list()
