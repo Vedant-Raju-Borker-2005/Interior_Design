@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, ArrowLeft, Clock, CheckCircle2, Download,
-  Image as ImageIcon, RefreshCw, X, Layout, AlignLeft, Settings
+  Image as ImageIcon, RefreshCw, X, Layout, AlignLeft, Settings, AlertCircle
 } from 'lucide-react'
 import clsx from 'clsx'
 
