@@ -20,6 +20,15 @@ const STYLE_OPTIONS = [
   { id: 'boho',                label: 'Boho',                emoji: '🪴', desc: 'Rattan, macramé, warm amber' },
 ]
 
+const COLOR_OPTIONS = [
+  { id: 'Beige', label: 'Beige', hex: '#F5F5DC' },
+  { id: 'Grey', label: 'Grey', hex: '#808080' },
+  { id: 'Blue', label: 'Blue', hex: '#3B82F6' },
+  { id: 'Green', label: 'Green', hex: '#10B981' },
+  { id: 'Brown', label: 'Brown', hex: '#78350F' },
+  { id: 'White', label: 'White', hex: '#FFFFFF' }
+]
+
 const BUDGET_RANGES = [
   { id: '300000',  label: '₹3L – ₹5L',   min: 300000,  max: 500000 },
   { id: '500000',  label: '₹5L – ₹8L',   min: 500000,  max: 800000 },
@@ -74,6 +83,7 @@ export default function OnboardingPage() {
     city:                '',
     property_name:       '',
     pincode:             '',
+    color_preference:    'White',
   })
 
   if (!isLoggedIn) {
@@ -152,7 +162,8 @@ export default function OnboardingPage() {
         furnishing_type:     local.furnishing_type,
         pincode:             local.pincode || undefined,
         floor_plan_type:     floorPlanMode,
-        floor_plan_name:     finalPlanName
+        floor_plan_name:     finalPlanName,
+        color_preference:    local.color_preference,
       })
       
       setOnboarding({
@@ -220,6 +231,30 @@ export default function OnboardingPage() {
                     <div className="text-xs text-slate-500 mt-1.5 leading-relaxed">{opt.desc}</div>
                   </button>
                 ))}
+              </div>
+
+              {/* Color preference selector */}
+              <div className="mt-12">
+                <h3 className="text-lg font-bold text-slate-800 mb-1">Select a Color Preference (Default Theme)</h3>
+                <p className="text-xs text-slate-500 mb-5">Products matching this color will be auto-selected for your rooms by default.</p>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                  {COLOR_OPTIONS.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setLocal((s) => ({ ...s, color_preference: c.id }))}
+                      className={clsx(
+                        'p-4 rounded-2xl border-2 text-center transition-all duration-200 bg-white flex flex-col items-center gap-2 cursor-pointer hover:border-indigo-400',
+                        local.color_preference === c.id
+                          ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
+                          : 'border-slate-200'
+                      )}
+                    >
+                      <span className="w-8 h-8 rounded-full border border-black/15 shadow-inner" style={{ backgroundColor: c.hex }} />
+                      <span className="text-xs font-bold text-slate-700">{c.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </motion.div>
           )}

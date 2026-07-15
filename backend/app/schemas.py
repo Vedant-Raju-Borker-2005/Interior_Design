@@ -36,6 +36,7 @@ class CreateProjectReq(BaseModel):
     material_preference: Optional[str] = None
     pincode: Optional[str] = None
     furnishing_type: Optional[str] = None  # new / upgrade
+    color_preference: Optional[str] = None
 
 
 class RoomOut(BaseModel):
@@ -59,6 +60,7 @@ class ProjectOut(BaseModel):
     budget: float
     status: str
     package_id: Optional[str] = None
+    color_preference: Optional[str] = None
     created_at: datetime.datetime
     rooms: List[RoomOut] = []
 

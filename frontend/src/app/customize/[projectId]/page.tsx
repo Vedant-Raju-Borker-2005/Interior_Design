@@ -74,6 +74,7 @@ export default function GuidedCustomizePage() {
   const [savingItem, setSavingItem] = useState(false)
 
   const [loading, setLoading] = useState(true)
+  const [activeImage, setActiveImage] = useState('')
 
   const activeRoom = project?.rooms?.[activeRoomIdx]
   const activeRoomItems = activeRoom?.items || []
@@ -143,6 +144,7 @@ export default function GuidedCustomizePage() {
   // Start customizing product attributes
   const handleSelectProduct = (product: any) => {
     setCustomizingProduct(product)
+    setActiveImage(product.thumbnail_url || '')
     const v = product.variants || {}
     setCustomColor(v.color?.[0] || '')
     setCustomFabric(v.fabric?.[0] || '')
@@ -483,15 +485,45 @@ export default function GuidedCustomizePage() {
                   {/* Left Column: Product Info Card */}
                   <div className="md:col-span-5 bg-slate-950/40 border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
                     <div>
-                      <img
-                        src={customizingProduct.thumbnail_url}
-                        alt={customizingProduct.name}
-                        className="w-full aspect-square object-cover rounded-xl mb-4"
-                      />
+                      {/* Main Image with Zoom Hover Effect */}
+                      <div className="relative w-full aspect-square overflow-hidden rounded-xl mb-4 border border-white/10 bg-slate-950">
+                        <img
+                          src={activeImage.startsWith('/') ? `http://localhost:8000${activeImage}` : activeImage}
+                          alt={customizingProduct.name}
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                        />
+                      </div>
+
+                      {/* Multi-Image Thumbnails (Flipkart/Amazon style) */}
+                      {customizingProduct.variants?.images && customizingProduct.variants.images.length > 1 && (
+                        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-thin">
+                          {customizingProduct.variants.images.map((img: string, idx: number) => (
+                            <div
+                              key={idx}
+                              onMouseEnter={() => setActiveImage(img)}
+                              onClick={() => setActiveImage(img)}
+                              className={clsx(
+                                'w-12 h-12 rounded-lg overflow-hidden border-2 cursor-pointer transition-all flex-shrink-0 bg-slate-950',
+                                activeImage === img ? 'border-indigo-500 scale-105' : 'border-white/5 opacity-60 hover:opacity-100'
+                              )}
+                            >
+                              <img src={img.startsWith('/') ? `http://localhost:8000${img}` : img} className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       <h4 className="text-sm font-extrabold text-white">{customizingProduct.name}</h4>
-                      <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                        Design variant elements will overlay inside the visual rendering engine.
-                      </p>
+                      
+                      {/* Specifications / Product Info Sheet */}
+                      <div className="mt-3 p-3 bg-slate-950/30 rounded-xl border border-white/5 space-y-1">
+                        <div className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Specifications</div>
+                        <div className="text-[10px] text-slate-350"><span className="text-slate-500 font-semibold">SKU:</span> {customizingProduct.sku}</div>
+                        <div className="text-[10px] text-slate-350"><span className="text-slate-500 font-semibold">Category:</span> {customizingProduct.category} {customizingProduct.subcategory ? `• ${customizingProduct.subcategory}` : ''}</div>
+                        {customizingProduct.description && (
+                          <div className="text-[10px] text-slate-350 leading-relaxed mt-1"><span className="text-slate-500 font-semibold">Details:</span> {customizingProduct.description}</div>
+                        )}
+                      </div>
                     </div>
                     <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
                       <span className="text-slate-400 text-xs font-semibold">Base Price:</span>
@@ -503,6 +535,17 @@ export default function GuidedCustomizePage() {
 
                   {/* Right Column: Custom Attribute Selectors */}
                   <div className="md:col-span-7 space-y-4">
+                    {/* Preferred Color Theme Validation Warning */}
+                    {project?.color_preference && customizingProduct.variants?.color && 
+                     !customizingProduct.variants.color.some((c: string) => c.toLowerCase() === project.color_preference.toLowerCase()) && (
+                       <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-xl text-[11px] leading-relaxed flex items-start gap-2 mb-2">
+                         <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                         <div>
+                           <span className="font-bold">Color Theme Warning:</span> The preferred theme color <strong>"{project.color_preference}"</strong> is not available for this design. Please customize using another color variant.
+                         </div>
+                       </div>
+                    )}
+
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <Sliders className="w-4 h-4 text-indigo-400" />
                       <span>Custom Attributes</span>

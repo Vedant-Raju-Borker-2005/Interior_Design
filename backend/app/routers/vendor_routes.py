@@ -699,6 +699,7 @@ def delete_vendor_product(
 @router.post("/products/{product_id}/image", summary="Upload product photo for vendor catalog")
 async def upload_product_image(
     product_id: str,
+    view_index: int = 0,
     file: UploadFile = File(...),
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
@@ -712,6 +713,9 @@ async def upload_product_image(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found or access denied")
 
+    if view_index < 0 or view_index > 2:
+        raise HTTPException(400, "view_index must be between 0 and 2")
+
     # Save image file
     ext = os.path.splitext(file.filename or "product.jpg")[1].lower() or ".jpg"
     allowed = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -719,7 +723,7 @@ async def upload_product_image(
         raise HTTPException(400, "Invalid image format. Use JPG, PNG, or WebP.")
 
     os.makedirs(os.path.join("pdfs", "product_images"), exist_ok=True)
-    filename = f"product_{product_id}_{int(datetime.datetime.utcnow().timestamp())}{ext}"
+    filename = f"product_{product_id}_view_{view_index}_{int(datetime.datetime.utcnow().timestamp())}{ext}"
     filepath = os.path.join("pdfs", "product_images", filename)
 
     contents = await file.read()
@@ -728,16 +732,23 @@ async def upload_product_image(
 
     image_url = f"/static/pdfs/product_images/{filename}"
 
-    # Update vendor product images
-    product.images = [image_url]
+    # Update vendor product images at specified index
+    current_images = list(product.images or [])
+    while len(current_images) <= view_index:
+        current_images.append("")
+    current_images[view_index] = image_url
+    product.images = [img for img in current_images if img]
     
-    # Update customer-facing catalog Product table thumbnail
+    # Update customer-facing catalog Product table
     cust_product = db.query(Product).filter(Product.id == product_id).first()
     if cust_product:
-        cust_product.thumbnail_url = image_url
+        cust_product.thumbnail_url = product.images[0] if product.images else image_url
+        v = dict(cust_product.variants or {})
+        v["images"] = product.images
+        cust_product.variants = v
 
     db.commit()
-    return {"success": True, "image_url": image_url}
+    return {"success": True, "image_url": image_url, "images": product.images}
 
 
 # --- INVENTORY MANAGEMENT ENDPOINTS ---

@@ -77,6 +77,7 @@ export default function ControlledVisualizePage() {
   const [swappingTexture, setSwappingTexture] = useState('')
   const [swappingCushionStyle, setSwappingCushionStyle] = useState('')
   const [savingSwap, setSavingSwap] = useState(false)
+  const [swappingActiveImage, setSwappingActiveImage] = useState('')
 
   // Uploaded room photo for img2img
   const [uploadedFileB64, setUploadedFileB64] = useState<string>('')
@@ -217,6 +218,7 @@ export default function ControlledVisualizePage() {
   const openSwapPanel = async (roomItem: any) => {
     setSwappingItem(roomItem)
     const product = roomItem.product
+    setSwappingActiveImage(product?.thumbnail_url || '')
     const v = product?.variants || {}
     setSwappingColor(roomItem.custom_color || v.color?.[0] || '')
     setSwappingFabric(roomItem.custom_fabric || v.fabric?.[0] || '')
@@ -499,8 +501,12 @@ export default function ControlledVisualizePage() {
                     </div>
                   </motion.div>
                 ) : activeRoom ? (
-                  <motion.div key="canvas3d" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 w-full h-full">
-                    <RoomCanvas3D roomType={activeRoom.room_type} style={selectedStyle} />
+                  <motion.div key="base_view_2d" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 w-full h-full">
+                    <img
+                      src={selectedBaseView === uploadedBaseImage ? uploadedBaseImage : ((BASE_VIEWS[activeRoom.room_type] || []).find((v) => v.id === selectedBaseView)?.url || '')}
+                      alt="2D Room Layout Preview"
+                      className="w-full h-full object-cover"
+                    />
                   </motion.div>
                 ) : (
                   <motion.div key="empty" className="text-center p-8">
@@ -601,6 +607,55 @@ export default function ControlledVisualizePage() {
               
               {/* Product Variant Details Panel */}
               <div className="space-y-4 border-r border-white/5 pr-6">
+                
+                {/* Flipkart style multi-image viewer for swappingItem */}
+                <div className="bg-slate-950/40 border border-white/5 p-3 rounded-2xl">
+                  <div className="relative w-full aspect-video overflow-hidden rounded-xl bg-slate-950">
+                    <img
+                      src={swappingActiveImage.startsWith('/') ? `http://localhost:8000${swappingActiveImage}` : swappingActiveImage}
+                      alt={swappingItem.product?.name}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                    />
+                  </div>
+                  {/* Thumbnails */}
+                  {swappingItem.product?.variants?.images && swappingItem.product.variants.images.length > 1 && (
+                    <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1 scrollbar-thin">
+                      {swappingItem.product.variants.images.map((img: string, idx: number) => (
+                        <div
+                          key={idx}
+                          onMouseEnter={() => setSwappingActiveImage(img)}
+                          onClick={() => setSwappingActiveImage(img)}
+                          className={clsx(
+                            'w-10 h-10 rounded-lg overflow-hidden border-2 cursor-pointer transition-all flex-shrink-0 bg-slate-950',
+                            swappingActiveImage === img ? 'border-indigo-500 scale-105' : 'border-white/5 opacity-60 hover:opacity-100'
+                          )}
+                        >
+                          <img src={img.startsWith('/') ? `http://localhost:8000${img}` : img} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Specs sheet */}
+                  <div className="mt-2.5 space-y-0.5 text-[10px] text-slate-400">
+                    <div><span className="text-slate-500 font-semibold">SKU:</span> {swappingItem.product?.sku}</div>
+                    <div><span className="text-slate-500 font-semibold">Category:</span> {swappingItem.product?.category} {swappingItem.product?.subcategory ? `• ${swappingItem.product?.subcategory}` : ''}</div>
+                    {swappingItem.product?.description && (
+                      <div className="leading-normal mt-1"><span className="text-slate-500 font-semibold">Description:</span> {swappingItem.product.description}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Color preference warning */}
+                {project?.color_preference && swappingItem.product?.variants?.color &&
+                 !swappingItem.product.variants.color.some((c: string) => c.toLowerCase() === project.color_preference.toLowerCase()) && (
+                   <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-xl text-[10px] leading-relaxed flex items-start gap-1.5">
+                     <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                     <div>
+                       <span className="font-bold">Not Available:</span> Preferred color <strong>"{project.color_preference}"</strong> is not available for this product. Please choose another color or swap design.
+                     </div>
+                   </div>
+                )}
+
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Configure Variant Options</h4>
                 
                 {swappingItem.product?.variants?.color && (

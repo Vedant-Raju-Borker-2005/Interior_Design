@@ -59,6 +59,7 @@ class Project(Base):
     floor_plan_url = Column(String)
     material_preference = Column(String)
     furnishing_type = Column(String)
+    color_preference = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="projects")
