@@ -80,8 +80,8 @@ export default function VendorProductsPage() {
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
 
   // Product image state
-  const [productImageFile, setProductImageFile] = useState<File | null>(null)
-  const [productImagePreview, setProductImagePreview] = useState<string>('')
+  const [productImageFiles, setProductImageFiles] = useState<(File | null)[]>([null, null, null])
+  const [productImagePreviews, setProductImagePreviews] = useState<string[]>(['', '', ''])
   const [uploadingImage, setUploadingImage] = useState(false)
 
 
@@ -134,8 +134,9 @@ export default function VendorProductsPage() {
       setTextureOptions(v.texture || [])
       setWoodFinishOptions(v.wood_finish || [])
       setCushionStyleOptions(v.cushion_style || [])
-      setProductImagePreview(editingProduct.images?.[0] || '')
-      setProductImageFile(null)
+      const imgs = editingProduct.images || []
+      setProductImagePreviews([imgs[0] || '', imgs[1] || '', imgs[2] || ''])
+      setProductImageFiles([null, null, null])
     } else {
       resetForm()
     }
@@ -157,7 +158,8 @@ export default function VendorProductsPage() {
     setColors([])
     setFabricOptions([]); setSizeOptions([]); setTextureOptions([])
     setWoodFinishOptions([]); setCushionStyleOptions([])
-    setProductImageFile(null); setProductImagePreview('')
+    setProductImageFiles([null, null, null])
+    setProductImagePreviews(['', '', ''])
   }
 
   const toggleTag = (list: string[], setList: (v: string[]) => void, val: string) =>
@@ -188,15 +190,20 @@ export default function VendorProductsPage() {
         toast.success('Product added! 🚀')
       }
 
-      // Upload product image if one was selected
-      if (productImageFile && productId) {
+      // Upload product images
+      if (productId) {
         setUploadingImage(true)
         try {
-          await vendorAPI.uploadProductImage(productId, productImageFile)
-          toast.success('Product photo uploaded! 📸')
+          for (let idx = 0; idx < 3; idx++) {
+            const file = productImageFiles[idx]
+            if (file) {
+              await vendorAPI.uploadProductImage(productId, file, idx)
+            }
+          }
+          toast.success('Product photos updated! 📸')
         } catch (uploadErr) {
           console.error("Photo upload error:", uploadErr)
-          toast.error('Product details saved, but photo upload failed.')
+          toast.error('Product details saved, but some photo uploads failed.')
         } finally {
           setUploadingImage(false)
         }
@@ -407,60 +414,70 @@ export default function VendorProductsPage() {
                 )}
               </div>
 
-              {/* Product Photo Upload Section */}
-              <div className="border border-indigo-150 bg-indigo-50/20 rounded-2xl p-4 space-y-3">
+              {/* Product Photos Upload Section (3 slots) */}
+              <div className="border border-indigo-150 bg-indigo-50/20 rounded-2xl p-4 space-y-4">
                 <label className="block text-[10px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Camera className="w-4 h-4 text-indigo-500" />
-                  <span>Real Product Photo (Shown to Customers)</span>
+                  <span>Real Product Photos (Upload 2-3 views)</span>
                 </label>
-                <div className="flex items-center gap-4">
-                  {productImagePreview ? (
-                    <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-indigo-200 bg-slate-50 flex-shrink-0">
-                      <img
-                        src={productImagePreview.startsWith('/') ? `http://localhost:8000${productImagePreview}` : productImagePreview}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => { setProductImageFile(null); setProductImagePreview('') }}
-                        className="absolute top-1 right-1 bg-red-600 hover:bg-red-750 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-black shadow-md"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-20 h-20 rounded-xl border-2 border-dashed border-indigo-200 bg-white flex items-center justify-center flex-shrink-0">
-                      <ImageIcon className="w-6 h-6 text-indigo-300" />
-                    </div>
-                  )}
-
-                  <div className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      id="product-image-file-input"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          setProductImageFile(file)
-                          setProductImagePreview(URL.createObjectURL(file))
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor="product-image-file-input"
-                      className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-750 text-white text-xs font-bold rounded-xl transition shadow-sm"
-                    >
-                      <Camera className="w-3.5 h-3.5" />
-                      {productImagePreview ? 'Replace Photo' : 'Upload Photo'}
-                    </label>
-                    <p className="text-[10px] text-slate-450 mt-1 font-medium">
-                      Select JPG, PNG or WebP image. This real photo will show up for customization.
-                    </p>
-                  </div>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  {[0, 1, 2].map((idx) => {
+                    const preview = productImagePreviews[idx]
+                    return (
+                      <div key={idx} className="flex flex-col items-center gap-2 p-2 bg-white rounded-xl border border-indigo-100/50">
+                        <span className="text-[9px] font-bold text-indigo-500">View {idx + 1} {idx === 0 ? '(Main)' : ''}</span>
+                        {preview ? (
+                          <div className="relative w-full aspect-square rounded-lg overflow-hidden border border-slate-200">
+                            <img
+                              src={preview.startsWith('/') ? `http://localhost:8000${preview}` : preview}
+                              alt={`View ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newPreviews = [...productImagePreviews]
+                                newPreviews[idx] = ''
+                                setProductImagePreviews(newPreviews)
+                                const newFiles = [...productImageFiles]
+                                newFiles[idx] = null
+                                setProductImageFiles(newFiles)
+                              }}
+                              className="absolute top-0.5 right-0.5 bg-red-600 hover:bg-red-750 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-black shadow-md"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-200 hover:border-indigo-400 bg-slate-50 flex flex-col items-center justify-center cursor-pointer transition-all">
+                            <ImageIcon className="w-5 h-5 text-slate-400" />
+                            <span className="text-[8px] text-slate-400 font-bold mt-1">Upload</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) {
+                                  const newPreviews = [...productImagePreviews]
+                                  newPreviews[idx] = URL.createObjectURL(file)
+                                  setProductImagePreviews(newPreviews)
+                                  const newFiles = [...productImageFiles]
+                                  newFiles[idx] = file
+                                  setProductImageFiles(newFiles)
+                                }
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
+                <p className="text-[9px] text-slate-450 mt-1 font-medium text-center">
+                  Supports JPG, PNG or WebP. Users will be able to switch between these views using thumbnails.
+                </p>
               </div>
 
               {/* Description */}
