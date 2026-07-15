@@ -55,7 +55,7 @@ export const authAPI = {
 export const projectsAPI = {
   list: () =>
     axiosInstance.get('/api/v1/projects'),
-  delete: (projectId: string) =>
+  deleteCustomerProject: (projectId: string) =>
     axiosInstance.delete(`/api/v1/customer/projects/${projectId}`),  
   
   create: (data: { 
@@ -77,9 +77,6 @@ export const projectsAPI = {
   
   update: (id: string, data: Partial<{ title: string; bhk: string; budget_min: number; budget_max: number; package_id: string }>) =>
     axiosInstance.put(`/api/v1/projects/${id}`, data),
-  
-  delete: (id: string) =>
-    axiosInstance.delete(`/api/v1/projects/${id}`),
 
   updateRoom: (projectId: string, roomId: string, data: { style_preference?: string; color_palette?: string[]; length_ft?: number; width_ft?: number; height_ft?: number }) =>
     axiosInstance.put(`/api/v1/projects/${projectId}/rooms/${roomId}`, data),
@@ -415,4 +412,3 @@ export const customerExtrasAPI = {
 }
 
 export default axiosInstance
-
