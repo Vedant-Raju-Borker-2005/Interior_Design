@@ -44,7 +44,7 @@ function PackagesContent() {
       try {
         if (styleTags) {
           // Use AI recommendations if style tags available
-          const res = await recommendationsAPI.packages({ bhk, budget, style_tags: styleTags })
+          const res = await recommendationsAPI.packages({ bhk, budget, style_tags: styleTags, project_id: projectId })
           const recs = res.data.recommendations || []
           const pkgs = recs.map((r: any) => ({
             ...r.package,

@@ -36,7 +36,8 @@ class CreateProjectReq(BaseModel):
     material_preference: Optional[str] = None
     pincode: Optional[str] = None
     furnishing_type: Optional[str] = None  # new / upgrade
-    color_preference: Optional[str] = None
+    color_preferences: Optional[List[str]] = []
+
 
 
 class RoomOut(BaseModel):
@@ -60,9 +61,10 @@ class ProjectOut(BaseModel):
     budget: float
     status: str
     package_id: Optional[str] = None
-    color_preference: Optional[str] = None
     created_at: datetime.datetime
     rooms: List[RoomOut] = []
+    color_preferences: Optional[List[str]] = []
+
 
     class Config:
         from_attributes = True
@@ -123,7 +125,20 @@ class ProductOut(BaseModel):
     color_variants: List[str]
     variants: Optional[dict] = {}
     thumbnail_url: Optional[str] = None
+    images: List[str] = []
     style_tags: List[str]
+    primary_material: Optional[str] = None
+    width: Optional[float] = None
+    height: Optional[float] = None
+    depth: Optional[float] = None
+    weight: Optional[float] = None
+    weight_capacity: Optional[float] = None
+    style: Optional[str] = None
+    finish: Optional[str] = None
+    mounting_type: Optional[str] = None
+    assembly_required: Optional[str] = None
+    suitable_room: Optional[str] = None
+
 
     class Config:
         from_attributes = True

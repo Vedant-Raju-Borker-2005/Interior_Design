@@ -17,7 +17,7 @@ export function ExecutionProgressBar({ progress, status }: Props) {
   const isDelayed = status === 'DELAYED';
 
   return (
-    <div className="w-full bg-indigo-950/40 border border-white/10 p-6 rounded-2xl shadow-card backdrop-blur-md">
+    <div className="w-full bg-[#0f1129] border border-white/10 p-6 rounded-2xl shadow-card backdrop-blur-md">
       <div className="flex justify-between items-center mb-3">
         <div>
           <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">

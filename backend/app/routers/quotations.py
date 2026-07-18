@@ -110,11 +110,16 @@ def generate_quotation(
     db.add(quotation)
     db.commit()
 
+    # Sync assignments per RoomItem to vendor side automatically
+    from ..db import sync_project_vendor_assignments
+    sync_project_vendor_assignments(project.id, db)
+
     # Update project status
     project.status = "quoted"
     db.commit()
 
     return {
+        "id": quot_id,
         "quotation_id": quot_id,
         "subtotal": subtotal,
         "gst": gst,
@@ -122,6 +127,7 @@ def generate_quotation(
         "pdf_url": pdf_url,
         "valid_until": valid_until,
         "line_items": line_items,
+        "status": "generated",
     }
 
 

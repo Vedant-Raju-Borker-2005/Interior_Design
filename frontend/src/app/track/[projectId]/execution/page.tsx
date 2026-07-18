@@ -107,14 +107,14 @@ export default function ProjectExecutionPage() {
   const progress = calculateProgress()
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-16">
+    <div className="min-h-screen text-white pb-16" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)', backgroundAttachment: 'fixed' }}>
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 pt-24 space-y-8">
         {/* Back navigation */}
         <button
           onClick={() => router.push(`/track/${projectId}`)}
-          className="flex items-center gap-2 text-indigo-300 hover:text-white transition-colors text-sm font-semibold"
+          className="flex items-center gap-2 text-indigo-950 hover:text-slate-900 transition-colors text-sm font-semibold"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Project Tracker
         </button>
@@ -122,8 +122,10 @@ export default function ProjectExecutionPage() {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-black tracking-tight">Project Execution Details</h1>
-            <p className="text-sm text-indigo-300/60 mt-1">
+            <h1 className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900">
+              Project Execution Details
+            </h1>
+            <p className="text-sm text-indigo-950/70 mt-1 font-medium">
               Track room-by-room fabrication status and upload verification progress photos.
             </p>
           </div>
@@ -139,7 +141,7 @@ export default function ProjectExecutionPage() {
             <TimelineView resources={timelineResources} />
 
             {/* Room-wise Accordion list */}
-            <div className="bg-indigo-950/40 border border-white/10 p-6 rounded-2xl shadow-card backdrop-blur-md space-y-4">
+            <div className="bg-[#0f1129] border border-white/10 p-6 rounded-2xl shadow-card backdrop-blur-md space-y-4">
               <h2 className="text-lg font-bold text-white uppercase tracking-wider mb-2">Room-Wise Sourcing Checklist</h2>
 
               {Object.keys(groupedTracking).map((roomName) => {
@@ -159,33 +161,88 @@ export default function ProjectExecutionPage() {
                     {isExpanded && (
                       <div className="p-4 space-y-4 divide-y divide-white/5">
                         {items.map((item) => (
-                          <div key={item.id} className="pt-4 first:pt-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
+                          <div key={item.id} className="pt-4 first:pt-0 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                            <div className="flex-1 min-w-[150px]">
                               <h4 className="font-bold text-xs text-white">{item.item_name}</h4>
                               {item.expected_date && (
                                 <p className="text-[10px] text-indigo-300/60 mt-1 flex items-center gap-1 font-medium">
                                   <Calendar className="w-3 h-3" /> Expected: {item.expected_date}
                                 </p>
                               )}
-                              {item.remarks && (
-                                <p className="text-[11px] text-indigo-400 italic mt-1 font-medium">Remarks: {item.remarks}</p>
-                              )}
                             </div>
 
-                            <div className="flex items-center gap-3">
-                              <select
-                                value={item.status}
-                                onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                                className="bg-indigo-950 border border-white/10 rounded-lg p-2 text-xs text-indigo-200 outline-none focus:ring-1 focus:ring-indigo-500 font-bold"
-                              >
-                                <option value="ordered">Ordered</option>
-                                <option value="accepted">Accepted</option>
-                                <option value="production">Production</option>
-                                <option value="ready">Ready</option>
-                                <option value="dispatched">Dispatched</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="installed">Installed</option>
-                              </select>
+                            {/* Center/Right: Dual Sourcing Status Controls */}
+                            <div className="flex flex-wrap items-center gap-5">
+                              {/* Vendor Progress Chain */}
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[8px] text-slate-400 uppercase tracking-widest font-extrabold">Vendor Status</span>
+                                <div className="flex items-center gap-1 bg-slate-950/40 p-1 rounded-lg border border-white/5">
+                                  {(() => {
+                                    const phases = ['ordered', 'accepted', 'production', 'ready', 'dispatched'];
+                                    const current = (item.status || 'ordered').toLowerCase();
+                                    
+                                    // Determine active index in vendor phases
+                                    let activeIndex = phases.indexOf(current);
+                                    if (activeIndex === -1 && ['delivered', 'installed'].includes(current)) {
+                                      activeIndex = phases.length - 1; // Dispatched is highlighted as past phase
+                                    }
+
+                                    return phases.map((phase, idx) => {
+                                      const isActive = idx <= activeIndex;
+                                      const isCurrent = current === phase;
+                                      return (
+                                        <span
+                                          key={phase}
+                                          className={`px-2 py-0.5 text-[9px] font-extrabold rounded uppercase tracking-wider transition-all duration-300 ${
+                                            isCurrent
+                                              ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400'
+                                              : isActive
+                                              ? 'bg-indigo-950/70 text-indigo-300/70'
+                                              : 'bg-transparent text-slate-600'
+                                          }`}
+                                        >
+                                          {phase}
+                                        </span>
+                                      );
+                                    });
+                                  })()}
+                                </div>
+                              </div>
+
+                              {/* Customer Actions / Verification Chain */}
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[8px] text-slate-400 uppercase tracking-widest font-extrabold">Customer Verification</span>
+                                <div className="flex items-center gap-1 bg-slate-950/40 p-1 rounded-lg border border-white/5">
+                                  {/* Ordered (Always active customer-side baseline) */}
+                                  <span className="px-2 py-0.5 text-[9px] font-extrabold rounded uppercase tracking-wider bg-slate-800 text-slate-300 ring-1 ring-slate-700 select-none">
+                                    Ordered
+                                  </span>
+
+                                  {/* Delivered Button */}
+                                  <button
+                                    onClick={() => handleStatusChange(item.id, 'delivered')}
+                                    className={`px-2.5 py-0.5 text-[9px] font-extrabold rounded uppercase tracking-wider transition-all duration-300 ${
+                                      ['delivered', 'installed'].includes((item.status || '').toLowerCase())
+                                        ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400'
+                                        : 'bg-transparent text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                                    }`}
+                                  >
+                                    Delivered
+                                  </button>
+
+                                  {/* Installed Button */}
+                                  <button
+                                    onClick={() => handleStatusChange(item.id, 'installed')}
+                                    className={`px-2.5 py-0.5 text-[9px] font-extrabold rounded uppercase tracking-wider transition-all duration-300 ${
+                                      (item.status || '').toLowerCase() === 'installed'
+                                        ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400'
+                                        : 'bg-transparent text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                                    }`}
+                                  >
+                                    Installed
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -207,7 +264,7 @@ export default function ProjectExecutionPage() {
             <IssueTracker projectId={projectId} />
 
             {/* Verification Photos */}
-            <div className="bg-indigo-950/40 border border-white/10 p-6 rounded-2xl shadow-card backdrop-blur-md space-y-6">
+            <div className="bg-[#0f1129] border border-white/10 p-6 rounded-2xl shadow-card backdrop-blur-md space-y-6">
               <div>
                 <h3 className="font-bold text-white text-sm uppercase tracking-wider">Site Verification Gallery</h3>
                 <p className="text-[10px] text-indigo-300/60 font-medium mt-1">Upload and review on-site fabrication proof.</p>
@@ -244,7 +301,7 @@ export default function ProjectExecutionPage() {
                     type="file"
                     accept="image/*"
                     onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-                    className="w-full text-xs text-indigo-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-650 file:text-white hover:file:bg-indigo-700 cursor-pointer"
+                    className="w-full text-xs text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-gradient-to-r file:from-purple-600 file:to-indigo-600 file:text-white hover:file:from-purple-700 hover:file:to-indigo-700 cursor-pointer"
                   />
                 </div>
 

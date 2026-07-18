@@ -11,7 +11,7 @@ import ActivityFeed from '@/components/ActivityFeed'
 import {
   Plus, ArrowRight, Clock, CheckCircle2, FileText,
   Home, Sparkles, TrendingUp, Edit3, Activity, MapPin, User, Mail, Phone, Settings, X, Check,
-  MessageSquare, CreditCard, Trash2
+  MessageSquare, CreditCard, Trash2, AlertCircle
 } from 'lucide-react'
 import Link from 'next/link'
 import clsx from 'clsx'
@@ -26,6 +26,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
 const CITIES = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Ahmedabad', 'Other']
 
 function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: string) => void }) {
+  const { user } = useAuthStore()
   const status = STATUS_CONFIG[project.status] || STATUS_CONFIG.draft
   const isExecution = ['ordered', 'done'].includes(project.status)
 
@@ -125,7 +126,7 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
           )}
         </div>
 
-        {isExecution && (
+        {isExecution && user?.role !== 'customer' && (
           <div className="mt-3 pt-3 border-t border-slate-100 flex gap-2">
             <Link href={`/projects/${project.id}/team`}
               className="flex-1 text-center py-2 bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 text-slate-600 text-[10px] font-bold rounded-lg transition-all">
@@ -170,6 +171,10 @@ function DashboardContent() {
   const [profileCity, setProfileCity] = useState('Bangalore')
   const [profilePref, setProfilePref] = useState<'new' | 'upgrade'>('new')
   const [savingProfile, setSavingProfile] = useState(false)
+
+  // Delete Confirmation Overlay States
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
+  const [deletingProject, setDeletingProject] = useState(false)
 
   useEffect(() => {
     if (!isLoggedIn) { router.push('/login'); return }
@@ -377,19 +382,7 @@ function DashboardContent() {
                     <ProjectCard
                       key={project.id}
                       project={project}
-                      onDelete={async (id) => {
-                        if (window.confirm("Are you sure you want to delete this project? All associated designs, files and details will be lost forever.")) {
-                          try {
-                            await projectsAPI.deleteCustomerProject(id)
-                            toast.success("Project deleted successfully! 🗑️")
-                            // Refresh list
-                            const res = await projectsAPI.list()
-                            setProjects(res.data.projects || [])
-                          } catch (err: any) {
-                            toast.error(err.response?.data?.detail || "Failed to delete project")
-                          }
-                        }
-                      }}
+                      onDelete={(id) => setProjectToDelete(id)}
                     />
                   ))}
                 </div>
@@ -723,6 +716,80 @@ function DashboardContent() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Delete Confirmation Modal */}
+      <AnimatePresence>
+        {projectToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            {/* Backdrop Blur Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setProjectToDelete(null)}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
+            />
+
+            {/* Glassmorphism Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-md bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl p-6 shadow-2xl relative z-10 text-center text-slate-800"
+            >
+              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+
+              <h3 className="text-lg font-black text-slate-900 mb-2">Delete Project</h3>
+              <p className="text-slate-500 text-xs mb-6 leading-relaxed max-w-sm mx-auto">
+                Are you sure you want to delete this project? All associated designs, files, and custom components will be permanently lost.
+              </p>
+
+              <div className="flex gap-3 justify-center">
+                <button
+                  type="button"
+                  onClick={() => setProjectToDelete(null)}
+                  disabled={deletingProject}
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition bg-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setDeletingProject(true)
+                    try {
+                      await projectsAPI.delete(projectToDelete)
+                      toast.success("Project deleted successfully! 🗑️")
+                      // Refresh list
+                      const res = await projectsAPI.list()
+                      setProjects(res.data.projects || [])
+                      fetchStats()
+                    } catch (err: any) {
+                      toast.error(err.response?.data?.detail || "Failed to delete project")
+                    } finally {
+                      setDeletingProject(false)
+                      setProjectToDelete(null)
+                    }
+                  }}
+                  disabled={deletingProject}
+                  className="px-6 py-2.5 bg-red-650 hover:bg-red-750 disabled:bg-red-800 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5"
+                >
+                  {deletingProject ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Confirm Delete"
+                  )}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

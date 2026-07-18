@@ -102,7 +102,14 @@ if not exist ".venv" (
 
 call ".venv\Scripts\activate.bat"
 
+:: Check if requests library is installed; if not, force re-installation of requirements
+python -c "import requests" >nul 2>&1
+if errorlevel 1 (
+    if exist ".venv\installed.flag" del ".venv\installed.flag"
+)
+
 if not exist ".venv\installed.flag" (
+
     echo   Installing Python dependencies ^(first time only - takes ~1 min^)...
     python -m pip install --upgrade pip -q --disable-pip-version-check
     pip install -r requirements.txt -q --disable-pip-version-check

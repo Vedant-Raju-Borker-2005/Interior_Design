@@ -27,14 +27,30 @@ export default function LoginPage() {
   const [role, setRole] = useState<'customer' | 'vendor' | 'team' | 'admin'>('customer')
 
   // Form Fields - Default pre-filled customer number for seamless reviewer login
-  const [contact, setContact] = useState('')
-  const [name, setName] = useState('')
+  const [contact, setContact] = useState('+919900004444')
+  const [name, setName] = useState('Seeded Customer')
   const [city, setCity] = useState('Bangalore')
   const [furnishingPreference, setFurnishingPreference] = useState<'new' | 'upgrade'>('new')
   const [otp, setOtp] = useState('')
 
+  const getPrefilledContact = (roleId: 'customer' | 'vendor' | 'team' | 'admin', currentMethod: 'phone' | 'email') => {
+    if (currentMethod === 'phone') {
+      if (roleId === 'customer') return '+919900004444'
+      if (roleId === 'vendor') return '+919900001111'
+      if (roleId === 'team') return '+919900002222'
+      if (roleId === 'admin') return '+919900003333'
+    } else {
+      if (roleId === 'customer') return 'customer@example.com'
+      if (roleId === 'vendor') return 'vendor@example.com'
+      if (roleId === 'team') return 'team@example.com'
+      if (roleId === 'admin') return 'admin@example.com'
+    }
+    return ''
+  }
+
   const handleSendOtp = async () => {
-    if (!contact.trim()) {
+    const sanitizedContact = contact.trim().replace(/\s+/g, '')
+    if (!sanitizedContact) {
       return toast.error(method === 'phone' ? 'Please enter your phone number' : 'Please enter your email')
     }
 
@@ -48,8 +64,8 @@ export default function LoginPage() {
       if (mode === 'signup') {
         const payload = {
           name,
-          email: method === 'email' ? contact : `${name.replace(/\s+/g, '').toLowerCase()}@example.com`,
-          phone: method === 'phone' ? contact : '+91 99999 88888',
+          email: method === 'email' ? sanitizedContact : `${name.replace(/\s+/g, '').toLowerCase()}@example.com`,
+          phone: method === 'phone' ? sanitizedContact : '+919999988888',
           city,
           furnishing_preference: furnishingPreference,
           role
@@ -60,7 +76,7 @@ export default function LoginPage() {
         setStep('otp')
       } else {
         // Sign In - Require role
-        const payload = method === 'phone' ? { phone: contact, role } : { email: contact, role }
+        const payload = method === 'phone' ? { phone: sanitizedContact, role } : { email: sanitizedContact, role }
         const res = await authAPI.login(payload)
         setDevOtp(res.data.dev_otp || '')
         toast.success(`Sign-in OTP sent! Check hint below.`)
@@ -76,10 +92,11 @@ export default function LoginPage() {
   const handleVerify = async () => {
     if (otp.length < 6) return toast.error('Enter 6-digit OTP')
     setLoading(true)
+    const sanitizedContact = contact.trim().replace(/\s+/g, '')
     try {
       const payload = method === 'phone'
-        ? { phone: contact, otp, role }
-        : { email: contact, otp, role }
+        ? { phone: sanitizedContact, otp, role }
+        : { email: sanitizedContact, otp, role }
       
       const res = await authAPI.verifyOtp(payload)
       
@@ -91,8 +108,8 @@ export default function LoginPage() {
         const updatedUser = {
           id: res.data.user_id,
           name,
-          email: method === 'email' ? contact : `${name.replace(/\s+/g, '').toLowerCase()}@example.com`,
-          phone: method === 'phone' ? contact : '',
+          email: method === 'email' ? sanitizedContact : `${name.replace(/\s+/g, '').toLowerCase()}@example.com`,
+          phone: method === 'phone' ? sanitizedContact : '',
           city,
           furnishing_preference: furnishingPreference,
           style_tags: [],
@@ -181,12 +198,13 @@ export default function LoginPage() {
                           key={item.id}
                           type="button"
                           onClick={() => {
-                            setRole(item.id)
-                            setContact('') // clear on role change
-                            if (item.id !== 'customer') {
+                            const targetRole = item.id
+                            setRole(targetRole)
+                            setContact(getPrefilledContact(targetRole, method))
+                            if (targetRole !== 'customer') {
                               setName(`Seeded ${item.label}`)
                             } else {
-                              setName('')
+                              setName('Seeded Customer')
                             }
                           }}
                           className={clsx(
@@ -215,7 +233,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => {
                       setMethod('phone')
-                      setContact('')
+                      setContact(getPrefilledContact(role, 'phone'))
                     }}
                     className={clsx(
                       'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all',
@@ -228,7 +246,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => {
                       setMethod('email')
-                      setContact('')
+                      setContact(getPrefilledContact(role, 'email'))
                     }}
                     className={clsx(
                       'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all',

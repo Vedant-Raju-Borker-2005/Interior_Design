@@ -323,21 +323,13 @@ export default function VendorDashboardPage() {
                       </span>
                     </td>
                     <td className="p-3 text-right space-x-1.5">
-                      {item.status === 'ASSIGNED' ? (
-                        <>
-                          <button
-                            onClick={() => handleAcceptAssignment(item.id)}
-                            className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold transition shadow-sm"
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => handleRejectAssignment(item.id)}
-                            className="px-2 py-1 border border-slate-250 text-slate-650 rounded-lg hover:bg-slate-100 text-[10px] font-bold transition shadow-sm"
-                          >
-                            Reject
-                          </button>
-                        </>
+                      {['ASSIGNED', 'RECEIVED_ORDER'].includes(item.status) ? (
+                        <button
+                          onClick={() => handleAcceptAssignment(item.id)}
+                          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-750 text-white rounded-lg text-[10px] font-extrabold transition shadow-sm"
+                        >
+                          Accept
+                        </button>
                       ) : (
                         <Link
                           href="/vendor/assignments"

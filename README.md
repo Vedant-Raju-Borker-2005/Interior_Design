@@ -40,6 +40,32 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
     Onboarding wizard category specialization checkboxes (Furniture, Kitchen, Lighting, Décor). Re-architected project-wise grouped assignments cards featuring inline milestone status update selects, immediate verification photo proof uploads, live shipment logistics tracking (Courier, Vehicle details, Tracking AWB), and interactive 5-stage milestone payouts checklist.
 *   **Project Workspace Details Sidebars & Access Control (New):**  
     Enforces project-wise member access validation (Coordinator/Technician roles check against project assignments). Automatically calculates project-level status ("On Track", "Delayed", "Completed"). Added Customer Profile and Vendor directory sidebar grids directly into the team execution panel workspace.
+*   **4-Wall AI Rendering & Custom view modes (New):**  
+    Replaced the 3D canvas viewport on the visualization page with a 2x2 grid showing Wall A, B, C, D perspectives. Supports Blueprint Templates, custom wall Photo Uploads, and room Dimension inputs with automatic pillar clearance calculation.
+*   **Real-Time Selection State Monitoring & Debounced Sync (New):**  
+    Tracks onboarding and customize stage selections in the frontend Zustand store, syncing them via a debounced backend API to the database. Enables O(1) latency prompt compilation for Gemini on generation submit.
+*   **Instant Quotation Sourcing Sync (New):**  
+    Automatically synchronizes quotation items to verified vendor dashboards immediately upon quotation generation, removing vendor rejection permissions to ensure solid sourcing fulfillment.
+*   **AI Architecture Proposal Document (New):**  
+    Added a comprehensive architectural report (`ai_architecture_proposal.docx`) to the project root, detailing the agentic spatial layout and color harmonization rules.
+*   **Automatic Tab Progression & Customizer Wizard (New):**  
+    When a customer saves the selection for the last category of a room, the customizer wizard automatically switches to the next room tab and pre-selects its first category.
+*   **Multi-View Product Image Upload Pipeline (New):**  
+    Allows vendors to upload up to 3 high-resolution images (Main/Front View, Side View, Perspective View) concurrently. The backend API maps them to specific view slots and sets the index-0 image as the product's primary thumbnail.
+*   **Thumbnail-based Gallery Carousels (New):**  
+    Integrates an Amazon/Flipkart-style image gallery slider inside both the Customer Customize drawer and the Customer Visualize swap drawer. Displays "Front", "Side", and "Top" indicators with next/prev arrows, failing back to a clean placeholder card if optional views are not uploaded.
+*   **Auto-Regenerating Quotations (New):**  
+    If a customer returns to the quotation page after editing their configurations when their previous quote was `'rejected'` or `'under_revision'`, the page automatically triggers a new PDF and quote calculations to present updated figures immediately.
+*   **Custom Glassmorphic Project Deletion (New):**  
+    Replaces browser native alerts with a premium glassmorphic confirmation modal featuring slide-up animations, backdrop blurs (`bg-white/80 backdrop-blur-xl`), and detailed info checks.
+*   **Customer Tracking & Sourcing Redesign (New):**  
+    Replaces customer-side dropdown lists with a dual horizontal tracker system. A read-only **Vendor Status Bar** visualizes item sourcing progress (Ordered to Dispatched) in real-time. An interactive **Customer Verification Bar** permits the customer to directly confirm deliveries and installations.
+*   **Solid Container Backgrounds & Contrast Controls (New):**  
+    Ensures optimal text contrast on light/purple mesh gradients by wrapping primary dashboard tracking sections in a solid dark navy-indigo shade (`bg-[#0f1129]`).
+*   **Purple-Indigo Gradient File Uploader (New):**  
+    Features a high-visibility file upload action button styled with custom purple-to-indigo gradient layouts inside verification forms.
+*   **Seeded Assets Track Status:**  
+    The custom-generated component images in `backend/pdfs/catalog/` are tracked directly inside Git (deliberately omitted from `.gitignore`) to ensure a fresh repository clone receives the visual catalog out-of-the-box.
 
 ---
 

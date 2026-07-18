@@ -7,9 +7,11 @@ import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChevronRight, ArrowRight, CheckCircle2, ShoppingBag,
-  Info, Sparkles, AlertCircle, Settings, Sliders, ChevronDown
+  Info, Sparkles, AlertCircle, Settings, Sliders, ChevronDown,
+  ChevronLeft, Image as ImageIcon
 } from 'lucide-react'
 import clsx from 'clsx'
+import { getBestColorMatch, getColorHex } from '@/lib/colorUtils'
 
 const ROOM_LABELS: Record<string, { label: string; icon: string }> = {
   living_room: { label: 'Living Room', icon: '🛋️' },
@@ -62,9 +64,16 @@ export default function GuidedCustomizePage() {
   // Products listing inside selected category
   const [products, setProducts] = useState<any[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
+  const [exactColorMatchFound, setExactColorMatchFound] = useState(true)
+
 
   // Active customization state
   const [customizingProduct, setCustomizingProduct] = useState<any>(null)
+  const [activeImageIdx, setActiveImageIdx] = useState(0)
+
+  useEffect(() => {
+    setActiveImageIdx(0)
+  }, [customizingProduct?.id])
   const [customColor, setCustomColor] = useState('')
   const [customFabric, setCustomFabric] = useState('')
   const [customWoodFinish, setCustomWoodFinish] = useState('')
@@ -74,7 +83,6 @@ export default function GuidedCustomizePage() {
   const [savingItem, setSavingItem] = useState(false)
 
   const [loading, setLoading] = useState(true)
-  const [activeImage, setActiveImage] = useState('')
 
   const activeRoom = project?.rooms?.[activeRoomIdx]
   const activeRoomItems = activeRoom?.items || []
@@ -127,15 +135,19 @@ export default function GuidedCustomizePage() {
         room_type: activeRoom.room_type,
         category: selectedCategory,
         pincode: project?.pincode,
+        project_id: projectId,
         limit: 25
       })
       setProducts(res.data.items || [])
+      setExactColorMatchFound(res.data.exact_color_match_found ?? true)
     } catch {
       setProducts([])
+      setExactColorMatchFound(true)
     } finally {
       setLoadingProducts(false)
     }
   }
+
 
   useEffect(() => {
     fetchProducts()
@@ -144,9 +156,9 @@ export default function GuidedCustomizePage() {
   // Start customizing product attributes
   const handleSelectProduct = (product: any) => {
     setCustomizingProduct(product)
-    setActiveImage(product.thumbnail_url || '')
     const v = product.variants || {}
-    setCustomColor(v.color?.[0] || '')
+    const match = getBestColorMatch(v.color || [], project?.color_preferences || [])
+    setCustomColor(match.color)
     setCustomFabric(v.fabric?.[0] || '')
     setCustomWoodFinish(v.wood_finish?.[0] || '')
     setCustomSize(v.size?.[0] || '')
@@ -182,11 +194,19 @@ export default function GuidedCustomizePage() {
       setCustomizingProduct(null)
       await loadProject()
 
-      // Automatically move to the next incomplete category to streamline workflow
+      // Automatically move to the next category or next room tab
       const categories = getCategoriesForActiveRoom()
       const currentIdx = categories.findIndex((c) => c.id === selectedCategory)
-      if (currentIdx !== -1 && currentIdx < categories.length - 1) {
-        setSelectedCategory(categories[currentIdx + 1].id)
+      if (currentIdx !== -1) {
+        if (currentIdx < categories.length - 1) {
+          // Go to next category in current room
+          setSelectedCategory(categories[currentIdx + 1].id)
+        } else if (activeRoomIdx < (project?.rooms?.length || 0) - 1) {
+          // Last category of current room is done; auto-progress to next room tab
+          setActiveRoomIdx(activeRoomIdx + 1)
+          const nextRoomName = project.rooms[activeRoomIdx + 1].room_type.replace('_', ' ').toUpperCase()
+          toast.success(`Switching to next room: ${nextRoomName}! 🚪`)
+        }
       }
     } catch {
       toast.error('Failed to save product selection')
@@ -222,42 +242,52 @@ export default function GuidedCustomizePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto" />
-          <p className="text-slate-400 text-sm animate-pulse">Initializing selection wizard…</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)' }}>
+        <div className="text-center space-y-4 bg-white/40 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-xl">
+          <div className="w-16 h-16 border-4 border-indigo-600/10 border-t-indigo-600 rounded-full animate-spin mx-auto" />
+          <p className="text-slate-800 text-sm font-extrabold animate-pulse">Initializing selection wizard…</p>
         </div>
       </div>
     )
   }
 
+  const galleryImages = customizingProduct
+    ? (customizingProduct.images || customizingProduct.variants?.images || [])
+    : []
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-20">
+    <div className="min-h-screen text-slate-800 pb-20" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)', backgroundAttachment: 'fixed' }}>
       <Navbar />
 
       {/* TOP HEADER STATUS BAR */}
-      <div className="fixed top-16 left-0 right-0 z-40 bg-slate-900/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 shadow-xl">
+      <div className="fixed top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-6 py-4 shadow-md">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold bg-gradient-to-r from-white via-slate-100 to-indigo-300 bg-clip-text text-transparent">
+              <span className="text-xl font-black text-slate-800">
                 {project?.property_name}
               </span>
-              <span className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs px-2.5 py-0.5 rounded-full font-bold uppercase">
+              <span className="bg-indigo-50 border border-indigo-150 text-indigo-650 text-xs px-2.5 py-0.5 rounded-full font-bold uppercase">
                 {project?.bhk_type}
               </span>
             </div>
-            <p className="text-slate-400 text-xs mt-0.5">Guided Room Configurator Wizard</p>
+            <p className="text-slate-500 text-xs mt-0.5">Customize room configurations and choose custom elements</p>
           </div>
 
           <div className="flex items-center gap-3">
             <button
+              onClick={() => router.push(`/dashboard`)}
+              className="py-2.5 px-5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition shadow-sm"
+            >
+              Exit to Dashboard
+            </button>
+            <button
               onClick={() => router.push(`/visualize/${projectId}`)}
               className={clsx(
-                'py-2.5 px-6 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg',
+                'py-2.5 px-6 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md hover:shadow-lg active:scale-[0.98]',
                 anyItemAdded
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-650 hover:from-indigo-500 hover:to-purple-555 text-white'
-                  : 'bg-slate-800 text-slate-500 border border-white/5 cursor-not-allowed'
+                  ? 'bg-indigo-700 hover:bg-indigo-850 text-white'
+                  : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
               )}
               disabled={!anyItemAdded}
             >
@@ -270,7 +300,7 @@ export default function GuidedCustomizePage() {
       </div>
 
       {/* MAIN CONTAINER */}
-      <div className="max-w-7xl mx-auto px-6 pt-36 grid lg:grid-cols-12 gap-8">
+      <div className="max-w-7xl mx-auto px-6 pt-44 grid lg:grid-cols-12 gap-8">
         
         {/* LEFT PANEL: ROOM PROGRESS AND CATEGORIES (4 cols) */}
         <div className="lg:col-span-4 space-y-6">
@@ -347,7 +377,7 @@ export default function GuidedCustomizePage() {
                           ? 'bg-indigo-600 border-indigo-500 text-white font-bold'
                           : savedItemInCat
                             ? 'bg-slate-950/30 border-emerald-500/20 text-slate-300'
-                            : 'bg-slate-950/50 border-white/5 text-slate-450 hover:text-white'
+                            : 'bg-slate-950/50 border-white/5 text-slate-400 hover:text-white'
                       )}
                     >
                       <div>
@@ -391,7 +421,15 @@ export default function GuidedCustomizePage() {
                     <p className="text-slate-400 text-xs mt-0.5">Select a base design layout for your active room category.</p>
                   </div>
 
+                  {!exactColorMatchFound && !loadingProducts && products.length > 0 && (
+                    <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-2 text-[11px] font-medium text-amber-200">
+                      <Sparkles className="w-4 h-4 flex-shrink-0 text-amber-350 animate-pulse" />
+                      <span>The selected color is currently unavailable for this product category. Showing the closest available shades instead.</span>
+                    </div>
+                  )}
+
                   {loadingProducts ? (
+
                     <div className="grid md:grid-cols-2 gap-4 py-8">
                       {[1, 2, 3, 4].map((i) => (
                         <div key={i} className="h-28 rounded-2xl bg-slate-950/50 border border-white/5 animate-pulse" />
@@ -482,48 +520,82 @@ export default function GuidedCustomizePage() {
                 </div>
 
                 <div className="grid md:grid-cols-12 gap-6">
-                  {/* Left Column: Product Info Card */}
+                  {/* Left Column: Product Info Card with Image Gallery Slider */}
                   <div className="md:col-span-5 bg-slate-950/40 border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
                     <div>
-                      {/* Main Image with Zoom Hover Effect */}
-                      <div className="relative w-full aspect-square overflow-hidden rounded-xl mb-4 border border-white/10 bg-slate-950">
-                        <img
-                          src={activeImage.startsWith('/') ? `http://localhost:8000${activeImage}` : activeImage}
-                          alt={customizingProduct.name}
-                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
-                        />
-                      </div>
-
-                      {/* Multi-Image Thumbnails (Flipkart/Amazon style) */}
-                      {customizingProduct.variants?.images && customizingProduct.variants.images.length > 1 && (
-                        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-thin">
-                          {customizingProduct.variants.images.map((img: string, idx: number) => (
-                            <div
-                              key={idx}
-                              onMouseEnter={() => setActiveImage(img)}
-                              onClick={() => setActiveImage(img)}
-                              className={clsx(
-                                'w-12 h-12 rounded-lg overflow-hidden border-2 cursor-pointer transition-all flex-shrink-0 bg-slate-950',
-                                activeImage === img ? 'border-indigo-500 scale-105' : 'border-white/5 opacity-60 hover:opacity-100'
+                            {/* Image Viewer with Navigation Arrows */}
+                            <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3 group bg-slate-900 border border-white/5 flex items-center justify-center">
+                              {galleryImages[activeImageIdx] ? (
+                                <img
+                                  src={galleryImages[activeImageIdx].startsWith('/') ? `http://localhost:8000${galleryImages[activeImageIdx]}` : galleryImages[activeImageIdx]}
+                                  alt={customizingProduct.name}
+                                  className="w-full h-full object-cover transition-all duration-300"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-900/90 select-none">
+                                  <ImageIcon className="w-8 h-8 text-slate-600 mb-2 animate-pulse" />
+                                  <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Optional View Not Uploaded</h5>
+                                  <p className="text-[9px] text-slate-500 mt-1 max-w-xs leading-relaxed">
+                                    The vendor has only provided the primary view for this component.
+                                  </p>
+                                </div>
                               )}
-                            >
-                              <img src={img.startsWith('/') ? `http://localhost:8000${img}` : img} className="w-full h-full object-cover" />
+                              
+                              {/* Navigation Arrows */}
+                              <button
+                                type="button"
+                                onClick={() => setActiveImageIdx((prev) => (prev === 0 ? 2 : prev - 1))}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-900/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md border border-white/10"
+                              >
+                                <ChevronLeft className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setActiveImageIdx((prev) => (prev === 2 ? 0 : prev + 1))}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-900/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md border border-white/10"
+                              >
+                                <ChevronRight className="w-4 h-4" />
+                              </button>
                             </div>
-                          ))}
-                        </div>
-                      )}
 
-                      <h4 className="text-sm font-extrabold text-white">{customizingProduct.name}</h4>
-                      
-                      {/* Specifications / Product Info Sheet */}
-                      <div className="mt-3 p-3 bg-slate-950/30 rounded-xl border border-white/5 space-y-1">
-                        <div className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Specifications</div>
-                        <div className="text-[10px] text-slate-350"><span className="text-slate-500 font-semibold">SKU:</span> {customizingProduct.sku}</div>
-                        <div className="text-[10px] text-slate-350"><span className="text-slate-500 font-semibold">Category:</span> {customizingProduct.category} {customizingProduct.subcategory ? `• ${customizingProduct.subcategory}` : ''}</div>
-                        {customizingProduct.description && (
-                          <div className="text-[10px] text-slate-350 leading-relaxed mt-1"><span className="text-slate-500 font-semibold">Details:</span> {customizingProduct.description}</div>
-                        )}
-                      </div>
+                            {/* Thumbnail Indicators (Amazon/Flipkart style) */}
+                            <div className="grid grid-cols-3 gap-2.5 mb-4">
+                              {[0, 1, 2].map((idx) => {
+                                const imgUrl = galleryImages[idx]
+                                const isActive = activeImageIdx === idx
+                                const label = idx === 0 ? "Front" : idx === 1 ? "Side" : "Top"
+                                
+                                return (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setActiveImageIdx(idx)}
+                                    className={clsx(
+                                      "relative h-12 rounded-lg overflow-hidden border transition flex flex-col items-center justify-center text-center p-1",
+                                      isActive ? "border-indigo-500 bg-indigo-500/10 shadow-sm" : "border-white/5 bg-slate-900/40 hover:bg-slate-900/80 hover:border-slate-700"
+                                    )}
+                                  >
+                                    {imgUrl ? (
+                                      <img
+                                        src={imgUrl.startsWith('/') ? `http://localhost:8000${imgUrl}` : imgUrl}
+                                        alt={`Thumb ${idx}`}
+                                        className="w-full h-full object-cover rounded"
+                                      />
+                                    ) : (
+                                      <div className="flex flex-col items-center justify-center">
+                                        <ImageIcon className="w-3.5 h-3.5 text-slate-650 mb-0.5" />
+                                        <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider">{label} N/A</span>
+                                      </div>
+                                    )}
+                                  </button>
+                                )
+                              })}
+                            </div>
+
+                            <h4 className="text-sm font-extrabold text-white">{customizingProduct.name}</h4>
+                      <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                        Design variant elements will overlay inside the visual rendering engine.
+                      </p>
                     </div>
                     <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
                       <span className="text-slate-400 text-xs font-semibold">Base Price:</span>
@@ -534,45 +606,60 @@ export default function GuidedCustomizePage() {
                   </div>
 
                   {/* Right Column: Custom Attribute Selectors */}
-                  <div className="md:col-span-7 space-y-4">
-                    {/* Preferred Color Theme Validation Warning */}
-                    {project?.color_preference && customizingProduct.variants?.color && 
-                     !customizingProduct.variants.color.some((c: string) => c.toLowerCase() === project.color_preference.toLowerCase()) && (
-                       <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-xl text-[11px] leading-relaxed flex items-start gap-2 mb-2">
-                         <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                         <div>
-                           <span className="font-bold">Color Theme Warning:</span> The preferred theme color <strong>"{project.color_preference}"</strong> is not available for this design. Please customize using another color variant.
-                         </div>
-                       </div>
-                    )}
-
+                  <div className="md:col-span-7 space-y-5">
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <Sliders className="w-4 h-4 text-indigo-400" />
-                      <span>Custom Attributes</span>
+                      <span>Available Variants</span>
                     </h3>
 
                     {/* Color Options */}
-                    {customizingProduct.variants?.color && (
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Color Variant</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {customizingProduct.variants.color.map((val: string) => (
-                            <button
-                              key={val}
-                              onClick={() => setCustomColor(val)}
-                              className={clsx(
-                                'px-3 py-1.5 rounded-xl text-xs transition border font-semibold',
-                                customColor === val
-                                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                                  : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white'
-                              )}
-                            >
-                              {val}
-                            </button>
-                          ))}
+                    {customizingProduct.variants?.color && (() => {
+                      const matchResult = getBestColorMatch(customizingProduct.variants.color, project?.color_preferences || []);
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase block">Color</span>
+                            {project?.color_preferences?.length > 0 && (
+                              <span className="text-[9px] text-slate-400">
+                                🎨 Selected Palette: <strong className="text-indigo-400">{project.color_preferences.join(', ')}</strong>
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-1.5">
+                            {customizingProduct.variants.color.map((val: string) => {
+                              const isSelected = customColor === val;
+                              const isBestMatch = matchResult.color === val;
+                              return (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => setCustomColor(val)}
+                                  className={clsx(
+                                    'px-3 py-1.5 rounded-xl text-xs transition border font-semibold flex items-center gap-1',
+                                    isSelected
+                                      ? 'bg-indigo-600 border-indigo-500 text-white'
+                                      : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white'
+                                  )}
+                                >
+                                  {isBestMatch && <span>⭐</span>}
+                                  {val}
+                                  {isBestMatch && <span className="text-[9px] opacity-75 font-normal ml-0.5">(Best Match)</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          
+                          {/* Banner for exact match unavailable */}
+                          {project?.color_preferences?.length > 0 && !matchResult.isExact && (
+                            <div className="bg-amber-950/30 border border-amber-900/30 rounded-xl p-2.5 text-[10px] text-amber-400 leading-normal flex items-start gap-1.5">
+                              <span className="text-amber-500 font-bold">⚠️ Note:</span>
+                              <span>Your preferred color isn't available for this product. We've selected the closest matching variant.</span>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Fabric Options */}
                     {customizingProduct.variants?.fabric && (
@@ -705,7 +792,73 @@ export default function GuidedCustomizePage() {
                     </button>
                   </div>
                 </div>
+
+                {/* About this Product */}
+                <div className="border-t border-white/5 pt-5 mt-6 space-y-4">
+                  <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">About this Product</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-xs">
+                    
+                    {/* Left Column */}
+                    <div className="space-y-1">
+                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
+                        <span className="col-span-1 text-slate-400 font-semibold">Material</span>
+                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.primary_material || customizingProduct.primaryMaterial || 'Solid Wood'}</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
+                        <span className="col-span-1 text-slate-400 font-semibold">Dimensions</span>
+                        <span className="col-span-2 text-white font-bold pl-2">
+                          {customizingProduct.width || 1200}w × {customizingProduct.height || 750}h × {customizingProduct.depth || 600}d mm
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
+                        <span className="col-span-1 text-slate-400 font-semibold">Weight</span>
+                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.weight || 15} kg</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
+                        <span className="col-span-1 text-slate-400 font-semibold">Capacity</span>
+                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.weight_capacity || customizingProduct.weightCapacity || 120} kg</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
+                        <span className="col-span-1 text-slate-400 font-semibold">Suitable Room</span>
+                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.suitable_room || customizingProduct.suitableRoom || 'Living Room'}</span>
+                      </div>
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="space-y-1">
+                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
+                        <span className="col-span-1 text-slate-400 font-semibold">Style</span>
+                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.style || 'Modern'}</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
+                        <span className="col-span-1 text-slate-400 font-semibold">Finish</span>
+                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.finish || 'Matte'}</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
+                        <span className="col-span-1 text-slate-400 font-semibold">Mounting</span>
+                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.mounting_type || customizingProduct.mountingType || 'Floor Standing'}</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
+                        <span className="col-span-1 text-slate-400 font-semibold">Assembly</span>
+                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.assembly_required || customizingProduct.assemblyRequired || 'No'}</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
+                        <span className="col-span-1 text-slate-400 font-semibold">Colors</span>
+                        <span className="col-span-2 text-white font-bold pl-2">{(customizingProduct.color_variants || customizingProduct.colorVariants || []).join(', ') || 'N/A'}</span>
+                      </div>
+                    </div>
+
+                  </div>
+                  {customizingProduct.description && (
+                    <div className="text-xs text-slate-400 mt-2 bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                      <div className="font-bold text-white mb-1">Description / Notes</div>
+                      {customizingProduct.description}
+                    </div>
+                  )}
+                </div>
+
               </motion.div>
+
             )}
           </AnimatePresence>
 

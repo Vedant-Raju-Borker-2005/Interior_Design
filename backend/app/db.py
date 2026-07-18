@@ -39,6 +39,40 @@ def init_db():
                     if col_name not in columns:
                         cursor.execute(f"ALTER TABLE vendors ADD COLUMN {col_name} {col_type}")
                 
+                # Migrate products table
+                cursor.execute("PRAGMA table_info(products)")
+                prod_cols = [row[1] for row in cursor.fetchall()]
+                new_prod_cols = {
+                    "primary_material": "VARCHAR DEFAULT 'Solid Wood'",
+                    "width": "FLOAT DEFAULT 1200.0",
+                    "height": "FLOAT DEFAULT 750.0",
+                    "depth": "FLOAT DEFAULT 600.0",
+                    "weight": "FLOAT DEFAULT 15.0",
+                    "weight_capacity": "FLOAT DEFAULT 120.0",
+                    "style": "VARCHAR DEFAULT 'Modern'",
+                    "finish": "VARCHAR DEFAULT 'Matte'",
+                    "mounting_type": "VARCHAR DEFAULT 'Floor Standing'",
+                    "assembly_required": "VARCHAR DEFAULT 'No'",
+                    "suitable_room": "VARCHAR DEFAULT 'Living Room'",
+                    "description": "TEXT DEFAULT NULL"
+                }
+                for col_name, col_type in new_prod_cols.items():
+                    if col_name not in prod_cols:
+                        cursor.execute(f"ALTER TABLE products ADD COLUMN {col_name} {col_type}")
+
+                # Migrate vendor_products table
+                cursor.execute("PRAGMA table_info(vendor_products)")
+                vprod_cols = [row[1] for row in cursor.fetchall()]
+                for col_name, col_type in new_prod_cols.items():
+                    if col_name not in vprod_cols:
+                        cursor.execute(f"ALTER TABLE vendor_products ADD COLUMN {col_name} {col_type}")
+
+                # Migrate projects table
+                cursor.execute("PRAGMA table_info(projects)")
+                proj_cols = [row[1] for row in cursor.fetchall()]
+                if "color_preferences" not in proj_cols:
+                    cursor.execute("ALTER TABLE projects ADD COLUMN color_preferences TEXT DEFAULT '[]'")
+
                 # Migrate project_photos table to add category column if missing
                 cursor.execute("PRAGMA table_info(project_photos)")
                 photo_columns = [row[1] for row in cursor.fetchall()]

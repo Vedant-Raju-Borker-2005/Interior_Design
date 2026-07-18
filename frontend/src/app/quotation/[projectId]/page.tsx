@@ -41,7 +41,24 @@ export default function QuotationPage() {
           quotationsAPI.get(projectId)
         ])
         if (projRes.status === 'fulfilled') setProject(projRes.value.data)
-        if (quoteRes.status === 'fulfilled') setQuotation(quoteRes.value.data)
+        
+        let activeQuote = null
+        if (quoteRes.status === 'fulfilled') {
+          activeQuote = quoteRes.value.data
+        }
+        
+        // If the quotation was rejected or under revision, automatically regenerate to reflect new room choices
+        if (activeQuote && (activeQuote.status === 'rejected' || activeQuote.status === 'under_revision')) {
+          try {
+            const genRes = await quotationsAPI.generate(projectId)
+            activeQuote = genRes.data
+            toast.success('Regenerated quote based on your new selections! 📋')
+          } catch (e) {
+            console.error("Failed to auto-regenerate quote:", e)
+          }
+        }
+        
+        setQuotation(activeQuote)
         fetchRevisions(projectId)
       } catch {
         toast.error('Failed to load project data')
@@ -78,7 +95,8 @@ export default function QuotationPage() {
 
   const handleApprove = async () => {
     try {
-      await updateQuotationStatus(projectId, quotation.id, 'approved')
+      const qId = quotation.id || quotation.quotation_id
+      await updateQuotationStatus(projectId, qId, 'approved')
       setQuotation({ ...quotation, status: 'approved' })
       toast.success('Quotation approved! Project status is now set to ordered.')
     } catch {
@@ -88,9 +106,11 @@ export default function QuotationPage() {
 
   const handleReject = async () => {
     try {
-      await updateQuotationStatus(projectId, quotation.id, 'rejected')
+      const qId = quotation.id || quotation.quotation_id
+      await updateQuotationStatus(projectId, qId, 'rejected')
       setQuotation({ ...quotation, status: 'rejected' })
       toast.success('Quotation rejected')
+      router.push(`/customize/${projectId}`)
     } catch {
       toast.error('Failed to reject quotation')
     }
@@ -106,6 +126,7 @@ export default function QuotationPage() {
       toast.success('Revision request logged successfully')
       setRevNotes('')
       setShowRevModal(false)
+      router.push(`/customize/${projectId}`)
     } catch {
       toast.error('Failed to request revision')
     } finally {
@@ -387,7 +408,13 @@ export default function QuotationPage() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={() => setInquiryOpen(true)}
+                  onClick={() => {
+                    if (quotation.status === 'approved') {
+                      router.push(`/track/${projectId}`)
+                    } else {
+                      toast.error('Please approve quotation before proceeding to execution.')
+                    }
+                  }}
                   id="proceed-inquiry-btn"
                   className="flex items-center gap-2 bg-white text-indigo-600 font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition"
                 >

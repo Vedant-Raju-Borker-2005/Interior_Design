@@ -16,6 +16,10 @@ _otp_rate: dict[str, int] = {}
 
 @router.post("/signup", summary="Register or login – sends OTP to phone/email")
 def signup(req: SignupReq, db: Session = Depends(get_db)):
+    if req.phone:
+        req.phone = req.phone.replace(" ", "")
+    if req.email:
+        req.email = req.email.replace(" ", "")
     contact = req.phone or req.email
     if not contact:
         raise HTTPException(400, "Phone or email required")
@@ -50,6 +54,10 @@ def signup(req: SignupReq, db: Session = Depends(get_db)):
 
 @router.post("/login", summary="Request OTP to login (only if registered)")
 def login(req: SignupReq, db: Session = Depends(get_db)):
+    if req.phone:
+        req.phone = req.phone.replace(" ", "")
+    if req.email:
+        req.email = req.email.replace(" ", "")
     contact = req.phone or req.email
     if not contact:
         raise HTTPException(400, "Phone or email required")
@@ -82,6 +90,10 @@ def login(req: SignupReq, db: Session = Depends(get_db)):
 
 @router.post("/verify-otp", response_model=TokenResponse, summary="Verify OTP and get JWT")
 def verify_otp(req: VerifyOTPReq, db: Session = Depends(get_db)):
+    if req.phone:
+        req.phone = req.phone.replace(" ", "")
+    if req.email:
+        req.email = req.email.replace(" ", "")
     contact = req.phone or req.email
     if not contact:
         raise HTTPException(400, "Phone or email required")

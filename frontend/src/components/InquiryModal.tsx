@@ -128,6 +128,7 @@ export default function InquiryModal({
                         onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                         placeholder="+91 98765 43210"
                         className="input pl-10 py-2 px-3.5 text-sm rounded-xl"
+                        style={{ paddingLeft: '2.5rem' }}
                       />
                     </div>
                   </div>
@@ -143,6 +144,7 @@ export default function InquiryModal({
                         onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                         placeholder="rahul@example.com"
                         className="input pl-10 py-2 px-3.5 text-sm rounded-xl"
+                        style={{ paddingLeft: '2.5rem' }}
                       />
                     </div>
                   </div>

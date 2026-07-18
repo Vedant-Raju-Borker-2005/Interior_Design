@@ -42,6 +42,17 @@ def create_project(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
+    # Check if a project with the same name already exists for this user
+    existing = db.query(Project).filter(
+        Project.user_id == user.id,
+        Project.property_name.ilike(req.property_name)
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A project named '{req.property_name}' already exists for this customer."
+        )
+
     pid = str(uuid.uuid4())
     project = Project(
         id=pid,
@@ -55,10 +66,31 @@ def create_project(
         material_preference=getattr(req, 'material_preference', None),
         furnishing_type=getattr(req, 'furnishing_type', None),
         pincode=getattr(req, 'pincode', None),
-        color_preference=req.color_preference,
         status="draft",
+        color_preferences=req.color_preferences or [],
     )
     db.add(project)
+
+    # Increment selection counts in ColorAnalytics for popularity ranking
+    if req.color_preferences:
+        from .catalog import classify_color_family
+        from ..models import ColorAnalytics
+        import datetime
+        for color_name in req.color_preferences:
+            cname = color_name.strip().title()
+            analytics = db.query(ColorAnalytics).filter(ColorAnalytics.color_name == cname).first()
+            if not analytics:
+                cat = classify_color_family(cname)
+                analytics = ColorAnalytics(
+                    color_name=cname,
+                    selection_count=1,
+                    last_selected=datetime.datetime.utcnow(),
+                    category=cat
+                )
+                db.add(analytics)
+            else:
+                analytics.selection_count += 1
+                analytics.last_selected = datetime.datetime.utcnow()
 
     rooms_out = []
     for rtype in BHK_ROOMS.get(req.bhk_type, []):
@@ -102,14 +134,9 @@ def update_project(
     db: Session = Depends(get_db),
 ):
     project = _get_project_or_404(project_id, user.id, db)
-    old_pkg_id = project.package_id
     for field in ["status", "package_id", "budget", "property_name"]:
         if field in payload:
             setattr(project, field, payload[field])
-    
-    if "package_id" in payload and payload["package_id"] and payload["package_id"] != old_pkg_id:
-        _auto_populate_default_items(project, db)
-        
     db.commit()
     return {"message": "updated"}
 
@@ -278,85 +305,9 @@ def _project_summary(p: Project) -> dict:
         "budget": p.budget,
         "status": p.status,
         "package_id": p.package_id,
-        "color_preference": p.color_preference,
         "total_area_sqft": p.total_area_sqft,
         "created_at": p.created_at.isoformat() if p.created_at else None,
     }
-
-
-def _auto_populate_default_items(project: Project, db: Session):
-    """Auto-populate rooms with default products based on categories & color preference."""
-    MANDATORY_CATEGORIES = {
-        "living_room": ["Sofas", "Coffee Tables", "Side Tables", "Chairs", "Rugs", "Lighting", "Decor"],
-        "bedroom_master": ["Beds", "Lighting", "Decor"],
-        "bedroom_2": ["Beds", "Lighting"],
-        "bedroom_3": ["Beds", "Lighting"],
-        "bedroom_4": ["Beds", "Lighting"],
-        "bedroom_5": ["Beds", "Lighting"],
-        "kitchen": ["Kitchen Cabinets", "Lighting"],
-        "bathroom": ["Bathroom Fixtures"],
-        "bathroom_2": ["Bathroom Fixtures"],
-        "bathroom_3": ["Bathroom Fixtures"],
-        "balcony": ["Decor"],
-        "dining_room": ["Dining Tables", "Lighting"],
-        "home_office": ["Furniture", "Lighting"]
-    }
-    
-    preferred_color = (project.color_preference or "").strip().lower()
-
-    for room in project.rooms:
-        cats = MANDATORY_CATEGORIES.get(room.room_type, ["Furniture", "Lighting"])
-        for cat in cats:
-            # Delete any existing room items for this category in this room
-            db.query(RoomItem).filter(
-                RoomItem.room_id == room.id,
-                RoomItem.product_id.in_(
-                    db.query(Product.id).filter(
-                        (Product.category == cat) | (Product.subcategory == cat)
-                    )
-                )
-            ).delete(synchronize_session=False)
-
-            # Query all products in this category for this room type
-            all_prods = db.query(Product).filter(
-                Product.room_type == room.room_type,
-                (Product.category == cat) | (Product.subcategory == cat)
-            ).all()
-
-            if not all_prods:
-                # Try generic category match if room type specific is empty
-                all_prods = db.query(Product).filter(
-                    (Product.category == cat) | (Product.subcategory == cat)
-                ).all()
-
-            if not all_prods:
-                continue
-
-            # Prioritize product containing the color preference
-            chosen_product = None
-            if preferred_color:
-                for prod in all_prods:
-                    colors = [c.lower() for c in (prod.color_variants or [])]
-                    variants_dict = prod.variants or {}
-                    colors_from_dict = [c.lower() for c in (variants_dict.get("color") or [])]
-                    if preferred_color in colors or preferred_color in colors_from_dict:
-                        chosen_product = prod
-                        break
-
-            # Fallback to the first product if none matches color preference
-            if not chosen_product:
-                chosen_product = all_prods[0]
-
-            # Add to room
-            item = RoomItem(
-                id=str(uuid.uuid4()),
-                room_id=room.id,
-                product_id=chosen_product.id,
-                qty=1,
-                custom_color=project.color_preference, # Keep default color preference (even if not available)
-                unit_price=chosen_product.price
-            )
-            db.add(item)
 
 
 def _room_detail(r: Room, db: Session) -> dict:

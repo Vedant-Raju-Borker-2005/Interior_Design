@@ -77,28 +77,30 @@ export default function FloorPlanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-16">
+    <div className="min-h-screen text-white pb-16" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)', backgroundAttachment: 'fixed' }}>
       <Navbar />
 
       <div className="max-w-4xl mx-auto px-4 pt-24 space-y-8">
         {/* Back navigation */}
         <button
           onClick={() => router.push(`/track/${projectId}`)}
-          className="flex items-center gap-2 text-indigo-300 hover:text-white transition-colors text-sm font-semibold"
+          className="flex items-center gap-2 text-indigo-950 hover:text-slate-900 transition-colors text-sm font-semibold"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Project Tracker
         </button>
 
         {/* Title */}
         <div>
-          <h1 className="text-3xl font-black tracking-tight">Floor Plan Manager</h1>
-          <p className="text-sm text-indigo-300/60 mt-1">
+          <h1 className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900">
+            Floor Plan Manager
+          </h1>
+          <p className="text-sm text-indigo-950/70 mt-1 font-medium">
             Upload and view architectural 2D floor plans. PDF and image formats are supported.
           </p>
         </div>
 
         {/* Drag and Drop Uploader */}
-        <div className="bg-indigo-950/40 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
+        <div className="bg-[#0f1129] border border-white/10 rounded-2xl p-6 backdrop-blur-md">
           <div
             onDragEnter={handleDrag}
             onDragOver={handleDrag}
@@ -155,7 +157,7 @@ export default function FloorPlanPage() {
         </div>
 
         {/* Uploaded List */}
-        <div className="bg-indigo-950/40 border border-white/10 p-6 rounded-2xl shadow-card backdrop-blur-md space-y-4">
+        <div className="bg-[#0f1129] border border-white/10 p-6 rounded-2xl shadow-card backdrop-blur-md space-y-4">
           <h2 className="text-sm font-bold text-white uppercase tracking-wider">Uploaded Floor Plans</h2>
 
           <div className="space-y-3">

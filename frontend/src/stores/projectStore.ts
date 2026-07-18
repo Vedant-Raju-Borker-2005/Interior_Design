@@ -27,6 +27,7 @@ interface ProjectState {
   onboarding: {
     bhk?: string
     style_tags?: string[]
+    color_preferences?: string[]
     budget?: number
     timeline?: string
     city?: string

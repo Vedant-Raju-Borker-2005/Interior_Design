@@ -51,6 +51,17 @@ class ProductCreateIn(BaseModel):
     variantOptions: dict = {}   # {"color": ["Yellow","Red"], "fabric": ["Velvet"], ...}
     colorStock: dict = {}       # {"Yellow": 2, "Red": 3} — vendor-only breakdown
     variants: List[VariantIn] = []
+    primaryMaterial: str
+    width: float
+    height: float
+    depth: float
+    weight: float
+    weightCapacity: float
+    style: str
+    finish: str
+    mountingType: str
+    assemblyRequired: str
+    suitableRoom: str
 
 
 class ProductUpdateIn(BaseModel):
@@ -63,6 +74,18 @@ class ProductUpdateIn(BaseModel):
     availableQty: Optional[int] = None
     variantOptions: Optional[dict] = None
     colorStock: Optional[dict] = None
+    primaryMaterial: Optional[str] = None
+    width: Optional[float] = None
+    height: Optional[float] = None
+    depth: Optional[float] = None
+    weight: Optional[float] = None
+    weightCapacity: Optional[float] = None
+    style: Optional[str] = None
+    finish: Optional[str] = None
+    mountingType: Optional[str] = None
+    assemblyRequired: Optional[str] = None
+    suitableRoom: Optional[str] = None
+
 
 
 class InventoryUpdateIn(BaseModel):
@@ -361,7 +384,7 @@ def get_vendor_dashboard(
         serialized_assignments.append({
             "id": a.id,
             "projectId": a.project_id,
-            "projectName": project.property_name if project else "Unknown Project",
+            "projectName": f"{project.property_name} ({project.pincode})" if project else "Unknown Project",
             "itemId": a.item_id,
             "itemName": product.name if product else "Custom Item",
             "quantity": item.qty if item else 1,
@@ -553,7 +576,18 @@ def create_vendor_product(
         sku=payload.sku,
         description=payload.description,
         base_price=payload.basePrice,
-        images=payload.images
+        images=payload.images,
+        primary_material=payload.primaryMaterial,
+        width=payload.width,
+        height=payload.height,
+        depth=payload.depth,
+        weight=payload.weight,
+        weight_capacity=payload.weightCapacity,
+        style=payload.style,
+        finish=payload.finish,
+        mounting_type=payload.mountingType,
+        assembly_required=payload.assemblyRequired,
+        suitable_room=payload.suitableRoom
     )
     db.add(product)
     db.flush()
@@ -600,12 +634,24 @@ def create_vendor_product(
             "wood_finish": variant_opts.get("wood_finish", []),
             "cushion_style": variant_opts.get("cushion_style", []),
         },
-        style_tags=["modern"]
+        style_tags=["modern"],
+        primary_material=payload.primaryMaterial,
+        width=payload.width,
+        height=payload.height,
+        depth=payload.depth,
+        weight=payload.weight,
+        weight_capacity=payload.weightCapacity,
+        style=payload.style,
+        finish=payload.finish,
+        mounting_type=payload.mountingType,
+        assembly_required=payload.assemblyRequired,
+        suitable_room=payload.suitableRoom
     )
     db.add(cust_product)
 
     db.commit()
     return {"success": True, "productId": product.id}
+
 
 
 @router.put("/products/{product_id}", summary="Update vendor product details")
@@ -652,7 +698,29 @@ def update_vendor_product(
         if payload.images is not None:
             cust_product.thumbnail_url = payload.images[0] if payload.images else "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=85&fit=crop"
 
+    # Update specifications on both models
+    spec_fields = {
+        "primaryMaterial": "primary_material",
+        "width": "width",
+        "height": "height",
+        "depth": "depth",
+        "weight": "weight",
+        "weightCapacity": "weight_capacity",
+        "style": "style",
+        "finish": "finish",
+        "mountingType": "mounting_type",
+        "assemblyRequired": "assembly_required",
+        "suitableRoom": "suitable_room"
+    }
+    for req_field, db_field in spec_fields.items():
+        val = getattr(payload, req_field, None)
+        if val is not None:
+            setattr(product, db_field, val)
+            if cust_product:
+                setattr(cust_product, db_field, val)
+
     if payload.availableQty is not None:
+
         inv = db.query(Inventory).filter(Inventory.product_id == product.id).first()
         if not inv:
             inv = Inventory(product_id=product.id, available_qty=0)
@@ -713,9 +781,6 @@ async def upload_product_image(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found or access denied")
 
-    if view_index < 0 or view_index > 2:
-        raise HTTPException(400, "view_index must be between 0 and 2")
-
     # Save image file
     ext = os.path.splitext(file.filename or "product.jpg")[1].lower() or ".jpg"
     allowed = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -723,7 +788,7 @@ async def upload_product_image(
         raise HTTPException(400, "Invalid image format. Use JPG, PNG, or WebP.")
 
     os.makedirs(os.path.join("pdfs", "product_images"), exist_ok=True)
-    filename = f"product_{product_id}_view_{view_index}_{int(datetime.datetime.utcnow().timestamp())}{ext}"
+    filename = f"product_{product_id}_{view_index}_{int(datetime.datetime.utcnow().timestamp())}{ext}"
     filepath = os.path.join("pdfs", "product_images", filename)
 
     contents = await file.read()
@@ -732,23 +797,31 @@ async def upload_product_image(
 
     image_url = f"/static/pdfs/product_images/{filename}"
 
-    # Update vendor product images at specified index
-    current_images = list(product.images or [])
-    while len(current_images) <= view_index:
-        current_images.append("")
-    current_images[view_index] = image_url
-    product.images = [img for img in current_images if img]
+    # Update vendor product images array at view_index
+    images = list(product.images) if product.images else []
+    while len(images) <= view_index:
+        images.append("")
+    images[view_index] = image_url
     
-    # Update customer-facing catalog Product table
+    # Filter out trailing empty slots
+    while images and not images[-1]:
+        images.pop()
+        
+    product.images = images
+    
+    # Update customer-facing catalog Product table thumbnail
     cust_product = db.query(Product).filter(Product.id == product_id).first()
     if cust_product:
-        cust_product.thumbnail_url = product.images[0] if product.images else image_url
-        v = dict(cust_product.variants or {})
-        v["images"] = product.images
-        cust_product.variants = v
+        cust_product.thumbnail_url = images[0] if (images and images[0]) else ""
+        cust_product.images = images
+        
+        # Save images list to variants["images"] as well
+        vars_dict = dict(cust_product.variants) if cust_product.variants else {}
+        vars_dict["images"] = images
+        cust_product.variants = vars_dict
 
     db.commit()
-    return {"success": True, "image_url": image_url, "images": product.images}
+    return {"success": True, "image_url": image_url, "images": images}
 
 
 # --- INVENTORY MANAGEMENT ENDPOINTS ---
@@ -905,7 +978,7 @@ def get_vendor_assignments(
         res.append({
             "id": a.id,
             "projectId": a.project_id,
-            "projectName": project.property_name if project else "Unknown Project",
+            "projectName": f"{project.property_name} ({project.pincode})" if project else "Unknown Project",
             "customerName": customer.name if customer else "Unknown Customer",
             "customerPhone": customer.phone if customer else "N/A",
             "city": project.city if project else "N/A",
@@ -1124,8 +1197,10 @@ def update_assignment_status(
         raise HTTPException(status_code=404, detail="Assignment not found or access denied")
 
     status_upper = payload.status.upper()
-    if status_upper not in ["ACCEPTED", "REJECTED"]:
-        raise HTTPException(status_code=400, detail="Invalid status. Must be ACCEPTED or REJECTED")
+    if status_upper == "REJECTED":
+        raise HTTPException(status_code=400, detail="Vendor rejection is disabled. Rejection of assignments is not permitted.")
+    if status_upper != "ACCEPTED":
+        raise HTTPException(status_code=400, detail="Invalid status. Must be ACCEPTED")
 
     assignment.status = status_upper
     assignment.remarks = payload.remarks
@@ -1304,7 +1379,7 @@ def get_vendor_payouts(
             "id": p.id,
             "amount": p.amount,
             "projectId": p.project_id,
-            "projectName": project.property_name if project else "Unknown Project",
+            "projectName": f"{project.property_name} ({project.pincode})" if project else "Unknown Project",
             "payoutDate": p.payout_date,
             "status": p.status,
             "statementUrl": p.statement_url,

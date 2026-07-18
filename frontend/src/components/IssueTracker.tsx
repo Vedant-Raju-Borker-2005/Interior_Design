@@ -57,7 +57,7 @@ export function IssueTracker({ projectId }: Props) {
   };
 
   return (
-    <div className="bg-indigo-950/40 border border-white/10 rounded-2xl p-6 shadow-card backdrop-blur-md flex flex-col justify-between">
+    <div className="bg-[#0f1129] border border-white/10 rounded-2xl p-6 shadow-card backdrop-blur-md flex flex-col justify-between">
       <div>
         <div className="flex justify-between items-center mb-6">
           <div>

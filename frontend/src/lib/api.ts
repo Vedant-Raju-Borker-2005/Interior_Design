@@ -35,13 +35,13 @@ axiosInstance.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  signup: (data: { name?: string; email?: string; phone?: string }) =>
+  signup: (data: { name?: string; email?: string; phone?: string; city?: string; furnishing_preference?: string; role?: string }) =>
     axiosInstance.post('/api/v1/auth/signup', data),
   
-  login: (data: { email?: string; phone?: string }) =>
+  login: (data: { email?: string; phone?: string; role?: string }) =>
     axiosInstance.post('/api/v1/auth/login', data),
   
-  verifyOtp: (data: { email?: string; phone?: string; otp: string }) =>
+  verifyOtp: (data: { email?: string; phone?: string; otp: string; role?: string }) =>
     axiosInstance.post('/api/v1/auth/verify-otp', data),
   
   me: () =>
@@ -55,7 +55,7 @@ export const authAPI = {
 export const projectsAPI = {
   list: () =>
     axiosInstance.get('/api/v1/projects'),
-  deleteCustomerProject: (projectId: string) =>
+  delete: (projectId: string) =>
     axiosInstance.delete(`/api/v1/customer/projects/${projectId}`),  
   
   create: (data: { 
@@ -68,15 +68,17 @@ export const projectsAPI = {
     pincode?: string;
     floor_plan_type?: string;
     floor_plan_name?: string;
-    color_preference?: string;
+    color_preferences?: string[];
   }) =>
     axiosInstance.post('/api/v1/projects', data),
+
   
   get: (id: string) =>
     axiosInstance.get(`/api/v1/projects/${id}`),
   
   update: (id: string, data: Partial<{ title: string; bhk: string; budget_min: number; budget_max: number; package_id: string }>) =>
     axiosInstance.put(`/api/v1/projects/${id}`, data),
+
 
   updateRoom: (projectId: string, roomId: string, data: { style_preference?: string; color_palette?: string[]; length_ft?: number; width_ft?: number; height_ft?: number }) =>
     axiosInstance.put(`/api/v1/projects/${projectId}/rooms/${roomId}`, data),
@@ -109,7 +111,7 @@ export const catalogAPI = {
   packages: (params?: { bhk?: string; tier?: string; budget?: number; style?: string }) =>
     axiosInstance.get('/api/v1/catalog/packages', { params }),
   
-  products: (params: { room_type?: string; category?: string; style?: string; limit?: number; skip?: number; pincode?: string }) =>
+  products: (params: { room_type?: string; category?: string; style?: string; limit?: number; skip?: number; pincode?: string; project_id?: string }) =>
     axiosInstance.get('/api/v1/catalog/products', { params }),
 
   productsByRoom: (roomType: string) =>
@@ -117,7 +119,11 @@ export const catalogAPI = {
   
   product: (id: string) =>
     axiosInstance.get(`/api/v1/catalog/products/${id}`),
+
+  colors: (params?: { style?: string; grouped?: boolean }) =>
+    axiosInstance.get('/api/v1/catalog/colors', { params }),
 }
+
 
 // AI Rendering API
 export const aiAPI = {
@@ -164,8 +170,9 @@ export const vendorsAPI = {
 
 // Recommendations API
 export const recommendationsAPI = {
-  packages: (params: { bhk: string; budget: number; style_tags?: string }) =>
+  packages: (params: { bhk: string; budget: number; style_tags?: string; project_id?: string }) =>
     axiosInstance.get('/api/v1/recommendations/packages', { params }),
+
 
   getPackages: (bhk: string, budget_max: number, style?: string) =>
     axiosInstance.get('/api/v1/recommendations/packages', {
@@ -181,7 +188,7 @@ export const recommendationsAPI = {
 // Tracking API
 export const trackingAPI = {
   getMilestones: (projectId: string) =>
-    axiosInstance.get(`/api/v1/tracking/${projectId}/milestones`),
+    axiosInstance.get(`/api/v1/tracking/${projectId}`),
   
   updateMilestone: (projectId: string, milestoneId: string, data: { status: string; photo_url?: string }) =>
     axiosInstance.put(`/api/v1/tracking/${projectId}/milestones/${milestoneId}`, data),
@@ -412,3 +419,4 @@ export const customerExtrasAPI = {
 }
 
 export default axiosInstance
+

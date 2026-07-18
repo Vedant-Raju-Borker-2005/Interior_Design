@@ -166,9 +166,7 @@ def build_prompt(style: str, color_palette: list, room_type: str = "living_room"
 
 def get_gemini_render(prompt: str) -> str | None:
     """
-    Generate a photorealistic interior render using available Gemini image models.
-    Primary: gemini-2.5-flash-image (generateContent with IMAGE modality)
-    Secondary: gemini-3.1-flash-image (generateContent with IMAGE modality)
+    Try Gemini 2.0 Flash image generation (primary), then Imagen 3 (secondary).
     Returns a local file URL or None on failure.
     """
     api_key = os.getenv("GEMINI_KEY")
@@ -178,57 +176,66 @@ def get_gemini_render(prompt: str) -> str | None:
 
     os.makedirs(os.path.join("pdfs", "renders"), exist_ok=True)
 
-    # Models to try in order — all support generateContent + IMAGE modality
-    image_models = [
-        "gemini-2.5-flash-image",
-        "gemini-3.1-flash-image",
-        "gemini-3-pro-image",
-    ]
+    # ── Primary: Gemini 2.0 Flash image generation ──────────────────────────
+    flash_url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.0-flash-preview-image-generation:generateContent?key={api_key}"
+    )
+    flash_payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
+    }
+    try:
+        print(f"[Render] Trying Gemini Flash image gen: {prompt[:80]}…")
+        resp = requests.post(flash_url, json=flash_payload,
+                             headers={"Content-Type": "application/json"}, timeout=60)
+        if resp.status_code == 200:
+            data = resp.json()
+            for candidate in data.get("candidates", []):
+                for part in candidate.get("content", {}).get("parts", []):
+                    if "inlineData" in part:
+                        img_bytes = base64.b64decode(part["inlineData"]["data"])
+                        filename = f"gen_{int(datetime.datetime.utcnow().timestamp())}_flash.jpg"
+                        filepath = os.path.join("pdfs", "renders", filename)
+                        with open(filepath, "wb") as f:
+                            f.write(img_bytes)
+                        print(f"[Render] Gemini Flash render saved: {filename}")
+                        return f"/static/pdfs/renders/{filename}"
+        else:
+            print(f"[Render] Gemini Flash error {resp.status_code}: {resp.text[:200]}")
+    except Exception as e:
+        print(f"[Render] Gemini Flash exception: {e}")
 
-    for model_name in image_models:
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{model_name}:generateContent?key={api_key}"
-        )
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }],
-            "generationConfig": {
-                "responseModalities": ["IMAGE", "TEXT"]
-            }
+    # ── Secondary: Imagen 3 ──────────────────────────────────────────────────
+    imagen_url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"imagen-3.0-generate-002:predict?key={api_key}"
+    )
+    imagen_payload = {
+        "instances": [{"prompt": prompt}],
+        "parameters": {
+            "sampleCount": 1,
+            "personGeneration": "DONT_ALLOW",
+            "aspectRatio": "3:2"
         }
+    }
+    try:
+        print(f"[Render] Trying Imagen 3: {prompt[:80]}…")
+        resp = requests.post(imagen_url, json=imagen_payload,
+                             headers={"Content-Type": "application/json"}, timeout=45)
+        if resp.status_code == 200:
+            predictions = resp.json().get("predictions", [])
+            if predictions:
+                img_bytes = base64.b64decode(predictions[0].get("bytesBase64Encoded", ""))
+                filename = f"gen_{int(datetime.datetime.utcnow().timestamp())}_imagen.jpg"
+                filepath = os.path.join("pdfs", "renders", filename)
+                with open(filepath, "wb") as f:
+                    f.write(img_bytes)
+                print(f"[Render] Imagen 3 render saved: {filename}")
+                return f"/static/pdfs/renders/{filename}"
+        else:
+            print(f"[Render] Imagen 3 error {resp.status_code}: {resp.text[:200]}")
+    except Exception as e:
+        print(f"[Render] Imagen 3 exception: {e}")
 
-        try:
-            print(f"[Render] Trying {model_name}: {prompt[:80]}…")
-            resp = requests.post(
-                url,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=60
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                for candidate in data.get("candidates", []):
-                    for part in candidate.get("content", {}).get("parts", []):
-                        if "inlineData" in part:
-                            img_b64 = part["inlineData"].get("data", "")
-                            mime = part["inlineData"].get("mimeType", "image/jpeg")
-                            ext = ".png" if "png" in mime else ".jpg"
-                            if img_b64:
-                                img_bytes = base64.b64decode(img_b64)
-                                filename = f"gen_{int(datetime.datetime.utcnow().timestamp())}_{model_name.replace('-','_')}{ext}"
-                                filepath = os.path.join("pdfs", "renders", filename)
-                                with open(filepath, "wb") as f:
-                                    f.write(img_bytes)
-                                print(f"[Render] SUCCESS with {model_name} — saved: {filename}")
-                                return f"/static/pdfs/renders/{filename}"
-                print(f"[Render] {model_name} returned 200 but no image data in response")
-            else:
-                print(f"[Render] {model_name} error {resp.status_code}: {resp.text[:200]}")
-        except Exception as e:
-            print(f"[Render] {model_name} exception: {e}")
-
-    print("[Render] All image models failed — falling back to stock images")
     return None
-

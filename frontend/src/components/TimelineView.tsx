@@ -16,7 +16,7 @@ export function TimelineView({ resources }: TimelineViewProps) {
   const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
 
   return (
-    <div className="bg-indigo-950/40 border border-white/10 rounded-2xl p-6 shadow-card backdrop-blur-md overflow-hidden select-none">
+    <div className="bg-[#0f1129] border border-white/10 rounded-2xl p-6 shadow-card backdrop-blur-md overflow-hidden select-none">
       <h3 className="font-bold text-white text-sm mb-6 uppercase tracking-wider">Project Timeline (Gantt)</h3>
       
       <div className="flex flex-col border border-white/10 rounded-xl overflow-hidden">

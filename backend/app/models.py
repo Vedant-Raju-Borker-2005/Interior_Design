@@ -59,12 +59,13 @@ class Project(Base):
     floor_plan_url = Column(String)
     material_preference = Column(String)
     furnishing_type = Column(String)
-    color_preference = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    color_preferences = Column(JSON, default=list)
+
 
     user = relationship("User", back_populates="projects")
     rooms = relationship("Room", back_populates="project", cascade="all, delete-orphan")
-    quotations = relationship("Quotation", back_populates="project")
+    quotations = relationship("Quotation", back_populates="project", cascade="all, delete-orphan")
     package = relationship("Package", back_populates="projects")
 
     # Project Team Module relations
@@ -113,10 +114,24 @@ class Product(Base):
     color_variants = Column(JSON, default=list)
     variants = Column(JSON, default=dict) # Options dictionary (color, fabric, size, texture, wood_finish, cushion_style)
     thumbnail_url = Column(String)
+    images = Column(JSON, default=list)
     model_url = Column(String)
     style_tags = Column(JSON, default=list)
+    primary_material = Column(String, default="Solid Wood")
+    width = Column(Float, default=1200.0)
+    height = Column(Float, default=750.0)
+    depth = Column(Float, default=600.0)
+    weight = Column(Float, default=15.0)
+    weight_capacity = Column(Float, default=120.0)
+    style = Column(String, default="Modern")
+    finish = Column(String, default="Matte")
+    mounting_type = Column(String, default="Floor Standing")
+    assembly_required = Column(String, default="No")
+    suitable_room = Column(String, default="Living Room")
+    description = Column(Text, nullable=True)
 
     vendor = relationship("Vendor", backref="catalog_products")
+
 
 
 class RoomItem(Base):
@@ -379,8 +394,20 @@ class VendorProduct(Base):
     images = Column(JSON, default=list)
     is_archived = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    primary_material = Column(String, default="Solid Wood")
+    width = Column(Float, default=1200.0)
+    height = Column(Float, default=750.0)
+    depth = Column(Float, default=600.0)
+    weight = Column(Float, default=15.0)
+    weight_capacity = Column(Float, default=120.0)
+    style = Column(String, default="Modern")
+    finish = Column(String, default="Matte")
+    mounting_type = Column(String, default="Floor Standing")
+    assembly_required = Column(String, default="No")
+    suitable_room = Column(String, default="Living Room")
 
     vendor = relationship("Vendor", back_populates="products")
+
     variants = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")
     inventory = relationship("Inventory", back_populates="product", uselist=False, cascade="all, delete-orphan")
 
@@ -632,3 +659,11 @@ class ProjectDocument(Base):
     version = Column(Integer, default=1)
 
     project = relationship("Project", back_populates="documents")
+
+
+class ColorAnalytics(Base):
+    __tablename__ = "color_analytics"
+    color_name = Column(String, primary_key=True)
+    selection_count = Column(Integer, default=0)
+    last_selected = Column(DateTime, default=datetime.datetime.utcnow)
+    category = Column(String, nullable=False)

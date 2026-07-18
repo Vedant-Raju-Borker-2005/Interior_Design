@@ -62,6 +62,8 @@ search_frontend.py
 check_db_team.py
 backend/reset_db.py
 reset_db.py
+check_db.py
+fix_thumbnails.py
 
 UPDATES/
-*.docx
+# *.docx
