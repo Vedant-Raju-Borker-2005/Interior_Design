@@ -97,12 +97,12 @@ export default function LoginPage() {
       const payload = method === 'phone'
         ? { phone: sanitizedContact, otp, role }
         : { email: sanitizedContact, otp, role }
-      
+
       const res = await authAPI.verifyOtp(payload)
-      
+
       // Auto Login & Set token
       setToken(res.data.access_token, res.data.user_id, res.data.role)
-      
+
       // If they just registered, update their profile details in the authStore
       if (mode === 'signup' && res.data.user) {
         const updatedUser = {
@@ -124,7 +124,7 @@ export default function LoginPage() {
       }
 
       toast.success(mode === 'signup' ? 'Account created successfully! 🎉' : 'Welcome back to InteriorAI! 👋')
-      
+
       // Redirect based on the authenticated role
       if (res.data.role === 'vendor') {
         router.push('/vendor/dashboard')
@@ -209,7 +209,7 @@ export default function LoginPage() {
                           }}
                           className={clsx(
                             'relative overflow-hidden p-3 rounded-xl flex items-center gap-3 transition-all duration-300 transform',
-                            isSelected 
+                            isSelected
                               ? `bg-gradient-to-r ${item.bg} text-white shadow-lg scale-[1.02]`
                               : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
                           )}
@@ -322,7 +322,7 @@ export default function LoginPage() {
                               <div className="text-[10px] text-slate-500 mt-0.5">Brand new shell property</div>
                             </div>
                           </button>
-                          
+
                           <button
                             type="button"
                             onClick={() => setFurnishingPreference('upgrade')}
@@ -476,7 +476,7 @@ export default function LoginPage() {
           style={{ animationDuration: '2s' }}
         />
         <div className="absolute inset-0 bg-gradient-to-l from-indigo-950/60 via-indigo-950/20 to-transparent" />
-        
+
         <div className="absolute bottom-12 left-8 right-8 glass rounded-2xl p-6 border border-white/20 shadow-glow-indigo">
           <p className="text-white font-medium text-lg leading-relaxed">&quot;Designed my entire 3BHK in under 20 minutes with InteriorAI. The renders and budget calculator were incredibly accurate!&quot;</p>
           <div className="flex items-center gap-3 mt-4">
