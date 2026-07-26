@@ -19,6 +19,7 @@ interface Project {
   budget: number
   status: string
   package_id?: string
+  interior_material_preference?: string
   rooms?: Room[]
 }
 
@@ -27,6 +28,7 @@ interface ProjectState {
   onboarding: {
     bhk?: string
     style_tags?: string[]
+    interior_material_preference?: string
     color_preferences?: string[]
     budget?: number
     timeline?: string

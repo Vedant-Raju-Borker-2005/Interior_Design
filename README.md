@@ -57,7 +57,11 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
 *   **Auto-Regenerating Quotations (New):**  
     If a customer returns to the quotation page after editing their configurations when their previous quote was `'rejected'` or `'under_revision'`, the page automatically triggers a new PDF and quote calculations to present updated figures immediately.
 *   **Custom Glassmorphic Project Deletion (New):**  
-    Replaces browser native alerts with a premium glassmorphic confirmation modal featuring slide-up animations, backdrop blurs (`bg-white/80 backdrop-blur-xl`), and detailed info checks.
+    Replaces browser native alerts with a premium dark-themed glassmorphic confirmation modal featuring slide-up animations, backdrop blurs (`bg-slate-950/60`), and concise info copy.
+*   **Animated Swipe-to-Delete Notifications (New):**  
+    Enables horizontal swipe-left gesture triggers on notification cards to immediately delete notifications from the SQLite database. Restores cards using spring-back animations if release threshold is unmet. Dismisses the notification dropdown immediately upon clicking outside the menu box.
+*   **Material Onboarding & Product Dimensions (New):**  
+    Adds a new step in the customer onboarding wizard to select interior wood laminate preferences (Oak Laminate, Teak Laminate, Walnut Laminate) loaded from the database. Serializes nested product details (dimensions: width/height/depth, mounting type, suitable room, finish, style, and assembly) under room items.
 *   **Customer Tracking & Sourcing Redesign (New):**  
     Replaces customer-side dropdown lists with a dual horizontal tracker system. A read-only **Vendor Status Bar** visualizes item sourcing progress (Ordered to Dispatched) in real-time. An interactive **Customer Verification Bar** permits the customer to directly confirm deliveries and installations.
 *   **Solid Container Backgrounds & Contrast Controls (New):**  

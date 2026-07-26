@@ -64,6 +64,7 @@ export const projectsAPI = {
     city: string; 
     budget: number;
     material_preference?: string;
+    interior_material_preference?: string;
     furnishing_type?: string;
     pincode?: string;
     floor_plan_type?: string;
@@ -122,6 +123,9 @@ export const catalogAPI = {
 
   colors: (params?: { style?: string; grouped?: boolean }) =>
     axiosInstance.get('/api/v1/catalog/colors', { params }),
+
+  materials: () =>
+    axiosInstance.get('/api/v1/catalog/materials'),
 }
 
 
@@ -311,6 +315,8 @@ export const customerAPI = {
     axiosInstance.patch(`/api/v1/customer/notifications/${notificationId}`),
   markAllNotificationsRead: () =>
     axiosInstance.post('/api/v1/customer/notifications/mark-all-read'),
+  deleteNotification: (notificationId: string) =>
+    axiosInstance.delete(`/api/v1/customer/notifications/${notificationId}`),
 
   getStats: () =>
     axiosInstance.get('/api/v1/customer/stats'),

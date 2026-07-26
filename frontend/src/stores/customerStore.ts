@@ -45,6 +45,7 @@ interface CustomerState {
   fetchNotifications: () => Promise<void>
   markNotificationRead: (notificationId: string) => Promise<void>
   markAllNotificationsRead: () => Promise<void>
+  deleteNotification: (notificationId: string) => Promise<void>
   fetchStats: () => Promise<void>
   fetchInquiries: () => Promise<void>
   closeInquiry: (inquiryId: string) => Promise<void>
@@ -282,6 +283,21 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
         notifications: s.notifications.map((n) => ({ ...n, read: true })),
       }))
     } catch (e: any) {}
+  },
+
+  deleteNotification: async (notificationId) => {
+    const previousNotifications = get().notifications
+    set((s) => ({
+      notifications: s.notifications.filter((n) => n.id !== notificationId),
+    }))
+    try {
+      console.log('Sending DELETE request for notification:', notificationId)
+      const res = await customerAPI.deleteNotification(notificationId)
+      console.log('DELETE response success:', res.data)
+    } catch (e: any) {
+      console.error('DELETE API failed:', e)
+      set({ notifications: previousNotifications })
+    }
   },
 
   fetchStats: async () => {
