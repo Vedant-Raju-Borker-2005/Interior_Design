@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 
 from ..db import get_db
-from ..models import Package, Product, ColorAnalytics
+from ..models import Package, Product, ColorAnalytics, InteriorMaterial
 from ..schemas import PackageOut, ProductOut
 
 router = APIRouter()
@@ -409,4 +409,10 @@ def _prod_out(p: Product, availability_tier: str = "national") -> dict:
         "suitable_room": p.suitable_room,
         "description": p.description
     }
+
+
+@router.get("/materials", summary="Get master list of interior material options")
+def get_interior_materials(db: Session = Depends(get_db)):
+    materials = db.query(InteriorMaterial).all()
+    return [m.name for m in materials]
 

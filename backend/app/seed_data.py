@@ -681,6 +681,14 @@ VENDORS = [
 
 
 def seed_database(db: Session):
+    # Seed interior materials independently
+    from .models import InteriorMaterial
+    if db.query(InteriorMaterial).count() == 0:
+        materials = ["Oak Laminate", "Teak Laminate", "Walnut Laminate"]
+        for m in materials:
+            db.add(InteriorMaterial(id=str(uuid.uuid4()), name=m))
+        db.commit()
+
     if db.query(Package).count() > 0:
         return  # already seeded
 

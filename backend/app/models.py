@@ -59,6 +59,7 @@ class Project(Base):
     floor_plan_url = Column(String)
     material_preference = Column(String)
     furnishing_type = Column(String)
+    interior_material_preference = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     color_preferences = Column(JSON, default=list)
 
@@ -667,3 +668,9 @@ class ColorAnalytics(Base):
     selection_count = Column(Integer, default=0)
     last_selected = Column(DateTime, default=datetime.datetime.utcnow)
     category = Column(String, nullable=False)
+
+
+class InteriorMaterial(Base):
+    __tablename__ = "interior_materials"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    name = Column(String, unique=True, nullable=False)

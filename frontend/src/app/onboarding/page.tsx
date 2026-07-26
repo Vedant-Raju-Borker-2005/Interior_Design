@@ -50,7 +50,7 @@ const FURNISHING_OPTIONS = [
 
 const CITIES = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Ahmedabad', 'Other']
 
-const STEPS = ['Style', 'Color Preference', 'BHK & Layout', 'Budget', 'Preferences', 'Details']
+const STEPS = ['Style', 'Material Preference', 'Color Preference', 'BHK & Layout', 'Budget', 'Preferences', 'Details']
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -60,6 +60,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [availableColors, setAvailableColors] = useState<any>(null)
+  const [availableMaterials, setAvailableMaterials] = useState<string[]>([])
   const [searches, setSearches] = useState<Record<string, string>>({
     Neutral: '',
     Earthy: '',
@@ -81,11 +82,25 @@ export default function OnboardingPage() {
     budget:              '',
     timeline:            '',
     material_preference: '',
+    interior_material_preference: '',
     furnishing_type:     '',
     city:                '',
     property_name:       '',
     pincode:             '',
   })
+
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      try {
+        const res = await catalogAPI.materials()
+        setAvailableMaterials(res.data)
+      } catch (err) {
+        console.error("Failed to load onboarding materials:", err)
+        setAvailableMaterials(["Oak Laminate", "Teak Laminate", "Walnut Laminate"])
+      }
+    }
+    fetchMaterials()
+  }, [])
 
   useEffect(() => {
     const fetchColors = async () => {
@@ -150,16 +165,17 @@ export default function OnboardingPage() {
 
   const canNext = () => {
     if (step === 0) return local.style_tags.length > 0
-    if (step === 1) return local.color_preferences.length > 0
-    if (step === 2) {
+    if (step === 1) return !!local.interior_material_preference
+    if (step === 2) return local.color_preferences.length > 0
+    if (step === 3) {
       if (!local.bhk) return false
       if (floorPlanMode === 'select') return !!selectedPlanId
       if (floorPlanMode === 'upload') return !!uploadFile
       return false
     }
-    if (step === 3) return !!local.budget && !!local.timeline
-    if (step === 4) return !!local.material_preference && !!local.furnishing_type
-    if (step === 5) return !!local.city && !!local.property_name
+    if (step === 4) return !!local.budget && !!local.timeline
+    if (step === 5) return !!local.material_preference && !!local.furnishing_type
+    if (step === 6) return !!local.city && !!local.property_name
     return false
   }
 
@@ -183,6 +199,7 @@ export default function OnboardingPage() {
         city:                local.city,
         budget:              budgetObj?.max || 1000000,
         material_preference: local.material_preference,
+        interior_material_preference: local.interior_material_preference,
         furnishing_type:     local.furnishing_type,
         pincode:             local.pincode || undefined,
         floor_plan_type:     floorPlanMode,
@@ -193,6 +210,7 @@ export default function OnboardingPage() {
       setOnboarding({
         bhk:       local.bhk,
         style_tags: local.style_tags,
+        interior_material_preference: local.interior_material_preference,
         color_preferences: local.color_preferences,
         budget:    budgetObj?.max,
         city:      local.city,
@@ -265,16 +283,61 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* Step 1: Color Preference (Loading view) */}
-          {step === 1 && !availableColors && (
+          {/* Step 1: Material Preference */}
+          {step === 1 && (
+            <motion.div key="material-pref" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
+              <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Material Preference for your interiors</h2>
+              <p className="text-slate-500 mb-8">Select your preferred wood laminate finish. These options are loaded from the database.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {(availableMaterials.length > 0 ? availableMaterials : ['Oak Laminate', 'Teak Laminate', 'Walnut Laminate']).map((m) => {
+                  const emojis: Record<string, string> = {
+                    'Oak Laminate': '🪵',
+                    'Teak Laminate': '🌲',
+                    'Walnut Laminate': '🌰'
+                  }
+                  const descriptions: Record<string, string> = {
+                    'Oak Laminate': 'Light, modern, and warm wood grain finish.',
+                    'Teak Laminate': 'Classic golden-brown look with rich textures.',
+                    'Walnut Laminate': 'Deep, dark, and sophisticated premium finish.'
+                  }
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => setLocal((s) => ({ ...s, interior_material_preference: m }))}
+                      className={clsx(
+                        'p-6 rounded-2xl border-2 text-left transition-all duration-200 bg-white card-hover flex flex-col justify-between h-48',
+                        local.interior_material_preference === m
+                          ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
+                          : 'border-slate-200 hover:border-indigo-300'
+                      )}
+                    >
+                      <div>
+                        <div className="text-3.5xl mb-3">{emojis[m] || '🪵'}</div>
+                        <div className="font-bold text-slate-800 text-base">{m}</div>
+                        <div className="text-xs text-slate-500 mt-2 leading-relaxed">{descriptions[m] || 'Premium interior wood laminate.'}</div>
+                      </div>
+                      {local.interior_material_preference === m && (
+                        <div className="self-end bg-indigo-600 text-white rounded-full p-1 mt-2">
+                          <Check className="w-3.5 h-3.5" />
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 2: Color Preference (Loading view) */}
+          {step === 2 && !availableColors && (
             <div className="text-center py-20">
               <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
               <p className="text-slate-500 text-sm">Loading color preferences catalog...</p>
             </div>
           )}
 
-          {/* Step 1: Color Preference (Main view) */}
-          {step === 1 && availableColors && (() => {
+          {/* Step 2: Color Preference (Main view) */}
+          {step === 2 && availableColors && (() => {
             const categoriesNames = ["Neutral", "Earthy", "Luxury / Premium", "Accent"];
 
             return (
@@ -557,8 +620,8 @@ export default function OnboardingPage() {
             );
           })()}
 
-          {/* Step 2: BHK & Floor Plan */}
-          {step === 2 && (
+          {/* Step 3: BHK & Floor Plan */}
+          {step === 3 && (
             <motion.div key="bhk" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-8">
               <div>
                 <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Home Configuration</h2>
@@ -679,8 +742,8 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* Step 3: Budget & Timeline */}
-          {step === 3 && (
+          {/* Step 4: Budget & Timeline */}
+          {step === 4 && (
             <motion.div key="budget" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
               <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Budget & Timeline</h2>
               <p className="text-slate-500 mb-6">Helps us curate package price tiers aligned with your goals.</p>
@@ -711,8 +774,8 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* Step 4: Preferences */}
-          {step === 4 && (
+          {/* Step 5: Preferences */}
+          {step === 5 && (
             <motion.div key="prefs" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
               <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Your Preferences</h2>
               <p className="text-slate-500 mb-8">Refine the build qualities and scope of works.</p>
@@ -754,8 +817,8 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* Step 5: Property Details */}
-          {step === 5 && (
+          {/* Step 6: Property Details */}
+          {step === 6 && (
             <motion.div key="details" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
               <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Property Details</h2>
               <p className="text-slate-500 mb-8">Almost there! Finalize your location and project address details.</p>

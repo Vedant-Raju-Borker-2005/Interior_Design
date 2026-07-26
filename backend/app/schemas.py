@@ -34,6 +34,7 @@ class CreateProjectReq(BaseModel):
     package_id: Optional[str] = None
     total_area_sqft: Optional[int] = None
     material_preference: Optional[str] = None
+    interior_material_preference: Optional[str] = None
     pincode: Optional[str] = None
     furnishing_type: Optional[str] = None  # new / upgrade
     color_preferences: Optional[List[str]] = []
