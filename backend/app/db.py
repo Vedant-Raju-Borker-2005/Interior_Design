@@ -101,11 +101,13 @@ def init_db():
                     if ticket_columns and "user_id" not in ticket_columns:
                         cursor.execute("ALTER TABLE support_tickets ADD COLUMN user_id VARCHAR")
 
-                # Migrate users table to add role column if missing
+                # Migrate users table to add role & status columns if missing
                 cursor.execute("PRAGMA table_info(users)")
                 user_columns = [row[1] for row in cursor.fetchall()]
                 if "role" not in user_columns:
                     cursor.execute("ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'customer'")
+                if "status" not in user_columns:
+                    cursor.execute("ALTER TABLE users ADD COLUMN status VARCHAR DEFAULT 'active'")
 
                 conn.commit()
                 conn.close()

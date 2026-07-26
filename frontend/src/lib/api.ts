@@ -229,6 +229,134 @@ export const adminAPI = {
   
   updateInquiry: (inquiryId: string, data: { status: string }) =>
     axiosInstance.put(`/api/v1/admin/inquiries/${inquiryId}`, data),
+
+  // Customer Management
+  getCustomers: (params?: { search?: string; status?: string; page?: number; limit?: number }) =>
+    axiosInstance.get('/api/v1/admin/customers', { params }),
+  getCustomerDetail: (id: string) =>
+    axiosInstance.get(`/api/v1/admin/customers/${id}`),
+  updateCustomerProfile: (id: string, data: any) =>
+    axiosInstance.put(`/api/v1/admin/customers/${id}`, data),
+  suspendCustomer: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/customers/${id}/suspend`),
+  reactivateCustomer: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/customers/${id}/reactivate`),
+
+  // Vendor Management
+  getVendors: (params?: { status?: string }) =>
+    axiosInstance.get('/api/v1/admin/vendors', { params }),
+  approveVendor: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/vendors/${id}/approve`),
+  rejectVendor: (id: string, data: { rejection_reason?: string }) =>
+    axiosInstance.post(`/api/v1/admin/vendors/${id}/reject`, data),
+  requestVendorDocs: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/vendors/${id}/request-docs`),
+  suspendVendor: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/vendors/${id}/suspend`),
+  reactivateVendor: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/vendors/${id}/reactivate`),
+  getVendorPerformance: (id: string) =>
+    axiosInstance.get(`/api/v1/admin/vendors/${id}/performance`),
+
+  // Quotation Management
+  getQuotations: () =>
+    axiosInstance.get('/api/v1/admin/quotations'),
+  createQuotation: (data: any) =>
+    axiosInstance.post('/api/v1/admin/quotations', data),
+  editQuotation: (id: string, data: any) =>
+    axiosInstance.put(`/api/v1/admin/quotations/${id}`, data),
+  approveQuotation: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/quotations/${id}/approve`),
+  rejectQuotation: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/quotations/${id}/reject`),
+  expireQuotation: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/quotations/${id}/expire`),
+  convertQuotation: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/quotations/${id}/convert`),
+  getQuotationHistory: (id: string) =>
+    axiosInstance.get(`/api/v1/admin/quotations/${id}/history`),
+
+  // Project Control Center
+  createProject: (data: any) =>
+    axiosInstance.post('/api/v1/admin/projects', data),
+  editProject: (id: string, data: any) =>
+    axiosInstance.put(`/api/v1/admin/projects/${id}`, data),
+  closeProject: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/projects/${id}/close`),
+  cancelProject: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/projects/${id}/cancel`),
+  assignProjectResource: (id: string, data: { assignee_id: string; role: string; target_item_id?: string }) =>
+    axiosInstance.post(`/api/v1/admin/projects/${id}/assign`, data),
+
+  // Master Data
+  getMasterProducts: (category?: string) =>
+    axiosInstance.get('/api/v1/admin/master/products', { params: { category } }),
+  createMasterProduct: (data: any) =>
+    axiosInstance.post('/api/v1/admin/master/products', data),
+  editMasterProduct: (id: string, data: any) =>
+    axiosInstance.put(`/api/v1/admin/master/products/${id}`, data),
+  deleteMasterProduct: (id: string) =>
+    axiosInstance.delete(`/api/v1/admin/master/products/${id}`),
+  importCatalog: (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return axiosInstance.post('/api/v1/admin/master/import', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  exportCatalogUrl: () =>
+    `${API_BASE_URL}/api/v1/admin/master/export`,
+
+  // Package Configuration
+  getPackageConfigs: () =>
+    axiosInstance.get('/api/v1/admin/packages/configurations'),
+  createPackageConfig: (data: any) =>
+    axiosInstance.post('/api/v1/admin/packages/configurations', data),
+  editPackageConfig: (id: string, data: any) =>
+    axiosInstance.put(`/api/v1/admin/packages/configurations/${id}`, data),
+  deletePackageConfig: (id: string) =>
+    axiosInstance.delete(`/api/v1/admin/packages/configurations/${id}`),
+
+  // Pricing Rules
+  getPricingRules: () =>
+    axiosInstance.get('/api/v1/admin/pricing/rules'),
+  createPricingRule: (data: any) =>
+    axiosInstance.post('/api/v1/admin/pricing/rules', data),
+  editPricingRule: (id: string, data: any) =>
+    axiosInstance.put(`/api/v1/admin/pricing/rules/${id}`, data),
+  deletePricingRule: (id: string) =>
+    axiosInstance.delete(`/api/v1/admin/pricing/rules/${id}`),
+
+  // Roles & Permissions
+  assignAdminRole: (data: { user_id: string; role_name: string }) =>
+    axiosInstance.post('/api/v1/admin/roles-permissions/assign', data),
+  revokeAdminRole: (userId: string) =>
+    axiosInstance.post(`/api/v1/admin/roles-permissions/revoke?user_id=${userId}`),
+
+  // Documents Center
+  getVaultDocuments: (search?: string, docType?: string) =>
+    axiosInstance.get('/api/v1/admin/documents', { params: { search, doc_type: docType } }),
+  uploadVaultDocument: (title: string, docType: string, projectId: string, file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return axiosInstance.post(`/api/v1/admin/documents?title=${encodeURIComponent(title)}&doc_type=${docType}&project_id=${projectId}`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  deleteVaultDocument: (id: string) =>
+    axiosInstance.delete(`/api/v1/admin/documents/${id}`),
+
+  // System Settings
+  getSystemSettings: () =>
+    axiosInstance.get('/api/v1/admin/settings'),
+  updateSystemSetting: (data: { key: string; value: string; category: string }) =>
+    axiosInstance.put('/api/v1/admin/settings', data),
+
+  // Audit Logs & Reports
+  getAuditLogs: () =>
+    axiosInstance.get('/api/v1/admin/audit-logs'),
+  getReportUrl: (category: string) =>
+    `${API_BASE_URL}/api/v1/admin/reports?category=${category}&token=${typeof window !== 'undefined' ? localStorage.getItem('access_token') : ''}`,
 }
 
 // Customer Module API
@@ -330,6 +458,12 @@ export const teamAPI = {
     axiosInstance.get(`/api/v1/team/projects/${projectId}/team`),
   assignMember: (projectId: string, userId: string, role: string) =>
     axiosInstance.post(`/api/v1/team/projects/${projectId}/assign`, { userId, role }),
+  removeMember: (projectId: string, userId: string, role: string) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/remove-assignment`, { userId, role }),
+  getAssignmentHistory: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/assignments/history`),
+  assignItemTechnician: (projectId: string, itemId: string, technicianId: string) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/assign-item`, { itemId, technicianId }),
   getProgress: (projectId: string) =>
     axiosInstance.get(`/api/v1/team/projects/${projectId}/progress`),
   updateProgress: (projectId: string, progress: number, reason?: string) =>
@@ -338,6 +472,14 @@ export const teamAPI = {
     axiosInstance.get(`/api/v1/team/projects/${projectId}/issues`),
   createIssue: (projectId: string, data: { type: string; priority: string; description: string; itemId?: string }) =>
     axiosInstance.post(`/api/v1/team/projects/${projectId}/issues`, data),
+  getIssueComments: (issueId: string) =>
+    axiosInstance.get(`/api/v1/team/issues/${issueId}/comments`),
+  createIssueComment: (issueId: string, comment: string) =>
+    axiosInstance.post(`/api/v1/team/issues/${issueId}/comments`, { comment }),
+  escalateIssue: (issueId: string) =>
+    axiosInstance.post(`/api/v1/team/issues/${issueId}/escalate`),
+  resolveIssue: (issueId: string, resolution: string) =>
+    axiosInstance.post(`/api/v1/team/issues/${issueId}/resolve`, { resolution }),
   getPhotos: (projectId: string) =>
     axiosInstance.get(`/api/v1/team/projects/${projectId}/photos`),
   uploadPhoto: (projectId: string, data: { roomName?: string; category: string; imageUrl: string }) =>
@@ -348,6 +490,47 @@ export const teamAPI = {
     axiosInstance.get(`/api/v1/team/projects/${projectId}/tracking`),
   updateTracking: (projectId: string, trackingId: string, status: string, remarks?: string) =>
     axiosInstance.put(`/api/v1/team/projects/${projectId}/tracking/${trackingId}`, { status, remarks }),
+  getTrackingHistory: (projectId: string, trackingId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/tracking/${trackingId}/history`),
+  getTasks: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/tasks`),
+  createTask: (projectId: string, data: { title: string; description?: string; dueDate: string; priority?: string; assignedTo?: string }) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/tasks`, data),
+  updateTask: (projectId: string, taskId: string, data: any) =>
+    axiosInstance.put(`/api/v1/team/projects/${projectId}/tasks/${taskId}`, data),
+  deleteTask: (projectId: string, taskId: string) =>
+    axiosInstance.delete(`/api/v1/team/projects/${projectId}/tasks/${taskId}`),
+  getChecklists: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/checklist`),
+  createChecklist: (projectId: string, data: { checklistType: string; items: { title: string; isCompleted: boolean }[] }) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/checklist`, data),
+  toggleChecklistItem: (projectId: string, itemId: string, isCompleted: boolean) =>
+    axiosInstance.put(`/api/v1/team/projects/${projectId}/checklist/item/${itemId}`, { isCompleted }),
+  getSiteVisits: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/site-visits`),
+  scheduleSiteVisit: (projectId: string, data: { visitDate: string; assignedTo?: string; notes?: string }) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/site-visits`, data),
+  updateSiteVisit: (projectId: string, visitId: string, data: any) =>
+    axiosInstance.put(`/api/v1/team/projects/${projectId}/site-visits/${visitId}`, data),
+  getComms: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/comms`),
+  createComm: (projectId: string, data: { type: string; notes: string }) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/comms`, data),
+  getDocuments: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/documents`),
+  uploadDocument: (projectId: string, title: string, type: string, file: File) => {
+    const fd = new FormData()
+    fd.append('title', title)
+    fd.append('type', type)
+    fd.append('file', file)
+    return axiosInstance.post(`/api/v1/team/projects/${projectId}/documents`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  deleteDocument: (projectId: string, documentId: string) =>
+    axiosInstance.delete(`/api/v1/team/projects/${projectId}/documents/${documentId}`),
+  getAnalytics: (projectId: string) =>
+    axiosInstance.get(`/api/v1/team/projects/${projectId}/analytics`),
 }
 
 // Vendor Module API
