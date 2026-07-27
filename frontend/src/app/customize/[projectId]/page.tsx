@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChevronRight, ArrowRight, CheckCircle2, ShoppingBag,
   Info, Sparkles, AlertCircle, Settings, Sliders, ChevronDown,
-  ChevronLeft, Image as ImageIcon
+  ChevronLeft, Image as ImageIcon, Upload, Layout, FileText
 } from 'lucide-react'
 import clsx from 'clsx'
 import { getBestColorMatch, getColorHex } from '@/lib/colorUtils'
@@ -81,6 +81,7 @@ export default function GuidedCustomizePage() {
   const [customTexture, setCustomTexture] = useState('')
   const [customCushionStyle, setCustomCushionStyle] = useState('')
   const [savingItem, setSavingItem] = useState(false)
+  const [uploadingPlan, setUploadingPlan] = useState(false)
 
   const [loading, setLoading] = useState(true)
 
@@ -212,8 +213,25 @@ export default function GuidedCustomizePage() {
       toast.error('Failed to save product selection')
     } finally {
       setSavingItem(false)
+  }
+
+  const handleFloorPlanUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingPlan(true)
+    try {
+      const res = await projectsAPI.uploadFloorPlan(projectId, file)
+      toast.success('Floor plan blueprint uploaded successfully! 📐')
+      await loadProject() // Reload project info to update UI and floor plan reference path
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err?.response?.data?.detail || 'Failed to upload floor plan blueprint')
+    } finally {
+      setUploadingPlan(false)
     }
   }
+
 
   // Room completeness validation logic
   const checkRoomCompleteness = (room: any) => {
@@ -399,7 +417,85 @@ export default function GuidedCustomizePage() {
               </div>
             </div>
           )}
+
+          {/* Floor Plan Blueprint Upload Card */}
+          <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-white">
+              <Layout className="w-5 h-5 text-indigo-400" />
+              <h3 className="font-bold text-sm tracking-wide">3. Floor Plan Layout</h3>
+            </div>
+            
+            {project?.floor_plan_url ? (
+              <div className="space-y-3 bg-slate-950/40 p-3.5 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  <span>Custom Blueprint Active</span>
+                </div>
+                
+                <div className="aspect-[4/3] rounded-xl overflow-hidden border border-white/10 bg-slate-900 relative">
+                  <img
+                    src={project.floor_plan_url}
+                    alt="Floor Plan"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent flex items-end p-2.5">
+                    <a
+                      href={project.floor_plan_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-bold text-white bg-slate-900/80 hover:bg-slate-900 px-2 py-1 rounded border border-white/10 truncate max-w-full"
+                    >
+                      View Full Size ↗
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-950/30 rounded-2xl border border-dashed border-white/10 text-center">
+                <FileText className="w-8 h-8 text-slate-500 mx-auto mb-1.5" />
+                <div className="text-xs font-bold text-slate-350">Using Default Rooms Layout</div>
+                <p className="text-[10px] text-slate-500 mt-1 max-w-[190px] mx-auto leading-normal">
+                  Vector blueprints will fall back to standard room structures.
+                </p>
+              </div>
+            )}
+
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleFloorPlanUpload}
+                id="sidebar-floorplan-file"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={uploadingPlan}
+              />
+              <button
+                type="button"
+                className={clsx(
+                  "w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border shadow-sm duration-200",
+                  uploadingPlan
+                    ? "bg-slate-850 text-slate-400 border-white/5 cursor-not-allowed"
+                    : "bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500 hover:shadow-indigo-500/20"
+                )}
+                disabled={uploadingPlan}
+              >
+                {uploadingPlan ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-white rounded-full animate-spin" />
+                    <span>Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{project?.floor_plan_url ? 'Change Floor Plan' : 'Upload Floor Plan Blueprint'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
         </div>
+
 
         {/* RIGHT AREA: PRODUCT DESIGN SELECTION AND CUSTOMIZER (8 cols) */}
         <div className="lg:col-span-8 space-y-6">

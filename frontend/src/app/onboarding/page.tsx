@@ -73,6 +73,7 @@ export default function OnboardingPage() {
   const [floorPlanMode, setFloorPlanMode] = useState<'select' | 'upload'>('select')
   const [selectedPlanId, setSelectedPlanId] = useState('plan-standard')
   const [uploadFile, setUploadFile] = useState<{ name: string; size: string; type: string } | null>(null)
+  const [realFile, setRealFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
 
   const [local, setLocal] = useState({
@@ -143,15 +144,14 @@ export default function OnboardingPage() {
     if (!file) return
 
     setUploading(true)
-    setTimeout(() => {
-      setUploadFile({
-        name: file.name,
-        size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-        type: file.type.includes('pdf') ? 'pdf' : 'image'
-      })
-      setUploading(false)
-      toast.success('Floor plan parsed successfully! 📐')
-    }, 1500)
+    setRealFile(file)
+    setUploadFile({
+      name: file.name,
+      size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+      type: file.type.includes('pdf') ? 'pdf' : 'image'
+    })
+    setUploading(false)
+    toast.success('Floor plan selected! 📐')
   }
 
   const toggleStyle = (id: string) => {
@@ -206,6 +206,18 @@ export default function OnboardingPage() {
         floor_plan_name:     finalPlanName,
         color_preferences:   local.color_preferences,
       })
+
+      // Real File Upload to Backend if uploaded
+      const createdProjId = res.data.project_id
+      if (floorPlanMode === 'upload' && realFile && createdProjId) {
+        try {
+          await projectsAPI.uploadFloorPlan(createdProjId, realFile)
+          toast.success('Blueprint saved on server! 💾')
+        } catch (uploadErr) {
+          console.error("Floor plan file upload failed:", uploadErr)
+          toast.error('Project created, but floor plan file upload failed. You can re-upload in customization page.')
+        }
+      }
       
       setOnboarding({
         bhk:       local.bhk,
@@ -216,8 +228,8 @@ export default function OnboardingPage() {
         city:      local.city,
       })
       
-      toast.success('Project created with floor plan! 🎉')
-      router.push(`/packages?projectId=${res.data.project_id}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
+      toast.success('Project created successfully! 🎉')
+      router.push(`/packages?projectId=${createdProjId}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
 
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Failed to create project')
