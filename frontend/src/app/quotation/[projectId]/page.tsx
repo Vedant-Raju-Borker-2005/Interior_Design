@@ -292,13 +292,22 @@ export default function QuotationPage() {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <a
-                    href={quotation.pdf_url}
+                    href={quotationsAPI.download(projectId)}
                     target="_blank"
                     rel="noopener noreferrer"
                     id="download-pdf-btn"
                     className="btn-primary animate-glow"
                   >
-                    <Download className="w-4 h-4" /> Download PDF
+                    <Download className="w-4 h-4" /> Download Quotation PDF
+                  </a>
+                  <a
+                    href={projectsAPI.downloadFloorPlan(projectId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    id="download-floorplan-btn"
+                    className="flex items-center gap-2 bg-indigo-50 text-indigo-700 font-bold px-5 py-2.5 rounded-xl hover:bg-indigo-100 transition border border-indigo-200 shadow-sm text-xs"
+                  >
+                    <FileText className="w-4 h-4" /> Download Floor Plan PDF
                   </a>
                   <button
                     onClick={handleWhatsAppShare}

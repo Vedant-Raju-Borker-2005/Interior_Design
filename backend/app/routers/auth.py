@@ -73,12 +73,30 @@ def login(req: SignupReq, db: Session = Depends(get_db)):
         raise HTTPException(404, "This account is not registered. Please sign up first.")
 
     # ── Role portal guard ──────────────────────────────────────────────────────
-    if req.role and user.role != req.role:
-        raise HTTPException(
-            status_code=403,
-            detail=f"This account is registered as '{user.role}'. "
-                   f"You cannot log in to the '{req.role}' portal with these credentials."
-        )
+    if req.role:
+        is_allowed = False
+        if req.role == "customer":
+            if user.role == "customer":
+                is_allowed = True
+        elif req.role == "admin":
+            if user.role == "admin":
+                is_allowed = True
+        elif req.role == "vendor":
+            if user.role == "vendor":
+                is_allowed = True
+            else:
+                from ..models import Vendor
+                vendor = db.query(Vendor).filter((Vendor.user_id == user.id) | (Vendor.phone == user.phone)).first()
+                if vendor:
+                    is_allowed = True
+
+        if not is_allowed:
+            raise HTTPException(
+                status_code=403,
+                detail=f"This account is not registered as a '{req.role}'."
+            )
+
+
 
     # Rate limit bypassed for development
     rate = 0
@@ -123,19 +141,40 @@ def verify_otp(req: VerifyOTPReq, db: Session = Depends(get_db)):
         raise HTTPException(404, "User not found")
 
     # ── Role portal guard ──────────────────────────────────────────────────────
-    if req.role and user.role != req.role:
-        raise HTTPException(
-            status_code=403,
-            detail=f"This account is registered as '{user.role}'. "
-                   f"Cannot authenticate as '{req.role}'."
-        )
+    if req.role:
+        is_allowed = False
+        if req.role == "customer":
+            is_allowed = True
+        elif req.role == "admin":
+            if user.role == "admin":
+                is_allowed = True
+            else:
+                from ..models import AdminRole
+                admin_role = db.query(AdminRole).filter(AdminRole.user_id == user.id).first()
+                if admin_role:
+                    is_allowed = True
+        elif req.role == "vendor":
+            if user.role == "vendor":
+                is_allowed = True
+            else:
+                from ..models import Vendor
+                vendor = db.query(Vendor).filter((Vendor.user_id == user.id) | (Vendor.phone == user.phone)).first()
+                if vendor:
+                    is_allowed = True
+
+        if not is_allowed:
+            raise HTTPException(
+                status_code=403,
+                detail=f"This account is not registered as a '{req.role}'."
+            )
+
 
     # Sync project assignments and role-based seeded details
     from ..db import sync_demo_data
     sync_demo_data(db)
 
     token = create_access_token(user.id)
-    return {"access_token": token, "token_type": "bearer", "user_id": user.id, "role": user.role or "customer"}
+    return {"access_token": token, "token_type": "bearer", "user_id": user.id, "role": req.role or user.role or "customer"}
 
 
 @router.get("/me", summary="Get current user profile")

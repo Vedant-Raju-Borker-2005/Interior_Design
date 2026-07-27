@@ -213,7 +213,9 @@ export default function GuidedCustomizePage() {
       toast.error('Failed to save product selection')
     } finally {
       setSavingItem(false)
+    }
   }
+
 
   const handleFloorPlanUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
