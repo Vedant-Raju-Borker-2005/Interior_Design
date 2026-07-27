@@ -62,11 +62,23 @@ interface ProjectTeamState {
   projectDetail: any | null
   customerDetail: any | null
   vendorDetail: any[]
+  tasks: any[]
+  checklists: any[]
+  siteVisits: any[]
+  comms: any[]
+  documents: any[]
+  analytics: any | null
+  comments: Record<string, any[]> // threaded by issueId
+  assignmentHistory: any[]
+  trackingHistory: Record<string, any[]> // threaded by trackingId
   isLoading: boolean
   error: string | null
 
   fetchMembers: (projectId: string) => Promise<void>
   assignMember: (projectId: string, userId: string, role: string) => Promise<void>
+  removeMember: (projectId: string, userId: string, role: string) => Promise<void>
+  fetchAssignmentHistory: (projectId: string) => Promise<void>
+  assignItemTechnician: (projectId: string, itemId: string, technicianId: string) => Promise<void>
   fetchProgress: (projectId: string) => Promise<void>
   updateProgress: (projectId: string, progress: number, reason?: string) => Promise<void>
   fetchIssues: (projectId: string) => Promise<void>
@@ -82,6 +94,27 @@ interface ProjectTeamState {
   fetchDashboard: () => Promise<void>
   fetchTracking: (projectId: string) => Promise<void>
   updateTracking: (projectId: string, trackingId: string, status: string, remarks?: string) => Promise<void>
+  fetchTrackingHistory: (projectId: string, trackingId: string) => Promise<void>
+  fetchTasks: (projectId: string) => Promise<void>
+  createTask: (projectId: string, data: any) => Promise<void>
+  updateTask: (projectId: string, taskId: string, data: any) => Promise<void>
+  deleteTask: (projectId: string, taskId: string) => Promise<void>
+  fetchChecklists: (projectId: string) => Promise<void>
+  createChecklist: (projectId: string, data: any) => Promise<void>
+  toggleChecklistItem: (projectId: string, itemId: string, isCompleted: boolean) => Promise<void>
+  fetchSiteVisits: (projectId: string) => Promise<void>
+  scheduleSiteVisit: (projectId: string, data: any) => Promise<void>
+  updateSiteVisit: (projectId: string, visitId: string, data: any) => Promise<void>
+  fetchComms: (projectId: string) => Promise<void>
+  createComm: (projectId: string, data: any) => Promise<void>
+  fetchDocuments: (projectId: string) => Promise<void>
+  uploadDocument: (projectId: string, title: string, type: string, file: File) => Promise<void>
+  deleteDocument: (projectId: string, documentId: string) => Promise<void>
+  fetchAnalytics: (projectId: string) => Promise<void>
+  fetchIssueComments: (issueId: string) => Promise<void>
+  createIssueComment: (issueId: string, comment: string) => Promise<void>
+  escalateIssue: (issueId: string) => Promise<void>
+  resolveIssue: (issueId: string, resolution: string) => Promise<void>
   clearError: () => void
 }
 
@@ -95,6 +128,15 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
   projectDetail: null,
   customerDetail: null,
   vendorDetail: [],
+  tasks: [],
+  checklists: [],
+  siteVisits: [],
+  comms: [],
+  documents: [],
+  analytics: null,
+  comments: {},
+  assignmentHistory: [],
+  trackingHistory: {},
   isLoading: false,
   error: null,
 
@@ -120,6 +162,34 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
       const errorMsg = e.response?.data?.detail || 'Assignment failed'
       set({ error: errorMsg, isLoading: false })
       throw new Error(errorMsg)
+    }
+  },
+
+  removeMember: async (projectId, userId, role) => {
+    set({ isLoading: true })
+    try {
+      await teamAPI.removeMember(projectId, userId, role)
+      set((state) => ({
+        members: state.members.filter((m) => !(m.user.id === userId && m.role === role)),
+        isLoading: false
+      }))
+    } catch (e: any) {
+      set({ error: e.response?.data?.detail || 'Failed to remove member', isLoading: false })
+    }
+  },
+
+  fetchAssignmentHistory: async (projectId) => {
+    try {
+      const res = await teamAPI.getAssignmentHistory(projectId)
+      set({ assignmentHistory: res.data })
+    } catch (e) {}
+  },
+
+  assignItemTechnician: async (projectId, itemId, technicianId) => {
+    try {
+      await teamAPI.assignItemTechnician(projectId, itemId, technicianId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Item assignment failed')
     }
   },
 
@@ -215,6 +285,185 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
     } catch (e: any) {
       set({ error: e.response?.data?.detail || 'Failed to update tracking item', isLoading: false })
       throw e
+    }
+  },
+
+  fetchTrackingHistory: async (projectId, trackingId) => {
+    try {
+      const res = await teamAPI.getTrackingHistory(projectId, trackingId)
+      set((state) => ({
+        trackingHistory: {
+          ...state.trackingHistory,
+          [trackingId]: res.data
+        }
+      }))
+    } catch (e) {}
+  },
+
+  fetchTasks: async (projectId) => {
+    try {
+      const res = await teamAPI.getTasks(projectId)
+      set({ tasks: res.data })
+    } catch (e) {}
+  },
+
+  createTask: async (projectId, data) => {
+    try {
+      await teamAPI.createTask(projectId, data)
+      await get().fetchTasks(projectId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to create task')
+    }
+  },
+
+  updateTask: async (projectId, taskId, data) => {
+    try {
+      await teamAPI.updateTask(projectId, taskId, data)
+      await get().fetchTasks(projectId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to update task')
+    }
+  },
+
+  deleteTask: async (projectId, taskId) => {
+    try {
+      await teamAPI.deleteTask(projectId, taskId)
+      await get().fetchTasks(projectId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to delete task')
+    }
+  },
+
+  fetchChecklists: async (projectId) => {
+    try {
+      const res = await teamAPI.getChecklists(projectId)
+      set({ checklists: res.data })
+    } catch (e) {}
+  },
+
+  createChecklist: async (projectId, data) => {
+    try {
+      await teamAPI.createChecklist(projectId, data)
+      await get().fetchChecklists(projectId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to create checklist')
+    }
+  },
+
+  toggleChecklistItem: async (projectId, itemId, isCompleted) => {
+    try {
+      await teamAPI.toggleChecklistItem(projectId, itemId, isCompleted)
+      await get().fetchChecklists(projectId)
+    } catch (e) {}
+  },
+
+  fetchSiteVisits: async (projectId) => {
+    try {
+      const res = await teamAPI.getSiteVisits(projectId)
+      set({ siteVisits: res.data })
+    } catch (e) {}
+  },
+
+  scheduleSiteVisit: async (projectId, data) => {
+    try {
+      await teamAPI.scheduleSiteVisit(projectId, data)
+      await get().fetchSiteVisits(projectId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to schedule site visit')
+    }
+  },
+
+  updateSiteVisit: async (projectId, visitId, data) => {
+    try {
+      await teamAPI.updateSiteVisit(projectId, visitId, data)
+      await get().fetchSiteVisits(projectId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to update site visit')
+    }
+  },
+
+  fetchComms: async (projectId) => {
+    try {
+      const res = await teamAPI.getComms(projectId)
+      set({ comms: res.data })
+    } catch (e) {}
+  },
+
+  createComm: async (projectId, data) => {
+    try {
+      await teamAPI.createComm(projectId, data)
+      await get().fetchComms(projectId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to log communication')
+    }
+  },
+
+  fetchDocuments: async (projectId) => {
+    try {
+      const res = await teamAPI.getDocuments(projectId)
+      set({ documents: res.data })
+    } catch (e) {}
+  },
+
+  uploadDocument: async (projectId, title, type, file) => {
+    try {
+      await teamAPI.uploadDocument(projectId, title, type, file)
+      await get().fetchDocuments(projectId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to upload document')
+    }
+  },
+
+  deleteDocument: async (projectId, documentId) => {
+    try {
+      await teamAPI.deleteDocument(projectId, documentId)
+      await get().fetchDocuments(projectId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to delete document')
+    }
+  },
+
+  fetchAnalytics: async (projectId) => {
+    try {
+      const res = await teamAPI.getAnalytics(projectId)
+      set({ analytics: res.data })
+    } catch (e) {}
+  },
+
+  fetchIssueComments: async (issueId) => {
+    try {
+      const res = await teamAPI.getIssueComments(issueId)
+      set((state) => ({
+        comments: {
+          ...state.comments,
+          [issueId]: res.data
+        }
+      }))
+    } catch (e) {}
+  },
+
+  createIssueComment: async (issueId, comment) => {
+    try {
+      await teamAPI.createIssueComment(issueId, comment)
+      await get().fetchIssueComments(issueId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to post comment')
+    }
+  },
+
+  escalateIssue: async (issueId) => {
+    try {
+      await teamAPI.escalateIssue(issueId)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to escalate issue')
+    }
+  },
+
+  resolveIssue: async (issueId, resolution) => {
+    try {
+      await teamAPI.resolveIssue(issueId, resolution)
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to resolve issue')
     }
   },
 

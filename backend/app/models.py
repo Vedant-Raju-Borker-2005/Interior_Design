@@ -25,6 +25,7 @@ class User(Base):
     budget_min = Column(Float, default=0)
     budget_max = Column(Float, default=0)
     role = Column(String, default="customer", nullable=False)
+    status = Column(String, default="active")  # active / suspended
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     projects = relationship("Project", back_populates="user")
 
@@ -319,6 +320,10 @@ class Issue(Base):
     resolved_at = Column(DateTime, nullable=True)
     created_by = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    comments = relationship("IssueComment", back_populates="issue", cascade="all, delete-orphan")
+    attachments = relationship("IssueAttachment", back_populates="issue", cascade="all, delete-orphan")
+
 
 
 class SupportTicket(Base):
@@ -674,3 +679,165 @@ class InteriorMaterial(Base):
     __tablename__ = "interior_materials"
     id = Column(String, primary_key=True, default=gen_uuid)
     name = Column(String, unique=True, nullable=False)
+
+
+# ── PROJECT TEAM EXTENSION MODELS ──
+
+class ProjectProgress(Base):
+    __tablename__ = "project_progress"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, unique=True)
+    current_progress = Column(Float, default=0.0)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    
+    project = relationship("Project", backref=backref("progress_cached", uselist=False, cascade="all, delete-orphan"))
+
+
+class ProjectItemTrackingHistory(Base):
+    __tablename__ = "project_item_tracking_history"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    tracking_id = Column(String, ForeignKey("item_trackings.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String, nullable=False)
+    expected_date = Column(String, nullable=True)
+    actual_date = Column(String, nullable=True)
+    updated_by = Column(String, nullable=True)
+    remarks = Column(Text, nullable=True)
+    changed_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    tracking = relationship("ItemTracking", backref=backref("history", cascade="all, delete-orphan"))
+
+
+class IssueComment(Base):
+    __tablename__ = "issue_comments"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    issue_id = Column(String, ForeignKey("issues.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    comment = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    issue = relationship("Issue", back_populates="comments")
+    user = relationship("User")
+
+
+class IssueAttachment(Base):
+    __tablename__ = "issue_attachments"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    issue_id = Column(String, ForeignKey("issues.id", ondelete="CASCADE"), nullable=False)
+    url = Column(String, nullable=False)
+    filename = Column(String, nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    issue = relationship("Issue", back_populates="attachments")
+
+
+class ChecklistItem(Base):
+    __tablename__ = "checklist_items"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    checklist_id = Column(String, ForeignKey("daily_checklists.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String, nullable=False)
+    is_completed = Column(Boolean, default=False)
+    completed_at = Column(DateTime, nullable=True)
+    completed_by = Column(String, nullable=True)
+
+    checklist = relationship("DailyChecklist", backref=backref("checklist_items", cascade="all, delete-orphan"))
+
+
+# Aliases for PRD Compatibility
+ExecutionIssue = Issue
+ExecutionPhoto = ProjectPhoto
+ProjectItemTracking = ItemTracking
+
+
+# ── ADMIN MODULE MODELS ──
+
+class AdminRole(Base):
+    __tablename__ = "admin_roles"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    role_name = Column(String, nullable=False)  # SUPER_ADMIN, OPERATIONS_ADMIN, SALES_ADMIN, FINANCE_ADMIN
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", backref=backref("admin_role", uselist=False, cascade="all, delete-orphan"))
+
+
+class QuoteAudit(Base):
+    __tablename__ = "quote_audits"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    quotation_id = Column(String, ForeignKey("quotations.id", ondelete="CASCADE"), nullable=False)
+    action = Column(String, nullable=False)  # CREATED, EDITED, APPROVED, REJECTED, EXPIRED, CONVERTED
+    changed_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    details = Column(Text, nullable=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+    quotation = relationship("Quotation", backref=backref("audits", cascade="all, delete-orphan"))
+    user = relationship("User")
+
+
+class ProjectAssignmentHistory(Base):
+    __tablename__ = "project_assignment_histories"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    assignee_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String, nullable=False)  # VENDOR, COORDINATOR, TECHNICIAN
+    action = Column(String, nullable=False)  # ASSIGNED, REMOVED
+    assigned_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+    project = relationship("Project", backref=backref("assignment_history", cascade="all, delete-orphan"))
+    assignee = relationship("User", foreign_keys=[assignee_id])
+    assigner = relationship("User", foreign_keys=[assigned_by])
+
+
+class PackageConfiguration(Base):
+    __tablename__ = "package_configurations"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    name = Column(String, nullable=False)  # Basic, Premium, Luxury
+    tier = Column(String, nullable=False)  # basic, premium, luxury
+    pricing = Column(Float, default=0.0)
+    timeline_days = Column(Integer, default=30)
+    included_services = Column(JSON, default=list)  # e.g., ["3D Visualization", "Plumbing", "Electrical"]
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class PackageItems(Base):
+    __tablename__ = "package_items"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    package_id = Column(String, ForeignKey("package_configurations.id", ondelete="CASCADE"), nullable=False)
+    product_id = Column(String, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+
+    package = relationship("PackageConfiguration", backref=backref("items", cascade="all, delete-orphan"))
+    product = relationship("Product")
+
+
+class PricingRule(Base):
+    __tablename__ = "pricing_rules"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    rule_type = Column(String, nullable=False)  # PRODUCT, PACKAGE, VENDOR, DISCOUNT, GST
+    name = Column(String, nullable=False)
+    value = Column(Float, nullable=False)  # Multiplier or percentage or flat amount
+    effective_date = Column(DateTime, nullable=False)
+    expiry_date = Column(DateTime, nullable=False)
+    history = Column(JSON, default=list)  # Logs of price updates or metadata changes
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    key = Column(String, unique=True, nullable=False)  # e.g. EMAIL_TEMPLATE_WELCOME, SMS_TEMPLATE_OTP
+    value = Column(Text, nullable=False)
+    category = Column(String, nullable=False)  # EMAIL, SMS, NOTIFICATION, TIMELINE, PACKAGE
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    action = Column(String, nullable=False)  # e.g. VENDOR_APPROVED, QUOTE_EDITED
+    entity_type = Column(String, nullable=False)  # e.g. Vendor, Quotation, Project
+    entity_id = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User")
+
