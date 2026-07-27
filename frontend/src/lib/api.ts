@@ -57,6 +57,9 @@ export const projectsAPI = {
     axiosInstance.get('/api/v1/projects'),
   delete: (projectId: string) =>
     axiosInstance.delete(`/api/v1/customer/projects/${projectId}`),  
+  downloadFloorPlan: (projectId: string) =>
+    `${API_BASE_URL}/api/v1/projects/${projectId}/floor-plan/download?token=${typeof window !== 'undefined' ? localStorage.getItem('access_token') : ''}`,
+
   
   create: (data: { 
     bhk_type: string; 
@@ -72,6 +75,17 @@ export const projectsAPI = {
     color_preferences?: string[];
   }) =>
     axiosInstance.post('/api/v1/projects', data),
+
+  uploadFloorPlan: (projectId: string, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return axiosInstance.post(`/api/v1/projects/${projectId}/floor-plan`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  },
+
 
   
   get: (id: string) =>
