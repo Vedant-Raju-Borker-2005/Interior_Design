@@ -792,6 +792,33 @@ export default function AdminPage() {
                 </div>
               )}
 
+              {/* Project Filter & Search Bar */}
+              <div className="bg-white border rounded-2xl p-4 shadow-sm flex flex-wrap gap-3 items-center">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by property, city or customer..."
+                    value={custSearch}
+                    onChange={(e) => setCustSearch(e.target.value)}
+                    className="w-full text-xs bg-slate-50 border rounded-lg pl-9 pr-4 py-2.5 outline-none font-semibold text-slate-700"
+                  />
+                </div>
+                <select
+                  value={projStatusFilter}
+                  onChange={(e) => setProjStatusFilter(e.target.value)}
+                  className="text-xs bg-slate-50 border rounded-lg px-3 py-2.5 outline-none font-bold text-slate-650"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="quoted">Quoted</option>
+                  <option value="ordered">Ordered (Finalized)</option>
+                  <option value="done">Done</option>
+                  <option value="delayed">Delayed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
               <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse min-w-[700px]">
@@ -806,7 +833,16 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-650">
-                      {projects.map((p) => (
+                      {projects
+                        .filter(p =>
+                          (!projStatusFilter || p.status === projStatusFilter) &&
+                          (!custSearch || 
+                            p.property_name?.toLowerCase().includes(custSearch.toLowerCase()) || 
+                            p.city?.toLowerCase().includes(custSearch.toLowerCase()) ||
+                            p.customer_name?.toLowerCase().includes(custSearch.toLowerCase())
+                          )
+                        )
+                        .map((p) => (
                         <tr key={p.id} className="hover:bg-slate-50/50">
                           <td className="p-3">
                             <div className="font-bold text-slate-800">{p.customer_name || '—'}</div>
