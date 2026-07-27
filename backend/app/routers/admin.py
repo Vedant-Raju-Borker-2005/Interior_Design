@@ -666,45 +666,6 @@ def get_quote_history(
 
 # ── PROJECT CONTROL CENTER ──
 
-@router.get("/projects", summary="List all projects (admin view)")
-def admin_list_projects(
-    status: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
-    page: int = Query(1, ge=1),
-    limit: int = Query(50, ge=1, le=200),
-    db: Session = Depends(get_db),
-    admin: User = Depends(get_admin_user(["SUPER_ADMIN", "OPERATIONS_ADMIN", "SALES_ADMIN"]))
-):
-    q = db.query(Project)
-    if status:
-        q = q.filter(Project.status == status)
-    if search:
-        q = q.filter(or_(
-            Project.property_name.ilike(f"%{search}%"),
-            Project.city.ilike(f"%{search}%"),
-            Project.bhk_type.ilike(f"%{search}%")
-        ))
-    total = q.count()
-    projects = q.order_by(Project.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
-
-    result = []
-    for p in projects:
-        customer = db.query(User).filter(User.id == p.user_id).first()
-        result.append({
-            "id": p.id,
-            "property_name": p.property_name,
-            "bhk_type": p.bhk_type,
-            "city": p.city,
-            "budget": p.budget,
-            "status": p.status,
-            "created_at": p.created_at.isoformat() if p.created_at else None,
-            "customer_name": customer.name if customer else "Unknown",
-            "customer_phone": customer.phone if customer else None,
-            "customer_email": customer.email if customer else None,
-        })
-    return {"projects": result, "total": total, "page": page, "limit": limit}
-
-
 @router.post("/projects", summary="Create a new project")
 def admin_create_project(
     req: ProjectReq,
