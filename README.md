@@ -70,6 +70,10 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
     Features a high-visibility file upload action button styled with custom purple-to-indigo gradient layouts inside verification forms.
 *   **Seeded Assets Track Status:**  
     The custom-generated component images in `backend/pdfs/catalog/` are tracked directly inside Git (deliberately omitted from `.gitignore`) to ensure a fresh repository clone receives the visual catalog out-of-the-box.
+*   **Project Team & Site Execution Center (New)**  
+    A cohesive operations console for site coordinators and technicians. Organize execution workflows into structured tabs covering Timeline & Sourcing (with status log history & technician mapping), Task Calendars, site visit outcomes, call/meeting minutes logs, customer communication history, local project document uploads, and Manager-specific SLA reporting.
+*   **Robust Sign-Up & Unique Contact Generation (New):**  
+    Automatically handles registration conflicts by dynamically generating unique backup credentials (phone-based emails for phone registrations, and random unique phone numbers for email registrations). This guarantees that new registration flows will never hit database unique key constraints (`UNIQUE constraint failed: users.email` or `users.phone`).
 
 ---
 
