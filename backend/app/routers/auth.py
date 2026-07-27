@@ -72,6 +72,17 @@ def login(req: SignupReq, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(404, "This account is not registered. Please sign up first.")
 
+    # ── Role portal guard ──────────────────────────────────────────────────────
+    # If the login request specifies a role (i.e. which portal is logging in),
+    # verify that this user's registered role matches. Customers cannot log in
+    # to the admin or vendor portals and vice versa.
+    if req.role and user.role != req.role:
+        raise HTTPException(
+            status_code=403,
+            detail=f"This account is registered as '{user.role}'. "
+                   f"You cannot log in to the '{req.role}' portal with these credentials."
+        )
+
     # Rate limit bypassed for development
     rate = 0
 
@@ -85,6 +96,7 @@ def login(req: SignupReq, db: Session = Depends(get_db)):
     print(f"{'='*40}\n")
 
     return {"otp_sent": True, "dev_otp": otp, "message": f"OTP sent to {contact}"}
+
 
 
 
@@ -113,9 +125,15 @@ def verify_otp(req: VerifyOTPReq, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(404, "User not found")
 
-    if req.role:
-        user.role = req.role
-        db.commit()
+    # ── Role portal guard ──────────────────────────────────────────────────────
+    # Verify the OTP was submitted from the correct portal for this user.
+    # We never allow the client to override the role stored in the database.
+    if req.role and user.role != req.role:
+        raise HTTPException(
+            status_code=403,
+            detail=f"This account is registered as '{user.role}'. "
+                   f"Cannot authenticate as '{req.role}'."
+        )
 
     # Sync project assignments and role-based seeded details
     from ..db import sync_demo_data
