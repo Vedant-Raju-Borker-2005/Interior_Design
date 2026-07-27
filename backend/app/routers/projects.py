@@ -9,6 +9,9 @@ from ..schemas import CreateProjectReq, UpdateRoomReq, AddRoomItemReq, AddRoomRe
 from ..auth_utils import current_user
 import uuid
 
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+
+
 router = APIRouter()
 
 BHK_ROOMS = {
@@ -283,10 +286,71 @@ async def upload_floor_plan(
     filepath = os.path.join(upload_dir, filename)
     with open(filepath, "wb") as f:
         shutil.copyfileobj(file.file, f)
-    url = f"http://localhost:8000/static/pdfs/floor_plans/{filename}"
+    url = f"{BACKEND_URL}/static/pdfs/floor_plans/{filename}"
     project.floor_plan_url = url
     db.commit()
     return {"message": "uploaded", "floor_plan_url": url}
+
+
+from fastapi.responses import FileResponse
+from fastapi import Query as QParam
+from ..services.pdf_service import generate_floor_plan_pdf
+from ..auth_utils import decode_token
+
+@router.get("/{project_id}/floor-plan/download", summary="Download floor plan design presentation PDF")
+def download_floor_plan_pdf(
+    project_id: str,
+    token: str = QParam(None),
+    db: Session = Depends(get_db)
+):
+    # Support token via query param (for direct <a href> browser downloads)
+    user_id = None
+    if token:
+        payload = decode_token(token)
+        if payload:
+            user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(401, "Authentication required")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user_id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+    
+    # Compile rooms & items data
+    rooms_data = []
+    for room in project.rooms:
+        items = db.query(RoomItem).filter(RoomItem.room_id == room.id).all()
+        products = []
+        for it in items:
+            prod = it.product
+            if prod:
+                products.append({
+                    "name": prod.name,
+                    "category": prod.category,
+                    "style": prod.style or "Modern",
+                    "custom_color": it.custom_color,
+                    "custom_material": it.custom_material,
+                    "custom_size": it.custom_size,
+                })
+        rooms_data.append({
+            "room_name": room.room_type.replace("_", " ").title(),
+            "products": products
+        })
+
+    pdf_filepath = generate_floor_plan_pdf(project.id, project, user, rooms_data)
+    if not os.path.exists(pdf_filepath):
+        raise HTTPException(500, "Failed to compile floor plan PDF")
+
+    return FileResponse(
+        pdf_filepath,
+        media_type="application/pdf",
+        filename=f"Design_Presentation_{project.property_name.replace(' ', '_')}.pdf"
+    )
+
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

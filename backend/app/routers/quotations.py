@@ -15,6 +15,7 @@ router = APIRouter()
 
 GST_RATE = 0.18
 PDF_DIR = os.getenv("PDF_OUTPUT_DIR", "./pdfs")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 @router.post("/{project_id}/generate", summary="Generate quotation PDF for a project")
@@ -93,7 +94,7 @@ def generate_quotation(
         valid_until=valid_until,
     )
 
-    pdf_url = f"http://localhost:8000/static/pdfs/{os.path.basename(pdf_path)}"
+    pdf_url = f"{BACKEND_URL}/static/pdfs/{os.path.basename(pdf_path)}"
 
     # Save to DB
     quotation = Quotation(
