@@ -806,7 +806,12 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-650">
-                      {projects.map((p) => (
+                      {projects
+                        .filter(p =>
+                          (!projStatusFilter || p.status === projStatusFilter) &&
+                          (!custSearch || p.property_name?.toLowerCase().includes(custSearch.toLowerCase()) || p.city?.toLowerCase().includes(custSearch.toLowerCase()))
+                        )
+                        .map((p) => (
                         <tr key={p.id} className="hover:bg-slate-50/50">
                           <td className="p-3">
                             <div className="font-bold text-slate-800">{p.customer_name || '—'}</div>
