@@ -274,6 +274,7 @@ def delete_room(
 @router.post("/{project_id}/floor-plan", summary="Upload floor plan image or PDF")
 async def upload_floor_plan(
     project_id: str,
+    room_id: str = None,
     file: UploadFile = File(...),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
@@ -282,12 +283,24 @@ async def upload_floor_plan(
     upload_dir = os.path.join("pdfs", "floor_plans")
     os.makedirs(upload_dir, exist_ok=True)
     ext = os.path.splitext(file.filename or "plan.jpg")[1] or ".jpg"
-    filename = f"fp_{project_id[:8]}{ext}"
+    
+    # Unique filename per room if room_id is provided
+    suffix = f"room_{room_id[:8]}" if room_id else f"proj_{project_id[:8]}"
+    filename = f"fp_{suffix}{ext}"
     filepath = os.path.join(upload_dir, filename)
     with open(filepath, "wb") as f:
         shutil.copyfileobj(file.file, f)
     url = f"{BACKEND_URL}/static/pdfs/floor_plans/{filename}"
-    project.floor_plan_url = url
+    
+    if room_id:
+        room = db.query(Room).filter(Room.id == room_id, Room.project_id == project_id).first()
+        if room:
+            cfg = dict(room.custom_config or {})
+            cfg["floor_plan_url"] = url
+            room.custom_config = cfg
+    else:
+        project.floor_plan_url = url
+        
     db.commit()
     return {"message": "uploaded", "floor_plan_url": url}
 
@@ -338,7 +351,8 @@ def download_floor_plan_pdf(
                 })
         rooms_data.append({
             "room_name": room.room_type.replace("_", " ").title(),
-            "products": products
+            "products": products,
+            "custom_floor_plan_url": (room.custom_config or {}).get("floor_plan_url")
         })
 
     pdf_filepath = generate_floor_plan_pdf(project.id, project, user, rooms_data)
@@ -386,6 +400,7 @@ def _room_detail(r: Room, db: Session) -> dict:
         "height_ft": r.height_ft,
         "style_preference": r.style_preference,
         "color_palette": r.color_palette or [],
+        "custom_config": r.custom_config or {},
         "items": [
             {
                 "id": it.id,

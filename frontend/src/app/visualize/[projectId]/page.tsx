@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { projectsAPI, aiAPI, catalogAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
-import RoomCanvas3D from '@/components/RoomCanvas3D'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -81,12 +80,13 @@ const FOUR_WALL_VIEWS: Record<string, { id: string; label: string; url: string }
 }
 
 const ROOM_LABELS: Record<string, string> = {
-  living_room: 'Living Room',
+  living_room:    'Living Room',
   bedroom_master: 'Master Bedroom',
-  bedroom_2: 'Bedroom 2',
-  kitchen: 'Kitchen',
-  bathroom: 'Bathroom',
-  balcony: 'Balcony',
+  bedroom_2:      'Bedroom 2',
+  kitchen:        'Kitchen',
+  bathroom:       'Bathroom',
+  balcony:        'Balcony',
+  dining_room:    'Dining Room',
 }
 
 const BASE_VIEWS: Record<string, { id: string; label: string; url: string }[]> = {
@@ -109,6 +109,63 @@ const BASE_VIEWS: Record<string, { id: string; label: string; url: string }[]> =
   ],
 }
 
+// Default room dimensions (in feet) for the floor plan preview in Templates tab
+const DEFAULT_ROOM_DIMS: Record<string, { w: number; h: number }> = {
+  living_room:    { w: 18, h: 14 },
+  bedroom_master: { w: 16, h: 14 },
+  bedroom_2:      { w: 13, h: 12 },
+  kitchen:        { w: 14, h: 10 },
+  bathroom:       { w: 9,  h: 7  },
+  balcony:        { w: 12, h: 6  },
+  dining_room:    { w: 14, h: 12 },
+}
+
+const ROOM_RENDER_WALLS: Record<string, { label: string; url: string }[]> = {
+  living_room: [
+    { label: 'Wall A — TV & Entertainment', url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=800&fit=crop' },
+    { label: 'Wall B — Sofa Lounge',        url: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&fit=crop' },
+    { label: 'Wall C — Gallery Wall',       url: 'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?w=800&fit=crop' },
+    { label: 'Wall D — Balcony View',       url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&fit=crop' },
+  ],
+  bedroom_master: [
+    { label: 'Wall A — Bed Headboard',      url: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=800&fit=crop' },
+    { label: 'Wall B — Wardrobe & Mirror',  url: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&fit=crop' },
+    { label: 'Wall C — Study Nook',         url: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=800&fit=crop' },
+    { label: 'Wall D — Window & Lounge',    url: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&fit=crop' },
+  ],
+  bedroom_2: [
+    { label: 'Wall A — Bed Accent',         url: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&fit=crop' },
+    { label: 'Wall B — Study & Storage',    url: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=800&fit=crop' },
+    { label: 'Wall C — Wardrobe',           url: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=800&fit=crop' },
+    { label: 'Wall D — Window',             url: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&fit=crop' },
+  ],
+  kitchen: [
+    { label: 'Wall A — Hob & Counter',      url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&fit=crop' },
+    { label: 'Wall B — Sink & Dishwasher',  url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&fit=crop' },
+    { label: 'Wall C — Pantry Tower',       url: 'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?w=800&fit=crop' },
+    { label: 'Wall D — Dining View',        url: 'https://images.unsplash.com/photo-1600489000022-c2086d79f9d4?w=800&fit=crop' },
+  ],
+  bathroom: [
+    { label: 'Wall A — Vanity & Mirror',    url: 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=800&fit=crop' },
+    { label: 'Wall B — Shower Glass',       url: 'https://images.unsplash.com/photo-1604014237800-1c9102c219da?w=800&fit=crop' },
+    { label: 'Wall C — WC & Storage',       url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&fit=crop' },
+    { label: 'Wall D — Ventilation',        url: 'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?w=800&fit=crop' },
+  ],
+  balcony: [
+    { label: 'Wall A — Open Railing View',  url: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=800&fit=crop' },
+    { label: 'Wall B — Green Accent Wall',  url: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=800&fit=crop' },
+    { label: 'Wall C — Seating & Storage',  url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&fit=crop' },
+    { label: 'Wall D — Sliding Door Wall',  url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=800&fit=crop' },
+  ],
+  dining_room: [
+    { label: 'Wall A — Dining Table View',  url: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?w=800&fit=crop' },
+    { label: 'Wall B — Sideboard Wall',     url: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=800&fit=crop' },
+    { label: 'Wall C — Bar Cabinet',        url: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&fit=crop' },
+    { label: 'Wall D — Window & Light',     url: 'https://images.unsplash.com/photo-1616137466211-f939a420be84?w=800&fit=crop' },
+  ],
+}
+
+
 export default function ControlledVisualizePage() {
   const params = useParams()
   const router = useRouter()
@@ -117,12 +174,12 @@ export default function ControlledVisualizePage() {
   const [project, setProject] = useState<any>(null)
   const [activeRoomIdx, setActiveRoomIdx] = useState(0)
   const [selectedStyle, setSelectedStyle] = useState('modern')
-  
+
   // Rendering settings
   const [selectedBaseView, setSelectedBaseView] = useState<string>('')
   const [uploadedBaseImage, setUploadedBaseImage] = useState<string>('')
   const [layoutPrompt, setLayoutPrompt] = useState<string>('')
-  
+
   // Custom setup states
   const [setupMode, setSetupMode] = useState<'default' | 'uploads' | 'dimensions'>('default')
   const [uploadedWalls, setUploadedWalls] = useState<Record<string, string>>({ A: '', B: '', C: '', D: '' })
@@ -673,7 +730,7 @@ export default function ControlledVisualizePage() {
                 'w-full py-4 rounded-2xl font-bold text-sm shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98]',
                 generating || activeRoomItems.length === 0
                   ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
-                  : 'bg-indigo-700 hover:bg-indigo-850 text-white'
+                  : 'bg-indigo-700 hover:bg-indigo-800 text-white'
               )}
             >
               {generating ? (

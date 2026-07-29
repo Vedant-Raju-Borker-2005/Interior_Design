@@ -280,7 +280,6 @@ export default function QuotationPage() {
                 </table>
               </div>
             </div>
-             {/* Validity and actions */}
             <div className="bg-white rounded-2xl shadow-card p-6 mb-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
@@ -291,6 +290,30 @@ export default function QuotationPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
+                  {/* Share buttons — always visible */}
+                  <button
+                    onClick={handleWhatsAppShare}
+                    className="flex items-center gap-2 bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-green-600 transition shadow-sm font-bold text-xs"
+                  >
+                    <Share2 className="w-4 h-4" /> Share via WhatsApp
+                  </button>
+                  <a
+                    href={`mailto:?subject=Interior Design Quotation&body=${encodeURIComponent(
+                      `Hi! I've designed my ${project?.bhk_type} at ${project?.property_name} using InteriorAI.\n` +
+                      `📋 Quotation Total: ₹${quotation.total?.toLocaleString('en-IN')}\n` +
+                      `📅 Valid until: ${quotation.valid_until}\n\n` +
+                      `Check InteriorAI: http://localhost:3000`
+                    )}`}
+                    className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-2.5 rounded-xl transition border border-slate-200 shadow-sm font-bold text-xs"
+                  >
+                    <Mail className="w-4 h-4 text-indigo-600" /> Share via Email
+                  </a>
+                </div>
+              </div>
+
+              {/* Download + Track — only visible after approval */}
+              {quotation.status === 'approved' ? (
+                <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-3">
                   <a
                     href={quotationsAPI.download(projectId)}
                     target="_blank"
@@ -309,23 +332,6 @@ export default function QuotationPage() {
                   >
                     <FileText className="w-4 h-4" /> Download Floor Plan PDF
                   </a>
-                  <button
-                    onClick={handleWhatsAppShare}
-                    className="flex items-center gap-2 bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-green-600 transition shadow-sm font-bold text-xs"
-                  >
-                    <Share2 className="w-4 h-4" /> Share via WhatsApp
-                  </button>
-                  <a
-                    href={`mailto:?subject=Interior Design Quotation&body=${encodeURIComponent(
-                      `Hi! I've designed my ${project?.bhk_type} at ${project?.property_name} using InteriorAI.\n` +
-                      `📋 Quotation Total: ₹${quotation.total?.toLocaleString('en-IN')}\n` +
-                      `📅 Valid until: ${quotation.valid_until}\n\n` +
-                      `Check InteriorAI: http://localhost:3000`
-                    )}`}
-                    className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-2.5 rounded-xl transition border border-slate-200 shadow-sm font-bold text-xs"
-                  >
-                    <Mail className="w-4 h-4 text-indigo-600" /> Share via Email
-                  </a>
                   <Link
                     href={`/track/${projectId}`}
                     className="flex items-center gap-2 bg-indigo-50 text-indigo-700 font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-100 transition border border-indigo-200/50 font-bold text-xs shadow-sm"
@@ -333,7 +339,16 @@ export default function QuotationPage() {
                     <Activity className="w-4 h-4" /> Track Project
                   </Link>
                 </div>
-              </div>
+              ) : (
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
+                    <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>
+                      <strong>Approve the quotation below</strong> to unlock: Download Quotation PDF, Download Floor Plan PDF, and Track Project.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Quotation Status & Approval Actions */}
