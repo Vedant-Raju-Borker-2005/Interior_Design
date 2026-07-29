@@ -76,10 +76,13 @@ export const projectsAPI = {
   }) =>
     axiosInstance.post('/api/v1/projects', data),
 
-  uploadFloorPlan: (projectId: string, file: File) => {
+  uploadFloorPlan: (projectId: string, file: File, roomId?: string) => {
     const formData = new FormData()
     formData.append('file', file)
-    return axiosInstance.post(`/api/v1/projects/${projectId}/floor-plan`, formData, {
+    const url = roomId 
+      ? `/api/v1/projects/${projectId}/floor-plan?room_id=${roomId}`
+      : `/api/v1/projects/${projectId}/floor-plan`
+    return axiosInstance.post(url, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

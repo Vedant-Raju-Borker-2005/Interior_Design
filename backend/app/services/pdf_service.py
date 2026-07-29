@@ -292,8 +292,7 @@ def generate_renders_pdf(project_id: str, project_name: str, renders_data: list)
 def _draw_room_blueprint(room_name: str, products: list):
     """
     Draw a top-down floor plan vector blueprint showing ONLY the user-selected
-    products placed on a clean room shell (walls, door arc, windows).
-    Returns a ReportLab Drawing object.
+    products placed on a clean room shell (walls, door arc, windows) matching the room type.
     """
     from reportlab.graphics.shapes import Drawing, Rect, Line, Circle, String
 
@@ -322,232 +321,158 @@ def _draw_room_blueprint(room_name: str, products: list):
     for gy in range(y0, y1 + 1, 20):
         draw.add(Line(x0, gy, x1, gy, strokeColor=C_GRID, strokeWidth=0.4))
 
-    # Room shell
+    # Room type determination
+    rt = room_name.lower().replace(" ", "_").replace("master_", "").replace("kid_", "").replace("guest_", "")
+
+    # Room background
     draw.add(Rect(x0, y0, rw, rh, fillColor=C_BG, strokeColor=None))
     draw.add(Rect(x0, y0, rw, rh, fillColor=None, strokeColor=C_WALL, strokeWidth=3))
 
-    # Door (bottom-left)
-    door_w = 42
-    draw.add(Rect(x0 + 1, y0 - 1, door_w - 1, 5, fillColor=C_BG, strokeColor=None))
-    draw.add(Line(x0, y0 + door_w, x0 + door_w, y0, strokeColor=C_DIM, strokeWidth=0.9))
-    draw.add(String(x0 + 4, y0 + 4, "DOOR", fontName="Helvetica", fontSize=6, fillColor=C_DIM))
+    # Custom door and windows per room type
+    if "living" in rt:
+        # Door bottom-left (South)
+        draw.add(Rect(x0 + 60, y0 - 2, 45, 5, fillColor=C_BG, strokeColor=None))
+        draw.add(Line(x0 + 60, y0, x0 + 60 + 45, y0 + 45, strokeColor=C_DIM, strokeWidth=0.9))
+        draw.add(String(x0 + 64, y0 + 6, "DOOR", fontName="Helvetica", fontSize=6, fillColor=C_DIM))
+        # North Window
+        draw.add(Rect(x0 + 120, y1 - 4, 110, 8, fillColor=C_WIN, strokeColor=C_WALL, strokeWidth=1.2))
+        # East Window
+        draw.add(Rect(x1 - 4, y0 + 80, 8, 90, fillColor=C_WIN, strokeColor=C_WALL, strokeWidth=1.2))
+    elif "bedroom" in rt or "bed" in rt:
+        # Door West wall (left bottom)
+        draw.add(Rect(x0 - 2, y0 + 40, 5, 45, fillColor=C_BG, strokeColor=None))
+        draw.add(Line(x0, y0 + 40, x0 + 45, y0 + 40 + 45, strokeColor=C_DIM, strokeWidth=0.9))
+        draw.add(String(x0 + 6, y0 + 44, "DOOR", fontName="Helvetica", fontSize=6, fillColor=C_DIM))
+        # Window North wall (top middle)
+        draw.add(Rect(x0 + rw // 2 - 50, y1 - 4, 100, 8, fillColor=C_WIN, strokeColor=C_WALL, strokeWidth=1.2))
+    elif "kitchen" in rt:
+        # Door bottom (South)
+        draw.add(Rect(x0 + 120, y0 - 2, 45, 5, fillColor=C_BG, strokeColor=None))
+        # Window North wall (top above platform)
+        draw.add(Rect(x0 + 100, y1 - 4, 120, 8, fillColor=C_WIN, strokeColor=C_WALL, strokeWidth=1.2))
+    elif "bathroom" in rt or "bath" in rt:
+        # Door South wall
+        draw.add(Rect(x0 + 20, y0 - 2, 40, 5, fillColor=C_BG, strokeColor=None))
+        # East ventilation window
+        draw.add(Rect(x1 - 4, y0 + 80, 8, 40, fillColor=C_WIN, strokeColor=C_WALL, strokeWidth=1.2))
+    elif "balcony" in rt:
+        # sliding door West (left)
+        draw.add(Rect(x0 - 2, y0 + 40, 5, 80, fillColor=C_WIN, strokeColor=C_WALL, strokeWidth=1.2))
+        # Railing North
+        draw.add(Line(x0, y1, x1, y1, strokeColor=C_WALL, strokeWidth=1.5))
+    else: # Dining/others
+        # Door West
+        draw.add(Rect(x0 - 2, y0 + 80, 5, 45, fillColor=C_BG, strokeColor=None))
+        # Window North
+        draw.add(Rect(x0 + 100, y1 - 4, 100, 8, fillColor=C_WIN, strokeColor=C_WALL, strokeWidth=1.2))
 
-    # Window (top wall)
-    wx = x0 + rw // 2 - 55
-    draw.add(Rect(wx, y1 - 5, 110, 10, fillColor=C_WIN, strokeColor=C_WALL, strokeWidth=1.5))
-    draw.add(Line(wx + 55, y1 - 5, wx + 55, y1 + 5, strokeColor=C_WALL, strokeWidth=0.8))
-    draw.add(String(wx + 55, y1 + 7, "WINDOW", fontName="Helvetica", fontSize=6,
-                    fillColor=C_DIM, textAnchor="middle"))
-
-    # Product text
-    all_txt = " ".join(
-        (p.get("category", "") + " " + p.get("name", "")).lower()
-        for p in products
-    )
+    # Product list normalization
+    all_txt = " ".join((p.get("category", "") + " " + p.get("name", "")).lower() for p in products)
 
     def sel(*kw):
         return any(k in all_txt for k in kw)
 
     labels = []
-
     def add_lbl(txt, px, py, lx, ly, anchor="end"):
         labels.append((txt, px, py, lx, ly, anchor))
 
-    # 1. BED
+    # 1. BED (Centered on East/North wall depending on room)
     if sel("bed", "mattress", "cot"):
-        bx, by, bw, bh = x0 + 110, y0 + 120, 155, 130
+        bx, by, bw, bh = x0 + 100, y1 - 140, 150, 130
         draw.add(Rect(bx, by, bw, bh, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1.5))
-        draw.add(Rect(bx, by + bh - 20, bw, 20,
-                      fillColor=colors.HexColor("#D1D5DB"), strokeColor=C_FSTK, strokeWidth=1))
-        draw.add(Rect(bx + 15, by + bh - 36, 55, 13,
-                      fillColor=colors.white, strokeColor=C_DIM, strokeWidth=0.7))
-        draw.add(Rect(bx + 85, by + bh - 36, 55, 13,
-                      fillColor=colors.white, strokeColor=C_DIM, strokeWidth=0.7))
-        draw.add(Line(bx, by + 85, bx + bw, by + 85, strokeColor=C_DIM, strokeWidth=0.7))
-        add_lbl("Double Bed", bx + bw // 2, by + bh // 2, x0 - 5, by + bh // 2 + 20)
+        draw.add(Rect(bx, by + bh - 15, bw, 15, fillColor=colors.HexColor("#D1D5DB"), strokeColor=C_FSTK, strokeWidth=1))
+        # Pillows
+        draw.add(Rect(bx + 15, by + bh - 28, 50, 10, fillColor=colors.white, strokeColor=C_DIM, strokeWidth=0.7))
+        draw.add(Rect(bx + 85, by + bh - 28, 50, 10, fillColor=colors.white, strokeColor=C_DIM, strokeWidth=0.7))
+        add_lbl("Double Bed", bx + bw // 2, by + bh // 2, x0 - 5, by + bh // 2)
 
-    # 2. SIDE TABLE
+    # 2. BEDSIDE TABLES
     if sel("side table", "nightstand", "bedside"):
-        draw.add(Rect(x0 + 58, y0 + 178, 42, 42, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1))
-        draw.add(Circle(x0 + 79, y0 + 199, 8, fillColor=colors.white, strokeColor=C_LAMP, strokeWidth=1.2))
-        draw.add(Rect(x0 + 275, y0 + 178, 42, 42, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1))
-        draw.add(Circle(x0 + 296, y0 + 199, 8, fillColor=colors.white, strokeColor=C_LAMP, strokeWidth=1.2))
-        add_lbl("Side Tables", x0 + 79, y0 + 199, x0 - 5, y0 + 199)
+        if sel("bed", "mattress", "cot"):
+            # Position L & R of the bed
+            draw.add(Rect(x0 + 50, y1 - 45, 40, 40, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1))
+            draw.add(Rect(x0 + 260, y1 - 45, 40, 40, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1))
+            add_lbl("Bedside L", x0 + 70, y1 - 25, x0 - 5, y1 - 25)
+            add_lbl("Bedside R", x0 + 280, y1 - 25, x1 + 5, y1 - 25, "start")
+        else:
+            draw.add(Rect(x0 + 20, y0 + 150, 40, 40, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1))
+            add_lbl("Side Table", x0 + 40, y0 + 170, x0 - 5, y0 + 170)
 
-    # 3. WARDROBE
+    # 3. WARDROBE (Along West wall)
     if sel("wardrobe", "closet", "cupboard", "almirah", "cabinet"):
-        wx2, wy2, ww2, wh2 = x0 + 5, y0 + 95, 48, 150
-        draw.add(Rect(wx2, wy2, ww2, wh2,
-                      fillColor=colors.HexColor("#F3F4F6"), strokeColor=C_FSTK, strokeWidth=1.5))
-        draw.add(Line(wx2 + ww2 // 2, wy2, wx2 + ww2 // 2, wy2 + wh2,
-                      strokeColor=C_DIM, strokeWidth=0.8))
-        draw.add(Circle(wx2 + ww2 // 2 - 8, wy2 + wh2 // 2, 3, fillColor=C_DIM, strokeColor=None))
-        draw.add(Circle(wx2 + ww2 // 2 + 8, wy2 + wh2 // 2, 3, fillColor=C_DIM, strokeColor=None))
-        add_lbl("Wardrobe", wx2 + ww2 // 2, wy2 + wh2 // 2, x0 - 5, wy2 + wh2 // 2 - 10)
+        wx2, wy2, ww2, wh2 = x0 + 10, y0 + 90, 45, 140
+        draw.add(Rect(wx2, wy2, ww2, wh2, fillColor=colors.HexColor("#F3F4F6"), strokeColor=C_FSTK, strokeWidth=1.5))
+        draw.add(Line(wx2 + ww2 // 2, wy2, wx2 + ww2 // 2, wy2 + wh2, strokeColor=C_DIM, strokeWidth=0.8))
+        add_lbl("Wardrobe", wx2 + ww2 // 2, wy2 + wh2 // 2, x0 - 5, wy2 + wh2 // 2)
 
-    # 4. DRESSING TABLE
-    if sel("dressing", "dresser", "vanity table", "makeup"):
-        draw.add(Rect(x0 + 80, y0 + 5, 95, 38, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1.2))
-        draw.add(Rect(x0 + 92, y0 + 43, 70, 5, fillColor=C_WIN, strokeColor=C_FSTK, strokeWidth=0.8))
-        add_lbl("Dressing Table", x0 + 127, y0 + 24, x0 - 5, y0 + 24)
+    # 4. STUDY DESK
+    if sel("study", "desk", "work table", "computer table"):
+        dx, dy = x1 - 110, y0 + 15
+        draw.add(Rect(dx, dy, 95, 40, fillColor=colors.HexColor("#F9FAFB"), strokeColor=C_FSTK, strokeWidth=1.2))
+        add_lbl("Study Desk", dx + 47, dy + 20, x1 + 5, dy + 20, "start")
 
-    # 5. STUDY DESK
-    if sel("study", "desk", "work table", "computer table", "writing table"):
-        dx, dy = x0 + 280, y0 + 5
-        draw.add(Rect(dx, dy, 100, 45,
-                      fillColor=colors.HexColor("#F9FAFB"), strokeColor=C_FSTK, strokeWidth=1.2))
-        draw.add(String(dx + 50, dy + 19, "DESK", fontName="Helvetica", fontSize=7,
-                        fillColor=C_DIM, textAnchor="middle"))
-        add_lbl("Study Desk", dx + 50, dy + 22, x1 + 5, dy + 22, "start")
-
-    # 6. CHAIR
-    if sel("chair", "stool", "office chair"):
-        cx2, cy2 = x0 + 330, y0 + 68
-        draw.add(Circle(cx2, cy2, 17, fillColor=colors.white, strokeColor=C_FSTK, strokeWidth=1))
-        draw.add(Rect(cx2 - 11, cy2 + 17, 22, 6, fillColor=colors.white, strokeColor=C_FSTK))
-        add_lbl("Chair", cx2, cy2, x1 + 5, cy2, "start")
-
-    # 7. SOFA
+    # 5. SOFA (Aligned along South wall for Living Room)
     if sel("sofa", "couch", "sectional", "loveseat"):
-        sx, sy, sw, sh = x0 + 55, y0 + 55, 250, 88
+        sx, sy, sw, sh = x0 + 100, y0 + 30, 160, 60
         draw.add(Rect(sx, sy, sw, sh, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1.5))
-        draw.add(Rect(sx, sy + sh - 20, sw, 20,
-                      fillColor=colors.HexColor("#D1D5DB"), strokeColor=C_FSTK, strokeWidth=1))
-        for i in range(3):
-            draw.add(Rect(sx + 10 + i * 80, sy + 8, 72, 55,
-                          fillColor=colors.white, strokeColor=C_DIM, strokeWidth=0.8))
+        draw.add(Rect(sx, sy, sw, 15, fillColor=colors.HexColor("#D1D5DB"), strokeColor=C_FSTK, strokeWidth=1))
         add_lbl("Sofa", sx + sw // 2, sy + sh // 2, x0 - 5, sy + sh // 2)
 
-    # 8. COFFEE TABLE
-    if sel("coffee table", "centre table", "center table", "ottoman"):
-        ctx, cty = x0 + 120, y0 + 165
-        draw.add(Rect(ctx, cty, 130, 65,
-                      fillColor=colors.HexColor("#F9FAFB"), strokeColor=C_FSTK, strokeWidth=1.2))
-        add_lbl("Coffee Table", ctx + 65, cty + 32, x0 - 5, cty + 32)
+    # 6. COFFEE TABLE (In front of Sofa)
+    if sel("coffee table", "centre table", "center table"):
+        ctx, cty = x0 + 115, y0 + 105
+        draw.add(Rect(ctx, cty, 130, 50, fillColor=colors.HexColor("#F9FAFB"), strokeColor=C_FSTK, strokeWidth=1.2))
+        add_lbl("Coffee Table", ctx + 65, cty + 25, x0 - 5, cty + 25)
 
-    # 9. TV UNIT
+    # 7. TV UNIT / ENTERTAINMENT CONSOLE (Facing Sofa)
     if sel("tv", "television", "entertainment", "media unit", "tv unit"):
-        tx, ty = x0 + 70, y1 - 38
-        draw.add(Rect(tx, ty, 230, 28,
-                      fillColor=colors.HexColor("#374151"), strokeColor=C_FSTK, strokeWidth=1))
-        draw.add(Rect(tx + 8, ty + 5, 214, 16,
-                      fillColor=colors.HexColor("#6B7280"), strokeColor=None))
-        add_lbl("TV Unit", tx + 115, ty + 14, x1 + 5, ty + 14, "start")
+        tx, ty = x0 + 100, y1 - 40, 160, 30
+        draw.add(Rect(tx, ty, 160, 30, fillColor=colors.HexColor("#374151"), strokeColor=C_FSTK, strokeWidth=1))
+        add_lbl("TV Console", tx + 80, ty + 15, x1 + 5, ty + 15, "start")
 
-    # 10. BOOKSHELF
-    if sel("bookshelf", "bookcase", "shelf", "rack", "display unit"):
-        bsx, bsy = x1 - 42, y0 + 55
-        draw.add(Rect(bsx, bsy, 37, 135, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1.2))
-        for row in range(4):
-            draw.add(Line(bsx, bsy + row * 33, bsx + 37, bsy + row * 33,
-                          strokeColor=C_DIM, strokeWidth=0.6))
-        add_lbl("Bookshelf", bsx + 18, bsy + 67, x1 + 5, bsy + 67, "start")
-
-    # 11. ARMCHAIR
-    if sel("armchair", "accent chair", "recliner", "lounge chair"):
-        ax, ay = x0 + 318, y0 + 170
-        draw.add(Rect(ax, ay, 55, 55, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1.2))
-        draw.add(Rect(ax, ay + 43, 55, 12,
-                      fillColor=colors.HexColor("#D1D5DB"), strokeColor=C_FSTK, strokeWidth=0.8))
-        add_lbl("Armchair", ax + 27, ay + 27, x1 + 5, ay + 27, "start")
-
-    # 12. DINING TABLE
-    if sel("dining table", "dining set", "6 seater", "4 seater"):
-        dtx, dty, dtw, dth = x0 + 100, y0 + 95, 180, 105
+    # 8. DINING TABLE (Centered)
+    if sel("dining table", "dining set"):
+        dtx, dty, dtw, dth = x0 + 100, y0 + 90, 150, 90
         draw.add(Rect(dtx, dty, dtw, dth, fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1.5))
+        # Chairs
         for ci in range(2):
-            draw.add(Rect(dtx + 25 + ci * 85, dty - 26, 55, 22,
-                          fillColor=colors.white, strokeColor=C_FSTK, strokeWidth=1))
-            draw.add(Rect(dtx + 25 + ci * 85, dty + dth + 4, 55, 22,
-                          fillColor=colors.white, strokeColor=C_FSTK, strokeWidth=1))
-        draw.add(Rect(dtx - 26, dty + 28, 22, 50,
-                      fillColor=colors.white, strokeColor=C_FSTK, strokeWidth=1))
-        draw.add(Rect(dtx + dtw + 4, dty + 28, 22, 50,
-                      fillColor=colors.white, strokeColor=C_FSTK, strokeWidth=1))
-        add_lbl("Dining Table + Chairs", dtx + dtw // 2, dty + dth // 2, x0 - 5, dty + dth // 2)
+            draw.add(Rect(dtx + 20 + ci * 70, dty - 18, 40, 18, fillColor=colors.white, strokeColor=C_FSTK))
+            draw.add(Rect(dtx + 20 + ci * 70, dty + dth, 40, 18, fillColor=colors.white, strokeColor=C_FSTK))
+        add_lbl("Dining Table", dtx + dtw // 2, dty + dth // 2, x0 - 5, dty + dth // 2)
 
-    # 13. KITCHEN COUNTER
-    if sel("kitchen", "counter", "modular kitchen", "hob", "chimney", "overhead cabinet"):
-        draw.add(Rect(x0 + 5, y0 + 38, 28, rh - 70,
-                      fillColor=colors.HexColor("#F3F4F6"), strokeColor=C_FSTK, strokeWidth=1.5))
-        draw.add(Rect(x0 + 5, y0 + 5, rw - 35, 28,
-                      fillColor=colors.HexColor("#F3F4F6"), strokeColor=C_FSTK, strokeWidth=1.5))
-        draw.add(Circle(x0 + 19, y0 + 200, 11,
-                        fillColor=colors.white, strokeColor=C_FSTK, strokeWidth=1))
-        draw.add(String(x0 + 19, y0 + 196, "S", fontName="Helvetica-Bold", fontSize=7,
-                        fillColor=C_DIM, textAnchor="middle"))
-        for bx3 in [x0 + 110, x0 + 150, x0 + 190, x0 + 230]:
-            draw.add(Circle(bx3, y0 + 19, 9,
-                            fillColor=colors.HexColor("#E5E7EB"), strokeColor=C_FSTK, strokeWidth=1))
-        add_lbl("Modular Kitchen Counter", x0 + 19, y0 + 185, x0 - 5, y0 + 185)
+    # 9. KITCHEN PLATFORM
+    if "kitchen" in rt and sel("counter", "modular", "hob", "sink"):
+        # L-shape counter top
+        draw.add(Rect(x0 + 5, y1 - 40, rw - 10, 35, fillColor=colors.HexColor("#F3F4F6"), strokeColor=C_FSTK, strokeWidth=1.5))
+        draw.add(Rect(x0 + 5, y0 + 5, 35, rh - 10, fillColor=colors.HexColor("#F3F4F6"), strokeColor=C_FSTK, strokeWidth=1.5))
+        add_lbl("Kitchen Platform", x0 + 18, y0 + 120, x0 - 5, y0 + 120)
 
-    # 14. REFRIGERATOR
-    if sel("refrigerator", "fridge"):
-        draw.add(Rect(x1 - 52, y0 + 5, 42, 60,
-                      fillColor=C_FURN, strokeColor=C_FSTK, strokeWidth=1.5))
-        draw.add(Line(x1 - 52, y0 + 35, x1 - 10, y0 + 35, strokeColor=C_DIM, strokeWidth=0.8))
-        draw.add(Circle(x1 - 20, y0 + 20, 3, fillColor=C_DIM))
-        draw.add(Circle(x1 - 20, y0 + 50, 3, fillColor=C_DIM))
-        add_lbl("Refrigerator", x1 - 31, y0 + 32, x1 + 5, y0 + 32, "start")
-
-    # 15. BATHTUB
-    if sel("bathtub", "bath tub", "tub"):
-        btx, bty = x0 + 8, y1 - 95
-        draw.add(Rect(btx, bty, 110, 80,
-                      fillColor=C_WIN, strokeColor=C_FSTK,
-                      strokeWidth=1.5, rx=10, ry=10))
-        draw.add(Circle(btx + 100, bty + 70, 6, fillColor=colors.white, strokeColor=C_FSTK, strokeWidth=1))
-        add_lbl("Bathtub", btx + 55, bty + 40, x0 - 5, bty + 40)
-
-    # 16. SHOWER
-    if sel("shower", "shower cubicle"):
-        shx, shy = x1 - 85, y1 - 90
-        draw.add(Rect(shx, shy, 75, 80,
-                      fillColor=colors.HexColor("#EFF6FF"), strokeColor=C_FSTK, strokeWidth=1.5))
-        draw.add(Circle(shx + 37, shy + 55, 14,
-                        fillColor=C_WIN, strokeColor=C_FSTK, strokeWidth=1))
-        draw.add(Line(shx + 37, shy + 69, shx + 37, shy + 80,
-                      strokeColor=C_FSTK, strokeWidth=1.2))
-        add_lbl("Shower", shx + 37, shy + 40, x1 + 5, shy + 40, "start")
-
-    # 17. WASH BASIN
-    if sel("wash basin", "basin", "vanity unit", "sink"):
-        draw.add(Rect(x0 + 8, y0 + 8, 50, 38,
-                      fillColor=colors.white, strokeColor=C_FSTK,
-                      strokeWidth=1.2, rx=6, ry=6))
-        draw.add(Circle(x0 + 33, y0 + 27, 6, fillColor=C_WIN, strokeColor=C_FSTK, strokeWidth=0.8))
-        add_lbl("Wash Basin", x0 + 33, y0 + 27, x0 - 5, y0 + 27)
-
-    # 18. TOILET
-    if sel("toilet", "wc", "commode", "water closet"):
-        draw.add(Rect(x1 - 62, y0 + 8, 48, 60,
-                      fillColor=colors.white, strokeColor=C_FSTK,
-                      strokeWidth=1.5, rx=12, ry=12))
-        draw.add(Rect(x1 - 57, y0 + 53, 38, 10,
-                      fillColor=colors.HexColor("#F3F4F6"), strokeColor=C_FSTK, strokeWidth=0.8))
-        add_lbl("WC / Toilet", x1 - 38, y0 + 35, x1 + 5, y0 + 35, "start")
+    # 10. WC / BATHROOM VANITY
+    if "bathroom" in rt:
+        if sel("toilet", "wc"):
+            draw.add(Rect(x1 - 50, y0 + 20, 35, 45, fillColor=colors.white, strokeColor=C_FSTK, rx=8, ry=8))
+            add_lbl("WC", x1 - 32, y0 + 42, x1 + 5, y0 + 42, "start")
+        if sel("bathtub", "tub"):
+            draw.add(Rect(x0 + 10, y1 - 80, 120, 70, fillColor=C_WIN, strokeColor=C_FSTK, rx=10, ry=10))
+            add_lbl("Bathtub", x0 + 70, y1 - 45, x0 - 5, y1 - 45)
 
     # Leader lines + labels
     for (txt, px, py, lx, ly, anchor) in labels:
-        draw.add(Circle(px, py, 2.8, fillColor=C_PTR, strokeColor=None))
-        draw.add(Line(px, py, lx, ly, strokeColor=C_PTR, strokeWidth=0.9))
-        draw.add(Line(lx - (5 if anchor == "end" else -5), ly,
-                      lx, ly, strokeColor=C_PTR, strokeWidth=1.2))
+        draw.add(Circle(px, py, 2.5, fillColor=C_PTR, strokeColor=None))
+        draw.add(Line(px, py, lx, ly, strokeColor=C_PTR, strokeWidth=0.8))
+        draw.add(Line(lx - (5 if anchor == "end" else -5), ly, lx, ly, strokeColor=C_PTR, strokeWidth=1.2))
         draw.add(String(lx + (-4 if anchor == "end" else 4), ly + 2, txt,
-                        fontName="Helvetica-Bold", fontSize=7,
-                        fillColor=C_LBL, textAnchor=anchor))
+                        fontName="Helvetica-Bold", fontSize=7, fillColor=C_LBL, textAnchor=anchor))
 
     # Room name watermark (bottom-right)
     draw.add(String(x1 - 5, y0 + 6, room_name.upper(),
-                    fontName="Helvetica-Bold", fontSize=8,
-                    fillColor=colors.HexColor("#9CA3AF"), textAnchor="end"))
+                    fontName="Helvetica-Bold", fontSize=8, fillColor=colors.HexColor("#9CA3AF"), textAnchor="end"))
 
     # Scale bar
     draw.add(Line(x0, 10, x0 + 100, 10, strokeColor=C_WALL, strokeWidth=1.2))
     draw.add(Line(x0, 6, x0, 14, strokeColor=C_WALL, strokeWidth=1))
     draw.add(Line(x0 + 100, 6, x0 + 100, 14, strokeColor=C_WALL, strokeWidth=1))
-    draw.add(String(x0 + 50, 13, "~3 m", fontName="Helvetica", fontSize=6.5,
-                    fillColor=C_WALL, textAnchor="middle"))
+    draw.add(String(x0 + 50, 13, "~3 m", fontName="Helvetica", fontSize=6.5, fillColor=C_WALL, textAnchor="middle"))
 
     return draw
 
@@ -635,8 +560,28 @@ def generate_floor_plan_pdf(project_id: str, project, user, rooms_data: list) ->
         story.append(Paragraph(note, styles["Normal"]))
         story.append(Spacer(1, 3 * mm))
 
-        # Vector blueprint — only user-selected products
-        story.append(_draw_room_blueprint(room_name, products))
+        # Custom floor plan blueprint or fallback vector layout
+        custom_fp_url = r.get("custom_floor_plan_url")
+        if custom_fp_url:
+            from reportlab.platypus import Image as RLImage
+            import urllib.request
+            import tempfile
+            try:
+                if custom_fp_url.startswith("/static/"):
+                    local_path = custom_fp_url.replace("/static/", "")
+                    if os.path.exists(local_path):
+                        story.append(RLImage(local_path, width=170*mm, height=113*mm))
+                    else:
+                        story.append(_draw_room_blueprint(room_name, products))
+                else:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tf:
+                        urllib.request.urlretrieve(custom_fp_url, tf.name)
+                        story.append(RLImage(tf.name, width=170*mm, height=113*mm))
+            except Exception as e:
+                print(f"[PDF] Could not load custom floor plan image {custom_fp_url}: {e}")
+                story.append(_draw_room_blueprint(room_name, products))
+        else:
+            story.append(_draw_room_blueprint(room_name, products))
         story.append(Spacer(1, 4 * mm))
 
         # Specifications table
