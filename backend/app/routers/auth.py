@@ -14,7 +14,22 @@ _otp_store: dict[str, str] = {}
 _otp_rate: dict[str, int] = {}
 
 
-@router.post("/signup", summary="Register or login – sends OTP to phone/email")
+def _has_role(user: User, role: str) -> bool:
+    """Check if user has a specific role (supports comma-separated multi-role)."""
+    user_roles = [r.strip() for r in (user.role or "customer").split(",")]
+    return role in user_roles
+
+
+def _add_role(user: User, role: str, db: Session):
+    """Add a new role to user without removing existing roles."""
+    user_roles = [r.strip() for r in (user.role or "customer").split(",")]
+    if role not in user_roles:
+        user_roles.append(role)
+        user.role = ",".join(user_roles)
+        db.commit()
+
+
+@router.post("/signup", summary="Register – sends OTP, appends role if user already exists")
 def signup(req: SignupReq, db: Session = Depends(get_db)):
     if req.phone:
         req.phone = req.phone.replace(" ", "")
@@ -39,10 +54,15 @@ def signup(req: SignupReq, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == req.email).first()
 
     if not user:
+        # Brand new user — create with this role
         user = User(phone=req.phone, email=req.email, name=req.name or "User", role=req.role or "customer")
         db.add(user)
         db.commit()
         db.refresh(user)
+    else:
+        # Existing user signing up for a new role — append role without removing old ones
+        if req.role:
+            _add_role(user, req.role, db)
 
     # In dev, print OTP to console
     print(f"\n{'='*40}")
@@ -52,7 +72,7 @@ def signup(req: SignupReq, db: Session = Depends(get_db)):
     return {"otp_sent": True, "dev_otp": otp, "message": f"OTP sent to {contact}"}
 
 
-@router.post("/login", summary="Request OTP to login (only if registered)")
+@router.post("/login", summary="Request OTP to login (only if registered for that role)")
 def login(req: SignupReq, db: Session = Depends(get_db)):
     if req.phone:
         req.phone = req.phone.replace(" ", "")
@@ -72,31 +92,14 @@ def login(req: SignupReq, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(404, "This account is not registered. Please sign up first.")
 
-    # ── Role portal guard ──────────────────────────────────────────────────────
+    # ── Strict Role portal guard ───────────────────────────────────────────────
+    # A number can ONLY login to a portal it has explicitly registered for.
     if req.role:
-        is_allowed = False
-        if req.role == "customer":
-            if user.role == "customer":
-                is_allowed = True
-        elif req.role == "admin":
-            if user.role == "admin":
-                is_allowed = True
-        elif req.role == "vendor":
-            if user.role == "vendor":
-                is_allowed = True
-            else:
-                from ..models import Vendor
-                vendor = db.query(Vendor).filter((Vendor.user_id == user.id) | (Vendor.phone == user.phone)).first()
-                if vendor:
-                    is_allowed = True
-
-        if not is_allowed:
+        if not _has_role(user, req.role):
             raise HTTPException(
                 status_code=403,
-                detail=f"This account is not registered as a '{req.role}'."
+                detail=f"This number is not registered as a '{req.role}'. Please sign up as '{req.role}' first."
             )
-
-
 
     # Rate limit bypassed for development
     rate = 0
@@ -111,8 +114,6 @@ def login(req: SignupReq, db: Session = Depends(get_db)):
     print(f"{'='*40}\n")
 
     return {"otp_sent": True, "dev_otp": otp, "message": f"OTP sent to {contact}"}
-
-
 
 
 @router.post("/verify-otp", response_model=TokenResponse, summary="Verify OTP and get JWT")
@@ -140,34 +141,22 @@ def verify_otp(req: VerifyOTPReq, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(404, "User not found")
 
-    # ── Role portal guard ──────────────────────────────────────────────────────
+    # ── Strict Role portal guard ───────────────────────────────────────────────
     if req.role:
-        is_allowed = False
-        if req.role == "customer":
-            is_allowed = True
-        elif req.role == "admin":
-            if user.role == "admin":
+        is_allowed = _has_role(user, req.role)
+
+        # Admin fallback: also check AdminRole table
+        if not is_allowed and req.role == "admin":
+            from ..models import AdminRole
+            admin_role = db.query(AdminRole).filter(AdminRole.user_id == user.id).first()
+            if admin_role:
                 is_allowed = True
-            else:
-                from ..models import AdminRole
-                admin_role = db.query(AdminRole).filter(AdminRole.user_id == user.id).first()
-                if admin_role:
-                    is_allowed = True
-        elif req.role == "vendor":
-            if user.role == "vendor":
-                is_allowed = True
-            else:
-                from ..models import Vendor
-                vendor = db.query(Vendor).filter((Vendor.user_id == user.id) | (Vendor.phone == user.phone)).first()
-                if vendor:
-                    is_allowed = True
 
         if not is_allowed:
             raise HTTPException(
                 status_code=403,
-                detail=f"This account is not registered as a '{req.role}'."
+                detail=f"This number is not registered as a '{req.role}'. Please sign up as '{req.role}' first."
             )
-
 
     # Sync project assignments and role-based seeded details
     from ..db import sync_demo_data
