@@ -64,8 +64,8 @@ search_frontend.py
 check_db_team.py
 backend/reset_db.py
 reset_db.py
-check_db.py
-fix_thumbnails.py
+# check_db.py
+# fix_thumbnails.py
 ingest_antigravity_catalog.py
 backend/ingest_antigravity_catalog.py
 *.log
