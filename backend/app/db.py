@@ -74,6 +74,8 @@ def init_db():
                     cursor.execute("ALTER TABLE projects ADD COLUMN color_preferences TEXT DEFAULT '[]'")
                 if "interior_material_preference" not in proj_cols:
                     cursor.execute("ALTER TABLE projects ADD COLUMN interior_material_preference VARCHAR")
+                if "fabric_preference" not in proj_cols:
+                    cursor.execute("ALTER TABLE projects ADD COLUMN fabric_preference VARCHAR")
 
                 # Migrate project_photos table to add category column if missing
                 cursor.execute("PRAGMA table_info(project_photos)")

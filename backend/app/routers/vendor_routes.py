@@ -2,6 +2,7 @@ import os
 import shutil
 import datetime
 import uuid
+import re
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -473,6 +474,17 @@ def list_vendor_products(
                 }
                 for v in variants
             ],
+            "primaryMaterial": p.primary_material,
+            "width": p.width,
+            "height": p.height,
+            "depth": p.depth,
+            "weight": p.weight,
+            "weightCapacity": p.weight_capacity,
+            "style": p.style,
+            "finish": p.finish,
+            "mountingType": p.mounting_type,
+            "assemblyRequired": p.assembly_required,
+            "suitableRoom": p.suitable_room,
             "inventory": {
                 "availableQty": inv.available_qty if inv else 0,
                 "reservedQty": inv.reserved_qty if inv else 0,
@@ -787,15 +799,66 @@ async def upload_product_image(
     if ext not in allowed:
         raise HTTPException(400, "Invalid image format. Use JPG, PNG, or WebP.")
 
-    os.makedirs(os.path.join("pdfs", "product_images"), exist_ok=True)
-    filename = f"product_{product_id}_{view_index}_{int(datetime.datetime.utcnow().timestamp())}{ext}"
-    filepath = os.path.join("pdfs", "product_images", filename)
+    # Determine view type name (0: front_view, 1: left_view, 2: right_view)
+    view_type_map = {0: "front_view", 1: "left_view", 2: "right_view"}
+    view_name = view_type_map.get(view_index, f"view_{view_index}")
+
+    cust_product = db.query(Product).filter(Product.id == product_id).first()
+    subcat = product.subcategory or product.category or "product"
+    primary_mat = product.primary_material or (cust_product.primary_material if cust_product else "solid_wood")
+
+    color = None
+    if cust_product:
+        if cust_product.color_variants and isinstance(cust_product.color_variants, list) and len(cust_product.color_variants) > 0:
+            color = cust_product.color_variants[0]
+        elif cust_product.variants and isinstance(cust_product.variants, dict) and cust_product.variants.get("color"):
+            color = cust_product.variants["color"][0]
+    if not color:
+        v_variant = db.query(ProductVariant).filter(ProductVariant.product_id == product_id).first()
+        if v_variant and v_variant.color:
+            color = v_variant.color
+    if not color:
+        color = "standard"
+
+    def slugify(val: str) -> str:
+        if not val:
+            return "unknown"
+        clean = re.sub(r'[^\w\s-]', '', str(val).strip())
+        clean = re.sub(r'[\s_]+', '_', clean)
+        return clean.strip('_').lower()
+
+    finish_val = product.finish or (cust_product.finish if cust_product else "matte")
+
+    # Check for fabric in variants/materials
+    fabric_val = None
+    if cust_product and cust_product.variants and isinstance(cust_product.variants, dict):
+        fabrics = cust_product.variants.get("fabric")
+        if fabrics and isinstance(fabrics, list) and len(fabrics) > 0 and fabrics[0]:
+            fabric_val = fabrics[0]
+    if not fabric_val and cust_product and cust_product.materials:
+        for m in cust_product.materials:
+            if m and m.lower() in ["velvet", "linen", "cotton", "leather", "faux leather", "microfiber", "polyester", "wool", "silk"]:
+                fabric_val = m
+                break
+
+    subcat_slug = slugify(subcat)
+    color_slug = slugify(color)
+    mat_slug = slugify(primary_mat)
+    finish_slug = slugify(finish_val)
+
+    os.makedirs(os.path.join("pdfs", "catalog"), exist_ok=True)
+    if fabric_val:
+        fabric_slug = slugify(fabric_val)
+        filename = f"{subcat_slug}-{color_slug}-{mat_slug}-{finish_slug}-{fabric_slug}-{view_name}{ext}"
+    else:
+        filename = f"{subcat_slug}-{color_slug}-{mat_slug}-{finish_slug}-{view_name}{ext}"
+    filepath = os.path.join("pdfs", "catalog", filename)
 
     contents = await file.read()
     with open(filepath, "wb") as f:
         f.write(contents)
 
-    image_url = f"/static/pdfs/product_images/{filename}"
+    image_url = f"/static/pdfs/catalog/{filename}"
 
     # Update vendor product images array at view_index
     images = list(product.images) if product.images else []

@@ -29,22 +29,23 @@ const MANDATORY_CATEGORIES: Record<string, { id: string; label: string; desc: st
     { id: 'coffee_tables', label: 'Coffee Table', desc: 'Central low table' },
     { id: 'side_tables', label: 'Side Tables', desc: 'Beside sofa accents' },
     { id: 'chairs', label: 'Accent Chair', desc: 'Secondary seating' },
+    { id: 'shoe_racks', label: 'Shoe Rack', desc: 'Entryway footwear storage' },
     { id: 'rugs', label: 'Area Rug', desc: 'Flooring base' },
     { id: 'lighting', label: 'Lighting', desc: 'Ambient floor/table lamps' },
-    { id: 'decor', label: 'Decor', desc: 'Wall art & accessories' },
   ],
   bedroom_master: [
     { id: 'Furniture', label: 'Master Bed', desc: 'Main sleeping set' },
+    { id: 'bedside_tables', label: 'Bedside Table', desc: 'Nightstand storage' },
+    { id: 'study_desk', label: 'Study Desk', desc: 'Workstation setup' },
     { id: 'Lighting', label: 'Lighting', desc: 'Bedside reading lamps' },
-    { id: 'Décor', label: 'Decor & Rugs', desc: 'Cozy floor & accessories' },
   ],
   bedroom_2: [
     { id: 'Furniture', label: 'Bed set', desc: 'Main sleeping frame' },
+    { id: 'bedside_tables', label: 'Bedside Table', desc: 'Nightstand storage' },
     { id: 'Lighting', label: 'Lighting', desc: 'Lamps or spot lights' },
   ],
   kitchen: [
     { id: 'Kitchen', label: 'Modular Cabinets', desc: 'Base & wall counters' },
-    { id: 'Lighting', label: 'Kitchen Lights', desc: 'Counter lighting' },
   ],
   bathroom: [
     { id: 'Furniture', label: 'Vanity Counter', desc: 'Wash basin setup' },

@@ -61,6 +61,7 @@ class Project(Base):
     material_preference = Column(String)
     furnishing_type = Column(String)
     interior_material_preference = Column(String)
+    fabric_preference = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     color_preferences = Column(JSON, default=list)
 

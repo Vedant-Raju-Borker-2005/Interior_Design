@@ -35,6 +35,7 @@ class CreateProjectReq(BaseModel):
     total_area_sqft: Optional[int] = None
     material_preference: Optional[str] = None
     interior_material_preference: Optional[str] = None
+    fabric_preference: Optional[str] = None
     pincode: Optional[str] = None
     furnishing_type: Optional[str] = None  # new / upgrade
     color_preferences: Optional[List[str]] = []
@@ -65,6 +66,7 @@ class ProjectOut(BaseModel):
     created_at: datetime.datetime
     rooms: List[RoomOut] = []
     color_preferences: Optional[List[str]] = []
+    fabric_preference: Optional[str] = None
 
 
     class Config:
