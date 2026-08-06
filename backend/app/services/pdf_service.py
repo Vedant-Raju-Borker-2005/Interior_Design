@@ -318,6 +318,14 @@ def _draw_room_blueprint(room_name: str, products: list):
                     return colors.HexColor("#8B5A2B") # Dark Brown
                 elif "golden brown" in c or "golden" in c or "teak" in c or "oak" in c:
                     return colors.HexColor("#CD853F") # Golden Brown
+                elif "emerald" in c or "green" in c:
+                    return colors.HexColor("#0F5132") # Emerald Green
+                elif "navy" in c or "blue" in c or "royal" in c:
+                    return colors.HexColor("#0B3C5D") # Navy Blue
+                elif "pink" in c or "blush" in c:
+                    return colors.HexColor("#E8C5C8") # Blush Pink
+                elif "grey" in c or "gray" in c:
+                    return colors.HexColor("#9CA3AF") # Grey
                 elif c:
                     try:
                         if c.startswith("#"):
@@ -439,6 +447,26 @@ def _draw_room_blueprint(room_name: str, products: list):
     c_coffeetable = get_custom_color_hex(["coffee table", "centre table", "center table"], "#F9FAFB")
     c_desk      = get_custom_color_hex(["study", "desk", "work table"], "#F9FAFB")
     c_dining    = get_custom_color_hex(["dining table", "dining set"], "#E8E9F5")
+    c_rug       = get_custom_color_hex(["rug", "carpet", "mat"], "#D4B896")
+
+    # 0. RUG / CARPET (Drawn on top of the wood floor, but under furniture)
+    if sel("rug", "carpet", "area rug", "mat"):
+        # Position and size adapt per room type
+        if "bedroom" in rt or "bed" in rt:
+            rx0, ry0, rw2, rh2 = x0 + 85, y0 + 80, 185, 165
+        elif "bathroom" in rt or "bath" in rt:
+            rx0, ry0, rw2, rh2 = x0 + 30, y0 + 30, 90, 50
+        elif sel("dining table", "dining set"):
+            rx0, ry0, rw2, rh2 = x0 + 80, y0 + 70, 190, 140
+        else:
+            # Living Room or default
+            rx0, ry0, rw2, rh2 = x0 + 70, y0 + 55, 215, 175
+
+        # Draw the main rug rect
+        draw.add(Rect(rx0, ry0, rw2, rh2, fillColor=c_rug, strokeColor=colors.HexColor("#1D2D24"), strokeWidth=1.5, rx=5, ry=5))
+        # Inner accent border (dashed white line for high-end look)
+        draw.add(Rect(rx0 + 8, ry0 + 8, rw2 - 16, rh2 - 16, fillColor=None, strokeColor=colors.white, strokeWidth=0.8, strokeDashArray=[4, 4]))
+        add_lbl("Area Rug", rx0 + rw2 // 2, ry0 + rh2 // 2, x0 - 5, ry0 + rh2 // 2)
 
     # 1. BED (Centered on East/North wall depending on room)
     if sel("bed", "mattress", "cot"):
