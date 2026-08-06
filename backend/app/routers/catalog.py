@@ -228,13 +228,56 @@ def list_products(
 
     all_prods = q.all()
 
-    # Load project color preferences
+    # Load project color & material & fabric preferences
     color_prefs = []
+    material_pref = None
+    fabric_pref = None
     if project_id:
         from ..models import Project
         project = db.query(Project).filter(Project.id == project_id).first()
-        if project and project.color_preferences:
-            color_prefs = project.color_preferences
+        if project:
+            if project.color_preferences:
+                color_prefs = project.color_preferences
+            if project.interior_material_preference:
+                material_pref = project.interior_material_preference
+            if getattr(project, 'fabric_preference', None):
+                fabric_pref = project.fabric_preference
+
+    # Filter products based on material preference first if present
+    if material_pref and all_prods:
+        mat_tokens = [w.lower() for w in material_pref.split() if len(w) > 2]
+        mat_matches = []
+        for p in all_prods:
+            p_mat = (p.primary_material or "").lower()
+            p_materials = [m.lower() for m in (p.materials or [])]
+            p_desc = (p.description or "").lower()
+            p_name = (p.name or "").lower()
+            
+            # Check match against primary_material, materials list, name, description
+            is_mat_match = any(
+                token in p_mat or any(token in m for m in p_materials) or token in p_name or token in p_desc
+                for token in mat_tokens
+            )
+            if is_mat_match:
+                mat_matches.append(p)
+        if mat_matches:
+            all_prods = mat_matches
+
+    # Filter products based on fabric preference if present
+    if fabric_pref and all_prods:
+        fab_token = fabric_pref.lower().strip()
+        fab_matches = []
+        for p in all_prods:
+            p_materials = [m.lower() for m in (p.materials or [])]
+            p_vars = p.variants if isinstance(p.variants, dict) else {}
+            p_fabrics = [f.lower() for f in p_vars.get('fabric', [])]
+            p_desc = (p.description or "").lower()
+            p_name = (p.name or "").lower()
+
+            if fab_token in p_materials or fab_token in p_fabrics or fab_token in p_name or fab_token in p_desc:
+                fab_matches.append(p)
+        if fab_matches:
+            all_prods = fab_matches
 
     # Filter products based on color preferences
     exact_color_match_found = True

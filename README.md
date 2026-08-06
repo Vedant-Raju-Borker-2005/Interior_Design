@@ -14,6 +14,10 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
     Simulated **Stable Diffusion XL + ControlNet** rendering pipeline. Generate stunning, high-resolution photorealistic renders of your customized rooms under various interior styles (Modern, Scandinavian, Art-Deco, Luxury, Mediterranean, Tropical) in less than 15 seconds.
 *   **Normalized Product Catalog & Variant Customization (New)**  
     Group catalog entries under single base models (e.g., Sofa A) instead of duplicate rows. Customize specific parameters (Color, Fabric, Wood Finish, Size, Texture, Cushion Style) dynamically from the configuration panel, with configurations stored in SQLAlchemy database JSON schemas.
+*   **Custom Bounded Category Dropdown & Vendor Catalog Management (New)**  
+    Unified single-category selection component (`CategoryDropdown`) with strict scroll height limits (`max-h-48`), downward drop positioning (`top-full mt-1`), grouped subcategory sections, and outside-click auto-closure. Features a 1-click **Refresh Catalog** button, direct storage of vendor uploads in `pdfs/catalog/`, and customer onboarding fabric preference integration (Linen, Velvet, Fabric).
+*   **Automated Catalog Ingestion & Room Checklist Alignment (New)**  
+    Includes an automated multi-view catalog ingestion script (`ingest_antigravity_catalog.py`) mapping color-to-material rules (Dark Brown $\rightarrow$ Walnut, Golden Brown $\rightarrow$ Teak, Warm Beige $\rightarrow$ Oak) and multi-view image grouping. Realigned customer component selection checklists (`MANDATORY_CATEGORIES`) for 100% catalog coverage across Living Room (added Shoe Racks), Master Bedroom (added Study Desk & Bedside Tables), and Bedroom 2 (added Bedside Tables).
 *   **Mandatory Room Layout Completeness (New)**  
     Validates room progress checklists against mandatory categories (e.g., Living Room requires at least a Sofa, Coffee Table, and Rug) before enabling AI visualization. Displays visual alerts and missing requirements checklists.
 *   **Iterative Swap & Background Re-render (New)**  

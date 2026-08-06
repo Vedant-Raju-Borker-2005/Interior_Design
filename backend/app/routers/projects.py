@@ -68,6 +68,7 @@ def create_project(
         total_area_sqft=req.total_area_sqft,
         material_preference=getattr(req, 'material_preference', None),
         interior_material_preference=getattr(req, 'interior_material_preference', None),
+        fabric_preference=getattr(req, 'fabric_preference', None),
         furnishing_type=getattr(req, 'furnishing_type', None),
         pincode=getattr(req, 'pincode', None),
         status="draft",

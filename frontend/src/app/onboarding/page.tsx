@@ -84,6 +84,7 @@ export default function OnboardingPage() {
     timeline:            '',
     material_preference: '',
     interior_material_preference: '',
+    fabric_preference:   '',
     furnishing_type:     '',
     city:                '',
     property_name:       '',
@@ -297,45 +298,84 @@ export default function OnboardingPage() {
 
           {/* Step 1: Material Preference */}
           {step === 1 && (
-            <motion.div key="material-pref" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
-              <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Material Preference for your interiors</h2>
-              <p className="text-slate-500 mb-8">Select your preferred wood laminate finish. These options are loaded from the database.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {(availableMaterials.length > 0 ? availableMaterials : ['Oak Laminate', 'Teak Laminate', 'Walnut Laminate']).map((m) => {
-                  const emojis: Record<string, string> = {
-                    'Oak Laminate': '🪵',
-                    'Teak Laminate': '🌲',
-                    'Walnut Laminate': '🌰'
-                  }
-                  const descriptions: Record<string, string> = {
-                    'Oak Laminate': 'Light, modern, and warm wood grain finish.',
-                    'Teak Laminate': 'Classic golden-brown look with rich textures.',
-                    'Walnut Laminate': 'Deep, dark, and sophisticated premium finish.'
-                  }
-                  return (
+            <motion.div key="material-pref" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-8">
+              <div>
+                <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Material & Fabric Preferences</h2>
+                <p className="text-slate-500 mb-6">Select your preferred wood laminate finish and fabric texture for customized recommendations.</p>
+                
+                <h3 className="text-xs font-extrabold text-indigo-700 uppercase tracking-wider mb-3">🪵 Wood Laminate Finish</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  {(availableMaterials.length > 0 ? availableMaterials : ['Oak Laminate', 'Teak Laminate', 'Walnut Laminate']).map((m) => {
+                    const emojis: Record<string, string> = {
+                      'Oak Laminate': '🪵',
+                      'Teak Laminate': '🌲',
+                      'Walnut Laminate': '🌰'
+                    }
+                    const descriptions: Record<string, string> = {
+                      'Oak Laminate': 'Light, modern, and warm wood grain finish.',
+                      'Teak Laminate': 'Classic golden-brown look with rich textures.',
+                      'Walnut Laminate': 'Deep, dark, and sophisticated premium finish.'
+                    }
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setLocal((s) => ({ ...s, interior_material_preference: m }))}
+                        className={clsx(
+                          'p-5 rounded-2xl border-2 text-left transition-all duration-200 bg-white card-hover flex flex-col justify-between h-44',
+                          local.interior_material_preference === m
+                            ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
+                            : 'border-slate-200 hover:border-indigo-300'
+                        )}
+                      >
+                        <div>
+                          <div className="text-3xl mb-2">{emojis[m] || '🪵'}</div>
+                          <div className="font-bold text-slate-800 text-sm">{m}</div>
+                          <div className="text-xs text-slate-500 mt-1.5 leading-relaxed">{descriptions[m] || 'Premium interior wood laminate.'}</div>
+                        </div>
+                        {local.interior_material_preference === m && (
+                          <div className="self-end bg-indigo-600 text-white rounded-full p-1 mt-1">
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-extrabold text-indigo-700 uppercase tracking-wider mb-3">🪡 Upholstery & Fabric Preference</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  {[
+                    { id: 'Linen', name: 'Linen', emoji: '🧵', desc: 'Breathable, natural, crisp texture.' },
+                    { id: 'Velvet', name: 'Velvet', emoji: '✨', desc: 'Plush, soft, rich plush texture.' },
+                    { id: 'Fabric', name: 'Fabric', emoji: '🪡', desc: 'Versatile woven upholstery fabric.' }
+                  ].map((f) => (
                     <button
-                      key={m}
-                      onClick={() => setLocal((s) => ({ ...s, interior_material_preference: m }))}
+                      key={f.id}
+                      type="button"
+                      onClick={() => setLocal((s) => ({ ...s, fabric_preference: f.name }))}
                       className={clsx(
-                        'p-6 rounded-2xl border-2 text-left transition-all duration-200 bg-white card-hover flex flex-col justify-between h-48',
-                        local.interior_material_preference === m
+                        'p-5 rounded-2xl border-2 text-left transition-all duration-200 bg-white card-hover flex flex-col justify-between h-44',
+                        local.fabric_preference === f.name
                           ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
                           : 'border-slate-200 hover:border-indigo-300'
                       )}
                     >
                       <div>
-                        <div className="text-3.5xl mb-3">{emojis[m] || '🪵'}</div>
-                        <div className="font-bold text-slate-800 text-base">{m}</div>
-                        <div className="text-xs text-slate-500 mt-2 leading-relaxed">{descriptions[m] || 'Premium interior wood laminate.'}</div>
+                        <div className="text-3xl mb-2">{f.emoji}</div>
+                        <div className="font-bold text-slate-800 text-sm">{f.name}</div>
+                        <div className="text-xs text-slate-500 mt-1.5 leading-relaxed">{f.desc}</div>
                       </div>
-                      {local.interior_material_preference === m && (
-                        <div className="self-end bg-indigo-600 text-white rounded-full p-1 mt-2">
+                      {local.fabric_preference === f.name && (
+                        <div className="self-end bg-indigo-600 text-white rounded-full p-1 mt-1">
                           <Check className="w-3.5 h-3.5" />
                         </div>
                       )}
                     </button>
-                  )
-                })}
+                  ))}
+                </div>
               </div>
             </motion.div>
           )}

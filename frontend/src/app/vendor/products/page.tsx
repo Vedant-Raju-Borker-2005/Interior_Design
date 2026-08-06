@@ -1,18 +1,102 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useVendorStore } from '@/stores/vendorStore'
 import { vendorAPI, catalogAPI } from '@/lib/api'
 
-import { Plus, Edit3, X, Package, Trash2, Camera, Image as ImageIcon } from 'lucide-react'
+import { Plus, Edit3, X, Package, Trash2, Camera, Image as ImageIcon, RotateCw, ChevronDown, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+
+function CategoryDropdown({
+  value,
+  onChange,
+  placeholder = 'Select Category',
+  includeAll = false,
+  className = '',
+}: {
+  value: string
+  onChange: (val: string) => void
+  placeholder?: string
+  includeAll?: boolean
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={clsx(
+          "w-full flex items-center justify-between text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-left outline-none focus:ring-1 focus:ring-indigo-500 transition shadow-xs",
+          className
+        )}
+      >
+        <span className={clsx("truncate", !value && "text-slate-400 font-normal")}>
+          {value === 'All' ? 'All Categories' : (value || placeholder)}
+        </span>
+        <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-1 space-y-1">
+          {includeAll && (
+            <button
+              type="button"
+              onClick={() => { onChange('All'); setOpen(false) }}
+              className={clsx(
+                "w-full text-left text-xs font-bold px-3 py-1.5 rounded-lg transition",
+                value === 'All' ? "bg-indigo-50 text-indigo-700 font-extrabold" : "text-slate-700 hover:bg-slate-50"
+              )}
+            >
+              All Categories
+            </button>
+          )}
+
+          {Object.entries(SUBCATEGORY_MAP).map(([pCat, subs]) => (
+            <div key={pCat} className="space-y-0.5">
+              <div className="text-[10px] font-extrabold text-slate-400 uppercase px-3 pt-1.5 pb-0.5 tracking-wider bg-slate-50/50 rounded-md">
+                {pCat}
+              </div>
+              {subs.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => { onChange(s); setOpen(false) }}
+                  className={clsx(
+                    "w-full text-left text-xs font-medium pl-5 pr-3 py-1.5 rounded-lg transition flex items-center justify-between",
+                    value === s ? "bg-indigo-600 text-white font-bold" : "text-slate-700 hover:bg-indigo-50"
+                  )}
+                >
+                  <span>{s}</span>
+                  {value === s && <Check className="w-3.5 h-3.5 text-white" />}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 
 // ── Category / Subcategory map ────────────────────────────────────────────────
 const CATEGORIES = ['Furniture', 'Lighting', 'Appliances', 'Decor', 'Flooring', 'Kitchen Cabinets', 'Wardrobes', 'Curtains', 'Bathroom Fixtures']
 const SUBCATEGORY_MAP: Record<string, string[]> = {
-  Furniture: ['Sofas', 'Chairs', 'Recliners', 'Coffee Tables', 'Side Tables', 'Dining Tables', 'Beds', 'Bookshelves', 'Benches'],
+  Furniture: ['Sofas', 'Chairs', 'Side Tables', 'Dining Tables', 'Beds', 'Benches', 'Wardrobes', 'Study Desk', 'Shoe Racks'],
   Lighting: ['Floor Lamps', 'Table Lamps', 'Ceiling Lights', 'Wall Lights', 'Chandeliers', 'LED Strips'],
   Appliances: ['Refrigerator', 'Washing Machine', 'AC', 'Microwave', 'Dishwasher'],
   Decor: ['Wall Art', 'Vases', 'Cushions', 'Rugs', 'Candles', 'Planters'],
@@ -46,12 +130,9 @@ const ALL_CUSHION = ['Firm', 'Soft', 'Medium', 'High-back', 'Low-back', 'Tufted'
 const SPEC_MAP: Record<string, SpecConfig> = {
   Sofas:           { sections: ['color','fabric','size','cushion_style'],      sizeLabel: 'Seater Size',    sizeOptions: ['1-Seater','2-Seater','3-Seater','L-Shape','U-Shape'], fabricLabel: 'Fabric', fabricOptions: ALL_FABRICS, woodFinishOptions: [], textureOptions: [], cushionOptions: ALL_CUSHION },
   Chairs:          { sections: ['color','fabric','cushion_style'],             sizeLabel: '',               sizeOptions: [], fabricLabel: 'Fabric', fabricOptions: ALL_FABRICS, woodFinishOptions: [], textureOptions: [], cushionOptions: ALL_CUSHION },
-  Recliners:       { sections: ['color','fabric','cushion_style'],             sizeLabel: '',               sizeOptions: [], fabricLabel: 'Fabric', fabricOptions: ALL_FABRICS, woodFinishOptions: [], textureOptions: [], cushionOptions: ALL_CUSHION },
-  'Coffee Tables': { sections: ['color','wood_finish','texture','size'],       sizeLabel: 'Table Size',     sizeOptions: ['Small','Medium','Large'], fabricLabel: '', fabricOptions: [], woodFinishOptions: ALL_WOOD, textureOptions: ALL_TEXTURE, cushionOptions: [] },
   'Side Tables':   { sections: ['color','wood_finish','texture'],              sizeLabel: '',               sizeOptions: [], fabricLabel: '', fabricOptions: [], woodFinishOptions: ALL_WOOD, textureOptions: ALL_TEXTURE, cushionOptions: [] },
   'Dining Tables': { sections: ['color','wood_finish','texture','size'],       sizeLabel: 'Seating',        sizeOptions: ['2-Seater','4-Seater','6-Seater','8-Seater','10-Seater'], fabricLabel: '', fabricOptions: [], woodFinishOptions: ALL_WOOD, textureOptions: ALL_TEXTURE, cushionOptions: [] },
   Beds:            { sections: ['color','wood_finish','size'],                 sizeLabel: 'Bed Size',       sizeOptions: ['Single','Double','Queen','King','Super King'], fabricLabel: '', fabricOptions: [], woodFinishOptions: ALL_WOOD, textureOptions: [], cushionOptions: [] },
-  Bookshelves:     { sections: ['color','wood_finish','texture','size'],       sizeLabel: 'Size',           sizeOptions: ['Small','Medium','Large'], fabricLabel: '', fabricOptions: [], woodFinishOptions: ALL_WOOD, textureOptions: ALL_TEXTURE, cushionOptions: [] },
   Benches:         { sections: ['color','fabric','wood_finish'],               sizeLabel: '',               sizeOptions: [], fabricLabel: 'Upholstery', fabricOptions: ALL_FABRICS, woodFinishOptions: ALL_WOOD, textureOptions: [], cushionOptions: [] },
   'Floor Lamps':   { sections: ['color','texture'],                            sizeLabel: '',               sizeOptions: [], fabricLabel: '', fabricOptions: [], woodFinishOptions: [], textureOptions: ALL_TEXTURE, cushionOptions: [] },
   'Table Lamps':   { sections: ['color','texture'],                            sizeLabel: '',               sizeOptions: [], fabricLabel: '', fabricOptions: [], woodFinishOptions: [], textureOptions: ALL_TEXTURE, cushionOptions: [] },
@@ -61,7 +142,11 @@ const SPEC_MAP: Record<string, SpecConfig> = {
   Vinyl:           { sections: ['color','texture'],                            sizeLabel: '',               sizeOptions: [], fabricLabel: '', fabricOptions: [], woodFinishOptions: [], textureOptions: ALL_TEXTURE, cushionOptions: [] },
   Curtains:        { sections: ['color','fabric','size'],                      sizeLabel: 'Length',         sizeOptions: ['7ft','8ft','9ft','10ft','Custom'], fabricLabel: 'Fabric', fabricOptions: ALL_FABRICS, woodFinishOptions: [], textureOptions: [], cushionOptions: [] },
   Rugs:            { sections: ['color','texture','size'],                     sizeLabel: 'Rug Size',       sizeOptions: ["4'x6'","5'x8'","6'x9'","8'x10'","9'x12'","Custom"], fabricLabel: '', fabricOptions: [], woodFinishOptions: [], textureOptions: ALL_TEXTURE, cushionOptions: [] },
-  Wardrobes:       { sections: ['color','wood_finish','size'],                 sizeLabel: 'Width',          sizeOptions: ['2-Door','3-Door','4-Door','Walk-in'], fabricLabel: '', fabricOptions: [], woodFinishOptions: ALL_WOOD, textureOptions: [], cushionOptions: [] },
+  Wardrobes:       { sections: ['color','fabric','size'],                 sizeLabel: 'Width',          sizeOptions: ['2-Door','3-Door','4-Door','Walk-in'], fabricLabel: 'Fabric', fabricOptions: ALL_FABRICS, woodFinishOptions: [], textureOptions: [], cushionOptions: [] },
+  Wardrobe:        { sections: ['color','fabric','size'],                 sizeLabel: 'Width',          sizeOptions: ['2-Door','3-Door','4-Door','Walk-in'], fabricLabel: 'Fabric', fabricOptions: ALL_FABRICS, woodFinishOptions: [], textureOptions: [], cushionOptions: [] },
+  'Study Desk':    { sections: ['color','wood_finish','size'],                 sizeLabel: 'Desk Type',      sizeOptions: ['Writing','Executive','Compact','With Storage'], fabricLabel: '', fabricOptions: [], woodFinishOptions: ALL_WOOD, textureOptions: ALL_TEXTURE, cushionOptions: [] },
+  'Shoe Racks':    { sections: ['color','wood_finish','size'],                 sizeLabel: 'Tier Capacity',  sizeOptions: ['2-Tier','3-Tier','4-Tier','Cabinet'], fabricLabel: '', fabricOptions: [], woodFinishOptions: ALL_WOOD, textureOptions: ALL_TEXTURE, cushionOptions: [] },
+  Vanity:          { sections: ['color','wood_finish','size'],                 sizeLabel: 'Counter Type',   sizeOptions: ['Single Sink','Double Sink','Compact','Luxury'], fabricLabel: '', fabricOptions: [], woodFinishOptions: ALL_WOOD, textureOptions: ALL_TEXTURE, cushionOptions: [] },
 }
 
 function getSpecConfig(subcategory: string): SpecConfig {
@@ -79,6 +164,20 @@ export default function VendorProductsPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any | null>(null)
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
+
+  const colorDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (colorDropdownRef.current && !colorDropdownRef.current.contains(event.target as Node)) {
+        setShowColorDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // Search & Filter state variables
   const [searchTerm, setSearchTerm] = useState('')
@@ -98,11 +197,11 @@ export default function VendorProductsPage() {
   const filteredProducts = products.filter(p => {
     const term = searchTerm.toLowerCase().trim()
     const nameMatch = !term || p.name.toLowerCase().includes(term) || p.sku.toLowerCase().includes(term)
-    const catMatch = filterCategory === 'All' || p.category === filterCategory
+    const catMatch = filterCategory === 'All' || p.category === filterCategory || p.subcategory === filterCategory
     const v = p.variants || {}
     const pColors = Array.isArray(v.color) ? v.color.map((c: string) => c.toLowerCase()) : []
     const colorMatch = filterColor === 'All' || pColors.includes(filterColor.toLowerCase())
-    const priceMatch = maxPriceFilter === '' || p.basePrice <= maxPriceFilter
+    const priceMatch = maxPriceFilter === '' || maxPriceFilter <= 0 || p.basePrice <= maxPriceFilter
     return nameMatch && catMatch && colorMatch && priceMatch
   })
 
@@ -214,13 +313,17 @@ export default function VendorProductsPage() {
 
 
   // Reset variant selections when subcategory changes
-  useEffect(() => {
-    setFabricOptions([])
-    setSizeOptions([])
-    setTextureOptions([])
-    setWoodFinishOptions([])
-    setCushionStyleOptions([])
-  }, [subcategory])
+  const handleSingleCategoryChange = (val: string) => {
+    setSubcategory(val)
+    let parent = 'Furniture'
+    for (const [pCat, subs] of Object.entries(SUBCATEGORY_MAP)) {
+      if (subs.includes(val)) {
+        parent = pCat
+        break
+      }
+    }
+    setCategory(parent)
+  }
 
   const resetForm = () => {
     setName(''); setCategory('Furniture'); setSubcategory('Sofas')
@@ -246,6 +349,43 @@ export default function VendorProductsPage() {
     setSuitableRoom('Living Room')
   }
 
+  const openAddModal = () => { setEditingProduct(null); resetForm(); setShowModal(true) }
+
+  const openEditModal = (product: any) => {
+    setEditingProduct(product)
+    setName(product.name || '')
+    setCategory(product.category || CATEGORIES[0])
+    setSubcategory(product.subcategory || SUBCATEGORY_MAP[product.category]?.[0] || '')
+    setSku(product.sku || '')
+    setBasePrice(product.basePrice || '')
+    setTotalStock(product.availableQty ?? 10)
+    setDescription(product.description || '')
+    const v = product.variants || {}
+    setColors(Array.isArray(v.color) ? v.color : [])
+    setFabricOptions(Array.isArray(v.fabric) ? v.fabric : [])
+    setSizeOptions(Array.isArray(v.size) ? v.size : [])
+    setTextureOptions(Array.isArray(v.texture) ? v.texture : [])
+    setWoodFinishOptions(Array.isArray(v.wood_finish) ? v.wood_finish : [])
+    setCushionStyleOptions(Array.isArray(v.cushion_style) ? v.cushion_style : [])
+
+    setPrimaryMaterial(product.primaryMaterial || '')
+    setWidth(product.width ?? '')
+    setHeight(product.height ?? '')
+    setDepth(product.depth ?? '')
+    setWeight(product.weight ?? '')
+    setWeightCapacity(product.weightCapacity ?? '')
+    setStyle(product.style || 'Modern')
+    setFinish(product.finish || 'Matte')
+    setMountingType(product.mountingType || 'Floor Standing')
+    setAssemblyRequired(product.assemblyRequired || 'Yes')
+    setSuitableRoom(product.suitableRoom || 'Living Room')
+
+    const imgs = product.images || []
+    setProductImagePreviews([imgs[0] || '', imgs[1] || '', imgs[2] || ''])
+    setProductImageFiles([null, null, null])
+
+    setShowModal(true)
+  }
 
   const handleAddCustomColor = () => {
     const val = customColor.trim()
@@ -263,6 +403,7 @@ export default function VendorProductsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim() || !sku.trim()) { toast.error('Name and SKU are required'); return }
+    if (!colors || colors.length === 0) { toast.error('At least one Color Option is required'); return }
     if (!primaryMaterial || width === '' || height === '' || depth === '' || weight === '' || weightCapacity === '' || !style || !finish || !mountingType || !assemblyRequired || !suitableRoom) {
       toast.error('All Product Specifications are mandatory')
       return
@@ -276,7 +417,7 @@ export default function VendorProductsPage() {
         texture: textureOptions, wood_finish: woodFinishOptions,
         cushion_style: cushionStyleOptions,
       },
-      colorStock: {}, // No longer color-wise stock, send empty
+      colorStock: {},
       primaryMaterial,
       width: Number(width),
       height: Number(height),
@@ -302,29 +443,14 @@ export default function VendorProductsPage() {
       }
       await loadColors()
 
-
-      // Upload product images (up to 3 slots)
       const uploadPromises = productImageFiles.map(async (file, idx) => {
         if (file && productId) {
           return vendorAPI.uploadProductImage(productId, file, idx)
         }
-      }).filter(Boolean)
-
-      if (uploadPromises.length > 0) {
-        setUploadingImage(true)
-        try {
-          await Promise.all(uploadPromises)
-          toast.success('Product photos uploaded! 📸')
-        } catch (uploadErr) {
-          console.error("Photo upload error:", uploadErr)
-          toast.error('Product details saved, but some photo uploads failed.')
-        } finally {
-          setUploadingImage(false)
-        }
-      }
-
-      // Refresh product list
+      })
+      await Promise.all(uploadPromises)
       await loadProducts()
+
       setShowModal(false)
       setEditingProduct(null)
     } catch (err: any) { toast.error(err.message || 'Failed') }
@@ -339,10 +465,19 @@ export default function VendorProductsPage() {
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Product Catalog</h1>
           <p className="text-xs text-slate-500 mt-0.5">Manage items, variants, and stock.</p>
         </div>
-        <button onClick={() => { setEditingProduct(null); setShowModal(true) }}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition">
-          <Plus className="w-4 h-4" /> Add Product
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={async () => { await loadProducts(); toast.success('Catalog refreshed 🔄') }}
+            className="px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
+          >
+            <RotateCw className="w-3.5 h-3.5 text-slate-500" /> Refresh
+          </button>
+          <button onClick={() => { setEditingProduct(null); setShowModal(true) }}
+            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition">
+            <Plus className="w-4 h-4" /> Add Product
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters Panel */}
@@ -359,14 +494,11 @@ export default function VendorProductsPage() {
         </div>
         <div className="space-y-1">
           <label className="text-[10px] text-slate-400 font-bold uppercase">Category</label>
-          <select
+          <CategoryDropdown
             value={filterCategory}
-            onChange={e => setFilterCategory(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-250 rounded-xl text-xs text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-          >
-            <option value="All">All Categories</option>
-            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+            onChange={val => setFilterCategory(val)}
+            includeAll={true}
+          />
         </div>
         <div className="space-y-1">
           <label className="text-[10px] text-slate-400 font-bold uppercase">Color</label>
@@ -413,7 +545,6 @@ export default function VendorProductsPage() {
           {filteredProducts.map(p => {
             const v = p.variants || {}
             const totalQty = p.inventory?.availableQty ?? 0
-            const isExp = expandedCard === p.id
             const displayImage = p.images?.[0] || ''
             return (
               <div key={p.id} className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
@@ -427,45 +558,43 @@ export default function VendorProductsPage() {
                     />
                   </div>
                 )}
-                <div className="p-4 space-y-2.5 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="font-extrabold text-slate-800 text-sm leading-tight truncate">{p.name}</h3>
-                      <span className="text-[10px] text-slate-400 font-mono">{p.sku}</span>
+                <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-bold text-slate-800 text-sm">{p.name}</h3>
+                        <p className="text-[10px] font-mono text-slate-400 mt-0.5">{p.sku}</p>
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-500 uppercase px-2 py-0.5 bg-slate-100 rounded-md">
+                        {p.subcategory || p.category}
+                      </span>
                     </div>
-                    <span className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200">{p.category}</span>
+
+                    <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                      <div className="bg-slate-50 p-2 rounded-xl">
+                        <span className="text-[9px] text-slate-400 font-bold block uppercase">Price</span>
+                        <span className="font-bold text-slate-800">{fmt(p.basePrice)}</span>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded-xl">
+                        <span className="text-[9px] text-slate-400 font-bold block uppercase">Stock</span>
+                        <span className="font-bold text-slate-800">{totalQty} units</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1 mt-3">
+                      {v.color?.map((c: string) => <span key={c} className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-[10px] font-bold">{c}</span>)}
+                      {v.fabric?.map((f: string) => <span key={f} className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">{f}</span>)}
+                      {v.size?.map((s: string) => <span key={s} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-[10px] font-bold">{s}</span>)}
+                      {v.wood_finish?.map((w: string) => <span key={w} className="px-2 py-0.5 bg-orange-50 text-orange-700 border border-orange-100 rounded-full text-[10px] font-bold">{w}</span>)}
+                    </div>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100">
-                      <span className="text-[9px] text-slate-400 font-bold uppercase block">Price</span>
-                      <span className="font-black text-slate-800 text-sm">{fmt(p.basePrice)}</span>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100">
-                      <span className="text-[9px] text-slate-400 font-bold uppercase block">Stock</span>
-                      <span className={clsx('font-black text-sm', totalQty <= 2 ? 'text-rose-600' : 'text-slate-800')}>{totalQty} units</span>
-                    </div>
-                  </div>
-
-                  {v.color?.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {v.color.map((c: string) => <span key={c} className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-[10px] font-bold">{c}</span>)}
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-1">
-                    {v.fabric?.map((f: string) => <span key={f} className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-full text-[10px] font-bold">{f}</span>)}
-                    {v.size?.map((s: string) => <span key={s} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-[10px] font-bold">{s}</span>)}
-                    {v.wood_finish?.map((w: string) => <span key={w} className="px-2 py-0.5 bg-orange-50 text-orange-700 border border-orange-100 rounded-full text-[10px] font-bold">{w}</span>)}
-                  </div>
-
-
                 </div>
                 <div className="bg-slate-50 px-4 py-2.5 border-t border-slate-100 flex justify-between items-center">
                   <button onClick={() => handleDelete(p.id)}
                     className="px-3 py-1.5 bg-white border border-red-200 hover:border-red-300 hover:text-red-650 text-red-500 font-bold rounded-lg text-[10px] flex items-center gap-1 transition shadow-sm">
                     <Trash2 className="w-3.5 h-3.5" /> Delete
                   </button>
-                  <button onClick={() => { setEditingProduct(p); setShowModal(true) }}
+                  <button onClick={() => openEditModal(p)}
                     className="px-3 py-1.5 bg-white border border-slate-200 hover:border-indigo-200 hover:text-indigo-600 text-slate-600 font-bold rounded-lg text-[10px] flex items-center gap-1 transition shadow-sm">
                     <Edit3 className="w-3.5 h-3.5" /> Edit
                   </button>
@@ -484,7 +613,7 @@ export default function VendorProductsPage() {
             <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition"><X className="w-4 h-4 text-slate-500" /></button>
             <div>
               <h2 className="text-lg font-extrabold text-slate-900">{editingProduct ? 'Edit Product' : 'Add Product'}</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Specs shown below change based on the subcategory you pick.</p>
+              <p className="text-xs text-slate-400 mt-0.5">Specs shown below change based on the category you pick.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -500,117 +629,115 @@ export default function VendorProductsPage() {
                 </Field>
               </div>
 
-              {/* Row 2 — Category + Subcategory */}
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Category">
-                  <select value={category} onChange={e => { setCategory(e.target.value); setSubcategory(SUBCATEGORY_MAP[e.target.value]?.[0] || '') }}
-                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 bg-slate-50 outline-none focus:ring-1 focus:ring-indigo-500">
-                    {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                  </select>
-                </Field>
-                <Field label="Subcategory">
-                  <select value={subcategory} onChange={e => setSubcategory(e.target.value)}
-                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 bg-slate-50 outline-none focus:ring-1 focus:ring-indigo-500">
-                    {(SUBCATEGORY_MAP[category] || [subcategory]).map(s => <option key={s}>{s}</option>)}
-                  </select>
-                </Field>
-              </div>
-
-              {/* Row 3 — Price + Total Stock */}
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Base Price (INR) *">
-                  <input type="number" required min={0} value={basePrice} onChange={e => setBasePrice(Number(e.target.value))}
-                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50" />
-                </Field>
-                <Field label="Total Available Stock *">
-                  <input type="number" required min={0} value={totalStock} onChange={e => setTotalStock(Number(e.target.value))}
-                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50" />
-                </Field>
-              </div>
-
-              {/* ── COLOR VARIANTS ── */}
-              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">🎨 Color Options</label>
-                  <p className="text-[9px] text-slate-400">Choose catalog colors or add custom ones</p>
-                </div>
-                
-                {availableColors.length > 0 && (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search or select colors from catalog..."
-                      onClick={() => setShowColorDropdown(!showColorDropdown)}
-                      onChange={e => {
-                        setColorSearch(e.target.value);
-                        setShowColorDropdown(true);
-                      }}
-                      value={colorSearch}
-                      className="w-full text-xs border border-slate-200 rounded-lg p-2 font-bold text-slate-705 bg-white outline-none focus:ring-1 focus:ring-indigo-500"
+              {/* 2-Column Section: Left (Category, Base Price, Total Stock) | Right (Color Options) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Left Side */}
+                <div className="space-y-3">
+                  <Field label="Category *">
+                    <CategoryDropdown
+                      value={subcategory}
+                      onChange={val => handleSingleCategoryChange(val)}
+                      placeholder="Select Category"
                     />
-                    {showColorDropdown && (
-                      <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-250 border-slate-200 rounded-lg shadow-lg z-30 space-y-0.5 p-1">
-                        {availableColors
-                          .filter(c => !colors.includes(c) && c.toLowerCase().includes(colorSearch.toLowerCase()))
-                          .map(c => (
-                            <button
-                              key={c}
-                              type="button"
-                              onClick={() => {
-                                setColors([...colors, c]);
-                                setColorSearch('');
-                                setShowColorDropdown(false);
-                              }}
-                              className="w-full text-left text-xs font-bold text-slate-700 px-3 py-1.5 hover:bg-indigo-50 rounded-md transition"
-                            >
-                              {c}
-                            </button>
-                          ))}
-                        {availableColors.filter(c => !colors.includes(c) && c.toLowerCase().includes(colorSearch.toLowerCase())).length === 0 && (
-                          <div className="text-[10px] text-slate-400 text-center py-2 font-semibold">No matching colors found</div>
+                  </Field>
+
+                  <Field label="Base Price (INR) *">
+                    <input type="number" required min={0} value={basePrice} onChange={e => setBasePrice(Number(e.target.value))}
+                      className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50" />
+                  </Field>
+
+                  <Field label="Total Available Stock *">
+                    <input type="number" required min={0} value={totalStock} onChange={e => setTotalStock(Number(e.target.value))}
+                      className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50" />
+                  </Field>
+                </div>
+
+                {/* Right Side — Color Options */}
+                <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-3 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">🎨 Color Options *</label>
+                      <p className="text-[9px] text-slate-400">Select or add colors</p>
+                    </div>
+                    
+                    {availableColors.length > 0 && (
+                      <div ref={colorDropdownRef} className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search or select colors..."
+                          onClick={() => setShowColorDropdown(!showColorDropdown)}
+                          onChange={e => {
+                            setColorSearch(e.target.value);
+                            setShowColorDropdown(true);
+                          }}
+                          value={colorSearch}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2 font-bold text-slate-700 bg-white outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                        {showColorDropdown && (
+                          <div className="absolute left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg z-30 space-y-0.5 p-1">
+                            {availableColors
+                              .filter(c => !colors.includes(c) && c.toLowerCase().includes(colorSearch.toLowerCase()))
+                              .map(c => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  onClick={() => {
+                                    setColors([...colors, c]);
+                                    setColorSearch('');
+                                    setShowColorDropdown(false);
+                                  }}
+                                  className="w-full text-left text-xs font-bold text-slate-700 px-3 py-1.5 hover:bg-indigo-50 rounded-md transition"
+                                >
+                                  {c}
+                                </button>
+                              ))}
+                            {availableColors.filter(c => !colors.includes(c) && c.toLowerCase().includes(colorSearch.toLowerCase())).length === 0 && (
+                              <div className="text-[10px] text-slate-400 text-center py-2 font-semibold">No matching colors found</div>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
-                  </div>
-                )}
 
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    placeholder="Or add custom color (e.g. Rosewood)"
-                    value={customColor}
-                    onChange={e => setCustomColor(e.target.value)}
-                    className="flex-1 text-xs border border-slate-200 rounded-lg p-2 font-bold text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomColor(); } }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomColor}
-                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-750 text-white text-xs font-bold rounded-lg transition flex-shrink-0"
-                  >
-                    Add Color
-                  </button>
-                </div>
-
-                {colors.length > 0 && (
-                  <div className="space-y-1.5 pt-1">
-                    <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Selected Colors:</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {colors.map(c => (
-                        <span key={c} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                          {c}
-                          <button
-                            type="button"
-                            onClick={() => setColors(colors.filter(x => x !== c))}
-                            className="text-indigo-400 hover:text-indigo-600 font-extrabold focus:outline-none ml-0.5"
-                          >
-                            &times;
-                          </button>
-                        </span>
-                      ))}
+                    <div className="flex gap-2 items-center mt-2">
+                      <input
+                        type="text"
+                        placeholder="Custom color (e.g. Rosewood)"
+                        value={customColor}
+                        onChange={e => setCustomColor(e.target.value)}
+                        className="flex-1 text-xs border border-slate-200 rounded-lg p-2 font-bold text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomColor(); } }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomColor}
+                        className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition flex-shrink-0"
+                      >
+                        Add
+                      </button>
                     </div>
                   </div>
-                )}
+
+                  {colors.length > 0 && (
+                    <div className="space-y-1 pt-1 border-t border-slate-200/60">
+                      <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Selected Colors:</div>
+                      <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                        {colors.map(c => (
+                          <span key={c} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            {c}
+                            <button
+                              type="button"
+                              onClick={() => setColors(colors.filter(x => x !== c))}
+                              className="text-indigo-400 hover:text-indigo-600 font-extrabold focus:outline-none ml-0.5"
+                            >
+                              &times;
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* ── SMART SPEC SECTIONS — shown in 2 columns ── */}
@@ -649,7 +776,7 @@ export default function VendorProductsPage() {
                      <select required value={primaryMaterial} onChange={e => setPrimaryMaterial(e.target.value)}
                        className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 bg-white outline-none focus:ring-1 focus:ring-indigo-500">
                        <option value="">Select Material</option>
-                       {['Solid Wood', 'Engineered Wood', 'MDF', 'Metal', 'Plastic', 'Glass', 'Marble', 'Fabric', 'Leather'].map(m => (
+                       {['Solid Wood', 'Engineered Wood', 'Oak', 'Teak', 'Walnut'].map(m => (
                          <option key={m} value={m}>{m}</option>
                        ))}
                      </select>
@@ -745,7 +872,7 @@ export default function VendorProductsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {[0, 1, 2].map((slotIdx) => {
                     const preview = productImagePreviews[slotIdx]
-                    const label = slotIdx === 0 ? "Main View *" : slotIdx === 1 ? "Side View (Optional)" : "Perspective (Optional)"
+                    const label = slotIdx === 0 ? "Front View *" : slotIdx === 1 ? "Left View (Optional)" : "Right View (Optional)"
                     
                     return (
                       <div key={slotIdx} className="bg-white border border-slate-200/80 rounded-xl p-3 flex flex-col items-center justify-center text-center relative group">
@@ -802,7 +929,7 @@ export default function VendorProductsPage() {
                   })}
                 </div>
                 <p className="text-[9px] text-slate-400 font-medium">
-                  Uploading Main View is highly recommended. The other slots are optional to show different angles (e.g. side, back, top) to customers.
+                  Uploading Front View is highly recommended. The other slots (Left View, Right View) are optional to show different angles to customers.
                 </p>
               </div>
 

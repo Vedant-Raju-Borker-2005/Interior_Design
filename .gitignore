@@ -45,6 +45,7 @@ desktop.ini
 .idea/
 
 # Backend generated PDFs and uploads
+# Backend generated PDFs and uploads
 backend/pdfs/*.pdf
 backend/pdfs/floor_plans/*.pdf
 backend/pdfs/floor_plans/*.png
@@ -53,8 +54,9 @@ backend/pdfs/floor_plans/*.jpeg
 backend/pdfs/documents/
 backend/pdfs/proofs/
 backend/pdfs/renders/
+backend/pdfs/product_images/
 
-# Temporary diagnostic scripts
+# Temporary diagnostic scripts & logs
 check_images.py
 search_showcase.py
 search_backend.py
@@ -64,6 +66,11 @@ backend/reset_db.py
 reset_db.py
 check_db.py
 fix_thumbnails.py
+ingest_antigravity_catalog.py
+backend/ingest_antigravity_catalog.py
+*.log
+.pytest_cache/
+.turbo/
 
 UPDATES/
 # *.docx
