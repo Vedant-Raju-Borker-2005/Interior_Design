@@ -134,7 +134,7 @@ Interior_Design/
 
 ---
 
-## ⚡ Quick Start (Windows)
+## Quick Start (Windows)
 
 The repository comes with a batch script that automates environment check, dependency installation, database initialization, seeding, and server startup.
 
@@ -149,7 +149,7 @@ The repository comes with a batch script that automates environment check, depen
 
 ---
 
-## 🔧 Manual Setup (All OS)
+## Manual Setup (All OS)
 
 If you prefer to run the components manually, open two terminal windows:
 
@@ -214,6 +214,3 @@ GEMINI_KEY=your_gemini_api_key_here
 ```
 
 ---
-
-## 📝 License
-Built with ❤️ for Indian homeowners. Distributed under the MIT License. See `LICENSE` for more information.
