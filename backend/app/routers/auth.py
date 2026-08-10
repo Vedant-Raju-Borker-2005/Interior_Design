@@ -95,7 +95,35 @@ def login(req: SignupReq, db: Session = Depends(get_db)):
     # ── Strict Role portal guard ───────────────────────────────────────────────
     # A number can ONLY login to a portal it has explicitly registered for.
     if req.role:
+<<<<<<< HEAD
+        is_allowed = False
+        if req.role == "customer":
+            if user.role == "customer":
+                is_allowed = True
+        elif req.role == "admin":
+            if user.role == "admin":
+                is_allowed = True
+        elif req.role == "vendor":
+            if user.role == "vendor":
+                is_allowed = True
+            else:
+                from ..models import Vendor
+                vendor = db.query(Vendor).filter((Vendor.user_id == user.id) | (Vendor.phone == user.phone)).first()
+                if vendor:
+                    is_allowed = True
+        elif req.role == "team":
+            if user.role in ["team", "COORDINATOR", "TECHNICIAN", "PROJECT_TEAM"]:
+                is_allowed = True
+            else:
+                from ..models import ProjectTeamMember
+                member = db.query(ProjectTeamMember).filter((ProjectTeamMember.user_id == user.id) | (ProjectTeamMember.email == user.email) | (ProjectTeamMember.phone == user.phone)).first()
+                if member:
+                    is_allowed = True
+
+        if not is_allowed:
+=======
         if not _has_role(user, req.role):
+>>>>>>> 787aa1bd0a714a029bf2edd3706cf6c9a93a0d01
             raise HTTPException(
                 status_code=403,
                 detail=f"This number is not registered as a '{req.role}'. Please sign up as '{req.role}' first."
@@ -151,6 +179,30 @@ def verify_otp(req: VerifyOTPReq, db: Session = Depends(get_db)):
             admin_role = db.query(AdminRole).filter(AdminRole.user_id == user.id).first()
             if admin_role:
                 is_allowed = True
+<<<<<<< HEAD
+            else:
+                from ..models import AdminRole
+                admin_role = db.query(AdminRole).filter(AdminRole.user_id == user.id).first()
+                if admin_role:
+                    is_allowed = True
+        elif req.role == "vendor":
+            if user.role == "vendor":
+                is_allowed = True
+            else:
+                from ..models import Vendor
+                vendor = db.query(Vendor).filter((Vendor.user_id == user.id) | (Vendor.phone == user.phone)).first()
+                if vendor:
+                    is_allowed = True
+        elif req.role == "team":
+            if user.role in ["team", "COORDINATOR", "TECHNICIAN", "PROJECT_TEAM"]:
+                is_allowed = True
+            else:
+                from ..models import ProjectTeamMember
+                member = db.query(ProjectTeamMember).filter((ProjectTeamMember.user_id == user.id) | (ProjectTeamMember.email == user.email) | (ProjectTeamMember.phone == user.phone)).first()
+                if member:
+                    is_allowed = True
+=======
+>>>>>>> 787aa1bd0a714a029bf2edd3706cf6c9a93a0d01
 
         if not is_allowed:
             raise HTTPException(

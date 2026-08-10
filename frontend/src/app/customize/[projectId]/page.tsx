@@ -114,13 +114,31 @@ export default function GuidedCustomizePage() {
     ]
   }
 
+  // Robust category matcher for category IDs against product category & subcategory
+  const matchCategory = (catId: string, product: any) => {
+    if (!product) return false
+    const target = catId.toLowerCase().replace(/_/g, ' ').trim()
+    const cat = (product.category || '').toLowerCase().replace(/_/g, ' ').trim()
+    const sub = (product.subcategory || '').toLowerCase().replace(/_/g, ' ').trim()
+    
+    if (cat === target || sub === target) return true
+    
+    const targetBase = target.endsWith('s') ? target.slice(0, -1) : target
+    const catBase = cat.endsWith('s') ? cat.slice(0, -1) : cat
+    const subBase = sub.endsWith('s') ? sub.slice(0, -1) : sub
+    
+    if (catBase === targetBase || subBase === targetBase) return true
+    if (target.includes(sub) || sub.includes(target) || target.includes(cat) || cat.includes(target)) return true
+    return false
+  }
+
   // Auto-select first incomplete category or first category
   useEffect(() => {
     const categories = getCategoriesForActiveRoom()
     if (categories.length > 0) {
       // Look for first category without a saved product
       const incomplete = categories.find(
-        (cat) => !activeRoomItems.some((it: any) => it.product?.category?.toLowerCase() === cat.id.toLowerCase() || it.product?.subcategory?.toLowerCase() === cat.id.toLowerCase())
+        (cat) => !activeRoomItems.some((it: any) => matchCategory(cat.id, it.product))
       )
       setSelectedCategory(incomplete ? incomplete.id : categories[0].id)
       setCustomizingProduct(null)
@@ -175,7 +193,7 @@ export default function GuidedCustomizePage() {
     try {
       // Clear existing item in this category first if any
       const existing = activeRoomItems.find(
-        (it: any) => it.product?.category?.toLowerCase() === selectedCategory.toLowerCase() || it.product?.subcategory?.toLowerCase() === selectedCategory.toLowerCase()
+        (it: any) => matchCategory(selectedCategory, it.product)
       )
       if (existing) {
         await projectsAPI.removeRoomItem(projectId, activeRoom.id, existing.id)
@@ -238,12 +256,15 @@ export default function GuidedCustomizePage() {
 
 
   // Room completeness validation logic
+  const isCategoryDone = (catId: string, room: any) => {
+    if (!room || !room.items) return false
+    return room.items.some((it: any) => matchCategory(catId, it.product))
+  }
+
   const checkRoomCompleteness = (room: any) => {
     if (!room) return { isComplete: false, missing: [] }
     const categories = MANDATORY_CATEGORIES[room.room_type] || []
-    const itemCategories = room.items?.map((it: any) => (it.product?.subcategory || it.product?.category || '').toLowerCase()) || []
-
-    const missing = categories.filter((cat) => !itemCategories.includes(cat.id.toLowerCase()))
+    const missing = categories.filter((cat) => !isCategoryDone(cat.id, room))
     return {
       isComplete: missing.length === 0,
       missing: missing.map((m) => m.label)
@@ -253,8 +274,7 @@ export default function GuidedCustomizePage() {
   const getCompletedCategoriesCount = (room: any) => {
     if (!room || !room.items) return 0
     const categories = MANDATORY_CATEGORIES[room.room_type] || []
-    const itemCategories = room.items.map((it: any) => (it.product?.subcategory || it.product?.category || '').toLowerCase())
-    return categories.filter((cat) => itemCategories.includes(cat.id.toLowerCase())).length
+    return categories.filter((cat) => isCategoryDone(cat.id, room)).length
   }
 
   const activeRoomCheck = checkRoomCompleteness(activeRoom)
@@ -382,7 +402,7 @@ export default function GuidedCustomizePage() {
               <div className="space-y-1.5">
                 {getCategoriesForActiveRoom().map((cat) => {
                   const savedItemInCat = activeRoomItems.find(
-                    (it: any) => it.product?.category?.toLowerCase() === cat.id.toLowerCase() || it.product?.subcategory?.toLowerCase() === cat.id.toLowerCase()
+                    (it: any) => matchCategory(cat.id, it.product)
                   )
                   const isSelected = selectedCategory === cat.id
 
