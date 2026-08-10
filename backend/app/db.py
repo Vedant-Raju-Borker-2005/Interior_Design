@@ -120,7 +120,7 @@ def init_db():
 
 
 def sync_demo_data(db):
-    from .models import User, Project, Vendor, ProjectTeamMember, ProjectAssignment, VendorAssignment, Room
+    from .models import User, Project, Vendor, ProjectTeamMember, ProjectAssignment, VendorAssignment, Room, Product, RoomItem, Quotation
     import uuid
     import datetime
 
@@ -190,6 +190,56 @@ def sync_demo_data(db):
             db.commit()
 
     # 3. Auto-assign all existing projects to the team user and the vendor
+
+    all_projects = db.query(Project).all()
+    for proj in all_projects:
+        # Check if project has rooms
+        existing_rooms = db.query(Room).filter(Room.project_id == proj.id).all()
+        if not existing_rooms:
+            r1 = Room(id=f"room-living-{proj.id[:6]}", project_id=proj.id, room_type="living_room")
+            r2 = Room(id=f"room-master-{proj.id[:6]}", project_id=proj.id, room_type="bedroom_master")
+            r3 = Room(id=f"room-kitchen-{proj.id[:6]}", project_id=proj.id, room_type="kitchen")
+            db.add_all([r1, r2, r3])
+            db.commit()
+
+            r1, r2, r3 = r1, r2, r3
+        else:
+            r1, r2, r3 = existing_rooms[0], existing_rooms[1] if len(existing_rooms) > 1 else existing_rooms[0], existing_rooms[2] if len(existing_rooms) > 2 else existing_rooms[0]
+
+        existing_items = db.query(RoomItem).filter(RoomItem.room_id.in_([r.id for r in existing_rooms])).all() if existing_rooms else []
+        if not existing_items:
+            prods = db.query(Product).all()
+            if prods:
+                sofa_prod = next((p for p in prods if "Sofa" in p.name), prods[0])
+                bed_prod = next((p for p in prods if "Bed" in p.name), prods[0])
+                cab_prod = next((p for p in prods if "Cabinets" in p.name), prods[0])
+
+                items = [
+                    RoomItem(id=f"item-sofa-{proj.id[:6]}", room_id=r1.id, product_id=sofa_prod.id, unit_price=sofa_prod.price, qty=1, custom_color="Warm Beige", custom_wood_finish="Teak Laminated"),
+                    RoomItem(id=f"item-bed-{proj.id[:6]}", room_id=r2.id, product_id=bed_prod.id, unit_price=bed_prod.price, qty=1, custom_color="Blush Pink", custom_wood_finish="Oak Laminated"),
+                    RoomItem(id=f"item-cab-{proj.id[:6]}", room_id=r3.id, product_id=cab_prod.id, unit_price=cab_prod.price, qty=1, custom_color="Royal Navy Blue", custom_wood_finish="Walnut Laminated"),
+                ]
+                db.add_all(items)
+                db.commit()
+
+        # Check if project has quotation
+        existing_quote = db.query(Quotation).filter(Quotation.project_id == proj.id).first()
+        if not existing_quote:
+            subtotal = 650000.0
+            gst = subtotal * 0.18
+            demo_quote = Quotation(
+                id=f"quote-{proj.id[:6]}",
+                project_id=proj.id,
+                subtotal=subtotal,
+                gst=gst,
+                total=subtotal + gst,
+                status="APPROVED",
+                created_at=datetime.datetime.utcnow()
+            )
+            db.add(demo_quote)
+            db.commit()
+
+    # 4. Auto-assign all existing projects to the team user and the vendor
     team_user = users.get("team")
     all_projects = db.query(Project).all()
     roles = ["MANAGER", "COORDINATOR", "TECHNICIAN"]
@@ -237,10 +287,11 @@ def sync_project_vendor_assignments(project_id: str, db: Session):
         items = db.query(RoomItem).filter(RoomItem.room_id == room.id).all()
         for item in items:
             product = db.query(Product).filter(Product.id == item.product_id).first()
-            if not product or not product.vendor_id:
-                continue
-
-            vendor = db.query(Vendor).filter(Vendor.id == product.vendor_id).first()
+            vendor = None
+            if product and product.vendor_id:
+                vendor = db.query(Vendor).filter(Vendor.id == product.vendor_id).first()
+            if not vendor:
+                vendor = db.query(Vendor).filter(Vendor.status == "APPROVED").first()
             if not vendor:
                 continue
 

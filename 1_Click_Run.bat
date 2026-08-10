@@ -156,6 +156,11 @@ echo.
 :: ============================================================
 echo [5/5] Launching services...
 echo.
+
+:: Clear ports 8000 and 3000 if occupied from previous sessions
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING 2^>nul') do taskkill /F /PID %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000 ^| findstr LISTENING 2^>nul') do taskkill /F /PID %%a >nul 2>&1
+
 echo   Backend API : http://localhost:8000
 echo   Frontend    : http://localhost:3000
 echo   API Docs    : http://localhost:8000/docs
