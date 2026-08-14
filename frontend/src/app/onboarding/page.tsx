@@ -13,13 +13,28 @@ import { ArrowRight, ArrowLeft, CheckCircle2, Home, Sparkles, Wrench, Upload, Fi
 import clsx from 'clsx'
 import { getColorHex, getColorFamily } from '@/lib/colorUtils'
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 const STYLE_OPTIONS = [
-  { id: 'modern',              label: 'Modern',              emoji: '🔲', desc: 'Clean lines, neutral tones' },
-  { id: 'scandinavian',        label: 'Scandinavian',        emoji: '🪵', desc: 'Light wood, cozy textures' },
-  { id: 'indian_contemporary', label: 'Indian Contemporary', emoji: '🪔', desc: 'Warm tones, brass accents' },
-  { id: 'luxury',              label: 'Luxury',              emoji: '💎', desc: 'Marble, velvet, bespoke' },
-  { id: 'mediterranean',       label: 'Mediterranean',       emoji: '🌊', desc: 'Arches, terracotta, sea palette' },
-  { id: 'boho',                label: 'Boho',                emoji: '🪴', desc: 'Rattan, macramé, warm amber' },
+  { id: 'modern',              label: 'Modern',              emoji: '🔲', desc: 'Clean lines, neutral tones', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Warm Beige.png` },
+  { id: 'scandinavian',        label: 'Scandinavian',        emoji: '🪵', desc: 'Light wood, cozy textures', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Emerald Green.png` },
+  { id: 'indian_contemporary', label: 'Indian Contemporary', emoji: '🪔', desc: 'Warm tones, brass accents', img: `${BACKEND_URL}/static/pdfs/catalog/Master Bed Set Blush Pink.png` },
+  { id: 'luxury',              label: 'Luxury',              emoji: '💎', desc: 'Marble, velvet, bespoke', img: `${BACKEND_URL}/static/pdfs/catalog/Master Bed Set Royal Navy Blue.png` },
+  { id: 'mediterranean',       label: 'Mediterranean',       emoji: '🌊', desc: 'Arches, terracotta, sea palette', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Royal Navy Blue.png` },
+  { id: 'boho',                label: 'Boho',                emoji: '🪴', desc: 'Rattan, macramé, warm amber', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Blush Pink.png` },
+]
+
+const MATERIAL_IMAGES: Record<string, string> = {
+  'Oak Laminate': `${BACKEND_URL}/static/pdfs/catalog/wardrobes-warm_beige-oak-laminated-front_view.png`,
+  'Teak Laminate': `${BACKEND_URL}/static/pdfs/catalog/wardrobes-golden_brown-teak-laminated-front_view.png`,
+  'Walnut Laminate': `${BACKEND_URL}/static/pdfs/catalog/wardrobes-dark_brown-walnut-laminated-front_view.png`,
+}
+
+const FABRIC_OPTIONS = [
+  { id: 'Linen', name: 'Linen', emoji: '🧵', desc: 'Breathable, natural, crisp texture.', img: `${BACKEND_URL}/static/pdfs/catalog/Accent Chair Warm Beige.png` },
+  { id: 'Velvet', name: 'Velvet', emoji: '✨', desc: 'Plush, soft, rich plush texture.', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Blush Pink.png` },
+  { id: 'Woven Fabric', name: 'Woven Fabric', emoji: '🪡', desc: 'Versatile woven upholstery fabric.', img: `${BACKEND_URL}/static/pdfs/catalog/Area Rug Blush Pink.png` },
+  { id: 'Leatherette', name: 'Leatherette', emoji: '🛋️', desc: 'Sleek, spill-resistant leather finish.', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Charcoal Grey.png` },
 ]
 
 const BUDGET_RANGES = [
@@ -274,24 +289,44 @@ export default function OnboardingPage() {
           {step === 0 && (
             <motion.div key="style" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
               <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">What's your design vibe?</h2>
-              <p className="text-slate-500 mb-8">Select one or more. We'll curate package suggestions that fit your aesthetic.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {STYLE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => toggleStyle(opt.id)}
-                    className={clsx(
-                      'p-5 rounded-2xl border-2 text-left transition-all duration-200 bg-white card-hover',
-                      local.style_tags.includes(opt.id)
-                        ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
-                        : 'border-slate-200 hover:border-indigo-300'
-                    )}
-                  >
-                    <div className="text-3.5xl mb-3">{opt.emoji}</div>
-                    <div className="font-bold text-slate-800 text-base">{opt.label}</div>
-                    <div className="text-xs text-slate-500 mt-1.5 leading-relaxed">{opt.desc}</div>
-                  </button>
-                ))}
+              <p className="text-slate-500 mb-8">Select one or more interior styles. Visual representations guide our design engine.</p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {STYLE_OPTIONS.map((opt) => {
+                  const isSelected = local.style_tags.includes(opt.id)
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => toggleStyle(opt.id)}
+                      className={clsx(
+                        'group rounded-2xl border-2 bg-white overflow-hidden text-left transition-all duration-200 shadow-sm hover:shadow-md flex flex-col h-full relative',
+                        isSelected
+                          ? 'border-indigo-650 ring-1 ring-indigo-650'
+                          : 'border-slate-200 hover:border-indigo-300'
+                      )}
+                    >
+                      <div className="h-44 w-full overflow-hidden relative bg-slate-100 flex-shrink-0">
+                        <img
+                          src={opt.img}
+                          alt={opt.label}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        {isSelected && (
+                          <div className="absolute top-3 right-3 bg-indigo-600 text-white rounded-full p-1 shadow-md z-10">
+                            <Check className="w-4 h-4 stroke-[3px]" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="font-extrabold text-slate-900 text-base">{opt.label}</div>
+                          <div className="text-xs text-slate-500 mt-1 leading-relaxed">{opt.desc}</div>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </motion.div>
           )}
@@ -301,43 +336,48 @@ export default function OnboardingPage() {
             <motion.div key="material-pref" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-8">
               <div>
                 <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Material & Fabric Preferences</h2>
-                <p className="text-slate-500 mb-6">Select your preferred wood laminate finish and fabric texture for customized recommendations.</p>
+                <p className="text-slate-500 mb-6">Select your preferred interior wood laminate finish and upholstery fabric texture.</p>
                 
-                <h3 className="text-xs font-extrabold text-indigo-700 uppercase tracking-wider mb-3">🪵 Wood Laminate Finish</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <h3 className="text-xs font-extrabold text-indigo-700 uppercase tracking-wider mb-3">🪵 INTERIOR WOOD LAMINATE FINISH</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   {(availableMaterials.length > 0 ? availableMaterials : ['Oak Laminate', 'Teak Laminate', 'Walnut Laminate']).map((m) => {
-                    const emojis: Record<string, string> = {
-                      'Oak Laminate': '🪵',
-                      'Teak Laminate': '🌲',
-                      'Walnut Laminate': '🌰'
-                    }
                     const descriptions: Record<string, string> = {
                       'Oak Laminate': 'Light, modern, and warm wood grain finish.',
                       'Teak Laminate': 'Classic golden-brown look with rich textures.',
                       'Walnut Laminate': 'Deep, dark, and sophisticated premium finish.'
                     }
+                    const imageUrl = MATERIAL_IMAGES[m] || `${BACKEND_URL}/static/pdfs/catalog/wardrobes-warm_beige-oak-laminated-front_view.png`
+                    const isSelected = local.interior_material_preference === m
                     return (
                       <button
                         key={m}
                         type="button"
                         onClick={() => setLocal((s) => ({ ...s, interior_material_preference: m }))}
                         className={clsx(
-                          'p-5 rounded-2xl border-2 text-left transition-all duration-200 bg-white card-hover flex flex-col justify-between h-44',
-                          local.interior_material_preference === m
-                            ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
+                          'group rounded-2xl border-2 bg-white overflow-hidden text-left transition-all duration-200 shadow-sm hover:shadow-md flex flex-col h-full relative',
+                          isSelected
+                            ? 'border-indigo-650 ring-1 ring-indigo-650'
                             : 'border-slate-200 hover:border-indigo-300'
                         )}
                       >
-                        <div>
-                          <div className="text-3xl mb-2">{emojis[m] || '🪵'}</div>
-                          <div className="font-bold text-slate-800 text-sm">{m}</div>
-                          <div className="text-xs text-slate-500 mt-1.5 leading-relaxed">{descriptions[m] || 'Premium interior wood laminate.'}</div>
+                        <div className="h-36 w-full overflow-hidden relative bg-slate-100 flex-shrink-0">
+                          <img
+                            src={imageUrl}
+                            alt={m}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          {isSelected && (
+                            <div className="absolute top-3 right-3 bg-indigo-600 text-white rounded-full p-1 shadow-md z-10">
+                              <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                            </div>
+                          )}
                         </div>
-                        {local.interior_material_preference === m && (
-                          <div className="self-end bg-indigo-600 text-white rounded-full p-1 mt-1">
-                            <Check className="w-3.5 h-3.5" />
+                        <div className="p-4 flex-1 flex flex-col justify-between">
+                          <div>
+                            <div className="font-extrabold text-slate-800 text-sm">{m}</div>
+                            <div className="text-xs text-slate-500 mt-1 leading-relaxed">{descriptions[m] || 'Premium interior wood laminate.'}</div>
                           </div>
-                        )}
+                        </div>
                       </button>
                     )
                   })}
@@ -345,36 +385,43 @@ export default function OnboardingPage() {
               </div>
 
               <div>
-                <h3 className="text-xs font-extrabold text-indigo-700 uppercase tracking-wider mb-3">🪡 Upholstery & Fabric Preference</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                  {[
-                    { id: 'Linen', name: 'Linen', emoji: '🧵', desc: 'Breathable, natural, crisp texture.' },
-                    { id: 'Velvet', name: 'Velvet', emoji: '✨', desc: 'Plush, soft, rich plush texture.' },
-                    { id: 'Fabric', name: 'Fabric', emoji: '🪡', desc: 'Versatile woven upholstery fabric.' }
-                  ].map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setLocal((s) => ({ ...s, fabric_preference: f.name }))}
-                      className={clsx(
-                        'p-5 rounded-2xl border-2 text-left transition-all duration-200 bg-white card-hover flex flex-col justify-between h-44',
-                        local.fabric_preference === f.name
-                          ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
-                          : 'border-slate-200 hover:border-indigo-300'
-                      )}
-                    >
-                      <div>
-                        <div className="text-3xl mb-2">{f.emoji}</div>
-                        <div className="font-bold text-slate-800 text-sm">{f.name}</div>
-                        <div className="text-xs text-slate-500 mt-1.5 leading-relaxed">{f.desc}</div>
-                      </div>
-                      {local.fabric_preference === f.name && (
-                        <div className="self-end bg-indigo-600 text-white rounded-full p-1 mt-1">
-                          <Check className="w-3.5 h-3.5" />
+                <h3 className="text-xs font-extrabold text-indigo-700 uppercase tracking-wider mb-3">🪡 UPHOLSTERY & FABRIC PREFERENCE</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                  {FABRIC_OPTIONS.map((f) => {
+                    const isSelected = local.fabric_preference === f.name
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setLocal((s) => ({ ...s, fabric_preference: f.name }))}
+                        className={clsx(
+                          'group rounded-2xl border-2 bg-white overflow-hidden text-left transition-all duration-200 shadow-sm hover:shadow-md flex flex-col h-full relative',
+                          isSelected
+                            ? 'border-indigo-650 ring-1 ring-indigo-650'
+                            : 'border-slate-200 hover:border-indigo-300'
+                        )}
+                      >
+                        <div className="h-32 w-full overflow-hidden relative bg-slate-100 flex-shrink-0">
+                          <img
+                            src={f.img}
+                            alt={f.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          {isSelected && (
+                            <div className="absolute top-3 right-3 bg-indigo-600 text-white rounded-full p-1 shadow-md z-10">
+                              <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </button>
-                  ))}
+                        <div className="p-4 flex-1 flex flex-col justify-between">
+                          <div>
+                            <div className="font-extrabold text-slate-850 text-slate-800 text-sm">{f.name}</div>
+                            <div className="text-xs text-slate-500 mt-1 leading-normal">{f.desc}</div>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </motion.div>

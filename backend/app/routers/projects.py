@@ -139,7 +139,7 @@ def update_project(
     db: Session = Depends(get_db),
 ):
     project = _get_project_or_404(project_id, user.id, db)
-    for field in ["status", "package_id", "budget", "property_name"]:
+    for field in ["status", "package_id", "budget", "property_name", "floor_plan_url"]:
         if field in payload:
             setattr(project, field, payload[field])
     db.commit()
@@ -377,6 +377,13 @@ def _get_project_or_404(project_id: str, user_id: str, db: Session) -> Project:
 
 
 def _project_summary(p: Project) -> dict:
+    fp_name = None
+    if p.floor_plan_url:
+        if "fp_proj_" in p.floor_plan_url:
+            fp_name = "Uploaded Blueprint"
+        else:
+            fp_name = "Standard 2D Layout Plan"
+
     return {
         "id": p.id,
         "bhk_type": p.bhk_type,
@@ -387,7 +394,15 @@ def _project_summary(p: Project) -> dict:
         "package_id": p.package_id,
         "total_area_sqft": p.total_area_sqft,
         "interior_material_preference": p.interior_material_preference,
+        "floor_plan_url": p.floor_plan_url,
+        "floor_plan_name": fp_name,
         "created_at": p.created_at.isoformat() if p.created_at else None,
+        "package": {
+            "id": p.package.id,
+            "name": p.package.name,
+            "base_price": p.package.base_price,
+            "tier": p.package.tier,
+        } if p.package else None,
     }
 
 

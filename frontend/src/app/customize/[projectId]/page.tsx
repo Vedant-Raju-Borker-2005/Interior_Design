@@ -293,6 +293,24 @@ export default function GuidedCustomizePage() {
     )
   }
 
+  const calculateCurrentCost = () => {
+    if (!project || !project.rooms) return 0
+    let totalItemsCost = 0
+    project.rooms.forEach((room: any) => {
+      (room.items || []).forEach((item: any) => {
+        const price = item.unit_price || item.product?.price || 0
+        const qty = item.qty || 1
+        totalItemsCost += price * qty
+      })
+    })
+    const basePrice = project.package?.base_price || 300000
+    return totalItemsCost > 0 ? totalItemsCost : basePrice
+  }
+
+  const baseAmount = project?.package?.base_price || 300000
+  const currentCost = calculateCurrentCost()
+  const variation = currentCost - baseAmount
+
   const galleryImages = customizingProduct
     ? (customizingProduct.images || customizingProduct.variants?.images || [])
     : []
@@ -314,6 +332,25 @@ export default function GuidedCustomizePage() {
               </span>
             </div>
             <p className="text-slate-500 text-xs mt-0.5">Customize room configurations and choose custom elements</p>
+
+            {project && (
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-2 text-xs font-bold text-slate-500 border-t border-slate-100 pt-2 w-full">
+                <div>
+                  Base Package: <span className="text-slate-800 font-extrabold">₹{baseAmount.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="h-3 w-[1px] bg-slate-200 hidden sm:block" />
+                <div>
+                  Current Project: <span className="text-indigo-600 font-extrabold">₹{currentCost.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="h-3 w-[1px] bg-slate-200 hidden sm:block" />
+                <div>
+                  Variation:{' '}
+                  <span className={clsx("font-extrabold", variation >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                    {variation >= 0 ? '+' : ''}₹{variation.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
