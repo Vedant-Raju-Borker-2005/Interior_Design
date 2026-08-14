@@ -94,7 +94,7 @@ export const projectsAPI = {
   get: (id: string) =>
     axiosInstance.get(`/api/v1/projects/${id}`),
   
-  update: (id: string, data: Partial<{ title: string; bhk: string; budget_min: number; budget_max: number; package_id: string }>) =>
+  update: (id: string, data: Partial<{ title: string; bhk: string; budget: number; budget_min: number; budget_max: number; package_id: string; property_name: string; status: string; floor_plan_url: string }>) =>
     axiosInstance.put(`/api/v1/projects/${id}`, data),
 
 

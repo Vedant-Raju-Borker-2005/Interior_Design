@@ -16,11 +16,11 @@ const HERO_IMAGES = [
 ]
 
 const STEPS = [
-  { icon: LayoutGrid, title: 'Choose Your BHK', desc: 'Select 1–5 BHK and let us auto-configure your rooms.', color: 'bg-indigo-100 text-indigo-600' },
-  { icon: Palette, title: 'Pick a Style Package', desc: 'Browse AI-recommended Basic, Premium, or Luxury packages.', color: 'bg-amber-100 text-amber-600' },
-  { icon: Zap, title: 'Customise Room-by-Room', desc: 'Swap furniture, change colours/materials with live price updates.', color: 'bg-emerald-100 text-emerald-600' },
-  { icon: ImageIcon, title: 'AI Visualisation', desc: 'Generate photo-realistic renders of your designed room in seconds.', color: 'bg-purple-100 text-purple-600' },
-  { icon: FileText, title: 'Instant Quotation', desc: 'Download a professional PDF quote with GST, terms, and warranty.', color: 'bg-rose-100 text-rose-600' },
+  { icon: LayoutGrid, title: 'Choose Project & BHK', desc: 'Select New Home or Upgrade and set up your room layouts.', color: 'bg-indigo-100 text-indigo-600' },
+  { icon: Palette, title: 'Select Materials & Fabrics', desc: 'Pick laminate finishes and fabric textures with real-time price tracking.', color: 'bg-amber-100 text-amber-600' },
+  { icon: Zap, title: 'Customise Room-by-Room', desc: 'Swap items, change attributes, and track budget variations.', color: 'bg-emerald-100 text-emerald-600' },
+  { icon: ImageIcon, title: 'Floor Layout & Renders', desc: 'Link custom floor plan blueprints and generate photo-realistic room renders.', color: 'bg-purple-100 text-purple-600' },
+  { icon: FileText, title: 'Quote & execution', desc: 'Download GST-compliant PDF quotations and begin execution with verified contractors.', color: 'bg-rose-100 text-rose-600' },
 ]
 
 const FEATURES = [
@@ -72,18 +72,18 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-sm font-medium mb-6"
             >
               <Sparkles className="w-4 h-4" />
-              AI-Powered Interior Design • India&apos;s First
+              Designed & Delivered in a Week • Starting from ₹3L
             </motion.div>
 
             <h1 className="text-5xl lg:text-6xl xl:text-7xl font-black text-white leading-tight mb-6">
-              Design Your{' '}
-              <span className="gradient-text">Dream Home</span>
-              {' '}with AI
+              Get Your Interiors{' '}
+              <span className="gradient-text">Designed & Delivered</span>
+              {' '}in a Week
             </h1>
 
             <p className="text-lg text-indigo-200 leading-relaxed mb-8 max-w-lg">
-              From BHK selection to photorealistic room renders — in under 10 minutes.
-              Get an instant professional quotation and connect with verified contractors.
+              AI-powered design coupled with rapid, guaranteed site execution.
+              Select packages starting under ₹3 Lakh, customize details in real-time, and execute with verified contractors.
             </p>
 
             <div className="flex flex-wrap gap-4 mb-10">
@@ -257,9 +257,9 @@ export default function LandingPage() {
       {/* ── CTA ────────────────────────────────────────────────────────────── */}
       <section className="py-24 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white text-center">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-          <h2 className="text-4xl font-bold mb-4">Ready to Design Your Dream Home?</h2>
+          <h2 className="text-4xl font-bold mb-4">Ready to Design & Deliver Your Interiors?</h2>
           <p className="text-indigo-200 text-lg mb-8 max-w-xl mx-auto">
-            Join 50,000+ homeowners who designed with InteriorAI. It&apos;s free to start.
+            Join 50,000+ homeowners who designed and executed with InteriorAI. Starting from ₹3L.
           </p>
           <Link href={ctaHref} className="inline-flex items-center gap-2 bg-white text-indigo-700 font-bold px-10 py-4 rounded-2xl hover:bg-indigo-50 transition-all shadow-glow-indigo text-lg">
             Start for Free <ArrowRight className="w-5 h-5" />

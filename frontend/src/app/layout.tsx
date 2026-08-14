@@ -3,12 +3,12 @@ import './globals.css'
 import { Toaster } from 'react-hot-toast'
 
 export const metadata: Metadata = {
-  title: 'InteriorAI — AI-Powered Interior Design Platform',
-  description: 'Design your dream home with AI. Choose packages, customize room-by-room, generate photo-realistic renders, and get instant quotations.',
-  keywords: 'interior design, AI visualization, home decor, 3D rendering, modular furniture, quotation',
+  title: 'InteriorAI — Designed & Delivered in a Week',
+  description: 'Get your home interiors designed and executed in a week. Select packages starting from ₹3L, customize details in real-time, and get instant quotes.',
+  keywords: 'interior design, modular furniture, home decor, 3D rendering, site delivery, quotation',
   openGraph: {
-    title: 'InteriorAI — AI-Powered Interior Design Platform',
-    description: 'Design your dream home with AI in minutes.',
+    title: 'InteriorAI — Designed & Delivered in a Week',
+    description: 'Guaranteed design and execution in a week starting from ₹3L.',
     type: 'website',
   },
 }

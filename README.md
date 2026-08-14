@@ -106,7 +106,7 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
 
 ```text
 Interior_Design/
-├── 1_Click_Run.bat         # Windows automated launcher (Backend + Frontend + DB Seeding)
+├── Click_Run.bat           # Windows automated launcher (Backend + Frontend + DB Seeding)
 ├── .gitignore              # Configured file exclusions (venv, node_modules, build outputs)
 ├── backend/
 │   ├── .env                # Server configuration & JWT secrets
@@ -138,7 +138,7 @@ Interior_Design/
 
 The repository comes with a batch script that automates environment check, dependency installation, database initialization, seeding, and server startup.
 
-1. Double-click the **`1_Click_Run.bat`** file at the root folder of the project.
+1. Double-click the **`Click_Run.bat`** file at the root folder of the project.
 2. The script will:
    * Validate that **Python 3.10+** and **Node.js 18+** are installed.
    * Initialize a Python virtual environment (`.venv`) in `backend/` and install `requirements.txt`.
@@ -198,7 +198,7 @@ graph TD
 
 ## 🛡️ Security & Environment Settings
 
-The configuration is managed via a `.env` file in the root directory. The batch launcher (`1_Click_Run.bat`) automatically synchronizes this file into the `backend/` directory during startup.
+The configuration is managed via a `.env` file in the root directory. The batch launcher (`Click_Run.bat`) automatically synchronizes this file into the `backend/` directory during startup.
 
 In production environments, make sure to change the default values:
 

@@ -175,7 +175,7 @@ export default function LoginPage() {
                 ) : (
                   <>
                     <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Create Account</h1>
-                    <p className="text-slate-500 mb-6">Join InteriorAI to design and visualize your home in minutes.</p>
+                    <p className="text-slate-500 mb-6">Join InteriorAI to design, customize, and execute your home interiors.</p>
                   </>
                 )}
 
