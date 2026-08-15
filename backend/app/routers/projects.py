@@ -15,11 +15,11 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 router = APIRouter()
 
 BHK_ROOMS = {
-    "1BHK": ["living_room", "bedroom_master", "kitchen", "bathroom"],
-    "2BHK": ["living_room", "bedroom_master", "bedroom_2", "kitchen", "bathroom", "balcony"],
+    "1BHK": ["living_room", "bedroom_master", "kitchen", "bathroom", "balcony"],
+    "2BHK": ["living_room", "bedroom_master", "bedroom_2", "kitchen", "bathroom", "bathroom_2", "balcony"],
     "3BHK": ["living_room", "bedroom_master", "bedroom_2", "bedroom_3", "kitchen", "bathroom", "bathroom_2", "balcony"],
     "4BHK": ["living_room", "bedroom_master", "bedroom_2", "bedroom_3", "bedroom_4", "kitchen", "bathroom", "bathroom_2", "bathroom_3", "balcony"],
-    "5BHK": ["living_room", "bedroom_master", "bedroom_2", "bedroom_3", "bedroom_4", "bedroom_5", "kitchen", "bathroom", "bathroom_2", "bathroom_3", "dining_room", "balcony", "home_office"],
+    "5BHK": ["living_room", "bedroom_master", "bedroom_2", "bedroom_3", "bedroom_4", "bedroom_5", "kitchen", "bathroom", "bathroom_2", "bathroom_3", "bathroom_4", "balcony"],
 }
 
 ROOM_DEFAULTS = {
@@ -33,6 +33,7 @@ ROOM_DEFAULTS = {
     "bathroom":       {"length_ft": 7,  "width_ft": 5,  "height_ft": 9},
     "bathroom_2":     {"length_ft": 6,  "width_ft": 5,  "height_ft": 9},
     "bathroom_3":     {"length_ft": 6,  "width_ft": 4,  "height_ft": 9},
+    "bathroom_4":     {"length_ft": 6,  "width_ft": 4,  "height_ft": 9},
     "balcony":        {"length_ft": 10, "width_ft": 5,  "height_ft": 9},
     "dining_room":    {"length_ft": 12, "width_ft": 10, "height_ft": 9},
     "home_office":    {"length_ft": 10, "width_ft": 9,  "height_ft": 9},

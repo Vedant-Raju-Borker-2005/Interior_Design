@@ -80,3 +80,7 @@ UPDATES/
 .system_generated/
 cleanup_test_runs.py
 backend/cleanup_test_runs.py
+.next/
+node_modules/
+*.db-journal
+*.db-wal

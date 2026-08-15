@@ -111,10 +111,6 @@ export default function OnboardingPage() {
     city:                '',
     property_name:       '',
     pincode:             '',
-    floor_plan_mode:     'select' as 'select' | 'upload',
-    selected_plan_id:    'plan-standard',
-    upload_file:         null as { name: string; size: string; type: string } | null,
-    real_file:           null as File | null,
   })
 
   // Parse inviteToken from URL (client-side only)
@@ -266,21 +262,6 @@ export default function OnboardingPage() {
         router.push(`/packages?projectId=${childProjectId}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
       } else {
         // Standard B2C onboarding creation
-        const floorPlanType = local.floor_plan_mode || 'select'
-        let floorPlanName = 'Standard 2D Layout Plan'
-        if (floorPlanType === 'select') {
-          const cleanBhk = local.bhk || '2BHK'
-          const mockPlans = [
-            { id: 'plan-compact', name: `${cleanBhk} Compact Layout` },
-            { id: 'plan-standard', name: `${cleanBhk} Premium Layout` },
-            { id: 'plan-luxury', name: `${cleanBhk} Spacious Luxury Layout` }
-          ]
-          const selected = mockPlans.find(p => p.id === local.selected_plan_id)
-          floorPlanName = selected ? selected.name : `${cleanBhk} Premium Layout`
-        } else if (local.upload_file) {
-          floorPlanName = `Uploaded: ${local.upload_file.name}`
-        }
-
         const res = await projectsAPI.create({
           bhk_type: local.bhk,
           property_name: local.property_name,
@@ -290,22 +271,12 @@ export default function OnboardingPage() {
           interior_material_preference: local.interior_material_preference,
           furnishing_type: local.furnishing_type,
           pincode: local.pincode || undefined,
-          floor_plan_type: floorPlanType,
-          floor_plan_name: floorPlanName,
+          floor_plan_type: 'select',
+          floor_plan_name: 'Standard 2D Layout Plan',
           color_preferences: local.color_preferences,
         })
 
         const createdProjId = res.data.project_id
-
-        // Upload file if floor plan mode is upload and real_file exists
-        if (floorPlanType === 'upload' && local.real_file) {
-          try {
-            await projectsAPI.uploadFloorPlan(createdProjId, local.real_file)
-          } catch (uploadErr) {
-            console.error("Failed to upload blueprint file:", uploadErr)
-          }
-        }
-
         setOnboarding({
           bhk: local.bhk,
           style_tags: local.style_tags,
@@ -315,8 +286,8 @@ export default function OnboardingPage() {
           city: local.city,
         })
 
-        toast.success("Welcome details saved! Let's choose your package. 📦")
-        // Direct transition to packages page
+        toast.success("Welcome details saved! Let's choose your pricing package. 📦")
+        // B2C Customer goes straight to packages selection page
         router.push(`/packages?projectId=${createdProjId}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
       }
     } catch (err: any) {
@@ -429,119 +400,6 @@ export default function OnboardingPage() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Floor Plan Layout Selection (Optional) */}
-              <div className="border-t border-slate-100 pt-6 space-y-4">
-                <div>
-                  <div className="text-xs font-bold text-slate-700 uppercase tracking-wider">Select Floor Plan Layout (Optional)</div>
-                  <div className="text-slate-400 text-xs mt-0.5">Pick a standard pre-designed blueprint layout matching your BHK type, or upload your own floor plan.</div>
-                </div>
-
-                {/* Tabs */}
-                <div className="flex gap-2 p-1 bg-slate-150/40 rounded-xl max-w-sm">
-                  <button
-                    type="button"
-                    onClick={() => setLocal(s => ({ ...s, floor_plan_mode: 'select' }))}
-                    className={clsx(
-                      'flex-1 py-2 rounded-lg text-xs font-bold transition-all',
-                      local.floor_plan_mode === 'select' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/40' : 'text-slate-500'
-                    )}
-                  >
-                    Choose Standard Layout
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLocal(s => ({ ...s, floor_plan_mode: 'upload' }))}
-                    className={clsx(
-                      'flex-1 py-2 rounded-lg text-xs font-bold transition-all',
-                      local.floor_plan_mode === 'upload' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/40' : 'text-slate-500'
-                    )}
-                  >
-                    Upload Blueprint
-                  </button>
-                </div>
-
-                {local.floor_plan_mode === 'select' ? (
-                  <div className="grid sm:grid-cols-3 gap-4 pt-2">
-                    {(() => {
-                      const cleanBhk = local.bhk || '2BHK'
-                      const mockPlans = [
-                        { id: 'plan-compact', name: `${cleanBhk} Compact Layout`, size: cleanBhk === '1BHK' ? '550 sqft' : cleanBhk === '2BHK' ? '950 sqft' : cleanBhk === '3BHK' ? '1450 sqft' : '1850 sqft', desc: 'Optimised space saving design with linear modular solutions.' },
-                        { id: 'plan-standard', name: `${cleanBhk} Premium Layout`, size: cleanBhk === '1BHK' ? '680 sqft' : cleanBhk === '2BHK' ? '1120 sqft' : cleanBhk === '3BHK' ? '1750 sqft' : '2200 sqft', desc: 'Spacious common zones, dedicated work-from-home alcove.' },
-                        { id: 'plan-luxury', name: `${cleanBhk} Spacious Luxury Layout`, size: cleanBhk === '1BHK' ? '820 sqft' : cleanBhk === '2BHK' ? '1350 sqft' : cleanBhk === '3BHK' ? '2100 sqft' : '2650 sqft', desc: 'Double balconies, master suite with walk-in wardrobe area.' }
-                      ]
-                      return mockPlans.map((plan) => (
-                        <button
-                          key={plan.id}
-                          type="button"
-                          onClick={() => setLocal(s => ({ ...s, selected_plan_id: plan.id }))}
-                          className={clsx(
-                            'p-4 rounded-xl border-2 text-left transition-all relative flex flex-col justify-between h-40 bg-white hover:border-indigo-300 shadow-sm hover:shadow-md',
-                            local.selected_plan_id === plan.id ? 'border-indigo-500 bg-indigo-50/20' : 'border-slate-200'
-                          )}
-                        >
-                          <div>
-                            <div className="flex justify-between items-start">
-                              <span className="font-bold text-slate-800 text-xs">{plan.name}</span>
-                              {local.selected_plan_id === plan.id && (
-                                <div className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
-                                  <Check className="w-2.5 h-2.5 stroke-[4px]" />
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-slate-450 mt-1 leading-relaxed">{plan.desc}</p>
-                          </div>
-                          <span className="inline-block mt-3 bg-indigo-100/60 text-indigo-700 text-[10px] font-extrabold px-2 py-0.5 rounded-md self-start">
-                            {plan.size}
-                          </span>
-                        </button>
-                      ))
-                    })()}
-                  </div>
-                ) : (
-                  <div className="space-y-4 pt-2">
-                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-slate-100/40 transition relative">
-                      <input
-                        type="file"
-                        accept="image/*,application/pdf"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          setLocal(s => ({
-                            ...s,
-                            real_file: file,
-                            upload_file: {
-                              name: file.name,
-                              size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-                              type: file.type.includes('pdf') ? 'pdf' : 'image'
-                            }
-                          }))
-                          toast.success('Floor plan selected! 📐')
-                        }}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      {local.upload_file ? (
-                        <div className="flex flex-col items-center justify-center">
-                          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2 animate-bounce">
-                            {local.upload_file.type === 'pdf' ? <FileText className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
-                          </div>
-                          <p className="text-slate-800 font-bold text-xs truncate max-w-xs">{local.upload_file.name}</p>
-                          <p className="text-slate-400 text-[10px] mt-0.5">{local.upload_file.size}</p>
-                          <span className="mt-2 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Blueprint Selected
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center">
-                          <Upload className="w-6 h-6 text-slate-400 mb-2" />
-                          <p className="text-slate-800 font-bold text-xs">Click or Drag blueprint here</p>
-                          <p className="text-slate-450 text-[10px] mt-0.5">Supports PDF, PNG, JPG files up to 10MB</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </motion.div>
           )}

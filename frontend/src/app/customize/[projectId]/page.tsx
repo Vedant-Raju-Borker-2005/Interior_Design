@@ -13,14 +13,28 @@ import {
 import clsx from 'clsx'
 import { getBestColorMatch, getColorHex } from '@/lib/colorUtils'
 
-const ROOM_LABELS: Record<string, { label: string; icon: string }> = {
-  living_room: { label: 'Living Room', icon: '🛋️' },
-  bedroom_master: { label: 'Master Bedroom', icon: '🛏️' },
-  bedroom_2: { label: 'Bedroom 2', icon: '🛌' },
-  bedroom_3: { label: 'Bedroom 3', icon: '🛌' },
-  kitchen: { label: 'Kitchen', icon: '🍳' },
-  bathroom: { label: 'Bathroom', icon: '🚿' },
-  balcony: { label: 'Balcony', icon: '🌿' },
+const getRoomLabelAndIcon = (roomType: string, bhkType?: string) => {
+  const is1BHK = bhkType === '1BHK'
+  if (is1BHK) {
+    if (roomType === 'bedroom_master') return { label: 'Bedroom', icon: '🛏️' }
+    if (roomType === 'bathroom') return { label: 'Bathroom', icon: '🚿' }
+  }
+  
+  const defaults: Record<string, { label: string; icon: string }> = {
+    living_room: { label: 'Living Room', icon: '🛋️' },
+    bedroom_master: { label: 'Master Bedroom 1', icon: '🛏️' },
+    bedroom_2: { label: 'Bedroom 2', icon: '🛌' },
+    bedroom_3: { label: 'Bedroom 3', icon: '🛌' },
+    bedroom_4: { label: 'Bedroom 4', icon: '🛌' },
+    bedroom_5: { label: 'Bedroom 5', icon: '🛌' },
+    kitchen: { label: 'Kitchen', icon: '🍳' },
+    bathroom: { label: 'Bathroom 1', icon: '🚿' },
+    bathroom_2: { label: 'Bathroom 2', icon: '🚿' },
+    bathroom_3: { label: 'Bathroom 3', icon: '🚿' },
+    bathroom_4: { label: 'Bathroom 4', icon: '🚿' },
+    balcony: { label: 'Balcony', icon: '🌿' },
+  }
+  return defaults[roomType] || { label: roomType.replace('_', ' '), icon: '🏠' }
 }
 
 const MANDATORY_CATEGORIES: Record<string, { id: string; label: string; desc: string }[]> = {
@@ -59,7 +73,6 @@ export default function GuidedCustomizePage() {
   const projectId = params.projectId as string
 
   const [project, setProject] = useState<any>(null)
-  const [activeRoomIdx, setActiveRoomIdx] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   
   // Products listing inside selected category
@@ -85,8 +98,12 @@ export default function GuidedCustomizePage() {
   const [uploadingPlan, setUploadingPlan] = useState(false)
 
   const [loading, setLoading] = useState(true)
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
+  const [hasSetInitialRoom, setHasSetInitialRoom] = useState(false)
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'customizer' | 'floorplan'>('customizer')
 
-  const activeRoom = project?.rooms?.[activeRoomIdx]
+  const activeRoom = project?.rooms?.find((r: any) => r.id === activeRoomId) || project?.rooms?.[0]
+  const activeRoomIdx = project?.rooms?.findIndex((r: any) => r.id === activeRoom?.id) ?? 0
   const activeRoomItems = activeRoom?.items || []
 
   // Load project detail
@@ -94,8 +111,10 @@ export default function GuidedCustomizePage() {
     try {
       const res = await projectsAPI.get(projectId)
       setProject(res.data)
+      return res.data
     } catch {
       toast.error('Failed to load project details')
+      return null
     } finally {
       setLoading(false)
     }
@@ -105,13 +124,33 @@ export default function GuidedCustomizePage() {
     loadProject()
   }, [projectId])
 
-  // Get categories list based on active room type
-  const getCategoriesForActiveRoom = () => {
-    if (!activeRoom) return []
-    return MANDATORY_CATEGORIES[activeRoom.room_type] || [
+  // Resolve room-specific categories with fallbacks for custom BHK rooms
+  const getRoomMandatoryCategories = (roomType: string) => {
+    if (MANDATORY_CATEGORIES[roomType]) {
+      return MANDATORY_CATEGORIES[roomType]
+    }
+    if (roomType.startsWith('bedroom_')) {
+      return MANDATORY_CATEGORIES['bedroom_2'] || MANDATORY_CATEGORIES['bedroom_master']
+    }
+    if (roomType.startsWith('bathroom_')) {
+      return MANDATORY_CATEGORIES['bathroom']
+    }
+    if (roomType === 'balcony') {
+      return [
+        { id: 'Furniture', label: 'Outdoor Seating', desc: 'Balcony chairs/table' },
+        { id: 'Décor', label: 'Planters & Lights', desc: 'Decorative green elements' }
+      ]
+    }
+    return [
       { id: 'Furniture', label: 'Furniture', desc: 'Main elements' },
       { id: 'Lighting', label: 'Lighting', desc: 'Room fixtures' }
     ]
+  }
+
+  // Get categories list based on active room type
+  const getCategoriesForActiveRoom = () => {
+    if (!activeRoom) return []
+    return getRoomMandatoryCategories(activeRoom.room_type)
   }
 
   // Robust category matcher for category IDs against product category & subcategory
@@ -212,7 +251,35 @@ export default function GuidedCustomizePage() {
 
       toast.success(`${customizingProduct.name} saved! ✓`)
       setCustomizingProduct(null)
-      await loadProject()
+      const updatedProject = await loadProject()
+      
+      if (updatedProject) {
+        let totalCost = 0
+        updatedProject.rooms?.forEach((room: any) => {
+          (room.items || []).forEach((item: any) => {
+            const price = item.unit_price || item.product?.price || 0
+            const qty = item.qty || 1
+            totalCost += price * qty
+          })
+        })
+        const budgetLimit = updatedProject.budget || 300000
+        const tier = updatedProject.package?.tier || 'basic'
+        if (totalCost > budgetLimit) {
+          if (tier === 'luxury') {
+            toast.error(`You are going off-budget, but since you had chosen the Luxury package, you can spend up to ₹${(budgetLimit + 500000).toLocaleString('en-IN')}.`, {
+              duration: 6000
+            })
+          } else if (tier === 'premium') {
+            toast.error(`You are going off-budget, but you are on the Premium package, so you could spend up to ₹${(budgetLimit + 200000).toLocaleString('en-IN')}.`, {
+              duration: 6000
+            })
+          } else {
+            toast.error(`You are going off-budget! You are on the Basic package. You have exceeded your ₹${budgetLimit.toLocaleString('en-IN')} limit.`, {
+              duration: 6000
+            })
+          }
+        }
+      }
 
       // Automatically move to the next category or next room tab
       const categories = getCategoriesForActiveRoom()
@@ -221,11 +288,16 @@ export default function GuidedCustomizePage() {
         if (currentIdx < categories.length - 1) {
           // Go to next category in current room
           setSelectedCategory(categories[currentIdx + 1].id)
-        } else if (activeRoomIdx < (project?.rooms?.length || 0) - 1) {
-          // Last category of current room is done; auto-progress to next room tab
-          setActiveRoomIdx(activeRoomIdx + 1)
-          const nextRoomName = project.rooms[activeRoomIdx + 1].room_type.replace('_', ' ').toUpperCase()
-          toast.success(`Switching to next room: ${nextRoomName}! 🚪`)
+        } else if (updatedProject) {
+          // Last category of current room is done; auto-progress to the next incomplete room
+          const incomplete = updatedProject.rooms.filter((r: any) => !checkRoomCompleteness(r).isComplete)
+          if (incomplete.length > 0) {
+            setActiveRoomId(incomplete[0].id)
+            const nextRoomName = incomplete[0].room_type.replace('_', ' ').toUpperCase()
+            toast.success(`Switching to next room: ${nextRoomName}! 🚪`)
+          } else {
+            toast.success("All rooms complete! Ready for rendering. ✨")
+          }
         }
       }
     } catch {
@@ -243,7 +315,7 @@ export default function GuidedCustomizePage() {
     setUploadingPlan(true)
     try {
       const res = await projectsAPI.uploadFloorPlan(projectId, file, activeRoom.id)
-      const roomLabel = ROOM_LABELS[activeRoom.room_type]?.label || activeRoom.room_type
+      const roomLabel = getRoomLabelAndIcon(activeRoom.room_type, project?.bhk_type).label
       toast.success(`${roomLabel} blueprint uploaded successfully! 📐`)
       await loadProject() // Reload project info to update UI and floor plan reference path
     } catch (err: any) {
@@ -263,7 +335,7 @@ export default function GuidedCustomizePage() {
 
   const checkRoomCompleteness = (room: any) => {
     if (!room) return { isComplete: false, missing: [] }
-    const categories = MANDATORY_CATEGORIES[room.room_type] || []
+    const categories = getRoomMandatoryCategories(room.room_type)
     const missing = categories.filter((cat) => !isCategoryDone(cat.id, room))
     return {
       isComplete: missing.length === 0,
@@ -273,9 +345,24 @@ export default function GuidedCustomizePage() {
 
   const getCompletedCategoriesCount = (room: any) => {
     if (!room || !room.items) return 0
-    const categories = MANDATORY_CATEGORIES[room.room_type] || []
+    const categories = getRoomMandatoryCategories(room.room_type)
     return categories.filter((cat) => isCategoryDone(cat.id, room)).length
   }
+
+  const getSortedRoomsList = () => {
+    if (!project?.rooms) return []
+    const incomplete = project.rooms.filter((r: any) => !checkRoomCompleteness(r).isComplete)
+    const complete = project.rooms.filter((r: any) => checkRoomCompleteness(r).isComplete)
+    return [...incomplete, ...complete]
+  }
+
+  useEffect(() => {
+    if (project?.rooms?.length > 0 && !hasSetInitialRoom) {
+      const incomplete = project.rooms.find((r: any) => !checkRoomCompleteness(r).isComplete)
+      setActiveRoomId(incomplete ? incomplete.id : project.rooms[0].id)
+      setHasSetInitialRoom(true)
+    }
+  }, [project, hasSetInitialRoom])
 
   const activeRoomCheck = checkRoomCompleteness(activeRoom)
   const allRoomsComplete = project?.rooms?.every((room: any) => checkRoomCompleteness(room).isComplete)
@@ -307,9 +394,17 @@ export default function GuidedCustomizePage() {
     return totalItemsCost > 0 ? totalItemsCost : basePrice
   }
 
-  const baseAmount = project?.package?.base_price || 300000
-  const currentCost = calculateCurrentCost()
-  const variation = currentCost - baseAmount
+  const initialBudget = project?.budget || 300000
+  let totalCustomizedCost = 0
+  project?.rooms?.forEach((room: any) => {
+    (room.items || []).forEach((item: any) => {
+      const price = item.unit_price || item.product?.price || 0
+      const qty = item.qty || 1
+      totalCustomizedCost += price * qty
+    })
+  })
+  const remainingBudget = Math.max(0, initialBudget - totalCustomizedCost)
+  const isOffBudget = totalCustomizedCost > initialBudget
 
   const galleryImages = customizingProduct
     ? (customizingProduct.images || customizingProduct.variants?.images || [])
@@ -319,248 +414,274 @@ export default function GuidedCustomizePage() {
     <div className="min-h-screen text-slate-800 pb-20" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)', backgroundAttachment: 'fixed' }}>
       <Navbar />
 
-      {/* TOP HEADER STATUS BAR */}
-      <div className="fixed top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-6 py-4 shadow-md">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-black text-slate-800">
+      {/* MAIN CONTAINER */}
+      <div className="max-w-7xl mx-auto px-6 pt-24 space-y-6">
+        
+        {/* TOP BUTTONS BAR */}
+        <div className="flex items-center justify-between w-full">
+          <button
+            onClick={() => router.push(`/dashboard`)}
+            className="py-2.5 px-5 bg-gradient-to-r from-slate-100 to-white text-slate-800 border border-slate-200 hover:from-slate-200 hover:to-slate-100 text-xs font-bold rounded-xl transition shadow-sm"
+          >
+            ← Exit to Dashboard
+          </button>
+          <button
+            onClick={() => router.push(`/visualize/${projectId}`)}
+            className={clsx(
+              'py-2.5 px-6 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md hover:shadow-lg active:scale-[0.98]',
+              anyItemAdded
+                ? 'bg-indigo-700 hover:bg-indigo-850 text-white'
+                : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+            )}
+            disabled={!anyItemAdded}
+          >
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            <span>Proceed to AI Render</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* WORKSPACE GRID */}
+        <div className="grid lg:grid-cols-12 gap-8">
+          
+          {/* LEFT PANEL: ROOM PROGRESS AND CATEGORIES (4 cols) */}
+          <div className="lg:col-span-4 space-y-4">
+            
+            {/* Project Details Box */}
+            <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 shadow-xl flex items-center justify-between">
+              <span className="font-extrabold text-white text-sm truncate">
                 {project?.property_name}
               </span>
-              <span className="bg-indigo-50 border border-indigo-150 text-indigo-650 text-xs px-2.5 py-0.5 rounded-full font-bold uppercase">
+              <span className="bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase">
                 {project?.bhk_type}
               </span>
             </div>
-            <p className="text-slate-500 text-xs mt-0.5">Customize room configurations and choose custom elements</p>
+          
+          {/* Main Configuration Container */}
+          <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl space-y-5">
+            
+            {/* Sidebar Tabs */}
+            <div className="flex gap-2 p-1 bg-slate-950/60 rounded-2xl border border-white/5">
+              <button
+                type="button"
+                onClick={() => setActiveSidebarTab('customizer')}
+                className={clsx(
+                  'flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5',
+                  activeSidebarTab === 'customizer'
+                    ? 'bg-indigo-650 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                )}
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Customizer</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSidebarTab('floorplan')}
+                className={clsx(
+                  'flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5',
+                  activeSidebarTab === 'floorplan'
+                    ? 'bg-indigo-650 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                )}
+              >
+                <Layout className="w-3.5 h-3.5" />
+                <span>Floor Plan</span>
+              </button>
+            </div>
 
-            {project && (
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-2 text-xs font-bold text-slate-500 border-t border-slate-100 pt-2 w-full">
-                <div>
-                  Base Package: <span className="text-slate-800 font-extrabold">₹{baseAmount.toLocaleString('en-IN')}</span>
+            {/* TAB CONTENT: CUSTOMIZER */}
+            {activeSidebarTab === 'customizer' && (
+              <div className="space-y-3">
+                {getSortedRoomsList().map((room: any) => {
+                  const check = checkRoomCompleteness(room)
+                  const isActive = room.id === activeRoomId
+                  
+                  return (
+                    <div
+                      key={room.id}
+                      className={clsx(
+                        'rounded-2xl border transition-all duration-200 overflow-hidden',
+                        isActive
+                          ? 'bg-slate-950/40 border-indigo-500/40 shadow-lg'
+                          : 'bg-slate-950/20 border-white/5 hover:border-white/10'
+                      )}
+                    >
+                      {/* Accordion Room Header Button */}
+                      <button
+                        onClick={() => {
+                          if (isActive) {
+                            setActiveRoomId(null)
+                          } else {
+                            setActiveRoomId(room.id)
+                          }
+                          setCustomizingProduct(null)
+                        }}
+                        className="w-full text-left p-4 flex items-center justify-between transition-colors hover:bg-white/[0.02]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{getRoomLabelAndIcon(room.room_type, project?.bhk_type).icon}</span>
+                          <div>
+                            <span className="font-extrabold text-white text-sm block">
+                              {getRoomLabelAndIcon(room.room_type, project?.bhk_type).label}
+                            </span>
+                            <span className="text-[10px] text-slate-450 block font-medium mt-0.5">
+                              {room.items?.length || 0} items configured
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {check.isComplete ? (
+                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-bold">
+                              Complete ✓
+                            </span>
+                          ) : (
+                            <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full font-bold">
+                              {getCompletedCategoriesCount(room)}/{getRoomMandatoryCategories(room.room_type).length} Done
+                            </span>
+                          )}
+                          <ChevronDown
+                            className={clsx(
+                              'w-4 h-4 text-slate-500 transition-transform duration-200',
+                              isActive && 'rotate-180 text-white'
+                            )}
+                          />
+                        </div>
+                      </button>
+
+                      {/* Expanded Accordion Body (Checklist under the room) */}
+                      {isActive && (
+                        <div className="border-t border-white/5 p-4 bg-slate-950/60 space-y-2">
+                          <div className="space-y-1.5">
+                            {(MANDATORY_CATEGORIES[room.room_type] || []).map((cat) => {
+                              const savedItemInCat = room.items?.find(
+                                (it: any) => matchCategory(cat.id, it.product)
+                              )
+                              const isSelected = selectedCategory === cat.id
+
+                              return (
+                                <button
+                                  key={cat.id}
+                                  onClick={() => {
+                                    setSelectedCategory(cat.id)
+                                    setCustomizingProduct(null)
+                                  }}
+                                  className={clsx(
+                                    'w-full p-3.5 rounded-xl border transition-all text-left flex items-start justify-between gap-3',
+                                    isSelected
+                                      ? 'bg-indigo-650 border-indigo-500 text-white font-extrabold shadow-md'
+                                      : savedItemInCat
+                                        ? 'bg-slate-900/40 border-emerald-500/10 text-slate-300'
+                                        : 'bg-slate-900/60 border-white/5 text-slate-400 hover:text-white hover:border-white/10'
+                                  )}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-extrabold flex items-center gap-1.5">
+                                      <span className="truncate">{cat.label}</span>
+                                      {savedItemInCat && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 font-normal mt-0.5 truncate leading-relaxed">
+                                      {cat.desc}
+                                    </p>
+                                    {savedItemInCat && (
+                                      <div className="text-[10px] text-indigo-300 font-bold mt-1 truncate">
+                                        Chosen: {savedItemInCat.product?.name}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <ChevronRight className="w-3.5 h-3.5 text-slate-500 mt-1 flex-shrink-0" />
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* TAB CONTENT: FLOOR PLAN */}
+            {activeSidebarTab === 'floorplan' && activeRoom && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-white pb-2 border-b border-white/5">
+                  <Layout className="w-4 h-4 text-indigo-400" />
+                  <h3 className="font-extrabold text-xs tracking-wider uppercase text-slate-350">
+                    {getRoomLabelAndIcon(activeRoom.room_type, project?.bhk_type).label} Floor Plan
+                  </h3>
                 </div>
-                <div className="h-3 w-[1px] bg-slate-200 hidden sm:block" />
-                <div>
-                  Current Project: <span className="text-indigo-600 font-extrabold">₹{currentCost.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="h-3 w-[1px] bg-slate-200 hidden sm:block" />
-                <div>
-                  Variation:{' '}
-                  <span className={clsx("font-extrabold", variation >= 0 ? "text-emerald-600" : "text-rose-600")}>
-                    {variation >= 0 ? '+' : ''}₹{variation.toLocaleString('en-IN')}
-                  </span>
+
+                {activeRoom.custom_config?.floor_plan_url ? (
+                  <div className="space-y-3 bg-slate-950/40 p-3.5 rounded-2xl border border-white/5">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                      <span>Custom Blueprint Active</span>
+                    </div>
+
+                    <div className="aspect-[4/3] rounded-xl overflow-hidden border border-white/10 bg-slate-900 relative">
+                      <img
+                        src={activeRoom.custom_config.floor_plan_url}
+                        alt="Floor Plan"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent flex items-end p-2.5">
+                        <a
+                          href={activeRoom.custom_config.floor_plan_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-bold text-white bg-slate-900/80 hover:bg-slate-900 px-2 py-1 rounded border border-white/10 truncate max-w-full"
+                        >
+                          View Full Size ↗
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-5 bg-slate-950/30 rounded-2xl border border-dashed border-white/10 text-center">
+                    <FileText className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                    <div className="text-xs font-bold text-slate-350">Using Default Rooms Layout</div>
+                    <p className="text-[10px] text-slate-500 mt-1 max-w-[200px] mx-auto leading-normal">
+                      Vector blueprints will fall back to standard room structures.
+                    </p>
+                  </div>
+                )}
+
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleFloorPlanUpload}
+                    id="sidebar-floorplan-file"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    disabled={uploadingPlan}
+                  />
+                  <button
+                    type="button"
+                    className={clsx(
+                      "w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border shadow-sm duration-200",
+                      uploadingPlan
+                        ? "bg-slate-850 text-slate-400 border-white/5 cursor-not-allowed"
+                        : "bg-indigo-650 hover:bg-indigo-500 text-white border-indigo-500 hover:shadow-indigo-500/20"
+                    )}
+                    disabled={uploadingPlan}
+                  >
+                    {uploadingPlan ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-white rounded-full animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload Custom Blueprint</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             )}
           </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push(`/dashboard`)}
-              className="py-2.5 px-5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition shadow-sm"
-            >
-              Exit to Dashboard
-            </button>
-            <button
-              onClick={() => router.push(`/visualize/${projectId}`)}
-              className={clsx(
-                'py-2.5 px-6 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md hover:shadow-lg active:scale-[0.98]',
-                anyItemAdded
-                  ? 'bg-indigo-700 hover:bg-indigo-850 text-white'
-                  : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
-              )}
-              disabled={!anyItemAdded}
-            >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Proceed to AI Render</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* MAIN CONTAINER */}
-      <div className="max-w-7xl mx-auto px-6 pt-44 grid lg:grid-cols-12 gap-8">
-        
-        {/* LEFT PANEL: ROOM PROGRESS AND CATEGORIES (4 cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          
-          {/* Room Selector Card */}
-          <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">1. Select Room</h3>
-            <div className="space-y-2">
-              {project?.rooms?.map((room: any, idx: number) => {
-                const check = checkRoomCompleteness(room)
-                const isActive = idx === activeRoomIdx
-                return (
-                  <button
-                    key={room.id}
-                    onClick={() => {
-                      setActiveRoomIdx(idx)
-                      setCustomizingProduct(null)
-                    }}
-                    className={clsx(
-                      'w-full text-left p-3.5 rounded-2xl transition border flex items-center justify-between',
-                      isActive
-                        ? 'bg-indigo-600/15 border-indigo-500 text-white font-bold'
-                        : 'bg-slate-950/45 border-white/5 text-slate-400 hover:border-white/10 hover:text-white'
-                    )}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-lg">{ROOM_LABELS[room.room_type]?.icon || '🏠'}</span>
-                      <span>{ROOM_LABELS[room.room_type]?.label || room.room_type}</span>
-                    </div>
-                    {check.isComplete ? (
-                      <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-bold">
-                        Complete ✓
-                      </span>
-                    ) : (
-                      <span className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full font-bold">
-                        {getCompletedCategoriesCount(room)}/{MANDATORY_CATEGORIES[room.room_type]?.length || 2} Done
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Categories Step Checklist */}
-          {activeRoom && (
-            <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl space-y-3">
-              <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-2">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">2. Category Checklist</h3>
-                {activeRoomCheck.isComplete && (
-                  <span className="text-xs text-emerald-400 font-extrabold flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Room Complete
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                {getCategoriesForActiveRoom().map((cat) => {
-                  const savedItemInCat = activeRoomItems.find(
-                    (it: any) => matchCategory(cat.id, it.product)
-                  )
-                  const isSelected = selectedCategory === cat.id
-
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        setSelectedCategory(cat.id)
-                        setCustomizingProduct(null)
-                      }}
-                      className={clsx(
-                        'w-full p-3.5 rounded-2xl border transition text-left flex items-start justify-between gap-3',
-                        isSelected
-                          ? 'bg-indigo-600 border-indigo-500 text-white font-bold'
-                          : savedItemInCat
-                            ? 'bg-slate-950/30 border-emerald-500/20 text-slate-300'
-                            : 'bg-slate-950/50 border-white/5 text-slate-400 hover:text-white'
-                      )}
-                    >
-                      <div>
-                        <div className="text-xs font-bold flex items-center gap-1.5">
-                          <span>{cat.label}</span>
-                          {savedItemInCat && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
-                        </div>
-                        <p className="text-[10px] text-slate-500 font-normal mt-0.5">{cat.desc}</p>
-                        {savedItemInCat && (
-                          <div className="text-[10px] text-indigo-300 font-bold mt-1">
-                            Chosen: {savedItemInCat.product?.name}
-                          </div>
-                        )}
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-600 mt-1 flex-shrink-0" />
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Floor Plan Blueprint Upload Card */}
-          {/* Floor Plan Blueprint Upload Card */}
-          {activeRoom && (
-            <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl space-y-4">
-              <div className="flex items-center gap-2 text-white">
-                <Layout className="w-5 h-5 text-indigo-400" />
-                <h3 className="font-bold text-sm tracking-wide">3. Floor Plan Layout</h3>
-              </div>
-              
-              {activeRoom.custom_config?.floor_plan_url ? (
-                <div className="space-y-3 bg-slate-950/40 p-3.5 rounded-2xl border border-white/5">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
-                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                    <span>Custom {ROOM_LABELS[activeRoom.room_type]?.label || activeRoom.room_type} Blueprint Active</span>
-                  </div>
-                  
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden border border-white/10 bg-slate-900 relative">
-                    <img
-                      src={activeRoom.custom_config.floor_plan_url}
-                      alt="Floor Plan"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent flex items-end p-2.5">
-                      <a
-                        href={activeRoom.custom_config.floor_plan_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] font-bold text-white bg-slate-900/80 hover:bg-slate-900 px-2 py-1 rounded border border-white/10 truncate max-w-full"
-                      >
-                        View Full Size ↗
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-slate-950/30 rounded-2xl border border-dashed border-white/10 text-center">
-                  <FileText className="w-8 h-8 text-slate-500 mx-auto mb-1.5" />
-                  <div className="text-xs font-bold text-slate-350">Using Default Rooms Layout</div>
-                  <p className="text-[10px] text-slate-500 mt-1 max-w-[190px] mx-auto leading-normal">
-                    Vector blueprints will fall back to standard room structures.
-                  </p>
-                </div>
-              )}
-
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={handleFloorPlanUpload}
-                  id="sidebar-floorplan-file"
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  disabled={uploadingPlan}
-                />
-                <button
-                  type="button"
-                  className={clsx(
-                    "w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border shadow-sm duration-200",
-                    uploadingPlan
-                      ? "bg-slate-850 text-slate-400 border-white/5 cursor-not-allowed"
-                      : "bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500 hover:shadow-indigo-500/20"
-                  )}
-                  disabled={uploadingPlan}
-                >
-                  {uploadingPlan ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-white rounded-full animate-spin" />
-                      <span>Uploading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>
-                        {activeRoom.custom_config?.floor_plan_url
-                          ? `Change ${ROOM_LABELS[activeRoom.room_type]?.label || activeRoom.room_type} Floor Plan`
-                          : `Upload ${ROOM_LABELS[activeRoom.room_type]?.label || activeRoom.room_type} Floor Plan`}
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
 
         </div>
 
@@ -568,6 +689,22 @@ export default function GuidedCustomizePage() {
         {/* RIGHT AREA: PRODUCT DESIGN SELECTION AND CUSTOMIZER (8 cols) */}
         <div className="lg:col-span-8 space-y-6">
           
+          {/* Budget & Variation Tracking Box */}
+          <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Remaining Budget</span>
+              <span className="text-lg font-black text-white mt-1 block">
+                ₹{remainingBudget.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Variation (Spent)</span>
+              <span className="text-lg font-black mt-1 block text-white">
+                ₹{totalCustomizedCost.toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+
           <AnimatePresence mode="wait">
             {!customizingProduct ? (
               // STEP A: CHOOSE DESIGN
@@ -612,41 +749,62 @@ export default function GuidedCustomizePage() {
                             key={p.id}
                             onClick={() => handleSelectProduct(p)}
                             className={clsx(
-                              'p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 group',
+                              'p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3 group',
                               isChosen
                                 ? 'bg-indigo-950/20 border-indigo-500/40 shadow-inner'
                                 : 'bg-slate-950/50 border-white/5 hover:border-white/10'
                             )}
                           >
-                            <div className="flex items-center gap-3.5 min-w-0">
-                              <img
-                                src={p.thumbnail_url}
-                                alt={p.name}
-                                className="w-14 h-14 object-cover rounded-xl flex-shrink-0"
-                              />
-                              <div className="min-w-0">
-                                <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors truncate">
-                                  {p.name}
-                                </h4>
-                                <div className="text-xs font-bold text-indigo-400 mt-0.5">
-                                  ₹{p.price.toLocaleString('en-IN')}
+                            <div className="flex items-center justify-between gap-4 w-full">
+                              <div className="flex items-center gap-3.5 min-w-0">
+                                <img
+                                  src={p.thumbnail_url}
+                                  alt={p.name}
+                                  className="w-14 h-14 object-cover rounded-xl flex-shrink-0"
+                                />
+                                <div className="min-w-0">
+                                  <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors truncate">
+                                    {p.name}
+                                  </h4>
+                                  <div className="text-xs font-bold text-indigo-400 mt-0.5">
+                                    ₹{p.price.toLocaleString('en-IN')}
+                                  </div>
+                                  {/* Availability tier badge */}
+                                  <span className={clsx(
+                                    'inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full',
+                                    p.availability_tier === 'local'
+                                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                                      : p.availability_tier === 'nearby'
+                                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                                      : 'bg-slate-700/50 text-slate-400 border border-white/5'
+                                  )}>
+                                    {p.availability_tier === 'local' ? '📍 Your Area' : p.availability_tier === 'nearby' ? '🏙️ Nearby' : '🌐 National'}
+                                  </span>
                                 </div>
-                                {/* Availability tier badge */}
-                                <span className={clsx(
-                                  'inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full',
-                                  p.availability_tier === 'local'
-                                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
-                                    : p.availability_tier === 'nearby'
-                                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
-                                    : 'bg-slate-700/50 text-slate-400 border border-white/5'
-                                )}>
-                                  {p.availability_tier === 'local' ? '📍 Your Area' : p.availability_tier === 'nearby' ? '🏙️ Nearby' : '🌐 National'}
-                                </span>
                               </div>
+                              <button className="py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-md shrink-0">
+                                {isChosen ? 'Configure' : 'Choose'}
+                              </button>
                             </div>
-                            <button className="py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-md shrink-0">
-                              {isChosen ? 'Configure' : 'Choose'}
-                            </button>
+
+                            {/* Match feedback warning banners */}
+                            <div className="space-y-1 w-full text-[9px] font-semibold">
+                              {p.is_price_match === false && (
+                                <div className="text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-1 rounded-lg">
+                                  ⚠️ The component is not within your price range.
+                                </div>
+                              )}
+                              {(p.is_material_match === false || p.is_fabric_match === false) && (
+                                <div className="text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg">
+                                  💡 Within your material/fabric preference, the component is not available.
+                                </div>
+                              )}
+                              {p.is_color_match === false && (
+                                <div className="text-indigo-300 bg-indigo-550/10 border border-indigo-550/20 px-2 py-1 rounded-lg">
+                                  🎨 Within your color preference, the component is not available.
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )
                       })}
@@ -1028,6 +1186,7 @@ export default function GuidedCustomizePage() {
 
         </div>
       </div>
+    </div>
     </div>
   )
 }

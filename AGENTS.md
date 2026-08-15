@@ -57,6 +57,26 @@ graph TD
 
 ---
 
+## Dynamic Platform Constraints (Phase 9)
+
+### 1. Dynamic Package Pricing
+- **Basic**: `budget`
+- **Premium**: `budget + 2L` (₹2,00,000)
+- **Luxury**: `budget + 5L` (₹5,00,000)
+
+### 2. Custom BHK Mappings
+- **1 BHK**: Living Room, Bedroom (No master prefix), Kitchen, Bathroom, Balcony
+- **2 BHK to 5 BHK**: Living Room, Master Bedroom 1, Bedroom 2-5, Kitchen, Bathroom 1-4, Balcony
+
+### 3. Budget Recommendation Constraints
+- **₹3L – ₹5L**: Max product price = **₹75,000**
+- **₹5L – ₹8L**: Max product price = **₹1,25,000**
+- **₹8L – ₹12L**: Max product price = **₹2,00,000**
+- **₹12L – ₹20L**: Max product price = **₹3,50,000**
+- **₹20L+**: Max product price = **₹5,00,000**
+
+---
+
 ## DOX Child Indices
 
 For sub-system guidelines, refer to:

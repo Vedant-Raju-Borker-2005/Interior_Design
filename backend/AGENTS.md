@@ -31,3 +31,7 @@ The backend is built with Python 3.10+, using FastAPI, SQLAlchemy, and SQLite.
 * **Database Operations**:
   * Commit transactions explicitly inside routers using `db.commit()`.
   * Create folder structures (like `pdfs/floor_plans`) programmatically if they do not exist.
+* **Catalog Query Normalization & Recommendation Logic (Phase 9)**:
+  * Custom room types (bedroom 3-5, bathroom 2-4, balcony) resolve to database-base room categories (bedroom_2, bathroom, living_room) when querying catalog products.
+  * Products are not hard-filtered out on mismatch; instead, the backend calculates and returns matching status flags (`is_color_match`, `is_material_match`, `is_fabric_match`, `is_price_match`) in the serialized response.
+  * Catalog items are sorted combined by matching rank (Perfect Match first, then exceeding budget, then mismatched material, color, etc.) and vendor serviceable tier (local first, then nearby, then national).

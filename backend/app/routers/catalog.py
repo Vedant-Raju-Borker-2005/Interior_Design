@@ -210,10 +210,20 @@ def list_products(
     from sqlalchemy import or_, func
     from ..models import Vendor
 
+    # Normalize room_type for custom BHK types
+    target_room_type = room_type
+    if room_type:
+        if room_type.startswith("bedroom_") and room_type != "bedroom_master":
+            target_room_type = "bedroom_2"
+        elif room_type.startswith("bathroom_") and room_type != "bathroom":
+            target_room_type = "bathroom"
+        elif room_type == "balcony":
+            target_room_type = "living_room"
+
     # ── Base query ─────────────────────────────────────────────────────────────
     q = db.query(Product)
     if room_type:
-        q = q.filter(Product.room_type == room_type)
+        q = q.filter(Product.room_type == target_room_type)
     if category:
         # Normalize: replace underscores with spaces so "coffee_tables" matches "Coffee Tables"
         cat_normalized = category.lower().replace("_", " ")
@@ -228,10 +238,12 @@ def list_products(
 
     all_prods = q.all()
 
-    # Load project color & material & fabric preferences
+    # Load project details
     color_prefs = []
     material_pref = None
     fabric_pref = None
+    project_budget = 500000.0
+    
     if project_id:
         from ..models import Project
         project = db.query(Project).filter(Project.id == project_id).first()
@@ -242,110 +254,111 @@ def list_products(
                 material_pref = project.interior_material_preference
             if getattr(project, 'fabric_preference', None):
                 fabric_pref = project.fabric_preference
+            if project.budget:
+                project_budget = project.budget
 
-    # Filter products based on material preference first if present
-    if material_pref and all_prods:
-        mat_tokens = [w.lower() for w in material_pref.split() if len(w) > 2]
-        mat_matches = []
-        for p in all_prods:
-            p_mat = (p.primary_material or "").lower()
-            p_materials = [m.lower() for m in (p.materials or [])]
-            p_desc = (p.description or "").lower()
-            p_name = (p.name or "").lower()
-            
-            # Check match against primary_material, materials list, name, description
-            is_mat_match = any(
-                token in p_mat or any(token in m for m in p_materials) or token in p_name or token in p_desc
-                for token in mat_tokens
-            )
-            if is_mat_match:
-                mat_matches.append(p)
-        if mat_matches:
-            all_prods = mat_matches
+    # Max product price limit table mapping
+    def get_max_product_price_limit(budget: float) -> float:
+        if budget <= 500000:
+            return 75000.0
+        elif budget <= 800000:
+            return 125000.0
+        elif budget <= 1200000:
+            return 200000.0
+        elif budget <= 2000000:
+            return 350000.0
+        else:
+            return 500000.0
 
-    # Filter products based on fabric preference if present
-    if fabric_pref and all_prods:
-        fab_token = fabric_pref.lower().strip()
-        fab_matches = []
-        for p in all_prods:
-            p_materials = [m.lower() for m in (p.materials or [])]
-            p_vars = p.variants if isinstance(p.variants, dict) else {}
-            p_fabrics = [f.lower() for f in p_vars.get('fabric', [])]
-            p_desc = (p.description or "").lower()
-            p_name = (p.name or "").lower()
+    max_price_limit = get_max_product_price_limit(project_budget)
 
-            if fab_token in p_materials or fab_token in p_fabrics or fab_token in p_name or fab_token in p_desc:
-                fab_matches.append(p)
-        if fab_matches:
-            all_prods = fab_matches
+    # We will build a list of products with their individual match metadata
+    products_with_flags = []
+    
+    ignore_words = {'and', 'or', 'with', 'set', 'table', 'chair', 'bed', 'sofa', 'rug', 'lighting', 'vanity', 'cabinet'}
+    pref_tokens = set()
+    for pref in color_prefs:
+        for word in pref.lower().split():
+            if len(word) > 2 and word not in ignore_words:
+                pref_tokens.add(word)
+    if 'gray' in pref_tokens:
+        pref_tokens.add('grey')
+    if 'grey' in pref_tokens:
+        pref_tokens.add('gray')
 
-    # Filter products based on color preferences
-    exact_color_match_found = True
-    if color_prefs and all_prods:
-        exact_matches = []
-        token_matches = []
-        
-        # Build token sets for preferred colors (excluding generic words)
-        ignore_words = {'and', 'or', 'with', 'set', 'table', 'chair', 'bed', 'sofa', 'rug', 'lighting', 'vanity', 'cabinet'}
-        pref_tokens = set()
-        for pref in color_prefs:
-            for word in pref.lower().split():
-                if len(word) > 2 and word not in ignore_words:
-                    pref_tokens.add(word)
-        
-        # Also treat 'gray' and 'grey' as synonyms
-        if 'gray' in pref_tokens:
-            pref_tokens.add('grey')
-        if 'grey' in pref_tokens:
-            pref_tokens.add('gray')
+    for p in all_prods:
+        # 1. Price match
+        is_price_match = p.price <= max_price_limit
 
-        for p in all_prods:
+        # 2. Material match
+        is_material_match = True
+        if material_pref:
+            mat_tokens = [w.lower() for w in material_pref.split() if len(w) > 2]
+            if mat_tokens:
+                p_mat = (p.primary_material or "").lower()
+                p_materials = [m.lower() for m in (p.materials or [])]
+                p_desc = (p.description or "").lower()
+                p_name = (p.name or "").lower()
+                is_material_match = any(
+                    token in p_mat or any(token in m for m in p_materials) or token in p_name or token in p_desc
+                    for token in mat_tokens
+                )
+
+        # 3. Fabric match
+        is_fabric_match = True
+        if fabric_pref:
+            fab_token = fabric_pref.lower().strip()
+            if fab_token:
+                p_materials = [m.lower() for m in (p.materials or [])]
+                p_vars = p.variants if isinstance(p.variants, dict) else {}
+                p_fabrics = [f.lower() for f in p_vars.get('fabric', [])]
+                p_desc = (p.description or "").lower()
+                p_name = (p.name or "").lower()
+                is_fabric_match = (
+                    fab_token in p_materials or
+                    any(fab_token in f for f in p_fabrics) or
+                    fab_token in p_name or
+                    fab_token in p_desc
+                )
+
+        # 4. Color match
+        is_color_match = True
+        if color_prefs:
+            is_color_match = False
             p_colors = p.color_variants or []
             if not p_colors and p.variants and isinstance(p.variants, dict):
                 p_colors = p.variants.get("color", [])
             p_colors_lower = [c.lower().strip() for c in p_colors]
             
-            # 1. Check exact match
-            has_exact = False
+            # Exact match check
             for uc in color_prefs:
                 uc_clean = uc.lower().strip()
                 if uc_clean in p_colors_lower or uc_clean in p.name.lower():
-                    has_exact = True
+                    is_color_match = True
                     break
-            
-            if has_exact:
-                exact_matches.append(p)
-                continue
-                
-            # 2. Check token match
-            has_token = False
-            # Check in product colors
-            for pc in p_colors_lower:
-                for word in pc.split():
-                    if word in pref_tokens:
-                        has_token = True
+                    
+            # Token match check
+            if not is_color_match and pref_tokens:
+                for pc in p_colors_lower:
+                    for word in pc.split():
+                        if word in pref_tokens:
+                            is_color_match = True
+                            break
+                    if is_color_match:
                         break
-                if has_token:
-                    break
-            # Also check in product name
-            if not has_token:
-                for word in p.name.lower().split():
-                    if word in pref_tokens:
-                        has_token = True
-                        break
-            
-            if has_token:
-                token_matches.append(p)
+                if not is_color_match:
+                    for word in p.name.lower().split():
+                        if word in pref_tokens:
+                            is_color_match = True
+                            break
 
-        if exact_matches:
-            all_prods = exact_matches
-            exact_color_match_found = True
-        elif token_matches:
-            all_prods = token_matches
-            exact_color_match_found = True
-        else:
-            # Fallback: if no matches at all, keep all_prods but flag match as False
-            exact_color_match_found = False
+        products_with_flags.append({
+            "product": p,
+            "is_price_match": is_price_match,
+            "is_material_match": is_material_match,
+            "is_fabric_match": is_fabric_match,
+            "is_color_match": is_color_match
+        })
 
     # Pincode priority vendor sets
     exact_ids = set()
@@ -362,12 +375,35 @@ def list_products(
             if any(p.startswith(pin_prefix) for p in (v.serviceable_pincodes or []))
         } - exact_ids
 
-    # Sorting logic combining color priority & pincode priority
-    def combined_sort_key(p: Product):
-        p_colors = p.color_variants or []
-        if not p_colors and p.variants and isinstance(p.variants, dict):
-            p_colors = p.variants.get("color", [])
-        color_pri = get_color_match_priority(p_colors, color_prefs)
+    # Sorting logic combining match quality & pincode priority
+    def get_match_rank(item: dict) -> int:
+        is_color = item["is_color_match"]
+        is_mat = item["is_material_match"]
+        is_fab = item["is_fabric_match"]
+        is_price = item["is_price_match"]
+        
+        # Perfect Match
+        if is_color and is_mat and is_fab and is_price:
+            return 0
+        # Exceeds budget
+        elif is_color and is_mat and is_fab and not is_price:
+            return 1
+        # Misses material
+        elif is_color and is_price and (not is_mat or not is_fab):
+            return 2
+        # Misses color
+        elif is_mat and is_fab and is_price and not is_color:
+            return 3
+        # Matches budget only
+        elif is_price:
+            return 4
+        # Others
+        else:
+            return 5
+
+    def combined_sort_key(item: dict):
+        p = item["product"]
+        match_rank = get_match_rank(item)
         
         pin_tier = 2
         if p.vendor_id in exact_ids:
@@ -375,13 +411,13 @@ def list_products(
         elif p.vendor_id in nearby_ids:
             pin_tier = 1
             
-        return (color_pri, pin_tier)
+        return (match_rank, pin_tier)
 
-    all_prods.sort(key=combined_sort_key)
+    products_with_flags.sort(key=combined_sort_key)
 
     # Style tag filtering
     if style:
-        all_prods = [p for p in all_prods if style.lower() in (p.style_tags or [])]
+        products_with_flags = [item for item in products_with_flags if style.lower() in (item["product"].style_tags or [])]
 
     # Helper for label
     def tier_label(p: Product):
@@ -391,10 +427,22 @@ def list_products(
             return "nearby"
         return "national"
 
-    paginated = all_prods[skip: skip + limit]
+    exact_color_match_found = any(item["is_color_match"] for item in products_with_flags)
+
+    paginated = products_with_flags[skip: skip + limit]
     return {
-        "items": [_prod_out(p, tier_label(p)) for p in paginated],
-        "total": len(all_prods),
+        "items": [
+            _prod_out(
+                item["product"], 
+                tier_label(item["product"]),
+                is_color_match=item["is_color_match"],
+                is_material_match=item["is_material_match"],
+                is_fabric_match=item["is_fabric_match"],
+                is_price_match=item["is_price_match"]
+            )
+            for item in paginated
+        ],
+        "total": len(products_with_flags),
         "exact_color_match_found": exact_color_match_found
     }
 
@@ -424,7 +472,14 @@ def _pkg_out(p: Package) -> dict:
     }
 
 
-def _prod_out(p: Product, availability_tier: str = "national") -> dict:
+def _prod_out(
+    p: Product, 
+    availability_tier: str = "national",
+    is_color_match: bool = True,
+    is_material_match: bool = True,
+    is_fabric_match: bool = True,
+    is_price_match: bool = True
+) -> dict:
     return {
         "id": p.id,
         "sku": p.sku,
@@ -450,7 +505,11 @@ def _prod_out(p: Product, availability_tier: str = "national") -> dict:
         "mounting_type": p.mounting_type,
         "assembly_required": p.assembly_required,
         "suitable_room": p.suitable_room,
-        "description": p.description
+        "description": p.description,
+        "is_color_match": is_color_match,
+        "is_material_match": is_material_match,
+        "is_fabric_match": is_fabric_match,
+        "is_price_match": is_price_match
     }
 
 
