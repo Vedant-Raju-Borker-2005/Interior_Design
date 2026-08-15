@@ -84,6 +84,13 @@ def init_db():
                     cursor.execute("ALTER TABLE projects ADD COLUMN defaults TEXT DEFAULT '{}'")
                 if "total_units" not in proj_cols:
                     cursor.execute("ALTER TABLE projects ADD COLUMN total_units INTEGER DEFAULT 0")
+                if "flat_id" not in proj_cols:
+                    cursor.execute("ALTER TABLE projects ADD COLUMN flat_id VARCHAR")
+                if "locality" not in proj_cols:
+                    cursor.execute("ALTER TABLE projects ADD COLUMN locality VARCHAR")
+                if "timeline" not in proj_cols:
+                    cursor.execute("ALTER TABLE projects ADD COLUMN timeline VARCHAR")
+
 
 
                 # Migrate project_photos table to add category column if missing
@@ -207,9 +214,9 @@ def sync_demo_data(db):
         # Check if project has rooms
         existing_rooms = db.query(Room).filter(Room.project_id == proj.id).all()
         if not existing_rooms:
-            r1 = Room(id=f"room-living-{proj.id[:6]}", project_id=proj.id, room_type="living_room")
-            r2 = Room(id=f"room-master-{proj.id[:6]}", project_id=proj.id, room_type="bedroom_master")
-            r3 = Room(id=f"room-kitchen-{proj.id[:6]}", project_id=proj.id, room_type="kitchen")
+            r1 = Room(id=f"room-living-{proj.id}", project_id=proj.id, room_type="living_room")
+            r2 = Room(id=f"room-master-{proj.id}", project_id=proj.id, room_type="bedroom_master")
+            r3 = Room(id=f"room-kitchen-{proj.id}", project_id=proj.id, room_type="kitchen")
             db.add_all([r1, r2, r3])
             db.commit()
 

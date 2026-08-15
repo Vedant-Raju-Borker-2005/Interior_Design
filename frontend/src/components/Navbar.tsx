@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
+import { useProjectStore } from '@/stores/projectStore'
 import { Home, LayoutDashboard, LogOut, Menu, X, Sparkles, BarChart3, User, Briefcase, HelpCircle } from 'lucide-react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -17,6 +18,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     logout()
+    useProjectStore.getState().clearProject()
     router.push('/')
   }
 
@@ -30,7 +32,7 @@ export default function Navbar() {
     if (role === 'admin') {
       navLinks.push({ href: '/admin', label: 'Admin Portal', icon: LayoutDashboard })
     } else if (role === 'enterprise') {
-      navLinks.push({ href: '/enterprise/dashboard', label: 'Enterprise Hub', icon: LayoutDashboard })
+      navLinks.push({ href: '/enterprise/dashboard', label: 'Enterprise Portal', icon: LayoutDashboard })
     } else if (role === 'vendor') {
       navLinks.push({ href: '/vendor/dashboard', label: 'Vendor Hub', icon: Briefcase })
     } else if (role === 'team') {

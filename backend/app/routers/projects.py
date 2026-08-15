@@ -4,7 +4,7 @@ from typing import List
 import os, shutil
 
 from ..db import get_db
-from ..models import Project, Room, RoomItem, Product, User
+from ..models import Project, Room, RoomItem, Product, User, Flat
 from ..schemas import CreateProjectReq, UpdateRoomReq, AddRoomItemReq, AddRoomReq
 from ..auth_utils import current_user
 import uuid
@@ -71,6 +71,7 @@ def create_project(
         fabric_preference=getattr(req, 'fabric_preference', None),
         furnishing_type=getattr(req, 'furnishing_type', None),
         pincode=getattr(req, 'pincode', None),
+        timeline=getattr(req, 'timeline', None),
         status="draft",
         color_preferences=req.color_preferences or [],
     )
@@ -142,6 +143,14 @@ def update_project(
     for field in ["status", "package_id", "budget", "property_name", "floor_plan_url"]:
         if field in payload:
             setattr(project, field, payload[field])
+            
+    flat = db.query(Flat).filter(Flat.customer_project_id == project.id).first()
+    if flat:
+        if payload.get("status") == "completed":
+            flat.status = "Completed"
+        elif payload.get("package_id") and flat.status in ["Onboarding", "Onboarding Complete"]:
+            flat.status = "Customization"
+            
     db.commit()
     return {"message": "updated"}
 

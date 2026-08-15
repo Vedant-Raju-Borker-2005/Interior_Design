@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from ..db import get_db, SessionLocal
-from ..models import Render, Room, User
+from ..models import Render, Room, User, Flat
 from ..schemas import RenderReq
 from ..auth_utils import current_user
 from ..services.render_mock import build_prompt, get_render_images
@@ -47,6 +47,11 @@ def queue_render(
         status="queued",
     )
     db.add(render)
+    
+    flat = db.query(Flat).filter(Flat.customer_project_id == room.project_id).first()
+    if flat and flat.status in ["Onboarding Complete", "Customization"]:
+        flat.status = "AI Rendering"
+        
     db.commit()
 
     _job_status[job_id] = {"status": "queued", "image_url": None, "thumbnail_url": None}

@@ -51,8 +51,10 @@ class Project(Base):
     user_id = Column(String, ForeignKey("users.id"))
     bhk_type = Column(String)
     property_name = Column(String)
+    locality = Column(String)
     city = Column(String)
     pincode = Column(String)
+    timeline = Column(String)
     total_area_sqft = Column(Integer)
     budget = Column(Float)
     package_id = Column(String, ForeignKey("packages.id"), nullable=True)
@@ -70,12 +72,16 @@ class Project(Base):
     earliest_start_date = Column(String, nullable=True)
     total_units = Column(Integer, default=0)
     defaults = Column(JSON, default=dict)
+    flat_id = Column(String, ForeignKey("flats.id", ondelete="SET NULL"), nullable=True)
+
 
     user = relationship("User", back_populates="projects")
     rooms = relationship("Room", back_populates="project", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="project", cascade="all, delete-orphan")
     package = relationship("Package", back_populates="projects")
     flats = relationship("Flat", foreign_keys="[Flat.project_id]", back_populates="project", cascade="all, delete-orphan")
+    flat = relationship("Flat", foreign_keys=[flat_id], backref="child_projects_backref")
+
 
     # Project Team Module relations
     team_members = relationship("ProjectTeamMember", back_populates="project", cascade="all, delete-orphan")

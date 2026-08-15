@@ -623,6 +623,7 @@ export const enterpriseAPI = {
   createProject: (data: any) => axiosInstance.post('/api/v1/enterprise/projects', data),
   listProjects: () => axiosInstance.get('/api/v1/enterprise/projects'),
   getProject: (id: string) => axiosInstance.get(`/api/v1/enterprise/projects/${id}`),
+  deleteProject: (id: string) => axiosInstance.delete(`/api/v1/enterprise/projects/${id}`),
   configureUnitMix: (id: string, data: { bhk_mix: Record<string, number> }) =>
     axiosInstance.post(`/api/v1/enterprise/projects/${id}/unit-mix`, data),
   listFlats: (id: string) => axiosInstance.get(`/api/v1/enterprise/projects/${id}/flats`),

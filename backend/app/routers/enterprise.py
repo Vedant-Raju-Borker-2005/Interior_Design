@@ -38,11 +38,13 @@ def create_enterprise_project(
         id=pid,
         user_id=user.id,
         property_name=req.property_name,
+        locality=req.locality,
         city=req.city,
         pincode=req.pincode,
         furnishing_type=req.furnishing_type,
         total_units=req.total_units,
         earliest_start_date=req.earliest_start_date,
+        timeline=req.timeline,
         status="draft",
         defaults={}
     )
@@ -351,11 +353,61 @@ def assign_customer(
         db.commit()
         db.refresh(cust_user)
 
-    flat.customer_id = cust_user.id
-    flat.status = "Not Invited"
-    db.commit()
+    try:
+        # If flat has old project and customer changed, delete it
+        if flat.customer_project_id and flat.customer_id != cust_user.id:
+            old_cp = db.query(Project).filter(Project.id == flat.customer_project_id).first()
+            if old_cp:
+                db.delete(old_cp)
+            flat.customer_project_id = None
+
+        flat.customer_id = cust_user.id
+        
+        if not flat.customer_project_id:
+            pid = str(uuid.uuid4())
+            child_project = Project(
+                id=pid,
+                user_id=cust_user.id,
+                parent_project_id=project.id,
+                flat_id=flat.id,
+                bhk_type=flat.bhk_type,
+                property_name=f"Flat {flat.flat_number}, {project.property_name}",
+                locality=project.locality,
+                city=project.city,
+                pincode=project.pincode,
+                timeline=project.timeline,
+                furnishing_type=project.furnishing_type,
+                budget=0.0,
+                status="draft",
+                floor_plan_url=flat.floor_plan.file_url if flat.floor_plan else None,
+                color_preferences=[],
+                defaults=project.defaults or {}
+            )
+            db.add(child_project)
+
+            # Initialize Rooms for child project
+            from .projects import BHK_ROOMS, ROOM_DEFAULTS
+            for rtype in BHK_ROOMS.get(flat.bhk_type, []):
+                defaults = ROOM_DEFAULTS.get(rtype, {})
+                room = Room(
+                    id=str(uuid.uuid4()),
+                    project_id=pid,
+                    room_type=rtype,
+                    length_ft=defaults.get("length_ft", 12),
+                    width_ft=defaults.get("width_ft", 10),
+                    height_ft=defaults.get("height_ft", 9),
+                )
+                db.add(room)
+            
+            flat.customer_project_id = pid
+
+        flat.status = "Not Invited"
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, detail=f"Failed to assign customer and create child project: {str(e)}")
     
-    return {"message": "Customer assigned", "customer_id": cust_user.id}
+    return {"message": "Customer assigned", "customer_id": cust_user.id, "project_id": flat.customer_project_id}
 
 
 @router.post("/flats/{flat_id}/invite", summary="Generate customer invitation token")
@@ -379,6 +431,19 @@ def generate_invitation_token(
     flat.invitation_token = token
     flat.status = "Invited"
     db.commit()
+
+    # Simulate sending email to customer
+    cust = db.query(User).filter(User.id == flat.customer_id).first()
+    if cust and cust.email:
+        invite_link = f"http://localhost:3000/onboarding?inviteToken={token}"
+        print(f"\n{'='*60}")
+        print(f"[EMAIL SIMULATION] Sent to: {cust.email}")
+        print(f"Subject: Invite to customize your flat {flat.flat_number} at {project.property_name}!")
+        print(f"Content: Hello {cust.name or 'Valued Client'},")
+        print(f"  Your developer {user.name or 'Prestige Group'} has invited you to customize your modular interiors.")
+        print(f"  Please click the following link to continue your onboarding (starting from Design Vibe):")
+        print(f"  {invite_link}")
+        print(f"{'='*60}\n")
     
     return {"invitation_token": token}
 
@@ -424,8 +489,11 @@ def validate_invitation(token: str, db: Session = Depends(get_db)):
         "flat_number": flat.flat_number,
         "bhk_type": flat.bhk_type,
         "project_name": parent_project.property_name,
+        "locality": parent_project.locality,
         "city": parent_project.city,
+        "furnishing_type": parent_project.furnishing_type,
         "earliest_start_date": parent_project.earliest_start_date,
+        "timeline": parent_project.timeline,
         "customer_name": cust.name if cust else "Valued Client",
         "customer_project_id": flat.customer_project_id
     }
@@ -445,50 +513,93 @@ def accept_invitation(
     if not parent_project:
         raise HTTPException(404, "Parent project not found.")
 
-    flat.customer_id = user.id
-    
-    if flat.customer_project_id:
-        return {"project_id": flat.customer_project_id, "message": "Invitation already accepted"}
+    try:
+        flat.customer_id = user.id
+        flat.status = "Onboarding"
+        
+        # Ensure the child project is owned by this user
+        if flat.customer_project_id:
+            child_project = db.query(Project).filter(Project.id == flat.customer_project_id).first()
+            if child_project:
+                child_project.user_id = user.id
+            else:
+                # Recreate if missing/deleted
+                pid = str(uuid.uuid4())
+                child_project = Project(
+                    id=pid,
+                    user_id=user.id,
+                    parent_project_id=parent_project.id,
+                    flat_id=flat.id,
+                    bhk_type=flat.bhk_type,
+                    property_name=f"Flat {flat.flat_number}, {parent_project.property_name}",
+                    locality=parent_project.locality,
+                    city=parent_project.city,
+                    pincode=parent_project.pincode,
+                    timeline=parent_project.timeline,
+                    furnishing_type=parent_project.furnishing_type,
+                    budget=0.0,
+                    status="draft",
+                    floor_plan_url=flat.floor_plan.file_url if flat.floor_plan else None,
+                    color_preferences=[],
+                    defaults=parent_project.defaults or {}
+                )
+                db.add(child_project)
+                
+                from .projects import BHK_ROOMS, ROOM_DEFAULTS
+                for rtype in BHK_ROOMS.get(flat.bhk_type, []):
+                    defaults = ROOM_DEFAULTS.get(rtype, {})
+                    room = Room(
+                        id=str(uuid.uuid4()),
+                        project_id=pid,
+                        room_type=rtype,
+                        length_ft=defaults.get("length_ft", 12),
+                        width_ft=defaults.get("width_ft", 10),
+                        height_ft=defaults.get("height_ft", 9),
+                    )
+                    db.add(room)
+                flat.customer_project_id = pid
+        else:
+            # Create child project
+            pid = str(uuid.uuid4())
+            child_project = Project(
+                id=pid,
+                user_id=user.id,
+                parent_project_id=parent_project.id,
+                flat_id=flat.id,
+                bhk_type=flat.bhk_type,
+                property_name=f"Flat {flat.flat_number}, {parent_project.property_name}",
+                locality=parent_project.locality,
+                city=parent_project.city,
+                pincode=parent_project.pincode,
+                timeline=parent_project.timeline,
+                furnishing_type=parent_project.furnishing_type,
+                budget=0.0,
+                status="draft",
+                floor_plan_url=flat.floor_plan.file_url if flat.floor_plan else None,
+                color_preferences=[],
+                defaults=parent_project.defaults or {}
+            )
+            db.add(child_project)
+            
+            from .projects import BHK_ROOMS, ROOM_DEFAULTS
+            for rtype in BHK_ROOMS.get(flat.bhk_type, []):
+                defaults = ROOM_DEFAULTS.get(rtype, {})
+                room = Room(
+                    id=str(uuid.uuid4()),
+                    project_id=pid,
+                    room_type=rtype,
+                    length_ft=defaults.get("length_ft", 12),
+                    width_ft=defaults.get("width_ft", 10),
+                    height_ft=defaults.get("height_ft", 9),
+                )
+                db.add(room)
+            flat.customer_project_id = pid
 
-    pid = str(uuid.uuid4())
-    child_project = Project(
-        id=pid,
-        user_id=user.id,
-        parent_project_id=parent_project.id,
-        bhk_type=flat.bhk_type,
-        property_name=f"Flat {flat.flat_number}, {parent_project.property_name}",
-        city=parent_project.city,
-        pincode=parent_project.pincode,
-        furnishing_type=parent_project.furnishing_type,
-        budget=0.0,
-        status="draft",
-        floor_plan_url=flat.floor_plan.file_url if flat.floor_plan else None,
-        color_preferences=[]
-    )
-    db.add(child_project)
-
-    # Initialize Rooms for child project
-    from .projects import BHK_ROOMS, ROOM_DEFAULTS
-    rooms_out = []
-    for rtype in BHK_ROOMS.get(flat.bhk_type, []):
-        defaults = ROOM_DEFAULTS.get(rtype, {})
-        room = Room(
-            id=str(uuid.uuid4()),
-            project_id=pid,
-            room_type=rtype,
-            length_ft=defaults.get("length_ft", 12),
-            width_ft=defaults.get("width_ft", 10),
-            height_ft=defaults.get("height_ft", 9),
-        )
-        db.add(room)
-        rooms_out.append(room)
-
-    flat.customer_project_id = pid
-    flat.status = "Onboarding"
-    # Keep the invitation token active until onboarding is fully complete
-    db.commit()
-
-    return {"project_id": pid}
+        db.commit()
+        return {"project_id": flat.customer_project_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, detail=f"Failed to accept invitation: {str(e)}")
 
 
 @router.put("/projects/{project_id}/onboarding", summary="Update child project onboarding preferences")
@@ -525,4 +636,42 @@ def update_child_onboarding(
     
     db.commit()
     return {"message": "Onboarding preferences saved"}
+
+
+@router.delete("/projects/{project_id}", summary="Delete an Enterprise project and all associated flats and child projects")
+def delete_enterprise_project(
+    project_id: str,
+    user: User = Depends(require_enterprise),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.user_id == user.id,
+        Project.parent_project_id.is_(None)
+    ).first()
+    if not project:
+        raise HTTPException(404, "Enterprise project not found")
+        
+    try:
+        # Break foreign key references in flats to avoid SQLAlchemy circular dependency errors
+        flats = db.query(Flat).filter(Flat.project_id == project_id).all()
+        for f in flats:
+            f.customer_project_id = None
+            f.customer_id = None
+        db.flush()
+
+        # Find all child projects of this parent project
+        child_projects = db.query(Project).filter(Project.parent_project_id == project_id).all()
+        for cp in child_projects:
+            db.delete(cp)
+            
+        # Delete parent project (this will cascade delete Flats due to relationship cascade)
+        db.delete(project)
+        db.commit()
+        return {"success": True, "message": "Project and all associated unit configurations deleted successfully."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, detail=f"Failed to delete project: {str(e)}")
+
+
 
