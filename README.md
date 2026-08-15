@@ -6,7 +6,7 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 *   **Interactive 3D Room Canvas**  
     Powered by **Three.js** and **React Three Fiber (R3F)**. Live 3D environment to customize walls, flooring, and adjust furniture arrangements (sofas, beds, wardrobes, kitchen counters, vanity units) in real time.
