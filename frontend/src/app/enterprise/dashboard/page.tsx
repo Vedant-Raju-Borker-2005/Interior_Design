@@ -13,6 +13,7 @@ export default function EnterpriseDashboard() {
   const router = useRouter()
   const { user } = useAuthStore()
   const [projects, setProjects] = useState<any[]>([])
+  const [activity, setActivity] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
@@ -21,15 +22,19 @@ export default function EnterpriseDashboard() {
   const fetchProjects = () => {
     setLoading(true)
     setError(null)
-    enterpriseAPI.listProjects()
-      .then(res => {
-        setProjects(res.data.projects || [])
+    Promise.all([
+      enterpriseAPI.listProjects(),
+      enterpriseAPI.getActivity()
+    ])
+      .then(([projRes, actRes]) => {
+        setProjects(projRes.data.projects || [])
+        setActivity(actRes.data.activity || [])
         setLoading(false)
       })
       .catch(err => {
-        console.error("Failed to load enterprise projects:", err)
-        setError("Failed to fetch projects. Please check your credentials.")
-        toast.error("Failed to fetch projects. Please check your credentials.", { id: 'enterprise-fetch-projects-error' })
+        console.error("Failed to load enterprise data:", err)
+        setError("Failed to fetch developments. Please check your connection.")
+        toast.error("Failed to fetch developments. Please check your connection.", { id: 'enterprise-fetch-error' })
         setLoading(false)
       })
   }
@@ -128,25 +133,35 @@ export default function EnterpriseDashboard() {
                 </h3>
 
                 <div className="divide-y divide-slate-100">
-                  {[
-                    { id: 1, message: 'Project Prestige Greenhills setup completed.', time: '2 hours ago', icon: Building },
-                    { id: 2, message: 'Flat 102 assigned to buyer (buyer.name@example.com).', time: '5 hours ago', icon: User },
-                    { id: 3, message: 'Invitation accepted for Flat 204 by Amit Sharma.', time: '1 day ago', icon: CheckCircle2 },
-                    { id: 4, message: 'Floor plan "Standard 3BHK Layout" uploaded for project Prestige Lakeside.', time: '2 days ago', icon: Calendar },
-                  ].map((act) => (
-                    <div key={act.id} className="py-4 flex gap-4 items-start first:pt-0 last:pb-0">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-slate-50 border border-slate-100 text-slate-500">
-                        <act.icon className="w-4 h-4" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-slate-750 leading-normal">{act.message}</p>
-                        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-semibold mt-0.5">
-                          <Clock className="w-3 h-3" />
-                          <span>{act.time}</span>
-                        </div>
-                      </div>
+                  {activity.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-400 font-semibold">
+                      No recent activities logged yet.
                     </div>
-                  ))}
+                  ) : (
+                    activity.map((act) => {
+                      const IconComponent = act.type === 'project' ? Building : User
+                      let displayedTime = 'Just now'
+                      try {
+                        const date = new Date(act.timestamp)
+                        displayedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + date.toLocaleDateString([], { month: 'short', day: 'numeric' })
+                      } catch (e) {}
+
+                      return (
+                        <div key={act.id} className="py-4 flex gap-4 items-start first:pt-0 last:pb-0">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-slate-50 border border-slate-100 text-slate-500">
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-slate-750 leading-normal">{act.message}</p>
+                            <div className="flex items-center gap-1 text-[10px] text-slate-400 font-semibold mt-0.5">
+                              <Clock className="w-3 h-3" />
+                              <span>{displayedTime}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
               </div>
 

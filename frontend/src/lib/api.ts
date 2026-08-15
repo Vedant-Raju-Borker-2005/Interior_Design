@@ -645,6 +645,7 @@ export const enterpriseAPI = {
   acceptInvitation: (token: string) => axiosInstance.post('/api/v1/enterprise/invitations/accept', { token }),
   updateOnboarding: (projectId: string, data: any) =>
     axiosInstance.put(`/api/v1/enterprise/projects/${projectId}/onboarding`, data),
+  getActivity: () => axiosInstance.get('/api/v1/enterprise/activity'),
 }
 
 // Customer extras

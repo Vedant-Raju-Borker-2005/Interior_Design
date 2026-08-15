@@ -78,6 +78,12 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
     A cohesive operations console for site coordinators and technicians. Organize execution workflows into structured tabs covering Timeline & Sourcing (with status log history & technician mapping), Task Calendars, site visit outcomes, call/meeting minutes logs, customer communication history, local project document uploads, and Manager-specific SLA reporting.
 *   **Robust Sign-Up & Unique Contact Generation (New):**  
     Automatically handles registration conflicts by dynamically generating unique backup credentials (phone-based emails for phone registrations, and random unique phone numbers for email registrations). This guarantees that new registration flows will never hit database unique key constraints (`UNIQUE constraint failed: users.email` or `users.phone`).
+*   **Real-Time Developer Activity Logging (New):**  
+    Logs and displays real-time developer actions (parent project setup completions and customer assignments) via database-backed `AuditLog` records.
+*   **Compulsory Allocation Form Fields (New):**  
+    Enforces name and email as required inputs on flat customer allocations, reordering fields to present email above the optional phone input.
+*   **Onboarding Floor Plan & Blueprint Integration (New):**  
+    Moved the floor plan selector and blueprint file upload system from a post-onboarding layout page directly into Step 1 (Home Configuration) of B2C customer onboarding, making it optional and simplifying B2C conversion.
 
 ---
 
