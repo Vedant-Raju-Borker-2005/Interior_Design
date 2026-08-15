@@ -618,6 +618,34 @@ export const vendorAPI = {
     axiosInstance.patch('/api/v1/vendor/notifications', { notificationIds }),
 }
 
+// Enterprise and B2B2C API
+export const enterpriseAPI = {
+  createProject: (data: any) => axiosInstance.post('/api/v1/enterprise/projects', data),
+  listProjects: () => axiosInstance.get('/api/v1/enterprise/projects'),
+  getProject: (id: string) => axiosInstance.get(`/api/v1/enterprise/projects/${id}`),
+  configureUnitMix: (id: string, data: { bhk_mix: Record<string, number> }) =>
+    axiosInstance.post(`/api/v1/enterprise/projects/${id}/unit-mix`, data),
+  listFlats: (id: string) => axiosInstance.get(`/api/v1/enterprise/projects/${id}/flats`),
+  uploadFloorPlan: (id: string, layoutName: string, file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('layout_name', layoutName)
+    return axiosInstance.post(`/api/v1/enterprise/projects/${id}/floor-plans`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  listFloorPlans: (id: string) => axiosInstance.get(`/api/v1/enterprise/projects/${id}/floor-plans`),
+  updateFlat: (flatId: string, data: any) => axiosInstance.put(`/api/v1/enterprise/flats/${flatId}`, data),
+  assignCustomer: (flatId: string, data: { name: string; phone?: string; email?: string }) =>
+    axiosInstance.post(`/api/v1/enterprise/flats/${flatId}/assign`, data),
+  inviteCustomer: (flatId: string) => axiosInstance.post(`/api/v1/enterprise/flats/${flatId}/invite`),
+  revokeInvitation: (flatId: string) => axiosInstance.post(`/api/v1/enterprise/flats/${flatId}/revoke-invite`),
+  validateInvitation: (token: string) => axiosInstance.get(`/api/v1/enterprise/invitations/validate?token=${token}`),
+  acceptInvitation: (token: string) => axiosInstance.post('/api/v1/enterprise/invitations/accept', { token }),
+  updateOnboarding: (projectId: string, data: any) =>
+    axiosInstance.put(`/api/v1/enterprise/projects/${projectId}/onboarding`, data),
+}
+
 // Customer extras
 export const customerExtrasAPI = {
   getProofPhotos: (projectId: string) =>
@@ -625,4 +653,5 @@ export const customerExtrasAPI = {
 }
 
 export default axiosInstance
+
 

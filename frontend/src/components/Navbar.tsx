@@ -29,6 +29,8 @@ export default function Navbar() {
     const role = user?.role || 'customer'
     if (role === 'admin') {
       navLinks.push({ href: '/admin', label: 'Admin Portal', icon: LayoutDashboard })
+    } else if (role === 'enterprise') {
+      navLinks.push({ href: '/enterprise/dashboard', label: 'Enterprise Hub', icon: LayoutDashboard })
     } else if (role === 'vendor') {
       navLinks.push({ href: '/vendor/dashboard', label: 'Vendor Hub', icon: Briefcase })
     } else if (role === 'team') {
