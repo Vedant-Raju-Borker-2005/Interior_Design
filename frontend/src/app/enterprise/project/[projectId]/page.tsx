@@ -80,8 +80,8 @@ export default function EnterpriseProjectPage() {
   }, [projectId])
 
   const handleAssignCustomer = async () => {
-    if (!selectedFlat || !assignName.trim()) {
-      toast.error("Please enter a customer name.")
+    if (!selectedFlat || !assignName.trim() || !assignEmail.trim()) {
+      toast.error("Name and Email are required fields.")
       return
     }
 
@@ -475,23 +475,23 @@ export default function EnterpriseProjectPage() {
                     <div className="space-y-2.5">
                       <input
                         type="text"
-                        placeholder="Buyer's Full Name"
+                        placeholder="Buyer's Full Name *"
                         value={assignName}
                         onChange={e => setAssignName(e.target.value)}
                         className="input w-full px-3 py-2 rounded-lg border border-slate-200 outline-none"
                       />
                       <input
-                        type="text"
-                        placeholder="Buyer's Phone (e.g. +919900004444)"
-                        value={assignPhone}
-                        onChange={e => setAssignPhone(e.target.value)}
+                        type="email"
+                        placeholder="Buyer's Email *"
+                        value={assignEmail}
+                        onChange={e => setAssignEmail(e.target.value)}
                         className="input w-full px-3 py-2 rounded-lg border border-slate-200 outline-none"
                       />
                       <input
-                        type="email"
-                        placeholder="Buyer's Email (optional)"
-                        value={assignEmail}
-                        onChange={e => setAssignEmail(e.target.value)}
+                        type="text"
+                        placeholder="Buyer's Phone (optional)"
+                        value={assignPhone}
+                        onChange={e => setAssignPhone(e.target.value)}
                         className="input w-full px-3 py-2 rounded-lg border border-slate-200 outline-none"
                       />
                       <button

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Project, Flat, User, FloorPlan, Room, RoomItem, Product, ProjectTeamMember, ProjectAssignment
+from ..models import Project, Flat, User, FloorPlan, Room, RoomItem, Product, ProjectTeamMember, ProjectAssignment, AuditLog
 from ..schemas import (
     CreateEnterpriseProjectReq, ConfigureUnitMixReq, UpdateFlatReq,
     AssignCustomerReq, AcceptInvitationReq, UpdateCustomerOnboardingReq
@@ -51,6 +51,21 @@ def create_enterprise_project(
     db.add(project)
     db.commit()
     db.refresh(project)
+
+    # Log project creation activity
+    try:
+        log = AuditLog(
+            user_id=user.id,
+            action="PROJECT_CREATED",
+            entity_type="Project",
+            entity_id=project.id,
+            timestamp=datetime.datetime.utcnow()
+        )
+        db.add(log)
+        db.commit()
+    except Exception as log_err:
+        print("Failed to write project creation audit log:", log_err)
+
     return {"project_id": pid, "property_name": project.property_name}
 
 
@@ -335,10 +350,10 @@ def assign_customer(
         raise HTTPException(403, "Not authorized to assign customer to this flat")
 
     cust_user = None
-    if req.phone:
-        cust_user = db.query(User).filter(User.phone == req.phone).first()
-    if not cust_user and req.email:
+    if req.email:
         cust_user = db.query(User).filter(User.email == req.email).first()
+    if not cust_user and req.phone:
+        cust_user = db.query(User).filter(User.phone == req.phone).first()
 
     if not cust_user:
         cust_user = User(
@@ -362,6 +377,7 @@ def assign_customer(
             flat.customer_project_id = None
 
         flat.customer_id = cust_user.id
+        flat.invitation_token = None
         
         if not flat.customer_project_id:
             pid = str(uuid.uuid4())
@@ -431,6 +447,20 @@ def generate_invitation_token(
     flat.invitation_token = token
     flat.status = "Invited"
     db.commit()
+
+    # Log invitation sent activity
+    try:
+        log = AuditLog(
+            user_id=user.id,
+            action="INVITATION_SENT",
+            entity_type="Flat",
+            entity_id=flat.id,
+            timestamp=datetime.datetime.utcnow()
+        )
+        db.add(log)
+        db.commit()
+    except Exception as log_err:
+        print("Failed to write invitation audit log:", log_err)
 
     # Simulate sending email to customer
     cust = db.query(User).filter(User.id == flat.customer_id).first()
@@ -665,13 +695,54 @@ def delete_enterprise_project(
         for cp in child_projects:
             db.delete(cp)
             
-        # Delete parent project (this will cascade delete Flats due to relationship cascade)
         db.delete(project)
         db.commit()
         return {"success": True, "message": "Project and all associated unit configurations deleted successfully."}
     except Exception as e:
         db.rollback()
         raise HTTPException(500, detail=f"Failed to delete project: {str(e)}")
+
+
+@router.get("/activity", summary="Fetch real activity feed of the logged-in enterprise developer")
+def get_enterprise_activity(
+    user: User = Depends(require_enterprise),
+    db: Session = Depends(get_db)
+):
+    # Query audit logs created by this enterprise user
+    logs = db.query(AuditLog).filter(
+        AuditLog.user_id == user.id,
+        AuditLog.action.in_(["PROJECT_CREATED", "INVITATION_SENT"])
+    ).order_by(AuditLog.timestamp.desc()).limit(10).all()
+    
+    activity = []
+    for log in logs:
+        time_str = log.timestamp.isoformat()
+        if log.action == "PROJECT_CREATED":
+            # Find project name
+            proj = db.query(Project).filter(Project.id == log.entity_id).first()
+            proj_name = proj.property_name if proj else "Unknown Project"
+            activity.append({
+                "id": log.id,
+                "message": f"Project {proj_name} setup completed.",
+                "timestamp": time_str,
+                "type": "project"
+            })
+        elif log.action == "INVITATION_SENT":
+            # Find flat and customer details
+            flat = db.query(Flat).filter(Flat.id == log.entity_id).first()
+            if flat:
+                proj = db.query(Project).filter(Project.id == flat.project_id).first()
+                proj_name = proj.property_name if proj else ""
+                cust = db.query(User).filter(User.id == flat.customer_id).first()
+                cust_desc = f" ({cust.email})" if cust and cust.email else ""
+                activity.append({
+                    "id": log.id,
+                    "message": f"Flat {flat.flat_number} at {proj_name} assigned to buyer{cust_desc}.",
+                    "timestamp": time_str,
+                    "type": "invite"
+                })
+                
+    return {"activity": activity}
 
 
 
