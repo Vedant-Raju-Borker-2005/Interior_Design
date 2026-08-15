@@ -36,5 +36,9 @@ The frontend is a single-page Next.js application built with React, TypeScript, 
   * All option grids (style vibes, laminate finishes, fabrics) must be fully responsive using standard breakpoints (`grid-cols-1 md:grid-cols-3` or similar).
 * **No Hardcoded URLs**:
   * Always construct static/catalog paths relative to the backend API base (`process.env.NEXT_PUBLIC_API_URL` or `http://localhost:8000`).
-* **Visual States**:
+* **Visual States & Notifications**:
   * Cards should include distinct hover scale transforms (`hover:scale-[1.02]`) and explicit visual indicator badges (like a checkmark overlay) for active selections.
+  * Product cards inside Customizer render preference warning banners (color, material, fabric, price range warnings) if compatibility checks fail.
+  * Action buttons in customize header include gradient exiting button and indigo Proceed button.
+  * Global Toaster is configured with a 75px top offset to display notifications below the fixed header navigation bar.
+  * Room labels in customize use the `getRoomLabelAndIcon` helper to adjust names dynamically based on BHK type (e.g. Master Bedroom 1 vs. Bedroom).

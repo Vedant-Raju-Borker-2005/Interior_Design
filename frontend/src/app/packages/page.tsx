@@ -33,6 +33,14 @@ function PackagesContent() {
   const budget = Number(searchParams.get('budget') || '1000000')
   const styleTags = searchParams.get('style') || ''
 
+  const getDynamicPrice = (pkg: any) => {
+    if (!budget) return pkg.base_price
+    if (pkg.tier === 'basic') return budget
+    if (pkg.tier === 'premium') return budget + 200000
+    if (pkg.tier === 'luxury') return budget + 500000
+    return pkg.base_price
+  }
+
   const [packages, setPackages] = useState<any[]>([])
   const [filteredTier, setFilteredTier] = useState<Tier>('all')
   const [loading, setLoading] = useState(true)
@@ -220,7 +228,7 @@ function PackagesContent() {
                     <div>
                       <div className="text-xs text-slate-400 mb-1">Starting from</div>
                       <div className="text-3xl font-black text-indigo-600">
-                        ₹{(pkg.base_price / 100000).toFixed(1)}L
+                        ₹{(getDynamicPrice(pkg) / 100000).toFixed(1)}L
                       </div>
                     </div>
                     <div className="text-xs text-slate-400 text-right">

@@ -84,6 +84,12 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
     Enforces name and email as required inputs on flat customer allocations, reordering fields to present email above the optional phone input.
 *   **Onboarding Floor Plan & Blueprint Integration (New):**  
     Moved the floor plan selector and blueprint file upload system from a post-onboarding layout page directly into Step 1 (Home Configuration) of B2C customer onboarding, making it optional and simplifying B2C conversion.
+*   **Dynamic Package Pricing (New):**  
+    Computes Basic, Premium, and Luxury package prices dynamically based on the customer's chosen onboarding budget limit (e.g. Basic = budget, Premium = budget + 2L, Luxury = budget + 5L).
+*   **Custom BHK Room Mixes (New):**  
+    Fully supports customized room distributions from 1BHK to 5BHK, with dynamic room labeling ("Bedroom" for 1BHK; "Master Bedroom 1", "Bedroom 2" etc. for 2BHK+) and category checklist mappings.
+*   **Budget-Aware Product Recommendations (New):**  
+    Scores and ranks catalog options against the onboarding budget limit (max price caps per budget tier) while rendering compatibility warning labels in customizer cards if color/material/price conditions are not met.
 
 ---
 
