@@ -131,13 +131,14 @@ export default function OnboardingPage() {
               bhk: data.bhk_type || '2BHK',
               property_name: data.project_name || '',
               city: data.city || 'Bangalore',
-              furnishing_type: 'new'
+              furnishing_type: data.furnishing_type || 'new',
+              timeline: data.timeline || ''
             }))
             if (data.customer_project_id) {
               setChildProjectId(data.customer_project_id)
             }
-            // Starts directly at Step 2 (Budget & Timeline)
-            setStep(2)
+            // Starts directly at Step 3 (Design Vibe)
+            setStep(3)
           })
           .catch(err => {
             console.error("Invalid token details:", err)
@@ -219,6 +220,16 @@ export default function OnboardingPage() {
     if (step === 4) return !!local.interior_material_preference && !!local.fabric_preference
     if (step === 5) return local.color_preferences.length > 0
     return false
+  }
+
+  const handleNext = () => {
+    if (step === 0) {
+      if (local.pincode && (local.pincode.length !== 6 || !/^\d+$/.test(local.pincode))) {
+        toast.error("Pincode must be a 6-digit number.")
+        return
+      }
+    }
+    setStep((s) => s + 1)
   }
 
   const handleSubmit = async () => {
@@ -342,7 +353,7 @@ export default function OnboardingPage() {
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Pincode <span className="text-slate-400 font-normal">(optional)</span></label>
                   <input id="pincode" type="text" placeholder="e.g. 560001"
-                    value={local.pincode} onChange={(e) => setLocal((s) => ({ ...s, pincode: e.target.value }))}
+                    value={local.pincode} onChange={(e) => { const numericVal = e.target.value.replace(/\D/g, ''); setLocal((s) => ({ ...s, pincode: numericVal })); }}
                     className="input w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium text-slate-800 outline-none" maxLength={6} />
                 </div>
 
@@ -901,7 +912,7 @@ export default function OnboardingPage() {
           </button>
 
           {step < STEPS.length - 1 ? (
-            <button onClick={() => setStep((s) => s + 1)} disabled={!canNext()}
+            <button onClick={handleNext} disabled={!canNext()}
               className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 shadow-glow-indigo text-white flex items-center gap-1.5">
               Next <ArrowRight className="w-4 h-4" />
             </button>

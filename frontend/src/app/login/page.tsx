@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { authAPI, enterpriseAPI } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
+import { useProjectStore } from '@/stores/projectStore'
 import toast from 'react-hot-toast'
 import { Sparkles, Phone, Mail, ArrowRight, RefreshCw, MapPin, User, Compass, HelpCircle, Check, Info, Building } from 'lucide-react'
 import Link from 'next/link'
@@ -104,6 +105,7 @@ export default function LoginPage() {
 
       // Auto Login & Set token
       setToken(res.data.access_token, res.data.user_id, res.data.role)
+      useProjectStore.getState().clearProject()
 
       // If they just registered, update their profile details in the authStore
       if (mode === 'signup' && res.data.user) {

@@ -38,6 +38,7 @@ class CreateProjectReq(BaseModel):
     fabric_preference: Optional[str] = None
     pincode: Optional[str] = None
     furnishing_type: Optional[str] = None  # new / upgrade
+    timeline: Optional[str] = None
     color_preferences: Optional[List[str]] = []
 
 
@@ -301,11 +302,13 @@ class UpdateVendorMilestoneReq(BaseModel):
 # ── Enterprise & B2B2C Schemas ────────────────────────────────────────────────
 class CreateEnterpriseProjectReq(BaseModel):
     property_name: str
+    locality: Optional[str] = None
     city: str
     pincode: Optional[str] = None
     furnishing_type: str  # new / upgrade
     total_units: int
     earliest_start_date: Optional[str] = None
+    timeline: Optional[str] = None
 
 
 class ConfigureUnitMixReq(BaseModel):
