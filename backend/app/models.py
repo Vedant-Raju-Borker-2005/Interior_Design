@@ -65,11 +65,17 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     color_preferences = Column(JSON, default=list)
 
+    # Enterprise / Parent-Child Project References
+    parent_project_id = Column(String, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    earliest_start_date = Column(String, nullable=True)
+    total_units = Column(Integer, default=0)
+    defaults = Column(JSON, default=dict)
 
     user = relationship("User", back_populates="projects")
     rooms = relationship("Room", back_populates="project", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="project", cascade="all, delete-orphan")
     package = relationship("Package", back_populates="projects")
+    flats = relationship("Flat", foreign_keys="[Flat.project_id]", back_populates="project", cascade="all, delete-orphan")
 
     # Project Team Module relations
     team_members = relationship("ProjectTeamMember", back_populates="project", cascade="all, delete-orphan")
@@ -81,6 +87,29 @@ class Project(Base):
     delays = relationship("ProjectDelay", back_populates="project", cascade="all, delete-orphan")
     comms_logs = relationship("CommunicationLog", back_populates="project", cascade="all, delete-orphan")
     documents = relationship("ProjectDocument", back_populates="project", cascade="all, delete-orphan")
+
+
+class Flat(Base):
+    __tablename__ = "flats"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    flat_number = Column(String, nullable=False)
+    bhk_type = Column(String, nullable=False)
+    floor_plan_id = Column(String, ForeignKey("floor_plans.id", ondelete="SET NULL"), nullable=True)
+    customer_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    invitation_token = Column(String, unique=True, nullable=True)
+    status = Column(String, default="Unassigned")  # Unassigned, Not Invited, Invited, Onboarding, Onboarding Complete, Customization, AI Rendering, Completed
+    invitation_expires_at = Column(DateTime, nullable=True)
+
+    overall_progress = Column(Float, default=0.0)
+    customer_project_id = Column(String, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+
+    project = relationship("Project", foreign_keys=[project_id], back_populates="flats")
+    customer = relationship("User", foreign_keys=[customer_id], backref="flats")
+    customer_project = relationship("Project", foreign_keys=[customer_project_id])
+    floor_plan = relationship("FloorPlan", foreign_keys=[floor_plan_id])
+
 
 
 class Room(Base):

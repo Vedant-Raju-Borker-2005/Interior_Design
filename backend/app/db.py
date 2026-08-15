@@ -76,6 +76,15 @@ def init_db():
                     cursor.execute("ALTER TABLE projects ADD COLUMN interior_material_preference VARCHAR")
                 if "fabric_preference" not in proj_cols:
                     cursor.execute("ALTER TABLE projects ADD COLUMN fabric_preference VARCHAR")
+                if "parent_project_id" not in proj_cols:
+                    cursor.execute("ALTER TABLE projects ADD COLUMN parent_project_id VARCHAR")
+                if "earliest_start_date" not in proj_cols:
+                    cursor.execute("ALTER TABLE projects ADD COLUMN earliest_start_date VARCHAR")
+                if "defaults" not in proj_cols:
+                    cursor.execute("ALTER TABLE projects ADD COLUMN defaults TEXT DEFAULT '{}'")
+                if "total_units" not in proj_cols:
+                    cursor.execute("ALTER TABLE projects ADD COLUMN total_units INTEGER DEFAULT 0")
+
 
                 # Migrate project_photos table to add category column if missing
                 cursor.execute("PRAGMA table_info(project_photos)")
@@ -120,7 +129,7 @@ def init_db():
 
 
 def sync_demo_data(db):
-    from .models import User, Project, Vendor, ProjectTeamMember, ProjectAssignment, VendorAssignment, Room, Product, RoomItem, Quotation
+    from .models import User, Project, Vendor, ProjectTeamMember, ProjectAssignment, VendorAssignment, Room, Product, RoomItem, Quotation, Flat
     import uuid
     import datetime
 
@@ -129,8 +138,10 @@ def sync_demo_data(db):
         {"name": "Seeded Customer", "phone": "+919900004444", "email": "customer@example.com", "role": "customer"},
         {"name": "Seeded Vendor", "phone": "+919900001111", "email": "vendor@example.com", "role": "vendor"},
         {"name": "Seeded Team Member", "phone": "+919900002222", "email": "team@example.com", "role": "team"},
-        {"name": "Seeded Admin", "phone": "+919900003333", "email": "admin@example.com", "role": "admin"}
+        {"name": "Seeded Admin", "phone": "+919900003333", "email": "admin@example.com", "role": "admin"},
+        {"name": "Seeded Enterprise", "phone": "+919900005555", "email": "enterprise@example.com", "role": "enterprise"}
     ]
+
 
     users = {}
     for ud in users_data:

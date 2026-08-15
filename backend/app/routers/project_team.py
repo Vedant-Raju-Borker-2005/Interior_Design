@@ -577,7 +577,11 @@ def get_team_dashboard_stats(
     open_issues = db.query(Issue).filter(Issue.status != "closed").count()
     
     assigned_project_ids = [m.project_id for m in memberships]
-    assigned_projects_count = len(assigned_project_ids)
+    child_projects = db.query(Project).filter(Project.parent_project_id.in_(assigned_project_ids)).all() if assigned_project_ids else []
+    child_project_ids = [cp.id for cp in child_projects]
+    all_assigned_project_ids = list(set(assigned_project_ids + child_project_ids))
+    assigned_projects_count = len(all_assigned_project_ids)
+
     
     pending_tasks = db.query(Task).filter(Task.assigned_to == user.id, Task.status == "PENDING").count()
     completed_tasks = db.query(Task).filter(Task.assigned_to == user.id, Task.status == "COMPLETED").count()

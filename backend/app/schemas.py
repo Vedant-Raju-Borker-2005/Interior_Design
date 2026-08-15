@@ -296,3 +296,43 @@ class UpdateShipmentReq(BaseModel):
 class UpdateVendorMilestoneReq(BaseModel):
     milestone_name: str # po_approved, design_approved, etc.
     status: str # pending, approved, paid
+
+
+# ── Enterprise & B2B2C Schemas ────────────────────────────────────────────────
+class CreateEnterpriseProjectReq(BaseModel):
+    property_name: str
+    city: str
+    pincode: Optional[str] = None
+    furnishing_type: str  # new / upgrade
+    total_units: int
+    earliest_start_date: Optional[str] = None
+
+
+class ConfigureUnitMixReq(BaseModel):
+    bhk_mix: dict[str, int]
+
+
+class UpdateFlatReq(BaseModel):
+    flat_number: Optional[str] = None
+    bhk_type: Optional[str] = None
+    floor_plan_id: Optional[str] = None
+
+
+class AssignCustomerReq(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+
+
+class AcceptInvitationReq(BaseModel):
+    token: str
+
+
+class UpdateCustomerOnboardingReq(BaseModel):
+    budget: float
+    material_preference: str  # budget / standard / premium
+    style_tags: List[str]
+    interior_material_preference: str  # Oak / Teak / Walnut
+    fabric_preference: str  # Linen / Velvet / etc.
+    color_preferences: List[str]
+

@@ -2,10 +2,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { authAPI } from '@/lib/api'
+import { authAPI, enterpriseAPI } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
-import { Sparkles, Phone, Mail, ArrowRight, RefreshCw, MapPin, User, Compass, HelpCircle, Check, Info } from 'lucide-react'
+import { Sparkles, Phone, Mail, ArrowRight, RefreshCw, MapPin, User, Compass, HelpCircle, Check, Info, Building } from 'lucide-react'
 import Link from 'next/link'
 import clsx from 'clsx'
 
@@ -24,7 +24,7 @@ export default function LoginPage() {
   const [method, setMethod] = useState<LoginMethod>('phone')
   const [loading, setLoading] = useState(false)
   const [devOtp, setDevOtp] = useState('')
-  const [role, setRole] = useState<'customer' | 'vendor' | 'team' | 'admin'>('customer')
+  const [role, setRole] = useState<'customer' | 'vendor' | 'team' | 'admin' | 'enterprise'>('customer')
 
   // Form Fields - Default pre-filled customer number for seamless reviewer login
   const [contact, setContact] = useState('+919900004444')
@@ -33,17 +33,19 @@ export default function LoginPage() {
   const [furnishingPreference, setFurnishingPreference] = useState<'new' | 'upgrade'>('new')
   const [otp, setOtp] = useState('')
 
-  const getPrefilledContact = (roleId: 'customer' | 'vendor' | 'team' | 'admin', currentMethod: 'phone' | 'email') => {
+  const getPrefilledContact = (roleId: 'customer' | 'vendor' | 'team' | 'admin' | 'enterprise', currentMethod: 'phone' | 'email') => {
     if (currentMethod === 'phone') {
       if (roleId === 'customer') return '+919900004444'
       if (roleId === 'vendor') return '+919900001111'
       if (roleId === 'team') return '+919900002222'
       if (roleId === 'admin') return '+919900003333'
+      if (roleId === 'enterprise') return '+919900005555'
     } else {
       if (roleId === 'customer') return 'customer@example.com'
       if (roleId === 'vendor') return 'vendor@example.com'
       if (roleId === 'team') return 'team@example.com'
       if (roleId === 'admin') return 'admin@example.com'
+      if (roleId === 'enterprise') return 'enterprise@example.com'
     }
     return ''
   }
@@ -132,7 +134,21 @@ export default function LoginPage() {
         router.push('/team')
       } else if (res.data.role === 'admin') {
         router.push('/admin')
+      } else if (res.data.role === 'enterprise' || res.data.role.includes('enterprise')) {
+        router.push('/enterprise/dashboard')
       } else {
+        const token = localStorage.getItem('inviteToken') || new URLSearchParams(window.location.search).get('inviteToken')
+        if (token) {
+          try {
+            await enterpriseAPI.acceptInvitation(token)
+            localStorage.removeItem('inviteToken')
+            toast.success("Invitation accepted! Proceeding to onboarding. 🏠")
+            router.push(`/onboarding?inviteToken=${token}`)
+            return
+          } catch (acceptErr) {
+            console.error("Failed to accept invitation on login:", acceptErr)
+          }
+        }
         router.push('/dashboard')
       }
     } catch (err: any) {
@@ -184,9 +200,10 @@ export default function LoginPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
                     Access Portal As
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {([
                       { id: 'customer', label: 'Customer', icon: User, bg: 'from-blue-500 to-indigo-600' },
+                      { id: 'enterprise', label: 'Enterprise', icon: Building, bg: 'from-cyan-500 to-blue-600' },
                       { id: 'vendor', label: 'Vendor', icon: Compass, bg: 'from-emerald-500 to-teal-600' },
                       { id: 'team', label: 'Project Team', icon: Check, bg: 'from-amber-500 to-orange-600' },
                       { id: 'admin', label: 'Admin', icon: Sparkles, bg: 'from-purple-500 to-pink-600' }
