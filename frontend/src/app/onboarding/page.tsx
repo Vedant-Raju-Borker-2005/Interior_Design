@@ -206,9 +206,8 @@ export default function OnboardingPage() {
   const toggleStyle = (id: string) => {
     setLocal((s) => ({
       ...s,
-      style_tags: s.style_tags.includes(id)
-        ? s.style_tags.filter((x) => x !== id)
-        : [...s.style_tags, id],
+      // Single-select: clicking same item deselects; clicking another replaces selection
+      style_tags: s.style_tags.includes(id) ? [] : [id],
     }))
   }
 
@@ -485,7 +484,7 @@ export default function OnboardingPage() {
           {step === 3 && (
             <motion.div key="style" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
               <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">What's your design vibe?</h2>
-              <p className="text-slate-500 mb-8">Select one or more interior styles. Visual representations guide our design engine.</p>
+              <p className="text-slate-500 mb-8">Select one interior style. Visual representations guide our design engine.</p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                 {STYLE_OPTIONS.map((opt) => {

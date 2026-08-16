@@ -100,6 +100,7 @@ export default function GuidedCustomizePage() {
   const [loading, setLoading] = useState(true)
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
   const [hasSetInitialRoom, setHasSetInitialRoom] = useState(false)
+  const [userEditingCategory, setUserEditingCategory] = useState(false)
   const [activeSidebarTab, setActiveSidebarTab] = useState<'customizer' | 'floorplan'>('customizer')
 
   const activeRoom = project?.rooms?.find((r: any) => r.id === activeRoomId) || project?.rooms?.[0]
@@ -335,6 +336,7 @@ export default function GuidedCustomizePage() {
 
   const checkRoomCompleteness = (room: any) => {
     if (!room) return { isComplete: false, missing: [] }
+    if (room.room_type === 'balcony') return { isComplete: true, missing: [] }
     const categories = getRoomMandatoryCategories(room.room_type)
     const missing = categories.filter((cat) => !isCategoryDone(cat.id, room))
     return {
@@ -346,6 +348,7 @@ export default function GuidedCustomizePage() {
   const getCompletedCategoriesCount = (room: any) => {
     if (!room || !room.items) return 0
     const categories = getRoomMandatoryCategories(room.room_type)
+    if (room.room_type === 'balcony') return categories.length
     return categories.filter((cat) => isCategoryDone(cat.id, room)).length
   }
 
@@ -366,6 +369,11 @@ export default function GuidedCustomizePage() {
 
   const activeRoomCheck = checkRoomCompleteness(activeRoom)
   const allRoomsComplete = project?.rooms?.every((room: any) => checkRoomCompleteness(room).isComplete)
+  useEffect(() => {
+    if (allRoomsComplete) {
+      setUserEditingCategory(false)
+    }
+  }, [allRoomsComplete])
   const anyRoomComplete = project?.rooms?.some((room: any) => checkRoomCompleteness(room).isComplete)
   const anyItemAdded = project?.rooms?.some((room: any) => room.items && room.items.length > 0)
 
@@ -553,7 +561,7 @@ export default function GuidedCustomizePage() {
                       {isActive && (
                         <div className="border-t border-white/5 p-4 bg-slate-950/60 space-y-2">
                           <div className="space-y-1.5">
-                            {(MANDATORY_CATEGORIES[room.room_type] || []).map((cat) => {
+                            {getRoomMandatoryCategories(room.room_type).map((cat) => {
                               const savedItemInCat = room.items?.find(
                                 (it: any) => matchCategory(cat.id, it.product)
                               )
@@ -565,6 +573,7 @@ export default function GuidedCustomizePage() {
                                   onClick={() => {
                                     setSelectedCategory(cat.id)
                                     setCustomizingProduct(null)
+                                    setUserEditingCategory(true)
                                   }}
                                   className={clsx(
                                     'w-full p-3.5 rounded-xl border transition-all text-left flex items-start justify-between gap-3',
@@ -690,23 +699,62 @@ export default function GuidedCustomizePage() {
         <div className="lg:col-span-8 space-y-6">
           
           {/* Budget & Variation Tracking Box */}
-          <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Remaining Budget</span>
-              <span className="text-lg font-black text-white mt-1 block">
+          <div className="bg-slate-900 border border-white/5 rounded-3xl p-4 shadow-2xl grid grid-cols-2 gap-4">
+            <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-4 shadow-inner flex flex-col items-center justify-center text-center">
+              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">Remaining Budget</span>
+              <span className="text-lg font-black text-white mt-1.5 block">
                 ₹{remainingBudget.toLocaleString('en-IN')}
               </span>
             </div>
-            <div className="text-right">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Variation (Spent)</span>
-              <span className="text-lg font-black mt-1 block text-white">
+            <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-4 shadow-inner flex flex-col items-center justify-center text-center">
+              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">Variation (Spent)</span>
+              <span className="text-lg font-black text-white mt-1.5 block">
                 ₹{totalCustomizedCost.toLocaleString('en-IN')}
               </span>
             </div>
           </div>
 
           <AnimatePresence mode="wait">
-            {!customizingProduct ? (
+            {allRoomsComplete && !userEditingCategory ? (
+              <motion.div
+                key="all-complete"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl min-h-[400px] flex flex-col justify-between"
+              >
+                <div>
+                  <div className="border-b border-white/5 pb-4 mb-6">
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Configuration Complete</span>
+                    <h2 className="text-xl font-extrabold text-white mt-1">Ready for Visualization</h2>
+                    <p className="text-slate-400 text-xs mt-0.5">All categories under all rooms have been successfully customized.</p>
+                  </div>
+                  
+                  <div className="bg-slate-950/40 p-6 rounded-2xl border border-white/5 space-y-4 text-center my-6">
+                    <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
+                      ✓
+                    </div>
+                    <div>
+                      <p className="text-slate-200 text-sm font-extrabold">All design selections chosen!</p>
+                      <p className="text-slate-400 text-xs mt-1">
+                        Please proceed to the AI Render Studio to generate photorealistic 4-wall visual designs of your configured home.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end">
+                  <button
+                    onClick={() => router.push(`/visualize/${projectId}`)}
+                    className="py-3 px-8 bg-indigo-700 hover:bg-indigo-850 text-white text-sm font-bold rounded-xl transition shadow-md flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>Proceed to AI Render</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            ) : !customizingProduct ? (
               // STEP A: CHOOSE DESIGN
               <motion.div
                 key="catalog"
