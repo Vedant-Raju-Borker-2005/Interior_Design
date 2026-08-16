@@ -497,14 +497,22 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-l from-indigo-950/60 via-indigo-950/20 to-transparent" />
 
         <div className="absolute bottom-12 left-8 right-8 glass rounded-2xl p-6 border border-white/20 shadow-glow-indigo">
-          <p className="text-white font-medium text-lg leading-relaxed">&quot;Designed my entire 3BHK in under 20 minutes with InteriorAI. The renders and budget calculator were incredibly accurate!&quot;</p>
-          <div className="flex items-center gap-3 mt-4">
-            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-extrabold shadow-inner border border-white/20">PM</div>
-            <div>
-              <div className="text-white text-sm font-bold">Priya Mehta</div>
-              <div className="text-indigo-200 text-xs font-semibold">Homeowner, Bangalore</div>
-            </div>
-          </div>
+          {mode === 'signup' ? (
+            <p className="text-white font-medium text-lg leading-relaxed">
+              &quot;We don&apos;t just show you what your home could look like. We help you actually get it done.&quot;
+            </p>
+          ) : (
+            <>
+              <p className="text-white font-medium text-lg leading-relaxed">&quot;From designing my 3BHK to getting an execution-ready budget — InteriorAI made the entire process incredibly simple.&quot;</p>
+              <div className="flex items-center gap-3 mt-4">
+                <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-extrabold shadow-inner border border-white/20">PM</div>
+                <div>
+                  <div className="text-white text-sm font-bold">Priya Mehta</div>
+                  <div className="text-indigo-200 text-xs font-semibold">Homeowner, Bangalore</div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

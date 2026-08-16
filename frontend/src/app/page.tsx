@@ -78,17 +78,16 @@ export default function LandingPage() {
             <h1 className="text-5xl lg:text-6xl xl:text-7xl font-black text-white leading-tight mb-6">
               Get Your Interiors{' '}
               <span className="gradient-text">Designed & Delivered</span>
-              {' '}in a Week
+              {' '}Starting Under ₹3 Lakhs
             </h1>
 
             <p className="text-lg text-indigo-200 leading-relaxed mb-8 max-w-lg">
-              AI-powered design coupled with rapid, guaranteed site execution.
-              Select packages starting under ₹3 Lakh, customize details in real-time, and execute with verified contractors.
+              AI-powered interior design with real-world execution. Get personalized designs, transparent budgets, and verified contractors — so you can go from idea to finished interiors without the usual hassle
             </p>
 
             <div className="flex flex-wrap gap-4 mb-10">
               <Link href={ctaHref} id="hero-cta" className="btn-primary text-base px-8 py-4">
-                Start Designing Free <ArrowRight className="w-5 h-5" />
+                Design My Home Free <ArrowRight className="w-5 h-5" />
               </Link>
               <Link href="#how-it-works" className="btn-secondary text-base px-8 py-4" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}>
                 See How It Works

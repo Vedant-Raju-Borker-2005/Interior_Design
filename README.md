@@ -82,14 +82,24 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
     Logs and displays real-time developer actions (parent project setup completions and customer assignments) via database-backed `AuditLog` records.
 *   **Compulsory Allocation Form Fields (New):**  
     Enforces name and email as required inputs on flat customer allocations, reordering fields to present email above the optional phone input.
-*   **Onboarding Floor Plan & Blueprint Integration (New):**  
-    Moved the floor plan selector and blueprint file upload system from a post-onboarding layout page directly into Step 1 (Home Configuration) of B2C customer onboarding, making it optional and simplifying B2C conversion.
+*   **Onboarding Blueprint Integration (New):**
+    The standalone "Select Floor Plan Layout" intermediate step has been removed from the post-onboarding flow. Floor plan input is handled exclusively inside the AI visualization stage. Customer onboarding flows directly from Plan Selection to the Component Customizer.
 *   **Dynamic Package Pricing (New):**  
     Computes Basic, Premium, and Luxury package prices dynamically based on the customer's chosen onboarding budget limit (e.g. Basic = budget, Premium = budget + 2L, Luxury = budget + 5L).
 *   **Custom BHK Room Mixes (New):**  
     Fully supports customized room distributions from 1BHK to 5BHK, with dynamic room labeling ("Bedroom" for 1BHK; "Master Bedroom 1", "Bedroom 2" etc. for 2BHK+) and category checklist mappings.
-*   **Budget-Aware Product Recommendations (New):**  
+*   **Budget-Aware Product Recommendations (New):**
     Scores and ranks catalog options against the onboarding budget limit (max price caps per budget tier) while rendering compatibility warning labels in customizer cards if color/material/price conditions are not met.
+*   **Single-Select Design Vibe (New):**
+    The onboarding "Design Vibe" step now enforces single-selection — choosing a new style automatically deselects the previously selected one, ensuring a focused design direction.
+*   **Balcony Auto-Complete Override (New):**
+    Balcony rooms are always treated as complete in the component selection checklist across all BHK configurations, bypassing product selection requirements.
+*   **Configuration Complete Panel (New):**
+    When all rooms in the customizer are marked complete, the product selection area is replaced with a full-width confirmation panel prompting the user to *"Proceed to AI Render"*. Clicking any room category returns the user to the product grid.
+*   **Dual Budget Sub-Boxes (New):**
+    The budget tracker in the customizer splits into two clearly labeled and centered sub-boxes — *Remaining Budget* and *Variation (Spent)* — with improved contrast and centered layout.
+*   **Contextual Landing Page & Login Content (New):**
+    Landing page hero updated to: *"Get Your Interiors Designed & Delivered Starting Under ₹3 Lakhs"* with CTA *"Design My Home Free"*. Login page shows a contextual testimonial based on whether the user is signing in or signing up.
 
 ---
 
