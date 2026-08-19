@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { projectsAPI, quotationsAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
@@ -9,7 +9,7 @@ import { useCustomerStore } from '@/stores/customerStore'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  FileText, Download, CheckCircle2, ArrowLeft, ArrowRight,
+  FileText, Download, CheckCircle2, ArrowLeft,
   Phone, Mail, MessageCircle, Sparkles, Building2, MapPin,
   Share2, Activity, X, CreditCard
 } from 'lucide-react'
@@ -47,12 +47,24 @@ export default function QuotationPage() {
           activeQuote = quoteRes.value.data
         }
         
-        // If the quotation was rejected or under revision, automatically regenerate to reflect new room choices
-        if (activeQuote && (activeQuote.status === 'rejected' || activeQuote.status === 'under_revision')) {
+        // Auto-regenerate in these cases:
+        // 1. Status is rejected/under_revision (re-customized, need fresh quote)
+        // 2. Status is 'generated' but line_items is empty/missing (stale quote from before products were selected)
+        const needsRegeneration = activeQuote && (
+          activeQuote.status === 'rejected' ||
+          activeQuote.status === 'under_revision' ||
+          (activeQuote.status === 'generated' && (!activeQuote.line_items || activeQuote.line_items.length === 0))
+        )
+
+        if (needsRegeneration) {
           try {
             const genRes = await quotationsAPI.generate(projectId)
             activeQuote = genRes.data
-            toast.success('Regenerated quote based on your new selections! 📋')
+            if (activeQuote.status !== 'rejected' && activeQuote.status !== 'under_revision') {
+              toast.success('Quotation ready with your latest selections! 📋')
+            } else {
+              toast.success('Regenerated quote based on your new selections! 📋')
+            }
           } catch (e) {
             console.error("Failed to auto-regenerate quote:", e)
           }
@@ -92,6 +104,28 @@ export default function QuotationPage() {
     )
     window.open(`https://wa.me/?text=${text}`, '_blank')
   }
+
+  const handleDownloadPDF = () => {
+    // Download the backend-generated PDF directly
+    const url = quotationsAPI.download(projectId)
+    const a = document.createElement('a')
+    a.href = url
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.download = `Quotation_${(quotation?.quotation_id || quotation?.id)?.substring(0, 8)?.toUpperCase() || 'INTERIORAI'}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  const emailBody = useCallback(() => {
+    return encodeURIComponent(
+      `Hi! I've designed my ${project?.bhk_type} at ${project?.property_name} using InteriorAI.\n` +
+      `📋 Quotation Total: ₹${quotation?.total?.toLocaleString('en-IN')}\n` +
+      `📅 Valid until: ${quotation?.valid_until}\n\n` +
+      `Check InteriorAI: http://localhost:3000`
+    )
+  }, [project, quotation])
 
   const handleApprove = async () => {
     try {
@@ -229,7 +263,7 @@ export default function QuotationPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
 
             {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-4 mb-5">
               {[
                 { label: 'Subtotal',   value: formatINR(quotation.subtotal), color: 'text-slate-700' },
                 { label: 'GST (18%)', value: formatINR(quotation.gst),      color: 'text-amber-600' },
@@ -240,6 +274,62 @@ export default function QuotationPage() {
                   <div className={`text-2xl font-black ${card.color}`}>{card.value}</div>
                 </div>
               ))}
+            </div>
+
+            {/* ── Top Action Bar: Download + Share + Meta ── */}
+            <div className="bg-white rounded-2xl shadow-card px-5 py-4 mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              {/* Quotation metadata */}
+              <div className="flex items-center gap-4 text-xs text-slate-500">
+                <span>
+                  <span className="font-semibold text-slate-700">ID:</span>{' '}
+                  {(quotation.quotation_id || quotation.id)?.substring(0, 8)?.toUpperCase()}
+                </span>
+                <span className="text-slate-300">|</span>
+                <span>
+                  <span className="font-semibold text-slate-700">Valid until:</span>{' '}
+                  {quotation.valid_until}
+                </span>
+              </div>
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleDownloadPDF}
+                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download PDF
+                </button>
+                <button
+                  onClick={handleWhatsAppShare}
+                  className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs"
+                >
+                  <Share2 className="w-3.5 h-3.5" /> WhatsApp
+                </button>
+                <a
+                  href={`mailto:?subject=Interior Design Quotation&body=${emailBody()}`}
+                  className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold px-4 py-2 rounded-xl transition border border-slate-200 shadow-sm text-xs"
+                >
+                  <Mail className="w-3.5 h-3.5 text-indigo-600" /> Share via Email
+                </a>
+                {quotation.status === 'approved' && (
+                  <>
+                    <a
+                      href={projectsAPI.downloadFloorPlan(projectId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      id="download-floorplan-btn"
+                      className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2 rounded-xl transition border border-indigo-200 text-xs"
+                    >
+                      <FileText className="w-3.5 h-3.5" /> Floor Plan PDF
+                    </a>
+                    <Link
+                      href={`/track/${projectId}`}
+                      className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-4 py-2 rounded-xl transition border border-emerald-200 text-xs"
+                    >
+                      <Activity className="w-3.5 h-3.5" /> Track Project
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Line items table */}
@@ -260,16 +350,24 @@ export default function QuotationPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {(quotation.line_items || []).map((item: any, i: number) => (
-                      <tr key={i} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 text-slate-600 whitespace-nowrap">{item.room}</td>
-                        <td className="px-6 py-4 font-medium text-slate-800">{item.name}</td>
-                        <td className="px-6 py-4 text-slate-500 capitalize">{item.category?.replace(/_/g, ' ')}</td>
-                        <td className="px-6 py-4 text-right text-slate-600">{item.qty}</td>
-                        <td className="px-6 py-4 text-right text-slate-600">₹{item.unit_price?.toLocaleString('en-IN')}</td>
-                        <td className="px-6 py-4 text-right font-semibold text-indigo-600">₹{item.total?.toLocaleString('en-IN')}</td>
+                    {(quotation.line_items || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-8 text-center text-slate-400 text-sm">
+                          No line items found. Please regenerate the quotation.
+                        </td>
                       </tr>
-                    ))}
+                    ) : (
+                      (quotation.line_items || []).map((item: any, i: number) => (
+                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 text-slate-600 whitespace-nowrap">{item.room}</td>
+                          <td className="px-6 py-4 font-medium text-slate-800">{item.name}</td>
+                          <td className="px-6 py-4 text-slate-500 capitalize">{item.category?.replace(/_/g, ' ')}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{item.qty}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">₹{item.unit_price?.toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4 text-right font-semibold text-indigo-600">₹{item.total?.toLocaleString('en-IN')}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                   <tfoot className="bg-indigo-50">
                     <tr>
@@ -279,76 +377,6 @@ export default function QuotationPage() {
                   </tfoot>
                 </table>
               </div>
-            </div>
-            <div className="bg-white rounded-2xl shadow-card p-6 mb-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <div className="text-sm text-slate-500 mb-1">Quotation valid until</div>
-                  <div className="font-bold text-slate-800 text-lg">{quotation.valid_until}</div>
-                  <div className="text-xs text-slate-400 mt-1">
-                    ID: {(quotation.quotation_id || quotation.id)?.substring(0, 8)?.toUpperCase()}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {/* Share buttons — always visible */}
-                  <button
-                    onClick={handleWhatsAppShare}
-                    className="flex items-center gap-2 bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-green-600 transition shadow-sm font-bold text-xs"
-                  >
-                    <Share2 className="w-4 h-4" /> Share via WhatsApp
-                  </button>
-                  <a
-                    href={`mailto:?subject=Interior Design Quotation&body=${encodeURIComponent(
-                      `Hi! I've designed my ${project?.bhk_type} at ${project?.property_name} using InteriorAI.\n` +
-                      `📋 Quotation Total: ₹${quotation.total?.toLocaleString('en-IN')}\n` +
-                      `📅 Valid until: ${quotation.valid_until}\n\n` +
-                      `Check InteriorAI: http://localhost:3000`
-                    )}`}
-                    className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-2.5 rounded-xl transition border border-slate-200 shadow-sm font-bold text-xs"
-                  >
-                    <Mail className="w-4 h-4 text-indigo-600" /> Share via Email
-                  </a>
-                </div>
-              </div>
-
-              {/* Download + Track — only visible after approval */}
-              {quotation.status === 'approved' ? (
-                <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-3">
-                  <a
-                    href={quotationsAPI.download(projectId)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    id="download-pdf-btn"
-                    className="btn-primary animate-glow"
-                  >
-                    <Download className="w-4 h-4" /> Download Quotation PDF
-                  </a>
-                  <a
-                    href={projectsAPI.downloadFloorPlan(projectId)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    id="download-floorplan-btn"
-                    className="flex items-center gap-2 bg-indigo-50 text-indigo-700 font-bold px-5 py-2.5 rounded-xl hover:bg-indigo-100 transition border border-indigo-200 shadow-sm text-xs"
-                  >
-                    <FileText className="w-4 h-4" /> Download Floor Plan PDF
-                  </a>
-                  <Link
-                    href={`/track/${projectId}`}
-                    className="flex items-center gap-2 bg-indigo-50 text-indigo-700 font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-100 transition border border-indigo-200/50 font-bold text-xs shadow-sm"
-                  >
-                    <Activity className="w-4 h-4" /> Track Project
-                  </Link>
-                </div>
-              ) : (
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
-                    <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" />
-                    <span>
-                      <strong>Approve the quotation below</strong> to unlock: Download Quotation PDF, Download Floor Plan PDF, and Track Project.
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Quotation Status & Approval Actions */}
