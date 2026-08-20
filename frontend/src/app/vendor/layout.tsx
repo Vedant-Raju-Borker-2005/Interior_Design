@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, UserCheck, Briefcase, Bell, CreditCard, LogOut, ShoppingBag, Archive, Menu, X } from 'lucide-react'
+import { LayoutDashboard, UserCheck, Briefcase, Bell, CreditCard, LogOut, ShoppingBag, Archive, Menu, X, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useVendorStore } from '@/stores/vendorStore'
 import Navbar from '@/components/Navbar'
@@ -14,6 +14,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   const { isLoggedIn, user, logout } = useAuthStore()
   const { profile, loadOnboarding } = useVendorStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -33,8 +34,9 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     { href: '/vendor/onboarding', label: 'KYC & Onboarding', icon: UserCheck },
     { href: '/vendor/products', label: 'Product Catalog', icon: ShoppingBag },
     { href: '/vendor/inventory', label: 'Inventory Log', icon: Archive },
-    { href: '/vendor/assignments', label: 'Assignments', icon: Briefcase },
+    { href: '/vendor/assignments', label: 'Orders', icon: Briefcase },
     { href: '/vendor/payouts', label: 'Payouts Log', icon: CreditCard },
+    { href: '/vendor/issues', label: 'Issues', icon: AlertCircle },
   ]
 
   const handleLogout = () => {
@@ -75,23 +77,46 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         {/* ── Sidebar ── */}
         <aside
           className={`
-            fixed top-16 left-0 bottom-0 z-50 w-64 bg-white border-r border-slate-200/60 shadow-xl
-            flex flex-col justify-between p-6
-            transition-transform duration-300 ease-in-out
+            fixed top-16 left-0 bottom-0 z-50 bg-white border-r border-slate-200/60 shadow-xl
+            flex flex-col justify-between transition-all duration-300 ease-in-out
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             lg:translate-x-0 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:shadow-sm
+            ${collapsed ? 'w-20 p-4' : 'w-64 p-6'}
           `}
         >
           <div>
-            {/* Logo / Portal Brand */}
-            <div className="flex items-center space-x-3 mb-8">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-indigo-150">
-                <span className="font-bold text-lg">💡</span>
+            {/* Logo / Brand / Collapsible Toggle */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-3 overflow-hidden">
+                <div className="w-9 h-9 min-w-[2.25rem] rounded-xl bg-gradient-to-tr from-indigo-500 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-indigo-150">
+                  <span className="font-bold text-lg">💡</span>
+                </div>
+                {!collapsed && (
+                  <div className="transition-opacity duration-200 whitespace-nowrap">
+                    <span className="font-extrabold text-sm text-slate-800 tracking-tight block">InteriorAI</span>
+                    <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider block">Vendor Hub</span>
+                  </div>
+                )}
               </div>
-              <div>
-                <span className="font-extrabold text-sm text-slate-800 tracking-tight block">InteriorAI</span>
-                <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider block">Vendor Hub</span>
-              </div>
+              
+              {!collapsed && (
+                <button
+                  onClick={() => setCollapsed(true)}
+                  className="hidden lg:flex p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
+                  title="Collapse Menu"
+                >
+                  <Menu className="w-4 h-4" />
+                </button>
+              )}
+              {collapsed && (
+                <button
+                  onClick={() => setCollapsed(false)}
+                  className="hidden lg:flex p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors mx-auto"
+                  title="Expand Menu"
+                >
+                  <Menu className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Navigation Links */}
@@ -107,10 +132,11 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
                       active
                         ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100/50'
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 border border-transparent'
-                    }`}
+                    } ${collapsed ? 'justify-center px-0' : ''}`}
+                    title={collapsed ? link.label : ''}
                   >
-                    <Icon className={`w-4 h-4 ${active ? 'text-indigo-600' : 'text-slate-400'}`} />
-                    <span>{link.label}</span>
+                    <Icon className={`w-4 h-4 min-w-[1rem] ${active ? 'text-indigo-600' : 'text-slate-400'}`} />
+                    {!collapsed && <span className="transition-opacity duration-200 whitespace-nowrap">{link.label}</span>}
                   </Link>
                 )
               })}
@@ -120,30 +146,43 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
           {/* User Info & Footer */}
           <div className="space-y-4">
             <div className="border-t border-slate-150 pt-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
+              <div className="flex items-center space-x-3 overflow-hidden">
+                <div className="w-9 h-9 min-w-[2.25rem] rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
                   {profile?.ownerName?.charAt(0) || user?.name?.charAt(0) || 'V'}
                 </div>
-                <div className="flex flex-col text-left">
-                  <span className="text-xs font-bold text-slate-700 truncate max-w-[110px]">
-                    {profile?.ownerName || user?.name || 'Vendor Partner'}
-                  </span>
-                  <span className={`text-[9px] font-extrabold uppercase tracking-wide ${
-                    profile?.status === 'APPROVED' ? 'text-emerald-600' : 'text-amber-500'
-                  }`}>
-                    {profile?.status || 'NOT REGISTERED'}
-                  </span>
-                </div>
+                {!collapsed && (
+                  <div className="flex flex-col text-left transition-opacity duration-200">
+                    <span className="text-xs font-bold text-slate-700 truncate max-w-[110px]">
+                      {profile?.ownerName || user?.name || 'Vendor Partner'}
+                    </span>
+                    <span className={`text-[9px] font-extrabold uppercase tracking-wide truncate max-w-[110px] ${
+                      profile?.status === 'APPROVED' ? 'text-emerald-600' : 'text-amber-500'
+                    }`}>
+                      {profile?.status || 'NOT REGISTERED'}
+                    </span>
+                  </div>
+                )}
               </div>
 
+              {!collapsed && (
+                <button
+                  onClick={handleLogout}
+                  className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition"
+                  title="Logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {collapsed && (
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition"
+                className="w-full flex justify-center p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
               </button>
-            </div>
+            )}
           </div>
         </aside>
 

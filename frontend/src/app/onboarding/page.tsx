@@ -80,6 +80,11 @@ export default function OnboardingPage() {
   const { isLoggedIn } = useAuthStore()
 
   const [step, setStep] = useState(0)
+  
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [step])
+
   const [loading, setLoading] = useState(false)
   const [availableColors, setAvailableColors] = useState<any>(null)
   const [availableMaterials, setAvailableMaterials] = useState<string[]>([])

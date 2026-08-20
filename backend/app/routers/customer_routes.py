@@ -285,7 +285,64 @@ def get_tracking(
     if not trackings:
         trackings = _populate_default_tracking(project_id, project, db)
         
-    return trackings
+    from ..models import Room, RoomItem, Product, Vendor, VendorAssignment
+    result = []
+    for t in trackings:
+        vendor_name = None
+        vendor_status = None
+        component_id = None
+        about_details = {}
+        image_url = None
+        
+        # Resolve via rooms and items
+        room = db.query(Room).filter(Room.project_id == project_id, Room.room_type == t.room_name).first()
+        if room:
+            # Match item by name
+            item = db.query(RoomItem).join(Product).filter(
+                RoomItem.room_id == room.id,
+                Product.name == t.item_name
+            ).first()
+            if item:
+                component_id = f"CMP-{item.id[:8].upper()}"
+                if item.product:
+                    image_url = item.product.image_url
+                    about_details = {
+                        "width": item.product.width,
+                        "height": item.product.height,
+                        "depth": item.product.depth,
+                        "mounting_type": item.product.mounting_type,
+                        "suitable_room": item.product.suitable_room,
+                        "finish": item.product.finish,
+                        "style": item.product.style,
+                        "assembly_required": item.product.assembly_required,
+                    }
+                
+                # Query vendor assignment
+                va = db.query(VendorAssignment).filter(
+                    VendorAssignment.project_id == project_id,
+                    VendorAssignment.item_id == item.id
+                ).first()
+                if va:
+                    vendor_status = va.status
+                    if va.vendor:
+                        vendor_name = va.vendor.name
+                        
+        result.append({
+            "id": t.id,
+            "project_id": t.project_id,
+            "room_name": t.room_name,
+            "item_name": t.item_name,
+            "status": t.status,
+            "expected_date": t.expected_date,
+            "actual_date": t.actual_date,
+            "remarks": t.remarks,
+            "vendor_name": vendor_name,
+            "vendor_status": vendor_status,
+            "component_id": component_id,
+            "about_details": about_details,
+            "image_url": image_url or "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace",
+        })
+    return result
 
 
 @router.put("/projects/{project_id}/tracking/{tracking_id}")
@@ -314,6 +371,18 @@ def update_tracking_status(
     elif status == "installed" and not track.actual_date:
         track.actual_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
         
+    # Log to ProjectItemTrackingHistory
+    from ..models import ProjectItemTrackingHistory
+    history_log = ProjectItemTrackingHistory(
+        tracking_id=track.id,
+        status=status,
+        expected_date=track.expected_date,
+        actual_date=track.actual_date,
+        updated_by="Customer",
+        remarks=remarks or f"Status updated by Customer to {status}."
+    )
+    db.add(history_log)
+
     log = ActivityLog(
         user_id=user.id,
         action="item_status_updated",
@@ -325,7 +394,50 @@ def update_tracking_status(
     
     db.commit()
     db.refresh(track)
-    return track
+    return {
+        "id": track.id,
+        "project_id": track.project_id,
+        "room_name": track.room_name,
+        "item_name": track.item_name,
+        "status": track.status,
+        "expected_date": track.expected_date,
+        "actual_date": track.actual_date,
+        "remarks": track.remarks,
+    }
+
+
+@router.get("/projects/{project_id}/tracking/{tracking_id}/history")
+def get_tracking_history(
+    project_id: str,
+    tracking_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+        
+    track = db.query(ItemTracking).filter(ItemTracking.id == tracking_id, ItemTracking.project_id == project_id).first()
+    if not track:
+        raise HTTPException(404, "Tracking item not found")
+        
+    from ..models import ProjectItemTrackingHistory
+    history = db.query(ProjectItemTrackingHistory).filter(
+        ProjectItemTrackingHistory.tracking_id == tracking_id
+    ).order_by(ProjectItemTrackingHistory.changed_at.desc()).all()
+    
+    result = []
+    for h in history:
+        result.append({
+            "id": h.id,
+            "status": h.status.upper(),
+            "expectedDate": h.expected_date,
+            "actualDate": h.actual_date,
+            "updatedBy": h.updated_by or "System",
+            "remarks": h.remarks,
+            "changedAt": h.changed_at.isoformat()
+        })
+    return result
 
 
 # ── PROJECT PHOTO GALLERY ─────────────────────────────────────────────────────
@@ -404,7 +516,44 @@ def get_issues(
     project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
     if not project:
         raise HTTPException(404, "Project not found")
-    return db.query(Issue).filter(Issue.project_id == project_id).order_by(Issue.created_at.desc()).all()
+        
+    issues = db.query(Issue).filter(Issue.project_id == project_id).order_by(Issue.created_at.desc()).all()
+    result = []
+    for i in issues:
+        attachments_list = []
+        for a in i.attachments:
+            attachments_list.append({
+                "id": a.id,
+                "url": a.url,
+                "filename": a.filename
+            })
+            
+        desc = i.description
+        date_encountered = None
+        if desc and desc.startswith("[Date Encountered:"):
+            try:
+                parts = desc.split("] ", 1)
+                date_encountered = parts[0].replace("[Date Encountered: ", "").strip()
+                desc = parts[1]
+            except:
+                pass
+                
+        result.append({
+            "id": i.id,
+            "project_id": i.project_id,
+            "item_id": i.item_id,
+            "type": i.type,
+            "status": i.status,
+            "priority": i.priority,
+            "description": desc,
+            "date_encountered": date_encountered,
+            "resolution": i.resolution,
+            "resolved_at": i.resolved_at.isoformat() if i.resolved_at else None,
+            "created_by": i.created_by,
+            "created_at": i.created_at.isoformat() if i.created_at else None,
+            "attachments": attachments_list
+        })
+    return result
 
 
 @router.post("/projects/{project_id}/issues")
@@ -414,6 +563,8 @@ def create_issue(
     priority: str = Form(...),
     description: str = Form(...),
     item_id: Optional[str] = Form(None),
+    date_encountered: Optional[str] = Form(None),
+    files: List[UploadFile] = File([]),
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
 ):
@@ -421,17 +572,43 @@ def create_issue(
     if not project:
         raise HTTPException(404, "Project not found")
 
+    desc = description
+    if date_encountered:
+        desc = f"[Date Encountered: {date_encountered}] {description}"
+
     issue = Issue(
         project_id=project_id,
         type=type,
         priority=priority,
-        description=description,
+        description=desc,
         item_id=item_id,
         status="open",
         created_by=user.name or user.email or user.id
     )
     db.add(issue)
+    db.commit()
+    db.refresh(issue)
     
+    # Save attachments
+    from ..models import IssueAttachment
+    for f in files:
+        if not f.filename: continue
+        file_id = str(uuid.uuid4())
+        ext = f.filename.split(".")[-1]
+        filename = f"{file_id}.{ext}"
+        os.makedirs("pdfs/floor_plans", exist_ok=True)
+        filepath = f"pdfs/floor_plans/{filename}"
+        with open(filepath, "wb") as out:
+            out.write(f.file.read())
+        url = f"/static/pdfs/floor_plans/{filename}"
+        
+        attachment = IssueAttachment(
+            issue_id=issue.id,
+            url=url,
+            filename=f.filename
+        )
+        db.add(attachment)
+        
     log = ActivityLog(
         user_id=user.id,
         action="issue_created",
@@ -443,7 +620,100 @@ def create_issue(
     
     db.commit()
     db.refresh(issue)
-    return issue
+    
+    attachments_list = []
+    for a in issue.attachments:
+        attachments_list.append({
+            "id": a.id,
+            "url": a.url,
+            "filename": a.filename
+        })
+        
+    return {
+        "id": issue.id,
+        "project_id": issue.project_id,
+        "item_id": issue.item_id,
+        "type": issue.type,
+        "status": issue.status,
+        "priority": issue.priority,
+        "description": description,
+        "date_encountered": date_encountered,
+        "resolution": issue.resolution,
+        "attachments": attachments_list
+    }
+
+
+@router.put("/projects/{project_id}/issues/{issue_id}")
+def update_issue(
+    project_id: str,
+    issue_id: str,
+    type: str = Form(...),
+    priority: str = Form(...),
+    description: str = Form(...),
+    date_encountered: Optional[str] = Form(None),
+    files: List[UploadFile] = File([]),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+        
+    issue = db.query(Issue).filter(Issue.id == issue_id, Issue.project_id == project_id).first()
+    if not issue:
+        raise HTTPException(404, "Issue not found")
+        
+    issue.type = type
+    issue.priority = priority
+    
+    desc = description
+    if date_encountered:
+        desc = f"[Date Encountered: {date_encountered}] {description}"
+    issue.description = desc
+    
+    # Save new attachments
+    from ..models import IssueAttachment
+    for f in files:
+        if not f.filename: continue
+        file_id = str(uuid.uuid4())
+        ext = f.filename.split(".")[-1]
+        filename = f"{file_id}.{ext}"
+        os.makedirs("pdfs/floor_plans", exist_ok=True)
+        filepath = f"pdfs/floor_plans/{filename}"
+        with open(filepath, "wb") as out:
+            out.write(f.file.read())
+        url = f"/static/pdfs/floor_plans/{filename}"
+        
+        attachment = IssueAttachment(
+            issue_id=issue.id,
+            url=url,
+            filename=f.filename
+        )
+        db.add(attachment)
+        
+    db.commit()
+    db.refresh(issue)
+    
+    attachments_list = []
+    for a in issue.attachments:
+        attachments_list.append({
+            "id": a.id,
+            "url": a.url,
+            "filename": a.filename
+        })
+        
+    return {
+        "id": issue.id,
+        "project_id": issue.project_id,
+        "item_id": issue.item_id,
+        "type": issue.type,
+        "status": issue.status,
+        "priority": issue.priority,
+        "description": description,
+        "date_encountered": date_encountered,
+        "resolution": issue.resolution,
+        "attachments": attachments_list
+    }
 
 
 # ── CUSTOMER SUPPORT PANEL ────────────────────────────────────────────────────

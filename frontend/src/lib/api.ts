@@ -409,6 +409,8 @@ export const customerAPI = {
 
   getTracking: (projectId: string) =>
     axiosInstance.get(`/api/v1/customer/projects/${projectId}/tracking`),
+  getTrackingHistory: (projectId: string, trackingId: string) =>
+    axiosInstance.get(`/api/v1/customer/projects/${projectId}/tracking/${trackingId}/history`),
   updateTracking: (projectId: string, trackingId: string, status: string, remarks?: string, actualDate?: string) => {
     const fd = new FormData()
     fd.append('status', status)
@@ -426,13 +428,32 @@ export const customerAPI = {
 
   getIssues: (projectId: string) =>
     axiosInstance.get(`/api/v1/customer/projects/${projectId}/issues`),
-  createIssue: (projectId: string, type: string, priority: string, description: string, itemId?: string) => {
+  createIssue: (projectId: string, type: string, priority: string, description: string, itemId?: string, dateEncountered?: string, files?: File[]) => {
     const fd = new FormData()
     fd.append('type', type)
     fd.append('priority', priority)
     fd.append('description', description)
     if (itemId) fd.append('item_id', itemId)
-    return axiosInstance.post(`/api/v1/customer/projects/${projectId}/issues`, fd)
+    if (dateEncountered) fd.append('date_encountered', dateEncountered)
+    if (files) {
+      files.forEach((f) => fd.append('files', f))
+    }
+    return axiosInstance.post(`/api/v1/customer/projects/${projectId}/issues`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  updateIssue: (projectId: string, issueId: string, type: string, priority: string, description: string, dateEncountered?: string, files?: File[]) => {
+    const fd = new FormData()
+    fd.append('type', type)
+    fd.append('priority', priority)
+    fd.append('description', description)
+    if (dateEncountered) fd.append('date_encountered', dateEncountered)
+    if (files) {
+      files.forEach((f) => fd.append('files', f))
+    }
+    return axiosInstance.put(`/api/v1/customer/projects/${projectId}/issues/${issueId}`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
   },
 
   getTickets: () =>
@@ -616,6 +637,8 @@ export const vendorAPI = {
     axiosInstance.get('/api/v1/vendor/notifications'),
   markNotificationsRead: (notificationIds?: string[]) =>
     axiosInstance.patch('/api/v1/vendor/notifications', { notificationIds }),
+  getIssues: () =>
+    axiosInstance.get('/api/v1/vendor/issues'),
 }
 
 // Enterprise and B2B2C API

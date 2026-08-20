@@ -1,49 +1,44 @@
 'use client'
-import { useEffect, useState } from 'react'
+
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { trackingAPI, projectsAPI, customerExtrasAPI } from '@/lib/api'
+import { projectsAPI, trackingAPI, customerExtrasAPI, customerAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import {
-  CheckCircle2, Clock, Circle, ArrowLeft, Sparkles,
-  CalendarDays, User2, FileText, Phone, ChevronRight, Wrench, Map, CreditCard, Camera
+  CheckCircle2, Clock, Sparkles, ArrowLeft,
+  CalendarDays, User2, FileText, Phone, Wrench, Map, CreditCard,
+  ChevronRight, AlertCircle, Building2, MapPin
 } from 'lucide-react'
 import clsx from 'clsx'
 import Link from 'next/link'
 
-const STATUS_CONFIG = {
-  completed:   { color: 'bg-emerald-500', ring: 'ring-emerald-200', text: 'text-emerald-700', bg: 'bg-emerald-50', icon: CheckCircle2 },
-  in_progress: { color: 'bg-indigo-500',  ring: 'ring-indigo-200',  text: 'text-indigo-700',  bg: 'bg-indigo-50',  icon: Sparkles },
-  pending:     { color: 'bg-slate-300',   ring: 'ring-slate-200',   text: 'text-slate-500',   bg: 'bg-slate-50',   icon: Clock },
-}
-
-const PROJECT_STATUS_COLORS: Record<string, string> = {
-  draft:   'bg-slate-100 text-slate-600',
-  quoted:  'bg-amber-100 text-amber-700',
-  ordered: 'bg-blue-100 text-blue-700',
-  done:    'bg-emerald-100 text-emerald-700',
-}
+const STAGES = [
+  { id: 'design', label: 'Design Finalized', weight: 10, desc: 'Final design and quotation approved by customer.' },
+  { id: 'procurement', label: 'Procurement & Production', weight: 25, desc: 'Components are being processed by vendors.' },
+  { id: 'site_prep', label: 'Site Preparation', weight: 15, desc: 'Civil work, false ceiling, and electrical groundwork.' },
+  { id: 'installation', label: 'Installation', weight: 30, desc: 'Furniture, modular kitchen, and fixtures installation.' },
+  { id: 'quality', label: 'Quality Inspection', weight: 10, desc: 'Full site inspection and punch-list completion.' },
+  { id: 'handover', label: 'Project Handover', weight: 10, desc: 'Keys and warranty documents handed over to customer.' }
+]
 
 export default function TrackPage() {
   const { projectId } = useParams() as { projectId: string }
   const router = useRouter()
   const [project, setProject] = useState<any>(null)
-  const [milestones, setMilestones] = useState<any[]>([])
-  const [proofPhotos, setProofPhotos] = useState<any[]>([])
+  const [trackingItems, setTrackingItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [projRes, trackRes, proofsRes] = await Promise.all([
+        const [projRes, trackRes] = await Promise.all([
           projectsAPI.get(projectId),
-          trackingAPI.getMilestones(projectId),
-          customerExtrasAPI.getProofPhotos(projectId),
+          customerAPI.getTracking(projectId)
         ])
         setProject(projRes.data)
-        setMilestones(trackRes.data.milestones || [])
-        setProofPhotos(proofsRes.data.proof_photos || [])
+        setTrackingItems(trackRes.data || [])
       } catch {
         toast.error('Failed to load tracking data')
       } finally {
@@ -53,8 +48,75 @@ export default function TrackPage() {
     load()
   }, [projectId])
 
-  const completedCount = milestones.filter(m => m.status === 'completed').length
-  const progressPct = milestones.length > 0 ? Math.round((completedCount / milestones.length) * 100) : 0
+  // Weighted Progress Bar and Stage Timeline Calculations
+  const timelineData = useMemo(() => {
+    let totalProgress = 0
+    let currentStageIndex = 0
+    let previousStagesMaxed = true
+    const total = trackingItems.length || 1
+
+    const calculatedStages = STAGES.map((stage, idx) => {
+      let completedCount = 0
+
+      // Count how many components have completed this stage
+      trackingItems.forEach(item => {
+        const status = (item.status || 'ordered').toLowerCase()
+        let completed = false
+        if (idx === 0) {
+          completed = true
+        } else if (idx === 1) {
+          completed = ['production', 'ready', 'dispatched', 'delivered', 'installed'].includes(status)
+        } else if (idx === 2) {
+          completed = ['ready', 'dispatched', 'delivered', 'installed'].includes(status)
+        } else if (idx === 3) {
+          completed = ['delivered', 'installed'].includes(status)
+        } else if (idx === 4) {
+          completed = ['installed'].includes(status)
+        } else if (idx === 5) {
+          completed = ['installed'].includes(status) && project?.status === 'done'
+        }
+        if (completed) completedCount++
+      })
+
+      const isAllCompleted = completedCount === total && total > 0
+      
+      let contribution = 0
+      if (previousStagesMaxed) {
+        contribution = (completedCount / total) * stage.weight
+        totalProgress += contribution
+        if (!isAllCompleted) {
+          previousStagesMaxed = false
+          currentStageIndex = idx
+        }
+      }
+
+      // Determine stage display status:
+      // - "completed" (Green) if all components completed it
+      // - "in_progress" (Purple) if it is the current active stage
+      // - "pending" (Gray) if it is a future stage
+      let displayStatus: 'completed' | 'in_progress' | 'pending' = 'pending'
+      if (isAllCompleted) {
+        displayStatus = 'completed'
+      } else if (idx === currentStageIndex && !previousStagesMaxed) {
+        displayStatus = 'in_progress'
+      } else if (idx === 0 && !isAllCompleted) {
+        displayStatus = 'in_progress'
+      }
+
+      return {
+        ...stage,
+        completedCount,
+        totalCount: total,
+        displayStatus,
+        contribution
+      }
+    })
+
+    return {
+      progressPct: Math.round(totalProgress),
+      stages: calculatedStages
+    }
+  }, [trackingItems, project])
 
   if (loading) {
     return (
@@ -65,233 +127,204 @@ export default function TrackPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-24 pb-16">
+      <div className="max-w-7xl mx-auto px-4 pt-24 pb-16 space-y-6">
 
-        {/* Back */}
-        <button onClick={() => router.back()} className="btn-ghost mb-6">
-          <ArrowLeft className="w-4 h-4" /> Back
+        {/* Back Button */}
+        <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-indigo-700 hover:text-indigo-900 transition font-bold text-sm">
+          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </button>
 
-        {/* Project header card */}
-        <div className="bg-gradient-to-br from-indigo-700 to-indigo-950 rounded-2xl p-8 text-white mb-8">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <p className="text-indigo-300 text-sm mb-1">{project?.bhk_type} • {project?.city}</p>
-              <h1 className="text-2xl font-bold">{project?.property_name}</h1>
-              <p className="text-indigo-200 text-sm mt-1">Budget: ₹{((project?.budget || 0)/100000).toFixed(1)}L</p>
-            </div>
-            <span className={clsx('badge text-sm font-semibold capitalize', PROJECT_STATUS_COLORS[project?.status] || '')}>
-              {project?.status}
-            </span>
-          </div>
-
-          {/* Progress bar */}
+        {/* Header ID Card Format (Replacing blue block) */}
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-indigo-300">Project Progress</span>
-              <span className="text-white font-bold">{progressPct}%</span>
+            <span className="text-[10px] font-black text-indigo-650 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full uppercase tracking-wider">
+              Project Execution Status
+            </span>
+            <h1 className="text-2xl font-black text-slate-850 mt-3 tracking-tight">{project?.property_name || 'Reliance'}</h1>
+            <div className="flex items-center gap-3 text-slate-400 text-xs mt-2 font-semibold">
+              <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" /> {project?.bhk_type || '3BHK'}</span>
+              <span>•</span>
+              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {project?.city || 'Hyderabad'}</span>
+              <span>•</span>
+              <span>Project ID: PRJ-2026-{(project?.id || '').substring(0, 4).toUpperCase()}</span>
             </div>
-            <div className="h-2.5 bg-indigo-900/60 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPct}%` }}
-                transition={{ duration: 1.2, ease: 'easeOut' }}
-                className="h-full bg-gradient-to-r from-indigo-400 to-emerald-400 rounded-full"
-              />
-            </div>
-            <p className="text-indigo-300 text-xs mt-2">{completedCount} of {milestones.length} milestones completed</p>
+          </div>
+          <div className="text-left md:text-right flex flex-col md:items-end gap-1 bg-slate-50 border border-slate-100 p-4 rounded-2xl min-w-[200px]">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Expected Completion</span>
+            <span className="text-lg font-black text-indigo-650">31 Aug 2026</span>
           </div>
         </div>
 
-        {/* Milestones timeline */}
-        <div className="bg-white rounded-2xl shadow-card p-6 mb-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-6">Execution Timeline</h2>
-          <div className="relative">
-            {milestones.map((ms, i) => {
-              const cfg = STATUS_CONFIG[ms.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending
-              const Icon = cfg.icon
-              const isLast = i === milestones.length - 1
+        {/* Three Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
 
-              return (
-                <motion.div
-                  key={ms.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="relative flex gap-5 pb-8"
-                >
-                  {/* Vertical line */}
-                  {!isLast && (
-                    <div className={clsx(
-                      'absolute left-5 top-10 bottom-0 w-0.5',
-                      ms.status === 'completed' ? 'bg-emerald-300' : 'bg-slate-200'
-                    )} />
-                  )}
-
-                  {/* Icon + ring */}
-                  <div className={clsx('relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ring-4 z-10', cfg.color, cfg.ring)}>
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-
-                  {/* Content */}
-                  <div className={clsx('flex-1 rounded-xl p-4 border', ms.status === 'completed' ? 'bg-emerald-50 border-emerald-100' : ms.status === 'in_progress' ? 'bg-indigo-50 border-indigo-100' : 'bg-slate-50 border-slate-100')}>
-                    <div className="flex items-start justify-between mb-1">
-                      <h3 className={clsx('font-semibold', cfg.text)}>{ms.title}</h3>
-                      <span className={clsx('badge text-xs capitalize', cfg.bg, cfg.text)}>{ms.status.replace('_', ' ')}</span>
-                    </div>
-                    <p className="text-slate-500 text-sm mb-3">{ms.description}</p>
-                    <div className="flex flex-wrap gap-4 text-xs text-slate-400">
-                      {ms.due_date && (
-                        <span className="flex items-center gap-1">
-                          <CalendarDays className="w-3 h-3" />
-                          Due: {ms.due_date}
-                        </span>
-                      )}
-                      {ms.completed_date && (
-                        <span className="flex items-center gap-1 text-emerald-600">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Completed: {ms.completed_date}
-                        </span>
-                      )}
-                      {ms.vendor_name && (
-                        <span className="flex items-center gap-1">
-                          <User2 className="w-3 h-3" />
-                          {ms.vendor_name}
-                        </span>
-                      )}
-                    </div>
-                    {ms.notes && (
-                      <p className="mt-2 text-xs text-slate-500 italic border-t border-slate-200 pt-2">{ms.notes}</p>
-                    )}
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Vendor Photo Proofs Gallery */}
-        {proofPhotos && proofPhotos.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-card p-6 mb-8">
-            <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-              <Camera className="w-5 h-5 text-indigo-650" /> Vendor Execution Photo Proofs
-            </h2>
-            <p className="text-xs text-slate-400 mb-6">Real-time photos uploaded by our verified vendors during manufacturing, transit, and installation.</p>
+          {/* Left Sidebar: View Quotation, AI Visualize, Floor Plans (25% width) */}
+          <div className="lg:col-span-1 space-y-4">
             
-            <div className="space-y-6">
-              {proofPhotos.map((item) => (
-                <div key={item.assignment_id} className="border-t border-slate-100 pt-4 first:border-0 first:pt-0">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-bold text-slate-800 text-sm">{item.product_name}</span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-150">
-                      Status: {item.status?.replace('_', ' ')}
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {item.proofs.map((proof: any) => {
-                      const fullUrl = proof.image_url.startsWith('/') 
-                        ? `http://localhost:8000${proof.image_url}` 
-                        : proof.image_url;
-                      return (
-                        <div key={proof.id} className="relative group border border-slate-100 rounded-xl overflow-hidden bg-slate-50">
-                          <img
-                            src={fullUrl}
-                            alt={proof.caption || "Proof"}
-                            className="w-full h-28 object-cover"
-                          />
-                          <div className="absolute inset-0 bg-slate-900/70 opacity-0 group-hover:opacity-100 flex flex-col justify-end p-2.5 transition duration-200">
-                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block">{proof.image_type}</span>
-                            <span className="text-[10px] text-white font-medium truncate block mt-0.5">{proof.caption}</span>
-                            <a
-                              href={fullUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-2 text-center py-1 bg-indigo-600 hover:bg-indigo-750 text-white rounded-lg text-[9px] font-bold transition"
-                            >
-                              Open Full Photo
-                            </a>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Link href={`/quotation/${projectId}`}
+              className="bg-white border border-slate-200/60 rounded-3xl p-5 flex flex-col gap-4 hover:shadow-card hover:border-slate-300 transition-all cursor-pointer group block">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <FileText className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-800 text-sm">View Quotation</h3>
+                <p className="text-xs text-slate-450 mt-1">View and download your approved quotation.</p>
+              </div>
+            </Link>
+
+            <Link href={`/visualize/${projectId}?from=track`}
+              className="bg-white border border-slate-200/60 rounded-3xl p-5 flex flex-col gap-4 hover:shadow-card hover:border-slate-300 transition-all cursor-pointer group block">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-800 text-sm">AI Visualize</h3>
+                <p className="text-xs text-slate-450 mt-1">Explore your AI generated interior designs.</p>
+              </div>
+            </Link>
+
+            <Link href={`/track/${projectId}/floorplans`}
+              className="bg-white border border-slate-200/60 rounded-3xl p-5 flex flex-col gap-4 hover:shadow-card hover:border-slate-300 transition-all cursor-pointer group block">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Map className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-800 text-sm">Floor Plans</h3>
+                <p className="text-xs text-slate-450 mt-1">View your uploaded and generated floor plans.</p>
+              </div>
+            </Link>
+
           </div>
-        )}
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Link href={`/quotation/${projectId}`}
-            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-indigo-600" />
-            </div>
-            <div>
-              <div className="font-semibold text-slate-800 text-sm">View Quotation</div>
-              <div className="text-xs text-slate-400">Download PDF</div>
-            </div>
-          </Link>
+          {/* Center Column: Progress bar & Execution Timeline (50% width) */}
+          <div className="lg:col-span-2 space-y-6 bg-indigo-600 rounded-[32px] p-6 shadow-glow-indigo border border-indigo-750/30">
 
-          <Link href={`/visualize/${projectId}`}
-            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-purple-600" />
+            {/* Progress Bar Card */}
+            <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="flex justify-between items-center text-sm font-extrabold text-slate-800">
+                <span className="text-slate-500 text-xs uppercase tracking-wider">Project Progress</span>
+                <span className="text-indigo-650 text-base">{timelineData.progressPct}%</span>
+              </div>
+              <div className="h-3.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/50">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${timelineData.progressPct}%` }}
+                  transition={{ duration: 1.2, ease: 'easeOut' }}
+                  className="h-full bg-gradient-to-r from-indigo-500 to-indigo-750 rounded-full"
+                />
+              </div>
+              <p className="text-slate-450 text-[10px] font-bold uppercase tracking-wider">
+                Weighted calculation across all room components
+              </p>
             </div>
-            <div>
-              <div className="font-semibold text-slate-800 text-sm">AI Visualise</div>
-              <div className="text-xs text-slate-400">Renders</div>
-            </div>
-          </Link>
 
-          <Link href={`/track/${projectId}/payments`}
-            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-rose-600" />
-            </div>
-            <div>
-              <div className="font-semibold text-slate-800 text-sm">Payments</div>
-              <div className="text-xs text-slate-400">Invoices & Receipts</div>
-            </div>
-          </Link>
+            {/* Execution Timeline Card */}
+            <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm space-y-6">
+              <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest border-b border-slate-100 pb-3">Execution Timeline</h2>
+              
+              <div className="relative pl-6 space-y-6">
+                
+                {/* Timeline connector line */}
+                <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-slate-100" />
 
-          <Link href={`/track/${projectId}/execution`}
-            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-              <Wrench className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <div className="font-semibold text-slate-800 text-sm">Execution</div>
-              <div className="text-xs text-slate-400">Status & Photos</div>
-            </div>
-          </Link>
+                {timelineData.stages.map((st, idx) => {
+                  const isCompleted = st.displayStatus === 'completed'
+                  const isInProgress = st.displayStatus === 'in_progress'
 
-          <Link href={`/track/${projectId}/floorplans`}
-            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <Map className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <div className="font-semibold text-slate-800 text-sm">Floor Plans</div>
-              <div className="text-xs text-slate-400">Upload & Manage</div>
-            </div>
-          </Link>
+                  return (
+                    <div key={st.id} className="relative flex gap-5 items-start">
+                      
+                      {/* Timeline dot */}
+                      <div className={clsx(
+                        'absolute -left-[20px] w-3 h-3 rounded-full border-2 z-10 top-1.5 transition-all duration-300',
+                        isCompleted ? 'bg-emerald-500 border-emerald-600 scale-110' :
+                        isInProgress ? 'bg-indigo-600 border-indigo-700 ring-4 ring-indigo-100 scale-125' :
+                        'bg-white border-slate-350'
+                      )} />
 
-          <Link href="/support"
-            className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-4 hover:shadow-card-hover transition-all card-hover">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-              <Phone className="w-5 h-5 text-emerald-600" />
+                      {/* Timeline details content */}
+                      <div className={clsx(
+                        'flex-1 rounded-2xl p-4 border transition duration-300',
+                        isCompleted ? 'bg-emerald-50/40 border-emerald-100/60' :
+                        isInProgress ? 'bg-indigo-50/50 border-indigo-100' :
+                        'bg-slate-50/30 border-slate-100'
+                      )}>
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <h3 className={clsx(
+                            'font-extrabold text-sm',
+                            isCompleted ? 'text-emerald-700' :
+                            isInProgress ? 'text-indigo-950' : 'text-slate-500'
+                          )}>
+                            {st.label}
+                          </h3>
+                          <span className={clsx(
+                            'px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider',
+                            isCompleted ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                            isInProgress ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' :
+                            'bg-slate-100 text-slate-400 border border-slate-200/60'
+                          )}>
+                            {st.displayStatus.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">{st.desc}</p>
+                        <div className="flex items-center gap-2 mt-3 text-[10px] text-slate-400 font-bold uppercase tracking-wide">
+                          <span>Progress: {st.completedCount} / {st.totalCount} Components</span>
+                          <span>•</span>
+                          <span>Weight: {st.weight}%</span>
+                        </div>
+                      </div>
+
+                    </div>
+                  )
+                })}
+
+              </div>
             </div>
-            <div>
-              <div className="font-semibold text-slate-800 text-sm">Support Center</div>
-              <div className="text-xs text-slate-400">Tickets & Help</div>
-            </div>
-          </Link>
+
+          </div>
+
+          {/* Right Sidebar: Execution, Payments, Support Center (25% width) */}
+          <div className="lg:col-span-1 space-y-4">
+            
+            <Link href={`/track/${projectId}/execution`}
+              className="bg-white border border-slate-200/60 rounded-3xl p-5 flex flex-col gap-4 hover:shadow-card hover:border-slate-300 transition-all cursor-pointer group block">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Wrench className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-800 text-sm">Execution</h3>
+                <p className="text-xs text-slate-450 mt-1">Track real-time progress of all components and tasks.</p>
+              </div>
+            </Link>
+
+            <Link href={`/track/${projectId}/payments`}
+              className="bg-white border border-slate-200/60 rounded-3xl p-5 flex flex-col gap-4 hover:shadow-card hover:border-slate-300 transition-all cursor-pointer group block">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <CreditCard className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-800 text-sm">Payments</h3>
+                <p className="text-xs text-slate-450 mt-1">View invoices, payments, and receipt details.</p>
+              </div>
+            </Link>
+
+            <Link href="/support"
+              className="bg-white border border-slate-200/60 rounded-3xl p-5 flex flex-col gap-4 hover:shadow-card hover:border-slate-300 transition-all cursor-pointer group block">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Phone className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-800 text-sm">Support Center</h3>
+                <p className="text-xs text-slate-450 mt-1">Raise a ticket or get help from our support team.</p>
+              </div>
+            </Link>
+
+          </div>
+
         </div>
+
       </div>
     </div>
   )

@@ -1,14 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useCustomerStore } from '@/stores/customerStore'
 import Navbar from '@/components/Navbar'
-import ExecutionProgressBar from '@/components/ExecutionProgressBar'
-import IssueTracker from '@/components/IssueTracker'
-import TimelineView from '@/components/TimelineView'
-import { ArrowLeft, ChevronDown, ChevronUp, Image as ImageIcon, Camera, Calendar, MessageSquare } from 'lucide-react'
+import { 
+  ArrowLeft, ChevronDown, ChevronUp, Camera, Calendar, 
+  ChevronLeft, ChevronRight, AlertCircle, Sparkles, MapPin, 
+  Building2, ClipboardList, Info, HelpCircle, FileText, Download,
+  CheckCircle2, Clock, Trash2, Send, Folder
+} from 'lucide-react'
 import toast from 'react-hot-toast'
+import clsx from 'clsx'
+import Link from 'next/link'
+import { projectsAPI } from '@/lib/api'
 
 export default function ProjectExecutionPage() {
   const { projectId } = useParams() as { projectId: string }
@@ -16,70 +21,193 @@ export default function ProjectExecutionPage() {
   const {
     tracking,
     photos,
+    issues,
     isLoading,
-    error,
     fetchTracking,
-    updateTracking,
     fetchPhotos,
     uploadPhoto,
+    fetchIssues,
+    createIssue,
+    updateIssue,
+    fetchTrackingHistory,
   } = useCustomerStore()
 
-  const [expandedRooms, setExpandedRooms] = useState<Record<string, boolean>>({
-    'Hall': true,
-    'Bedroom': true,
-    'Kitchen': true,
-  })
+  // Routing View States
+  const [view, setView] = useState<'overview' | 'component' | 'issue'>('overview')
+  const [selectedComp, setSelectedComp] = useState<any>(null)
+  const [selectedIssue, setSelectedIssue] = useState<any>(null)
   
-  // Photo fields
+  // Page Local states
+  const [project, setProject] = useState<any>(null)
+  const [expandedRooms, setExpandedRooms] = useState<Record<string, boolean>>({})
+  const [compHistory, setCompHistory] = useState<any[]>([])
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedRoomFilter, setSelectedRoomFilter] = useState('ALL')
+  const [selectedVendorFilter, setSelectedVendorFilter] = useState('ALL')
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL')
+
+  // Photo uploads context
   const [photoRoom, setPhotoRoom] = useState('')
   const [photoCaption, setPhotoCaption] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
 
+  // Glassmorphic site gallery modal states
+  const [activeGalleryRoom, setActiveGalleryRoom] = useState<string | null>(null)
+  const [activeGalleryPhotoIdx, setActiveGalleryPhotoIdx] = useState(0)
+
+  // Issue creation/edit fields
+  const [issueType, setIssueType] = useState('FUNCTIONAL')
+  const [issuePriority, setIssuePriority] = useState('MEDIUM')
+  const [issueDescription, setIssueDescription] = useState('')
+  const [issueDate, setIssueDate] = useState('')
+  const [issuePhotos, setIssuePhotos] = useState<File[]>([])
+  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false)
+  const [issuePhotoPreviews, setIssuePhotoPreviews] = useState<string[]>([])
+  const [isEditingIssue, setIsEditingIssue] = useState(false)
+
+  // Load project meta, tracking checklist, photos, and issues
   useEffect(() => {
+    projectsAPI.get(projectId).then(res => setProject(res.data)).catch(() => {})
     fetchTracking(projectId)
     fetchPhotos(projectId)
-  }, [projectId, fetchTracking, fetchPhotos])
+    fetchIssues(projectId)
+  }, [projectId, fetchTracking, fetchPhotos, fetchIssues])
 
-  const toggleRoom = (roomName: string) => {
-    setExpandedRooms((prev) => ({ ...prev, [roomName]: !prev[roomName] }))
-  }
-
-  // Calculate project progress percentage based on tracking items
-  const calculateProgress = () => {
-    if (tracking.length === 0) return 0
-    const statusWeights: Record<string, number> = {
-      ordered: 15,
-      accepted: 30,
-      production: 50,
-      ready: 60,
-      dispatched: 75,
-      delivered: 90,
-      installed: 100,
+  // Automatically expand all folders/rooms on initial load
+  useEffect(() => {
+    if (tracking.length > 0) {
+      const rooms = Array.from(new Set(tracking.map(t => t.room_name)))
+      const initial: Record<string, boolean> = {}
+      rooms.forEach(r => { initial[r] = true })
+      setExpandedRooms(initial)
     }
-    const total = tracking.reduce((sum, item) => sum + (statusWeights[item.status.toLowerCase()] || 0), 0)
-    return Math.round(total / tracking.length)
-  }
+  }, [tracking])
 
-  const handleStatusChange = async (trackingId: string, newStatus: string) => {
+  // Dynamic Expected Completion Date: Farthest (latest) date from all components
+  const expectedCompletionDate = useMemo(() => {
+    if (tracking.length === 0) return 'Pending'
+    const dates = tracking
+      .map(t => t.expected_date)
+      .filter(d => !!d)
+      .map(d => new Date(d))
+      .filter(d => !isNaN(d.getTime()))
+    if (dates.length === 0) return 'Pending'
+    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())))
+    return maxDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  }, [tracking])
+
+  // Component Counts for Execution Overview Grid
+  const overviewStats = useMemo(() => {
+    const total = tracking.length
+    const accepted = tracking.filter(t => t.status.toLowerCase() === 'accepted').length
+    const inProduction = tracking.filter(t => t.status.toLowerCase() === 'production').length
+    const dispatched = tracking.filter(t => t.status.toLowerCase() === 'dispatched').length
+    const delivered = tracking.filter(t => t.status.toLowerCase() === 'delivered').length
+    const installed = tracking.filter(t => t.status.toLowerCase() === 'installed').length
+    const activeIssues = issues.filter(i => i.status.toLowerCase() !== 'resolved').length
+    return { total, accepted, inProduction, dispatched, delivered, installed, activeIssues }
+  }, [tracking, issues])
+
+  // Filter and Search components
+  const filteredTracking = useMemo(() => {
+    return tracking.filter(t => {
+      const matchesSearch = t.item_name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesRoom = selectedRoomFilter === 'ALL' || t.room_name === selectedRoomFilter
+      const matchesVendor = selectedVendorFilter === 'ALL' || t.vendor_name === selectedVendorFilter
+      const matchesStatus = selectedStatusFilter === 'ALL' || t.status.toLowerCase() === selectedStatusFilter.toLowerCase()
+      return matchesSearch && matchesRoom && matchesVendor && matchesStatus
+    })
+  }, [tracking, searchQuery, selectedRoomFilter, selectedVendorFilter, selectedStatusFilter])
+
+  // Grouped tracking items for room-wise folder view
+  const groupedTracking = useMemo(() => {
+    return filteredTracking.reduce((acc: Record<string, any[]>, item) => {
+      const room = item.room_name || 'General'
+      if (!acc[room]) acc[room] = []
+      acc[room].push(item)
+      return acc
+    }, {})
+  }, [filteredTracking])
+
+  // List of unique room names for folder previews
+  const uniqueRooms = useMemo(() => {
+    return Array.from(new Set(tracking.map(t => t.room_name)))
+  }, [tracking])
+
+  // List of unique vendors
+  const uniqueVendors = useMemo(() => {
+    return Array.from(new Set(tracking.map(t => t.vendor_name).filter(Boolean)))
+  }, [tracking])
+
+  // Group photos by room for Amazon-style folder gallery
+  const photosByRoom = useMemo(() => {
+    return photos.reduce((acc: Record<string, any[]>, photo) => {
+      const room = photo.room_name || 'General'
+      if (!acc[room]) acc[room] = []
+      acc[room].push(photo)
+      return acc
+    }, {})
+  }, [photos])
+
+  // Recent Activity Feed: Delivered components + resolved issues only
+  const recentActivities = useMemo(() => {
+    const activities: { id: string; text: string; date: string; isSuccess: boolean }[] = []
+    
+    // 1. Delivered/Installed Components
+    tracking.forEach(t => {
+      if (t.status === 'delivered' || t.status === 'installed') {
+        activities.push({
+          id: `del-${t.id}`,
+          text: `Component "${t.item_name}" has been ${t.status}.`,
+          date: t.actual_date || 'Recently',
+          isSuccess: true
+        })
+      }
+    })
+
+    // 2. Resolved Issues
+    issues.forEach(i => {
+      if (i.status.toLowerCase() === 'resolved') {
+        const comp = tracking.find(t => t.id === i.item_id)
+        activities.push({
+          id: `issue-${i.id}`,
+          text: `Issue for "${comp?.item_name || 'Component'}" has been resolved.`,
+          date: i.resolved_at ? new Date(i.resolved_at).toLocaleDateString('en-IN') : 'Recently',
+          isSuccess: true
+        })
+      }
+    })
+
+    return activities.sort((a, b) => b.date.localeCompare(a.date))
+  }, [tracking, issues])
+
+  // Handle opening Component Details Subpage
+  const handleOpenComponent = async (comp: any) => {
+    setSelectedComp(comp)
+    setView('component')
+    setCompHistory([])
     try {
-      await updateTracking(projectId, trackingId, newStatus)
-      toast.success('Status updated successfully')
-    } catch {
-      toast.error('Failed to update status')
+      const historyData = await fetchTrackingHistory(projectId, comp.id)
+      setCompHistory(historyData)
+    } catch (e) {
+      console.error(e)
     }
   }
 
-  const handlePhotoUpload = async (e: React.FormEvent) => {
+  // Handle Photo Upload inside Site Verification card
+  const handlePhotoUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!photoRoom) {
-      toast.error('Please enter room name')
+      toast.error('Please enter a room folder name')
       return
     }
     setIsUploadingPhoto(true)
     try {
       await uploadPhoto(projectId, photoRoom, photoCaption, photoFile || undefined)
-      toast.success('Site photo uploaded')
+      toast.success('Site verification photo uploaded')
       setPhotoRoom('')
       setPhotoCaption('')
       setPhotoFile(null)
@@ -90,258 +218,793 @@ export default function ProjectExecutionPage() {
     }
   }
 
-  const groupedTracking = tracking.reduce((groups: Record<string, any[]>, item) => {
-    const room = item.room_name || 'Other'
-    if (!groups[room]) groups[room] = []
-    groups[room].push(item)
-    return groups
-  }, {})
+  // Handle Issue file inputs
+  const handleIssueFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArr = Array.from(e.target.files)
+      setIssuePhotos(prev => [...prev, ...filesArr])
 
-  const timelineResources = tracking.map((item) => ({
-    id: item.id,
-    title: `${item.room_name} - ${item.item_name}`,
-    status: item.status.toUpperCase(),
-    createdAt: new Date(),
-  }))
+      // Generate previews
+      const previews = filesArr.map(file => URL.createObjectURL(file))
+      setIssuePhotoPreviews(prev => [...prev, ...previews])
+    }
+  }
 
-  const progress = calculateProgress()
+  // Handle navigation to Issue Details for creation
+  const handleNewIssueInit = () => {
+    setIssueType('FUNCTIONAL')
+    setIssuePriority('MEDIUM')
+    setIssueDescription('')
+    setIssueDate(new Date().toISOString().substring(0, 10))
+    setIssuePhotos([])
+    setIssuePhotoPreviews([])
+    setSelectedIssue(null)
+    setIsEditingIssue(false)
+    setView('issue')
+  }
+
+  // Handle navigation to Issue Details for editing
+  const handleEditIssueInit = (issue: any) => {
+    setSelectedIssue(issue)
+    setIssueType(issue.type)
+    setIssuePriority(issue.priority)
+    setIssueDescription(issue.description)
+    setIssueDate(issue.date_encountered || '')
+    setIssuePhotos([])
+    setIssuePhotoPreviews(issue.attachments?.map((a: any) => a.url.startsWith('http') ? a.url : `http://localhost:8000${a.url}`) || [])
+    setIsEditingIssue(true)
+    setView('issue')
+  }
+
+  // Submit/Update Issue Form Handler
+  const handleIssueSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!issueDescription.trim()) {
+      toast.error('Please provide an issue description')
+      return
+    }
+    setIsSubmittingIssue(true)
+    try {
+      if (isEditingIssue && selectedIssue) {
+        await updateIssue(projectId, selectedIssue.id, {
+          type: issueType,
+          priority: issuePriority,
+          description: issueDescription,
+          dateEncountered: issueDate,
+          files: issuePhotos
+        })
+        toast.success('Issue updated successfully')
+      } else {
+        await createIssue(projectId, {
+          type: issueType,
+          priority: issuePriority,
+          description: issueDescription,
+          itemId: selectedComp.id,
+          dateEncountered: issueDate,
+          files: issuePhotos
+        })
+        toast.success('Issue logged successfully')
+      }
+      setView('component')
+      // Refresh selected component details
+      const historyData = await fetchTrackingHistory(projectId, selectedComp.id)
+      setCompHistory(historyData)
+      fetchIssues(projectId)
+    } catch {
+      toast.error('Failed to submit issue')
+    } finally {
+      setIsSubmittingIssue(false)
+    }
+  }
+
+  // Render priority badge helpers
+  const renderPriorityBadge = (p: string) => {
+    const colors: Record<string, string> = {
+      CRITICAL: 'bg-red-100 text-red-700 border-red-200',
+      HIGH: 'bg-orange-100 text-orange-700 border-orange-200',
+      MEDIUM: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      LOW: 'bg-blue-100 text-blue-700 border-blue-200',
+    }
+    return (
+      <span className={clsx('px-2.5 py-0.5 rounded-full text-[10px] font-bold border capitalize tracking-wide', colors[p.toUpperCase()] || colors.LOW)}>
+        {p}
+      </span>
+    )
+  }
 
   return (
-    <div className="min-h-screen text-white pb-16" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)', backgroundAttachment: 'fixed' }}>
+    <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 pt-24 space-y-8">
-        {/* Back navigation */}
-        <button
-          onClick={() => router.push(`/track/${projectId}`)}
-          className="flex items-center gap-2 text-indigo-950 hover:text-slate-900 transition-colors text-sm font-semibold"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Project Tracker
-        </button>
+        
+        {/* Navigation Head */}
+        {view === 'overview' ? (
+          <button
+            onClick={() => router.push(`/track/${projectId}`)}
+            className="flex items-center gap-2 text-indigo-700 hover:text-indigo-900 transition font-bold text-sm"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Project Progress
+          </button>
+        ) : view === 'component' ? (
+          <button
+            onClick={() => setView('overview')}
+            className="flex items-center gap-2 text-indigo-700 hover:text-indigo-900 transition font-bold text-sm"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Project Execution
+          </button>
+        ) : (
+          <button
+            onClick={() => setView('component')}
+            className="flex items-center gap-2 text-indigo-700 hover:text-indigo-900 transition font-bold text-sm"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Component Details
+          </button>
+        )}
 
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900">
-              Project Execution Details
-            </h1>
-            <p className="text-sm text-indigo-950/70 mt-1 font-medium">
-              Track room-by-room fabrication status and upload verification progress photos.
-            </p>
-          </div>
-        </div>
+        {/* VIEW A: PROJECT OVERVIEW DASHBOARD */}
+        {view === 'overview' && (
+          <>
+            {/* Project Header ID Card Format (Replacing blue gradient block) */}
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div>
+                <span className="text-[10px] font-black text-indigo-650 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                  Project Execution
+                </span>
+                <h1 className="text-2xl font-black text-slate-850 mt-3 tracking-tight">{project?.property_name || 'Reliance'}</h1>
+                <div className="flex items-center gap-3 text-slate-400 text-xs mt-2 font-semibold">
+                  <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" /> {project?.bhk_type || '3BHK'}</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {project?.city || 'Hyderabad'}</span>
+                  <span>•</span>
+                  <span>Project ID: PRJ-2026-{(project?.id || '').substring(0, 4).toUpperCase()}</span>
+                </div>
+              </div>
+              <div className="text-left md:text-right flex flex-col md:items-end gap-1 bg-slate-50 border border-slate-100 p-4 rounded-2xl min-w-[200px]">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Expected Completion</span>
+                <span className="text-lg font-black text-indigo-650">{expectedCompletionDate}</span>
+              </div>
+            </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Progress & Accordion checklists */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Progress indicator */}
-            <ExecutionProgressBar progress={progress} status={progress < 30 ? 'DELAYED' : 'ON_TRACK'} />
+            {/* Layout Grid: 75% Left (col-span-3) & 25% Right (col-span-1) */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+              
+              {/* Left Column (75% Width): Overview counters + Room Checklists */}
+              <div className="lg:col-span-3 space-y-6">
 
-            {/* Gantt Timeline */}
-            <TimelineView resources={timelineResources} />
+                {/* Execution Overview Status Counts */}
+                <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card">
+                  <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Execution Overview</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+                    {[
+                      { label: 'Total Components', val: overviewStats.total, color: 'text-slate-850' },
+                      { label: 'Accepted', val: overviewStats.accepted, color: 'text-indigo-600' },
+                      { label: 'In Production', val: overviewStats.inProduction, color: 'text-purple-600' },
+                      { label: 'Dispatched', val: overviewStats.dispatched, color: 'text-blue-600' },
+                      { label: 'Delivered', val: overviewStats.delivered, color: 'text-emerald-600' },
+                      { label: 'Installed', val: overviewStats.installed, color: 'text-teal-600' },
+                      { label: 'Active Issues', val: overviewStats.activeIssues, color: 'text-rose-605' },
+                    ].map((stat, idx) => (
+                      <div key={idx} className="bg-slate-50 border border-slate-200/50 rounded-2xl p-4 text-center hover:scale-[1.02] transition duration-250 flex flex-col justify-center min-h-[96px]">
+                        <span className={clsx('text-2xl font-black block leading-none mb-1.5', stat.color)}>{stat.val}</span>
+                        <span className="text-[10px] font-bold text-slate-450 leading-tight uppercase block tracking-wide">{stat.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Component Execution Table Card */}
+                <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-6">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div>
+                      <h2 className="text-lg font-black text-slate-800 tracking-tight">Component Execution</h2>
+                      <p className="text-xs text-slate-500 font-medium">Track progress of all components</p>
+                    </div>
 
-            {/* Room-wise Accordion list */}
-            <div className="bg-[#0f1129] border border-white/10 p-6 rounded-2xl shadow-card backdrop-blur-md space-y-4">
-              <h2 className="text-lg font-bold text-white uppercase tracking-wider mb-2">Room-Wise Sourcing Checklist</h2>
-
-              {Object.keys(groupedTracking).map((roomName) => {
-                const isExpanded = expandedRooms[roomName]
-                const items = groupedTracking[roomName]
-
-                return (
-                  <div key={roomName} className="border border-white/5 rounded-xl overflow-hidden bg-indigo-900/10">
-                    <button
-                      onClick={() => toggleRoom(roomName)}
-                      className="w-full flex justify-between items-center p-4 bg-indigo-900/20 hover:bg-indigo-900/30 transition-colors text-left"
-                    >
-                      <span className="font-bold text-sm text-white">{roomName} ({items.length} Items)</span>
-                      {isExpanded ? <ChevronUp className="w-4 h-4 text-indigo-300" /> : <ChevronDown className="w-4 h-4 text-indigo-300" />}
-                    </button>
-
-                    {isExpanded && (
-                      <div className="p-4 space-y-4 divide-y divide-white/5">
-                        {items.map((item) => (
-                          <div key={item.id} className="pt-4 first:pt-0 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                            <div className="flex-1 min-w-[150px]">
-                              <h4 className="font-bold text-xs text-white">{item.item_name}</h4>
-                              {item.expected_date && (
-                                <p className="text-[10px] text-indigo-300/60 mt-1 flex items-center gap-1 font-medium">
-                                  <Calendar className="w-3 h-3" /> Expected: {item.expected_date}
-                                </p>
-                              )}
-                            </div>
-
-                            {/* Center/Right: Dual Sourcing Status Controls */}
-                            <div className="flex flex-wrap items-center gap-5">
-                              {/* Vendor Progress Chain */}
-                              <div className="flex flex-col gap-1">
-                                <span className="text-[8px] text-slate-400 uppercase tracking-widest font-extrabold">Vendor Status</span>
-                                <div className="flex items-center gap-1 bg-slate-950/40 p-1 rounded-lg border border-white/5">
-                                  {(() => {
-                                    const phases = ['ordered', 'accepted', 'production', 'ready', 'dispatched'];
-                                    const current = (item.status || 'ordered').toLowerCase();
-                                    
-                                    // Determine active index in vendor phases
-                                    let activeIndex = phases.indexOf(current);
-                                    if (activeIndex === -1 && ['delivered', 'installed'].includes(current)) {
-                                      activeIndex = phases.length - 1; // Dispatched is highlighted as past phase
-                                    }
-
-                                    return phases.map((phase, idx) => {
-                                      const isActive = idx <= activeIndex;
-                                      const isCurrent = current === phase;
-                                      return (
-                                        <span
-                                          key={phase}
-                                          className={`px-2 py-0.5 text-[9px] font-extrabold rounded uppercase tracking-wider transition-all duration-300 ${
-                                            isCurrent
-                                              ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400'
-                                              : isActive
-                                              ? 'bg-indigo-950/70 text-indigo-300/70'
-                                              : 'bg-transparent text-slate-600'
-                                          }`}
-                                        >
-                                          {phase}
-                                        </span>
-                                      );
-                                    });
-                                  })()}
-                                </div>
-                              </div>
-
-                              {/* Customer Actions / Verification Chain */}
-                              <div className="flex flex-col gap-1">
-                                <span className="text-[8px] text-slate-400 uppercase tracking-widest font-extrabold">Customer Verification</span>
-                                <div className="flex items-center gap-1 bg-slate-950/40 p-1 rounded-lg border border-white/5">
-                                  {/* Ordered (Always active customer-side baseline) */}
-                                  <span className="px-2 py-0.5 text-[9px] font-extrabold rounded uppercase tracking-wider bg-slate-800 text-slate-300 ring-1 ring-slate-700 select-none">
-                                    Ordered
-                                  </span>
-
-                                  {/* Delivered Button */}
-                                  <button
-                                    onClick={() => handleStatusChange(item.id, 'delivered')}
-                                    className={`px-2.5 py-0.5 text-[9px] font-extrabold rounded uppercase tracking-wider transition-all duration-300 ${
-                                      ['delivered', 'installed'].includes((item.status || '').toLowerCase())
-                                        ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400'
-                                        : 'bg-transparent text-slate-500 hover:text-slate-300 hover:bg-white/5'
-                                    }`}
-                                  >
-                                    Delivered
-                                  </button>
-
-                                  {/* Installed Button */}
-                                  <button
-                                    onClick={() => handleStatusChange(item.id, 'installed')}
-                                    className={`px-2.5 py-0.5 text-[9px] font-extrabold rounded uppercase tracking-wider transition-all duration-300 ${
-                                      (item.status || '').toLowerCase() === 'installed'
-                                        ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400'
-                                        : 'bg-transparent text-slate-500 hover:text-slate-300 hover:bg-white/5'
-                                    }`}
-                                  >
-                                    Installed
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                    {/* Filter fields */}
+                    <div className="flex flex-wrap gap-2.5">
+                      <select
+                        value={selectedRoomFilter}
+                        onChange={(e) => setSelectedRoomFilter(e.target.value)}
+                        className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 outline-none font-semibold text-slate-700 focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="ALL">All Rooms</option>
+                        {uniqueRooms.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                      <select
+                        value={selectedVendorFilter}
+                        onChange={(e) => setSelectedVendorFilter(e.target.value)}
+                        className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 outline-none font-semibold text-slate-700 focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="ALL">All Vendors</option>
+                        {uniqueVendors.map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                      <select
+                        value={selectedStatusFilter}
+                        onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                        className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 outline-none font-semibold text-slate-700 focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="ALL">All Statuses</option>
+                        {['ordered', 'accepted', 'production', 'ready', 'dispatched', 'delivered', 'installed'].map(st => (
+                          <option key={st} value={st}>{st}</option>
                         ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Search query input */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search component name..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-1 focus:ring-indigo-500 text-slate-700"
+                    />
+                  </div>
+
+                  {/* Room accordion checklists */}
+                  <div className="space-y-4">
+                    {Object.keys(groupedTracking).map(roomName => {
+                      const isExpanded = expandedRooms[roomName] !== false
+                      const items = groupedTracking[roomName]
+
+                      return (
+                        <div key={roomName} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/50">
+                          <button
+                            onClick={() => setExpandedRooms(prev => ({ ...prev, [roomName]: !isExpanded }))}
+                            className="w-full flex justify-between items-center p-4 bg-slate-150 hover:bg-slate-200/50 transition text-left"
+                          >
+                            <span className="font-extrabold text-sm text-slate-800 capitalize tracking-tight">
+                              {roomName.replace(/_/g, ' ')} — {items.length} Component{items.length === 1 ? '' : 's'}
+                            </span>
+                            {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-505" /> : <ChevronDown className="w-4 h-4 text-slate-505" />}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="p-4 space-y-4 divide-y divide-slate-150">
+                              {items.map(item => {
+                                const phases = ['ordered', 'accepted', 'production', 'ready', 'dispatched', 'delivered', 'installed']
+                                const curStatus = (item.status || 'ordered').toLowerCase()
+                                const activeIdx = phases.indexOf(curStatus)
+
+                                return (
+                                  <div key={item.id} className="pt-4 first:pt-0 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                    <div className="space-y-1">
+                                      <h4 className="font-extrabold text-sm text-indigo-950">{item.item_name}</h4>
+                                      <p className="text-[10px] text-slate-450 font-bold uppercase tracking-wider">
+                                        Vendor: {item.vendor_name || 'Pending assignment'}
+                                      </p>
+                                    </div>
+
+                                    {/* Inline Status Lifecycle Dots */}
+                                    <div className="flex items-center gap-5">
+                                      <div className="flex items-center gap-1.5">
+                                        {phases.map((ph, idx) => {
+                                          const isDone = idx <= activeIdx
+                                          const isCur = curStatus === ph
+                                          return (
+                                            <div
+                                              key={ph}
+                                              className={clsx(
+                                                'w-2 h-2 rounded-full transition duration-300',
+                                                isCur ? 'bg-indigo-650 ring-4 ring-indigo-100 scale-125' :
+                                                isDone ? 'bg-emerald-500' : 'bg-slate-200'
+                                              )}
+                                              title={ph.toUpperCase()}
+                                            />
+                                          )
+                                        })}
+                                      </div>
+
+                                      <div className="text-right text-[10px] text-slate-500 font-medium">
+                                        <div>Exp: {item.expected_date || 'Pending'}</div>
+                                        <div className="text-[8px] text-slate-400 mt-0.5">{item.remarks || 'Updated recently'}</div>
+                                      </div>
+
+                                      {/* Arrow navigation to Component Details */}
+                                      <button 
+                                        onClick={() => handleOpenComponent(item)}
+                                        className="p-1.5 hover:bg-slate-200 rounded-lg transition"
+                                      >
+                                        <ChevronRight className="w-4 h-4 text-indigo-600" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {Object.keys(groupedTracking).length === 0 && (
+                      <div className="text-center py-10 text-slate-400 font-bold text-sm">
+                        No components match your search filters.
                       </div>
                     )}
                   </div>
-                )
-              })}
-
-              {Object.keys(groupedTracking).length === 0 && (
-                <p className="text-sm text-indigo-300/40 text-center py-6">No item tracking data available.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Site Photos and Issue Tracker */}
-          <div className="space-y-8">
-            {/* Issue log tracker */}
-            <IssueTracker projectId={projectId} />
-
-            {/* Verification Photos */}
-            <div className="bg-[#0f1129] border border-white/10 p-6 rounded-2xl shadow-card backdrop-blur-md space-y-6">
-              <div>
-                <h3 className="font-bold text-white text-sm uppercase tracking-wider">Site Verification Gallery</h3>
-                <p className="text-[10px] text-indigo-300/60 font-medium mt-1">Upload and review on-site fabrication proof.</p>
+                </div>
               </div>
 
-              {/* Upload form */}
-              <form onSubmit={handlePhotoUpload} className="p-4 bg-indigo-900/20 rounded-xl border border-white/5 space-y-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-indigo-300 uppercase tracking-wider mb-1">Room Context</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Master Bedroom, Kitchen"
-                    value={photoRoom}
-                    onChange={(e) => setPhotoRoom(e.target.value)}
-                    className="w-full text-xs bg-indigo-950 border border-white/10 rounded-lg p-2.5 outline-none text-white focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[9px] font-bold text-indigo-300 uppercase tracking-wider mb-1">Caption / Notes</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Sofa fabric padding installed"
-                    value={photoCaption}
-                    onChange={(e) => setPhotoCaption(e.target.value)}
-                    className="w-full text-xs bg-indigo-950 border border-white/10 rounded-lg p-2.5 outline-none text-white focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[9px] font-bold text-indigo-300 uppercase tracking-wider mb-1">Photo Upload</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-                    className="w-full text-xs text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-gradient-to-r file:from-purple-600 file:to-indigo-600 file:text-white hover:file:from-purple-700 hover:file:to-indigo-700 cursor-pointer"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isUploadingPhoto}
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-850 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  {isUploadingPhoto ? 'Uploading...' : 'Add Verification Photo'}
-                </button>
-              </form>
-
-              {/* Photos List Grid */}
-              <div className="grid grid-cols-2 gap-3 max-h-56 overflow-y-auto pr-1">
-                {photos.map((photo) => (
-                  <div key={photo.id} className="relative group rounded-xl overflow-hidden shadow-sm aspect-video border border-white/10 bg-indigo-900/10">
-                    <img
-                      src={photo.image_url.startsWith('http') ? photo.image_url : `http://localhost:8000${photo.image_url}`}
-                      alt={photo.room_name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 text-white">
-                      <span className="text-[10px] font-bold">{photo.room_name}</span>
-                      <span className="text-[8px] opacity-75 font-semibold mt-0.5">{photo.caption}</span>
-                    </div>
+              {/* Right Column (25% Width): Recent Activity (top) & Site Verification Gallery (below) */}
+              <div className="lg:col-span-1 space-y-8">
+                
+                {/* Recent Activity Card (Moved to top of sidebar) */}
+                <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-6">
+                  <div>
+                    <h3 className="font-extrabold text-slate-800 text-sm uppercase tracking-wider">Recent Activity</h3>
+                    <p className="text-[10px] text-slate-400 font-medium mt-1">Track key delivery status and resolved issues.</p>
                   </div>
-                ))}
 
-                {photos.length === 0 && (
-                  <div className="col-span-2 text-center py-8 text-indigo-300/40 text-xs font-semibold">
-                    <Camera className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    No site verification photos yet.
+                  <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+                    {recentActivities.map(act => (
+                      <div key={act.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-start gap-3">
+                        <div className="p-1 bg-emerald-50 rounded-lg border border-emerald-100 mt-0.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-750 leading-relaxed">{act.text}</p>
+                          <span className="text-[9px] text-slate-400 font-bold block mt-1">{act.date}</span>
+                        </div>
+                      </div>
+                    ))}
+
+                    {recentActivities.length === 0 && (
+                      <div className="text-center py-8 text-slate-400 text-xs font-semibold bg-slate-50/50 rounded-xl">
+                        No recent updates in deliveries or resolutions yet.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Site Verification Gallery Card (Moved below Recent Activity) */}
+                <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-6">
+                  <div>
+                    <h3 className="font-extrabold text-slate-800 text-sm uppercase tracking-wider">Site Verification Gallery</h3>
+                    <p className="text-[10px] text-slate-400 font-medium mt-1">Room verification folders & component proof.</p>
+                  </div>
+
+                  {/* Folder based galleries grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {uniqueRooms.map(room => {
+                      const roomPhotos = photosByRoom[room] || []
+                      
+                      return (
+                        <button
+                          key={room}
+                          onClick={() => {
+                            if (roomPhotos.length === 0) {
+                              toast.error(`No site verification photos uploaded for ${room.replace(/_/g, ' ')}`)
+                              return
+                            }
+                            setActiveGalleryRoom(room)
+                            setActiveGalleryPhotoIdx(0)
+                          }}
+                          className="aspect-square bg-slate-50 hover:bg-slate-100 border border-slate-200/60 rounded-2xl flex flex-col items-center justify-center p-3 text-center transition"
+                        >
+                          <Folder className="w-8 h-8 text-indigo-500 mb-1.5" />
+                          <span className="text-xs font-bold text-slate-800 capitalize leading-tight truncate w-full">{room.replace(/_/g, ' ')}</span>
+                          <span className="text-[10px] text-slate-450 font-bold mt-1 uppercase leading-none">{roomPhotos.length} Photo{roomPhotos.length === 1 ? '' : 's'}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* VIEW B: COMPONENT DETAILS SUBPAGE */}
+        {view === 'component' && selectedComp && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            
+            {/* Left Column: Image and specifications about block */}
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200/60 rounded-3xl overflow-hidden shadow-card p-4">
+                <div className="aspect-video w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/60">
+                  <img
+                    src={selectedComp.image_url.startsWith('http') ? selectedComp.image_url : `http://localhost:8000${selectedComp.image_url}`}
+                    alt={selectedComp.item_name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+
+              {/* Status Header Outside About container */}
+              <div className="bg-indigo-50 border border-indigo-150 p-4 rounded-2xl flex justify-between items-center">
+                <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Current Status</span>
+                <span className="px-3 py-1 bg-indigo-600 text-white rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
+                  {selectedComp.status}
+                </span>
+              </div>
+
+              {/* Specifications About Block */}
+              <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-4">
+                <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-100 pb-3">About Component</h3>
+                {selectedComp.about_details && Object.keys(selectedComp.about_details).length > 0 ? (
+                  <div className="space-y-2.5 text-xs">
+                    {[
+                      { label: 'Dimensions (WxHxD)', val: selectedComp.about_details.width ? `${selectedComp.about_details.width} x ${selectedComp.about_details.height} x ${selectedComp.about_details.depth} cm` : null },
+                      { label: 'Mounting Type', val: selectedComp.about_details.mounting_type },
+                      { label: 'Suitable Room', val: selectedComp.about_details.suitable_room },
+                      { label: 'Finish Preference', val: selectedComp.about_details.finish },
+                      { label: 'Style Vibe', val: selectedComp.about_details.style },
+                      { label: 'Assembly Required', val: selectedComp.about_details.assembly_required ? 'Yes' : 'No' }
+                    ].map((spec, sidx) => spec.val && (
+                      <div key={sidx} className="flex justify-between py-1.5 border-b border-slate-50 last:border-0 font-semibold text-slate-700">
+                        <span className="text-slate-400">{spec.label}</span>
+                        <span className="text-slate-800 text-right capitalize">{spec.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 font-semibold italic">No specifications loaded for this component.</p>
+                )}
+              </div>
+
+              {/* Component specific site verification images */}
+              <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-4">
+                <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-100 pb-3">Installation verification</h3>
+                {/* Search photos uploaded for this component name */}
+                {photos.filter(p => p.caption?.toLowerCase().includes(selectedComp.item_name.toLowerCase())).length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {photos
+                      .filter(p => p.caption?.toLowerCase().includes(selectedComp.item_name.toLowerCase()))
+                      .map(p => (
+                        <div key={p.id} className="relative rounded-xl overflow-hidden aspect-video bg-slate-50 border">
+                          <img
+                            src={p.image_url.startsWith('http') ? p.image_url : `http://localhost:8000${p.image_url}`}
+                            alt="Verification"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-slate-400 text-xs font-semibold border border-dashed rounded-xl">
+                    Verification photos will appear here after site installation.
                   </div>
                 )}
               </div>
             </div>
+
+            {/* Right Column: Tracking progress, history logs, vendor docs and issues */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Component Details Card Header */}
+              <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card flex flex-col sm:flex-row justify-between gap-4">
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedComp.room_name.replace(/_/g, ' ')}</span>
+                  <h2 className="text-2xl font-black text-indigo-950 mt-1 tracking-tight">{selectedComp.item_name}</h2>
+                  <p className="text-xs text-slate-505 font-medium mt-1">Vendor: {selectedComp.vendor_name || 'Pending assignment'}</p>
+                </div>
+                <div className="text-left sm:text-right text-xs text-slate-505 font-medium">
+                  <div>Expected Delivery Date</div>
+                  <div className="text-lg font-black text-indigo-650 mt-0.5">{selectedComp.expected_date || 'Pending'}</div>
+                  <div className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider font-extrabold">{selectedComp.component_id}</div>
+                </div>
+              </div>
+
+              {/* Horizontal dot step indicator */}
+              <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-4">
+                <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-100 pb-3">Component Progress</h3>
+                <div className="relative py-4 flex items-center justify-between w-full">
+                  <div className="absolute inset-x-2.5 top-1/2 -translate-y-1/2 h-1 bg-slate-100 rounded z-0" />
+                  {['assigned', 'accepted', 'production', 'ready', 'dispatched', 'delivered', 'installed'].map((st, idx) => {
+                    const phases = ['assigned', 'accepted', 'production', 'ready', 'dispatched', 'delivered', 'installed']
+                    const cur = (selectedComp.status || 'ordered').toLowerCase()
+                    let curIdx = phases.indexOf(cur)
+                    if (curIdx === -1 && cur === 'ordered') curIdx = 0 // map ordered -> assigned
+                    const isActive = idx <= curIdx
+                    const isCur = cur === st || (cur === 'ordered' && st === 'assigned')
+
+                    return (
+                      <div key={st} className="relative z-10 flex flex-col items-center flex-1">
+                        <div
+                          className={clsx(
+                            'w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-300 font-extrabold text-xs',
+                            isCur ? 'bg-indigo-650 border-indigo-700 text-white ring-4 ring-indigo-155 scale-110 shadow-sm' :
+                            isActive ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-405'
+                          )}
+                        >
+                          {isActive ? '✓' : idx + 1}
+                        </div>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-2.5 text-center capitalize">{st}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Status history timeline logs */}
+              <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-4">
+                <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-100 pb-3">Status History</h3>
+                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+                  {compHistory.map((h, hidx) => (
+                    <div key={h.id || hidx} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-start text-xs font-semibold">
+                      <div className="space-y-1">
+                        <div className="text-slate-850 capitalize">Status changed to <span className="text-indigo-600 font-extrabold">{h.status}</span></div>
+                        <p className="text-[10px] text-slate-400 font-bold">Updated by: {h.updatedBy}</p>
+                        {h.remarks && <p className="text-[10px] text-slate-500 font-medium italic mt-1 bg-white p-2 rounded-lg border border-slate-100">"{h.remarks}"</p>}
+                      </div>
+                      <span className="text-[10px] text-slate-400">{new Date(h.changedAt).toLocaleString('en-IN', { hour12: true })}</span>
+                    </div>
+                  ))}
+
+                  {compHistory.length === 0 && (
+                    <div className="text-center py-6 text-slate-400 text-xs font-semibold bg-slate-50/50 rounded-xl">
+                      No status logs created yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Vendor documents card */}
+              <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-4">
+                <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-100 pb-3">Documents</h3>
+                <div className="text-slate-400 text-xs font-semibold py-4 bg-slate-50/50 rounded-xl text-center border border-dashed">
+                  No documents shared. Vendor updates will appear here.
+                </div>
+              </div>
+
+              {/* Issues logged section */}
+              <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-4">
+                <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-100 pb-3">Logged Issues</h3>
+                <div className="space-y-3">
+                  {issues.filter(i => i.item_id === selectedComp.id).map(issue => (
+                    <div
+                      key={issue.id}
+                      onClick={() => handleEditIssueInit(issue)}
+                      className="p-4 bg-rose-50/40 border border-rose-100 hover:bg-rose-50 transition rounded-xl flex justify-between items-center cursor-pointer"
+                    >
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 uppercase tracking-widest">
+                          {issue.type.replace(/_/g, ' ')}
+                        </span>
+                        <h4 className="font-extrabold text-xs text-slate-800 mt-1">{issue.description.substring(0, 100)}...</h4>
+                        <span className="text-[10px] text-slate-400 block font-medium">Status: {issue.status}</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-rose-505" />
+                    </div>
+                  ))}
+
+                  {issues.filter(i => i.item_id === selectedComp.id).length === 0 && (
+                    <div className="text-center py-6 text-slate-400 text-xs font-semibold bg-slate-50/50 rounded-xl">
+                      No issues created for this component yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom centered link to report issues */}
+              <div className="flex flex-col items-center justify-center py-8 border-t border-slate-200/60 space-y-2">
+                <span className="text-sm font-semibold text-slate-500">Have any issues?</span>
+                <button
+                  onClick={handleNewIssueInit}
+                  className="text-xs font-extrabold text-indigo-650 hover:underline uppercase tracking-wider"
+                >
+                  Raise new Issue / complaint
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* VIEW C: ISSUE DETAILS (CREATE & EDIT) */}
+        {view === 'issue' && selectedComp && (
+          <div className="max-w-4xl mx-auto bg-white border border-slate-200/60 rounded-3xl shadow-xl overflow-hidden p-6 space-y-6">
+            
+            {/* Header info */}
+            <div>
+              <span className="text-[10px] font-black text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200 uppercase tracking-widest">
+                {isEditingIssue ? 'Edit Issue Detail' : 'Raise component issue'}
+              </span>
+              <h2 className="text-2xl font-black text-slate-800 mt-3.5 tracking-tight">Report an issue related to this component</h2>
+            </div>
+
+            {/* Component Summary Card */}
+            <div className="p-4 bg-slate-50 rounded-2xl flex items-center gap-4 border border-slate-100">
+              <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-200 border">
+                <img
+                  src={selectedComp.image_url.startsWith('http') ? selectedComp.image_url : `http://localhost:8000${selectedComp.image_url}`}
+                  alt={selectedComp.item_name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1 text-xs">
+                <div>
+                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] block">Component</span>
+                  <span className="font-extrabold text-slate-800">{selectedComp.item_name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] block">Room</span>
+                  <span className="font-extrabold text-slate-800 capitalize">{selectedComp.room_name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] block">Vendor</span>
+                  <span className="font-extrabold text-slate-800">{selectedComp.vendor_name || 'ABC Furnitures'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] block">Expected Date</span>
+                  <span className="font-extrabold text-slate-800">{selectedComp.expected_date || '31 Aug 2026'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Issue log Form */}
+            <form onSubmit={handleIssueSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Issue Type *</label>
+                  <select
+                    value={issueType}
+                    onChange={(e) => setIssueType(e.target.value)}
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none text-slate-800 focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="FUNCTIONAL">Functional Issue</option>
+                    <option value="MECHANICAL">Mechanical Issue</option>
+                    <option value="STRUCTURAL">Structural Issue</option>
+                    <option value="COSMETIC">Cosmetic Issue</option>
+                    <option value="DAMAGE">Product Damage</option>
+                    <option value="DELAY">Vendor Delay</option>
+                    <option value="INSTALLATION">Installation Problem</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Priority *</label>
+                  <select
+                    value={issuePriority}
+                    onChange={(e) => setIssuePriority(e.target.value)}
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none text-slate-800 focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Date Encountered *</label>
+                  <input
+                    type="date"
+                    required
+                    value={issueDate}
+                    onChange={(e) => setIssueDate(e.target.value)}
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none text-slate-800 focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-505 uppercase tracking-widest mb-1.5">Issue Description *</label>
+                <textarea
+                  placeholder="Describe the issue in detail..."
+                  required
+                  value={issueDescription}
+                  onChange={(e) => setIssueDescription(e.target.value)}
+                  rows={4}
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none text-slate-800 focus:ring-1 focus:ring-indigo-500 resize-none font-medium"
+                />
+              </div>
+
+              {/* Photos & Evidence uploads */}
+              <div className="space-y-3">
+                <label className="block text-[10px] font-black text-slate-505 uppercase tracking-widest">Photos / Evidence</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100/50 transition cursor-pointer relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleIssueFilesChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <Camera className="w-8 h-8 text-slate-400 mb-2" />
+                    <span className="text-xs font-bold text-indigo-700">Choose Files</span>
+                    <span className="text-[10px] text-slate-450 mt-1 font-semibold">JPG, PNG up to 5 files</span>
+                  </div>
+
+                  {/* Thumbnail previews */}
+                  <div className="grid grid-cols-3 gap-2 border border-slate-100 rounded-2xl p-4 bg-slate-50/30 overflow-y-auto max-h-[140px]">
+                    {issuePhotoPreviews.map((preview, previewIdx) => (
+                      <div key={previewIdx} className="relative rounded-xl overflow-hidden aspect-video bg-slate-200 border">
+                        <img src={preview} alt="preview" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                    {issuePhotoPreviews.length === 0 && (
+                      <div className="col-span-3 text-center text-slate-400 text-xs font-semibold py-8 italic">
+                        No files uploaded yet.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions footer */}
+              <div className="flex justify-end gap-3 pt-6 border-t border-slate-200/60">
+                <button
+                  type="button"
+                  onClick={() => setView('component')}
+                  className="px-5 py-2.5 border border-slate-250 hover:bg-slate-50 text-slate-505 font-bold rounded-xl text-xs transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingIssue}
+                  className="px-6 py-2.5 bg-indigo-650 hover:bg-indigo-700 disabled:bg-indigo-800 text-white font-bold rounded-xl text-xs transition shadow-sm"
+                >
+                  {isSubmittingIssue ? 'Submitting...' : isEditingIssue ? 'Save Issue' : 'Submit Issue'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+      </div>
+
+      {/* Glassmorphic site gallery modal overlay */}
+      {activeGalleryRoom && (
+        <div 
+          onClick={() => setActiveGalleryRoom(null)}
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            className="relative max-w-4xl w-full aspect-video bg-black/85 rounded-3xl overflow-hidden border border-white/10 flex items-center justify-center group"
+          >
+            {(() => {
+              const roomPhotos = photosByRoom[activeGalleryRoom] || []
+              const activePhoto = roomPhotos[activeGalleryPhotoIdx]
+              if (!activePhoto) return null
+
+              return (
+                <>
+                  <img
+                    src={activePhoto.image_url.startsWith('http') ? activePhoto.image_url : `http://localhost:8000${activePhoto.image_url}`}
+                    alt={activeGalleryRoom}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                  {/* Caption banner at bottom */}
+                  <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm p-4 text-white text-xs font-bold text-center">
+                    {activePhoto.caption || `${activeGalleryRoom.replace(/_/g, ' ')} Verification Photo`}
+                  </div>
+
+                  {/* Left and Right navigation arrow buttons */}
+                  {roomPhotos.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setActiveGalleryPhotoIdx(prev => prev === 0 ? roomPhotos.length - 1 : prev - 1)
+                        }}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 text-white hover:bg-black/80 transition border border-white/15 shadow-md"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveGalleryPhotoIdx(prev => prev === roomPhotos.length - 1 ? 0 : prev + 1)
+                        }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 text-white hover:bg-black/80 transition border border-white/15 shadow-md"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                </>
+              )
+            })()}
           </div>
         </div>
-      </div>
+      )}
+
     </div>
   )
 }
