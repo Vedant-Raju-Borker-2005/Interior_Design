@@ -104,25 +104,29 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
           </div>
         )}
 
-        <div className="flex gap-2">
-          <Link href={`/customize/${project.id}`}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition">
-            <Edit3 className="w-3.5 h-3.5" /> Customise
-          </Link>
-          <Link href={`/visualize/${project.id}`}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition">
-            <Sparkles className="w-3.5 h-3.5" /> AI View
-          </Link>
-          {project.status === 'draft' ? (
-            <Link href={`/quotation/${project.id}`}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
-              <FileText className="w-3.5 h-3.5" /> Quote
-            </Link>
+        <div className="flex gap-2 w-full">
+          {!isExecution ? (
+            <>
+              <Link href={`/customize/${project.id}`}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition">
+                <Edit3 className="w-3.5 h-3.5" /> Customise
+              </Link>
+              <Link href={`/visualize/${project.id}?from=dashboard`}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
+                <Sparkles className="w-3.5 h-3.5" /> AI View
+              </Link>
+            </>
           ) : (
-            <Link href={`/track/${project.id}`}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
-              <Activity className="w-3.5 h-3.5" /> Track
-            </Link>
+            <>
+              <Link href={`/visualize/${project.id}?from=dashboard`}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition">
+                <Sparkles className="w-3.5 h-3.5" /> AI View
+              </Link>
+              <Link href={`/track/${project.id}`}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
+                <Activity className="w-3.5 h-3.5" /> Track
+              </Link>
+            </>
           )}
         </div>
 

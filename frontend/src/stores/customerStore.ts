@@ -28,13 +28,15 @@ interface CustomerState {
   fetchActivity: () => Promise<void>
   
   fetchTracking: (projectId: string) => Promise<void>
+  fetchTrackingHistory: (projectId: string, trackingId: string) => Promise<any[]>
   updateTracking: (projectId: string, trackingId: string, status: string, remarks?: string, actualDate?: string) => Promise<void>
   
   fetchPhotos: (projectId: string) => Promise<void>
   uploadPhoto: (projectId: string, roomName: string, caption?: string, file?: File) => Promise<void>
   
   fetchIssues: (projectId: string) => Promise<void>
-  createIssue: (projectId: string, data: { type: string; priority: string; description: string; itemId?: string }) => Promise<void>
+  createIssue: (projectId: string, data: { type: string; priority: string; description: string; itemId?: string; dateEncountered?: string; files?: File[] }) => Promise<void>
+  updateIssue: (projectId: string, issueId: string, data: { type: string; priority: string; description: string; dateEncountered?: string; files?: File[] }) => Promise<void>
   
   fetchTickets: () => Promise<void>
   createTicket: (projectId: string, subject: string, description: string) => Promise<void>
@@ -159,6 +161,16 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     }
   },
 
+  fetchTrackingHistory: async (projectId, trackingId) => {
+    try {
+      const res = await customerAPI.getTrackingHistory(projectId, trackingId)
+      return res.data
+    } catch (e) {
+      console.error('Failed to fetch tracking history:', e)
+      return []
+    }
+  },
+
   updateTracking: async (projectId, trackingId, status, remarks, actualDate) => {
     set({ isLoading: true, error: null })
     try {
@@ -210,10 +222,40 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   createIssue: async (projectId, data) => {
     set({ isLoading: true, error: null })
     try {
-      const res = await customerAPI.createIssue(projectId, data.type, data.priority, data.description, data.itemId)
+      const res = await customerAPI.createIssue(
+        projectId,
+        data.type,
+        data.priority,
+        data.description,
+        data.itemId,
+        data.dateEncountered,
+        data.files
+      )
       set((s) => ({ issues: [res.data, ...s.issues], isLoading: false }))
     } catch (e: any) {
       set({ error: e.response?.data?.detail || 'Failed to create issue', isLoading: false })
+      throw e
+    }
+  },
+
+  updateIssue: async (projectId, issueId, data) => {
+    set({ isLoading: true, error: null })
+    try {
+      const res = await customerAPI.updateIssue(
+        projectId,
+        issueId,
+        data.type,
+        data.priority,
+        data.description,
+        data.dateEncountered,
+        data.files
+      )
+      set((s) => ({
+        issues: s.issues.map((i) => i.id === issueId ? res.data : i),
+        isLoading: false
+      }))
+    } catch (e: any) {
+      set({ error: e.response?.data?.detail || 'Failed to update issue', isLoading: false })
       throw e
     }
   },

@@ -305,7 +305,7 @@ export default function VendorAssignmentsPage() {
       {/* Filter and search bar controls */}
       <div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex gap-2 w-full md:w-auto flex-wrap">
-          {['ALL', 'RECEIVED_ORDER', 'ACCEPTED', 'PRODUCTION', 'READY', 'DISPATCHED', 'DELIVERED', 'COMPLETED', 'REJECTED'].map((st) => (
+          {['ALL', 'PRODUCTION', 'READY', 'DISPATCHED'].map((st) => (
             <button
               key={st}
               onClick={() => setFilterStatus(st)}
@@ -448,13 +448,15 @@ export default function VendorAssignmentsPage() {
                               onChange={(e) => handleStatusChange(item.id, e.target.value)}
                               className="px-2.5 py-1 bg-white border border-slate-200 text-slate-750 text-[11px] font-bold rounded-lg cursor-pointer hover:border-slate-350 focus:outline-none transition"
                             >
-                              <option value="RECEIVED_ORDER">RECEIVED ORDER (New)</option>
-                              <option value="ACCEPTED">ACCEPTED (Ready to process)</option>
+                              {['RECEIVED_ORDER', 'ACCEPTED'].includes(item.status) && (
+                                <option value={item.status} disabled>{item.status.replace('_', ' ')}</option>
+                              )}
                               <option value="PRODUCTION">PRODUCTION (In progress)</option>
                               <option value="READY">READY (QA complete)</option>
                               <option value="DISPATCHED">DISPATCHED (In transit)</option>
-                              <option value="DELIVERED">DELIVERED (At site)</option>
-                              <option value="COMPLETED">COMPLETED (Handover done)</option>
+                              {['DELIVERED', 'COMPLETED'].includes(item.status) && (
+                                <option value={item.status} disabled>{item.status}</option>
+                              )}
                             </select>
                           )}
                         </td>
@@ -523,7 +525,7 @@ export default function VendorAssignmentsPage() {
               animate={{ opacity: 0.4 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedAssignment(null)}
-              className="fixed inset-0 bg-slate-900 z-40 cursor-pointer"
+              className="fixed inset-0 top-16 bg-slate-900 z-40 cursor-pointer"
             />
 
             {/* Slider Drawer */}
@@ -532,13 +534,13 @@ export default function VendorAssignmentsPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white z-50 shadow-2xl p-6 overflow-y-auto flex flex-col justify-between"
+              className="fixed right-0 top-16 bottom-0 w-full max-w-lg bg-white z-50 shadow-2xl p-6 overflow-y-auto flex flex-col justify-between"
             >
               <div className="space-y-6">
                 {/* Header */}
                 <div className="flex justify-between items-start border-b pb-4">
                   <div>
-                    <h3 className="font-extrabold text-slate-800 text-lg">Assignment Sourcing Details</h3>
+                    <h3 className="font-extrabold text-slate-800 text-lg">Order Sourcing Details</h3>
                     <p className="text-[11px] text-slate-500 mt-1 font-mono">
                       {selectedAssignment.projectName} / {selectedAssignment.itemName}
                     </p>
@@ -561,7 +563,7 @@ export default function VendorAssignmentsPage() {
                         : 'border-transparent text-slate-400 hover:text-slate-600'
                     }`}
                   >
-                    Status & Proofs
+                    Order Sourcing Checklist
                   </button>
                   <button
                     onClick={() => setActiveTab('shipment')}
@@ -587,169 +589,114 @@ export default function VendorAssignmentsPage() {
 
                 {/* Tab content */}
                 <div className="pt-2">
-                  
-                  {/* TAB 1: STATUS & PHOTO PROOFS */}
+                                {/* TAB 1: ORDER SOURCING CHECKLIST */}
                   {activeTab === 'status' && (
                     <div className="space-y-6">
-                      {/* Lifecycle Status selector */}
                       <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                        <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">
-                          Production / Delivery State
-                        </label>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-1">
+                          Production lifecycle manager
+                        </span>
+                        <p className="text-xs text-slate-500 mb-3">
+                          Progress the component through manufacturing, quality check, and dispatch stages.
+                        </p>
+                        
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Update Status</label>
                         <select
                           value={selectedAssignment.status}
                           onChange={(e) => handleStatusChange(selectedAssignment.id, e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-indigo-500 rounded-xl text-xs focus:outline-none text-slate-800 transition"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-indigo-500 rounded-xl text-xs font-bold focus:outline-none text-slate-800 transition"
                         >
-                          <option value="RECEIVED_ORDER">RECEIVED ORDER (New)</option>
-                          <option value="ACCEPTED">ACCEPTED (Ready to process)</option>
-                          <option value="PRODUCTION">PRODUCTION (Factory manufacturing)</option>
-                          <option value="READY">READY (Finished fabrication)</option>
-                          <option value="DISPATCHED">DISPATCHED (Handed to courier)</option>
-                          <option value="DELIVERED">DELIVERED (Sourced at site)</option>
-                          <option value="COMPLETED">COMPLETED (Installation complete)</option>
+                          {['RECEIVED_ORDER', 'ACCEPTED'].includes(selectedAssignment.status) && (
+                            <option value={selectedAssignment.status} disabled>{selectedAssignment.status.replace('_', ' ')}</option>
+                          )}
+                          <option value="PRODUCTION">PRODUCTION (In progress)</option>
+                          <option value="READY">READY (QA complete)</option>
+                          <option value="DISPATCHED">DISPATCHED (In transit)</option>
+                          {['DELIVERED', 'COMPLETED'].includes(selectedAssignment.status) && (
+                            <option value={selectedAssignment.status} disabled>{selectedAssignment.status}</option>
+                          )}
                         </select>
                       </div>
 
-                      {/* Timeline status logs */}
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                          <Clock className="w-4 h-4 text-slate-400" />
-                          <span>Fulfillment Progress Log</span>
-                        </h4>
-                        <div className="relative border-l-2 border-slate-100 ml-3 pl-5 space-y-4">
-                          {selectedAssignment.history && selectedAssignment.history.map((hist: any, index: number) => (
-                            <div key={index} className="relative text-xs">
-                              {/* Dot */}
-                              <div className="absolute -left-[27px] top-1.5 w-3.5 h-3.5 rounded-full bg-white border-2 border-indigo-650 flex items-center justify-center">
-                                <div className="w-1.5 h-1.5 bg-indigo-650 rounded-full" />
-                              </div>
-                              <div className="flex justify-between font-bold text-slate-800">
-                                <span>{hist.status}</span>
-                                <span className="text-[10px] text-slate-400 font-mono">
-                                  {new Date(hist.timestamp).toLocaleDateString()} {new Date(hist.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-black text-slate-450 uppercase tracking-widest">Milestone Sourcing Progress</h4>
+                        
+                        <div className="relative pl-5 space-y-6 border-l border-slate-200 ml-2 pt-1 pb-1">
+                          {[
+                            { id: 'design', label: 'Design Finalized', isDone: true, isActive: false, sub: 'Approved by customer' },
+                            { id: 'procurement', label: 'Procurement & Production', 
+                              isDone: ['ready', 'dispatched', 'delivered', 'completed', 'installed'].includes((selectedAssignment.status || '').toLowerCase()), 
+                              isActive: ['production', 'ready'].includes((selectedAssignment.status || '').toLowerCase()),
+                              sub: (
+                                <div className="mt-2 p-2.5 bg-slate-50 border border-slate-150 rounded-xl space-y-1.5">
+                                  <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Production Lifecycle:</div>
+                                  {[
+                                    { label: 'Production', done: ['production', 'ready', 'dispatched', 'delivered', 'completed'].includes(selectedAssignment.status) },
+                                    { label: 'Ready', done: ['ready', 'dispatched', 'delivered', 'completed'].includes(selectedAssignment.status) },
+                                    { label: 'Dispatched', done: ['dispatched', 'delivered', 'completed'].includes(selectedAssignment.status) }
+                                  ].map((subStep, sidx) => (
+                                    <div key={sidx} className="flex items-center gap-2">
+                                      <div className={`w-3 h-3 rounded-full border flex items-center justify-center text-[7px] text-white ${
+                                        subStep.done ? "bg-emerald-500 border-emerald-600" : "bg-white border-slate-300"
+                                      }`}>
+                                        {subStep.done && "✓"}
+                                      </div>
+                                      <span className={`text-xs font-semibold ${subStep.done ? "text-slate-800" : "text-slate-400"}`}>
+                                        {subStep.label}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            },
+                            { id: 'site_prep', label: 'Site Preparation', 
+                              isDone: ['ready', 'dispatched', 'delivered', 'completed'].includes((selectedAssignment.status || '').toLowerCase()), 
+                              isActive: false },
+                            { id: 'installation', label: 'Installation', 
+                              isDone: ['delivered', 'completed'].includes((selectedAssignment.status || '').toLowerCase()), 
+                              isActive: (selectedAssignment.status || '').toLowerCase() === 'dispatched' },
+                            { id: 'quality', label: 'Quality Inspection', 
+                              isDone: ['completed'].includes((selectedAssignment.status || '').toLowerCase()), 
+                              isActive: (selectedAssignment.status || '').toLowerCase() === 'delivered' },
+                            { id: 'handover', label: 'Project Handover', 
+                              isDone: (selectedAssignment.status || '').toLowerCase() === 'completed', 
+                              isActive: false }
+                          ].map((milestone) => {
+                            return (
+                              <div key={milestone.id} className="relative flex gap-3 items-start text-xs">
+                                {/* Dot */}
+                                <div className={`absolute -left-[25px] w-2.5 h-2.5 rounded-full border z-10 transition-colors duration-200 top-1 ${
+                                  milestone.isDone ? "bg-emerald-500 border-emerald-600" :
+                                  milestone.isActive ? "bg-indigo-600 border-indigo-700 ring-2 ring-indigo-100" :
+                                  "bg-white border-slate-300"
+                                }`} />
+                                
+                                <div className="flex-1">
+                                  <span className={`font-extrabold text-sm block ${
+                                    milestone.isDone ? "text-emerald-700" :
+                                    milestone.isActive ? "text-indigo-900" :
+                                    "text-slate-400"
+                                  }`}>
+                                    {milestone.label}
+                                  </span>
+                                  {milestone.sub && (
+                                    <div className="text-[10px] text-slate-500 font-medium">
+                                      {milestone.sub}
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border mt-0.5 ${
+                                  milestone.isDone ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                                  milestone.isActive ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                                  "bg-slate-50 text-slate-400 border-slate-200"
+                                }`}>
+                                  {milestone.isDone ? "Completed" : milestone.isActive ? "Active" : "Pending"}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-slate-500 mt-1">{hist.remarks}</p>
-                            </div>
-                          ))}
-                          {(!selectedAssignment.history || selectedAssignment.history.length === 0) && (
-                            <div className="text-xs text-slate-450 italic">No progress events logged yet.</div>
-                          )}
+                            )
+                          })}
                         </div>
-                      </div>
-
-                      {/* Image proofs uploader */}
-                      <div className="border-t border-slate-100 pt-5 space-y-4">
-                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                          Upload Dispatch or Delivery Photo Proof
-                        </h4>
-                        <form onSubmit={handleProofSubmit} className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Photo Tag</label>
-                              <select
-                                value={proofType}
-                                onChange={(e) => setProofType(e.target.value)}
-                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none text-slate-800"
-                              >
-                                <option value="PRODUCTION">Factory Production</option>
-                                <option value="PACKAGING">Item Packaging</option>
-                                <option value="DISPATCH">Transit Dispatch</option>
-                                <option value="DELIVERY">Site Delivery</option>
-                                <option value="INSTALLATION">Fitment Proof</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Caption</label>
-                              <input
-                                type="text"
-                                placeholder="Short description"
-                                value={proofCaption}
-                                onChange={(e) => setProofCaption(e.target.value)}
-                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none text-slate-800"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="border-2 border-dashed border-slate-200 p-5 rounded-xl bg-slate-50 text-center">
-                            {proofFile ? (
-                              <div className="text-xs text-slate-700 space-y-2">
-                                <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" />
-                                <span className="font-bold block truncate max-w-[250px] mx-auto">{proofFile.name}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => setProofFile(null)}
-                                  className="text-[10px] text-red-500 font-bold hover:underline"
-                                >
-                                  Clear Image
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  id="drawer-proof-upload"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0]
-                                    if (file) setProofFile(file)
-                                  }}
-                                />
-                                <label
-                                  htmlFor="drawer-proof-upload"
-                                  className="cursor-pointer inline-flex flex-col items-center space-y-1 text-slate-450 hover:text-indigo-600 transition"
-                                >
-                                  <UploadCloud className="w-6 h-6 text-slate-350" />
-                                  <span className="text-xs font-bold">Choose a verification photo</span>
-                                </label>
-                              </>
-                            )}
-                          </div>
-
-                          <button
-                            type="submit"
-                            disabled={uploadingProofState || !proofFile}
-                            className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
-                          >
-                            {uploadingProofState ? 'Uploading file...' : 'Submit Photo Proof'}
-                          </button>
-                        </form>
-
-                        {/* List of proofs */}
-                        {selectedAssignment.proofImages && selectedAssignment.proofImages.length > 0 && (
-                          <div className="space-y-2">
-                            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Uploaded Proof Images:</span>
-                            <div className="grid grid-cols-3 gap-2">
-                              {selectedAssignment.proofImages.map((proof: any) => {
-                                const fullUrl = proof.imageUrl.startsWith('/') 
-                                  ? `http://localhost:8000${proof.imageUrl}` 
-                                  : proof.imageUrl;
-                                return (
-                                  <div key={proof.id} className="relative group border border-slate-100 rounded-lg overflow-hidden">
-                                    <img
-                                      src={fullUrl}
-                                      alt={proof.caption || "Proof"}
-                                      className="w-full h-20 object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center p-1 transition text-center text-white">
-                                      <span className="text-[8px] truncate max-w-full font-bold uppercase">{proof.imageType}</span>
-                                      <a
-                                        href={fullUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="mt-1 p-0.5 bg-indigo-600 hover:bg-indigo-700 rounded text-xs transition"
-                                      >
-                                        View
-                                      </a>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}

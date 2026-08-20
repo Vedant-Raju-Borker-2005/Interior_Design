@@ -12,7 +12,7 @@ from ..db import get_db
 from ..models import (
     User, Vendor, VendorDocument, VendorProduct, ProductVariant,
     Inventory, InventoryTransaction, VendorAssignment, ItemStatusHistory,
-    ItemProofImage, VendorPayout, VendorNotification, VendorPerformance, Project, RoomItem, Product
+    ItemProofImage, VendorPayout, VendorNotification, VendorPerformance, Project, RoomItem, Product, Issue
 )
 from ..auth_utils import current_user
 from ..schemas import UpdateShipmentReq, UpdateVendorMilestoneReq
@@ -1154,6 +1154,18 @@ def update_assignment_shipment(
                 tracking.status = "dispatched"
             tracking.remarks = f"Shipment status: {payload.shipment_status}"
 
+            # Log to ProjectItemTrackingHistory
+            from ..models import ProjectItemTrackingHistory
+            hist_log = ProjectItemTrackingHistory(
+                tracking_id=tracking.id,
+                status=tracking.status,
+                expected_date=tracking.expected_date,
+                actual_date=tracking.actual_date,
+                updated_by=vendor.name,
+                remarks=tracking.remarks
+            )
+            db.add(hist_log)
+
     db.commit()
     return {"success": True, "shipmentStatus": assignment.shipment_status, "status": assignment.status}
 
@@ -1356,6 +1368,18 @@ def add_assignment_milestone(
                 tracking.actual_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
             tracking.remarks = remarks
 
+            # Log to ProjectItemTrackingHistory
+            from ..models import ProjectItemTrackingHistory
+            hist_log = ProjectItemTrackingHistory(
+                tracking_id=tracking.id,
+                status=tracking.status,
+                expected_date=tracking.expected_date,
+                actual_date=tracking.actual_date,
+                updated_by=vendor.name,
+                remarks=tracking.remarks
+            )
+            db.add(hist_log)
+
     # Auto Payout simulation when installed
     if status.upper() == "INSTALLED":
         payout = db.query(VendorPayout).filter(
@@ -1511,3 +1535,50 @@ def mark_notifications_read(
     
     db.commit()
     return {"success": True}
+
+
+@router.get("/issues", summary="List issues related to the vendor's assigned components")
+def get_vendor_issues(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    vendor = db.query(Vendor).filter(Vendor.user_id == user.id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor profile not found")
+
+    assignments = db.query(VendorAssignment).filter(VendorAssignment.vendor_id == vendor.id).all()
+    assigned_item_ids = [a.item_id for a in assignments]
+
+    if not assigned_item_ids:
+        return []
+
+    issues = db.query(Issue).filter(Issue.item_id.in_(assigned_item_ids)).all()
+
+    result = []
+    for i in issues:
+        room_item = db.query(RoomItem).filter(RoomItem.id == i.item_id).first()
+        item_name = "General Component"
+        room_name = "General"
+        project_name = "Unknown Project"
+        if room_item:
+            item_name = room_item.product.name if room_item.product else "Custom Item"
+            room_name = room_item.room.room_type if (room_item.room and room_item.room.room_type) else (room_item.room.name if room_item.room else "General")
+            project_name = room_item.room.project.property_name if (room_item.room and room_item.room.project) else "Project"
+            
+        result.append({
+            "id": i.id,
+            "projectId": i.project_id,
+            "projectName": project_name,
+            "itemId": i.item_id,
+            "itemName": item_name,
+            "roomName": room_name,
+            "type": i.type,
+            "status": i.status,
+            "priority": i.priority,
+            "description": i.description,
+            "created_by": i.created_by,
+            "created_at": i.created_at.isoformat() if i.created_at else None,
+            "resolved_at": i.resolved_at.isoformat() if i.resolved_at else None,
+        })
+    return result
+

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { projectsAPI, aiAPI, catalogAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
@@ -169,6 +169,8 @@ const ROOM_RENDER_WALLS: Record<string, { label: string; url: string }[]> = {
 export default function ControlledVisualizePage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromParam = searchParams.get('from')
   const projectId = params.projectId as string
 
   const [project, setProject] = useState<any>(null)
@@ -407,7 +409,15 @@ export default function ControlledVisualizePage() {
         <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.push(`/customize/${projectId}`)}
+              onClick={() => {
+                if (fromParam === 'dashboard') {
+                  router.push('/dashboard')
+                } else if (fromParam === 'track') {
+                  router.push(`/track/${projectId}`)
+                } else {
+                  router.push(`/customize/${projectId}`)
+                }
+              }}
               className="p-2 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl transition shadow-sm text-slate-700"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -664,28 +674,30 @@ export default function ControlledVisualizePage() {
             </div>
 
             {/* Generate Render Trigger */}
-            <button
-              onClick={handleGenerate}
-              disabled={generating || activeRoomItems.length === 0}
-              className={clsx(
-                'w-full py-4 rounded-2xl font-bold text-sm shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98]',
-                generating || activeRoomItems.length === 0
-                  ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
-                  : 'bg-indigo-700 hover:bg-indigo-800 text-white'
-              )}
-            >
-              {generating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-slate-500 border-t-slate-200 rounded-full animate-spin" />
-                  <span>Generating 4-wall viewport…</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>Generate Controlled Render</span>
-                </>
-              )}
-            </button>
+            {!['ordered', 'done'].includes(project?.status) && (
+              <button
+                onClick={handleGenerate}
+                disabled={generating || activeRoomItems.length === 0}
+                className={clsx(
+                  'w-full py-4 rounded-2xl font-bold text-sm shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98]',
+                  generating || activeRoomItems.length === 0
+                    ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+                    : 'bg-indigo-700 hover:bg-indigo-800 text-white'
+                )}
+              >
+                {generating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-slate-500 border-t-slate-200 rounded-full animate-spin" />
+                    <span>Generating 4-wall viewport…</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>Generate Controlled Render</span>
+                  </>
+                )}
+              </button>
+            )}
 
           </div>
 
@@ -757,7 +769,7 @@ export default function ControlledVisualizePage() {
             </div>
 
             {/* Finalize and get quotation CTA */}
-            {(renders.length > 0 || renderedWallImages) && !generating && (
+            {(renders.length > 0 || renderedWallImages) && !generating && !['ordered', 'done'].includes(project?.status) && (
               <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/20 p-5 rounded-3xl flex items-center justify-between">
                 <div>
                   <h3 className="text-white font-bold mb-1">Satisfied with the designs?</h3>

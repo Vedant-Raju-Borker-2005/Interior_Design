@@ -185,9 +185,15 @@ export default function QuotationPage() {
       <div className="max-w-4xl mx-auto px-4 pt-24 pb-16">
 
         {/* Back button */}
-        <button onClick={() => router.back()} className="btn-ghost mb-6">
-          <ArrowLeft className="w-4 h-4" /> Back to Customise
-        </button>
+        {quotation?.status === 'approved' ? (
+          <button onClick={() => router.push(`/track/${projectId}`)} className="btn-ghost mb-6">
+            <ArrowLeft className="w-4 h-4" /> Back to Project Progress
+          </button>
+        ) : (
+          <button onClick={() => router.back()} className="btn-ghost mb-6">
+            <ArrowLeft className="w-4 h-4" /> Back to Customise
+          </button>
+        )}
 
         {/* Project header */}
         <div className="bg-gradient-to-r from-indigo-700 to-indigo-900 rounded-2xl p-8 text-white mb-6">
@@ -380,109 +386,113 @@ export default function QuotationPage() {
             </div>
 
             {/* Quotation Status & Approval Actions */}
-            <div className="bg-white rounded-2xl shadow-card p-6 mb-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider">Quotation Decision</h3>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                  quotation.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
-                  quotation.status === 'rejected' ? 'bg-rose-100 text-rose-700' :
-                  quotation.status === 'under_revision' ? 'bg-amber-100 text-amber-700' :
-                  'bg-slate-100 text-slate-650'
-                }`}>
-                  Status: {quotation.status?.replace('_', ' ')}
-                </span>
-              </div>
+            {quotation.status !== 'approved' && (
+              <>
+                <div className="bg-white rounded-2xl shadow-card p-6 mb-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider">Quotation Decision</h3>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      quotation.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                      quotation.status === 'rejected' ? 'bg-rose-100 text-rose-700' :
+                      quotation.status === 'under_revision' ? 'bg-amber-100 text-amber-700' :
+                      'bg-slate-100 text-slate-650'
+                    }`}>
+                      Status: {quotation.status?.replace('_', ' ')}
+                    </span>
+                  </div>
 
-              {quotation.status !== 'approved' && quotation.status !== 'rejected' ? (
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handleApprove}
-                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm"
-                  >
-                    ✓ Approve Quotation
-                  </button>
-                  <button
-                    onClick={handleReject}
-                    className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-sm"
-                  >
-                    ✕ Reject Quotation
-                  </button>
-                  <button
-                    onClick={() => setShowRevModal(true)}
-                    className="px-6 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-150 font-bold rounded-xl text-xs transition"
-                  >
-                    ✎ Request Changes / Revision
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <p className="text-xs text-slate-500 font-semibold">
-                    This quotation has been <span className="font-bold text-slate-700 uppercase">{quotation.status}</span>. You can track progress, make milestone payments, or download receipts.
-                  </p>
-                  {quotation.status === 'approved' && (
-                    <Link
-                      href={`/track/${projectId}/payments`}
-                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white font-bold rounded-xl text-xs transition shadow-glow-indigo flex items-center gap-1.5 whitespace-nowrap"
-                    >
-                      <CreditCard className="w-3.5 h-3.5" /> Make Milestone Payment
-                    </Link>
+                  {quotation.status !== 'approved' && quotation.status !== 'rejected' ? (
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={handleApprove}
+                        className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm"
+                      >
+                        ✓ Approve Quotation
+                      </button>
+                      <button
+                        onClick={handleReject}
+                        className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-sm"
+                      >
+                        ✕ Reject Quotation
+                      </button>
+                      <button
+                        onClick={() => setShowRevModal(true)}
+                        className="px-6 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-150 font-bold rounded-xl text-xs transition"
+                      >
+                        ✎ Request Changes / Revision
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <p className="text-xs text-slate-500 font-semibold">
+                        This quotation has been <span className="font-bold text-slate-700 uppercase">{quotation.status}</span>. You can track progress, make milestone payments, or download receipts.
+                      </p>
+                      {quotation.status === 'approved' && (
+                        <Link
+                          href={`/track/${projectId}/payments`}
+                          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white font-bold rounded-xl text-xs transition shadow-glow-indigo flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" /> Make Milestone Payment
+                        </Link>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* Revision History timeline */}
-            {revisions.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-card p-6 mb-6 space-y-4">
-                <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider border-b border-slate-100 pb-3">Revision History</h3>
-                <div className="space-y-4 relative">
-                  {revisions.map((rev: any, idx: number) => (
-                    <div key={rev.id} className="p-4 bg-slate-50 border border-slate-150 rounded-xl flex justify-between items-start text-xs shadow-sm">
-                      <div className="space-y-1">
-                        <div className="font-bold text-slate-800">Revision #{rev.revision_number}</div>
-                        <p className="text-slate-600 leading-relaxed italic">"Notes: {rev.customer_notes}"</p>
-                        <p className="text-[10px] text-slate-400 font-medium">Requested: {new Date(rev.created_at).toLocaleString()}</p>
-                      </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 border border-indigo-200">
-                        {rev.status}
-                      </span>
+                {/* Revision History timeline */}
+                {revisions.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-card p-6 mb-6 space-y-4">
+                    <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider border-b border-slate-100 pb-3">Revision History</h3>
+                    <div className="space-y-4 relative">
+                      {revisions.map((rev: any, idx: number) => (
+                        <div key={rev.id} className="p-4 bg-slate-50 border border-slate-150 rounded-xl flex justify-between items-start text-xs shadow-sm">
+                          <div className="space-y-1">
+                            <div className="font-bold text-slate-800">Revision #{rev.revision_number}</div>
+                            <p className="text-slate-600 leading-relaxed italic">"Notes: {rev.customer_notes}"</p>
+                            <p className="text-[10px] text-slate-400 font-medium">Requested: {new Date(rev.created_at).toLocaleString()}</p>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 border border-indigo-200">
+                            {rev.status}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
 
-            {/* Inquiry CTA */}
-            <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white">
-              <h3 className="font-bold text-xl mb-2">Ready to Proceed?</h3>
-              <p className="text-indigo-200 text-sm mb-5">
-                Our design consultants will get in touch within 2 hours to walk you through the execution plan.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => {
-                    if (quotation.status === 'approved') {
-                      router.push(`/track/${projectId}`)
-                    } else {
-                      toast.error('Please approve quotation before proceeding to execution.')
-                    }
-                  }}
-                  id="proceed-inquiry-btn"
-                  className="flex items-center gap-2 bg-white text-indigo-600 font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition"
-                >
-                  <Sparkles className="w-4 h-4" /> Proceed to Execution
-                </button>
-                <a href="tel:+919876543210" className="flex items-center gap-2 bg-white/20 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-white/30 transition">
-                  <Phone className="w-4 h-4" /> Call Us
-                </a>
-                <a href="https://wa.me/919876543210" target="_blank" className="flex items-center gap-2 bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-green-600 transition">
-                  <MessageCircle className="w-4 h-4" /> WhatsApp
-                </a>
-                <a href="mailto:hello@interiorai.in" className="flex items-center gap-2 bg-white/10 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-white/20 transition">
-                  <Mail className="w-4 h-4" /> Email
-                </a>
-              </div>
-            </div>
+                {/* Inquiry CTA */}
+                <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white">
+                  <h3 className="font-bold text-xl mb-2">Ready to Proceed?</h3>
+                  <p className="text-indigo-200 text-sm mb-5">
+                    Our design consultants will get in touch within 2 hours to walk you through the execution plan.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => {
+                        if (quotation.status === 'approved') {
+                          router.push(`/track/${projectId}`)
+                        } else {
+                          toast.error('Please approve quotation before proceeding to execution.')
+                        }
+                      }}
+                      id="proceed-inquiry-btn"
+                      className="flex items-center gap-2 bg-white text-indigo-600 font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition"
+                    >
+                      <Sparkles className="w-4 h-4" /> Proceed to Execution
+                    </button>
+                    <a href="tel:+919876543210" className="flex items-center gap-2 bg-white/20 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-white/30 transition">
+                      <Phone className="w-4 h-4" /> Call Us
+                    </a>
+                    <a href="https://wa.me/919876543210" target="_blank" className="flex items-center gap-2 bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-green-600 transition">
+                      <MessageCircle className="w-4 h-4" /> WhatsApp
+                    </a>
+                    <a href="mailto:hello@interiorai.in" className="flex items-center gap-2 bg-white/10 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-white/20 transition">
+                      <Mail className="w-4 h-4" /> Email
+                    </a>
+                  </div>
+                </div>
+              </>
+            )}
           </motion.div>
         )}
       </div>
