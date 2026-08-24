@@ -1345,6 +1345,11 @@ def add_assignment_milestone(
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
+    # Update the vendor assignment status and remarks
+    assignment.status = status.upper()
+    if remarks:
+        assignment.remarks = remarks
+
     hist = ItemStatusHistory(
         assignment_id=assignment.id,
         status=status.upper(),
@@ -1362,6 +1367,20 @@ def add_assignment_milestone(
             ItemTracking.room_name == (item.room.room_type if item.room else "General"),
             ItemTracking.item_name == (item.product.name if item.product else "Custom Item")
         ).first()
+        
+        if not tracking:
+            # Generate default tracking items if they don't exist yet
+            from .customer_routes import _populate_default_tracking
+            project = db.query(Project).filter(Project.id == assignment.project_id).first()
+            if project:
+                _populate_default_tracking(assignment.project_id, project, db)
+                # Re-query tracking item
+                tracking = db.query(ItemTracking).filter(
+                    ItemTracking.project_id == assignment.project_id,
+                    ItemTracking.room_name == (item.room.room_type if item.room else "General"),
+                    ItemTracking.item_name == (item.product.name if item.product else "Custom Item")
+                ).first()
+
         if tracking:
             tracking.status = status.lower()
             if status.lower() == "delivered":

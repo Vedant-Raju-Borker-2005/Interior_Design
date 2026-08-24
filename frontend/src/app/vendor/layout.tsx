@@ -85,38 +85,15 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
           `}
         >
           <div>
-            {/* Logo / Brand / Collapsible Toggle */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center space-x-3 overflow-hidden">
-                <div className="w-9 h-9 min-w-[2.25rem] rounded-xl bg-gradient-to-tr from-indigo-500 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-indigo-150">
-                  <span className="font-bold text-lg">💡</span>
-                </div>
-                {!collapsed && (
-                  <div className="transition-opacity duration-200 whitespace-nowrap">
-                    <span className="font-extrabold text-sm text-slate-800 tracking-tight block">InteriorAI</span>
-                    <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider block">Vendor Hub</span>
-                  </div>
-                )}
-              </div>
-              
-              {!collapsed && (
-                <button
-                  onClick={() => setCollapsed(true)}
-                  className="hidden lg:flex p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
-                  title="Collapse Menu"
-                >
-                  <Menu className="w-4 h-4" />
-                </button>
-              )}
-              {collapsed && (
-                <button
-                  onClick={() => setCollapsed(false)}
-                  className="hidden lg:flex p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors mx-auto"
-                  title="Expand Menu"
-                >
-                  <Menu className="w-4 h-4" />
-                </button>
-              )}
+            {/* Collapsible Toggle Header */}
+            <div className={`flex mb-8 ${collapsed ? 'justify-center' : 'justify-end'}`}>
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                className="hidden lg:flex p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
+                title={collapsed ? "Expand Menu" : "Collapse Menu"}
+              >
+                <Menu className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Navigation Links */}
