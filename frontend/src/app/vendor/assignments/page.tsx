@@ -592,32 +592,6 @@ export default function VendorAssignmentsPage() {
                                 {/* TAB 1: ORDER SOURCING CHECKLIST */}
                   {activeTab === 'status' && (
                     <div className="space-y-6">
-                      <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-1">
-                          Production lifecycle manager
-                        </span>
-                        <p className="text-xs text-slate-500 mb-3">
-                          Progress the component through manufacturing, quality check, and dispatch stages.
-                        </p>
-                        
-                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Update Status</label>
-                        <select
-                          value={selectedAssignment.status}
-                          onChange={(e) => handleStatusChange(selectedAssignment.id, e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-indigo-500 rounded-xl text-xs font-bold focus:outline-none text-slate-800 transition"
-                        >
-                          {['RECEIVED_ORDER', 'ACCEPTED'].includes(selectedAssignment.status) && (
-                            <option value={selectedAssignment.status} disabled>{selectedAssignment.status.replace('_', ' ')}</option>
-                          )}
-                          <option value="PRODUCTION">PRODUCTION (In progress)</option>
-                          <option value="READY">READY (QA complete)</option>
-                          <option value="DISPATCHED">DISPATCHED (In transit)</option>
-                          {['DELIVERED', 'COMPLETED'].includes(selectedAssignment.status) && (
-                            <option value={selectedAssignment.status} disabled>{selectedAssignment.status}</option>
-                          )}
-                        </select>
-                      </div>
-
                       <div className="space-y-4">
                         <h4 className="text-xs font-black text-slate-450 uppercase tracking-widest">Milestone Sourcing Progress</h4>
                         
@@ -625,15 +599,15 @@ export default function VendorAssignmentsPage() {
                           {[
                             { id: 'design', label: 'Design Finalized', isDone: true, isActive: false, sub: 'Approved by customer' },
                             { id: 'procurement', label: 'Procurement & Production', 
-                              isDone: ['ready', 'dispatched', 'delivered', 'completed', 'installed'].includes((selectedAssignment.status || '').toLowerCase()), 
-                              isActive: ['production', 'ready'].includes((selectedAssignment.status || '').toLowerCase()),
+                              isDone: ['dispatched', 'delivered', 'completed', 'installed'].includes((selectedAssignment.status || '').toLowerCase()), 
+                              isActive: ['accepted', 'production', 'ready'].includes((selectedAssignment.status || '').toLowerCase()),
                               sub: (
                                 <div className="mt-2 p-2.5 bg-slate-50 border border-slate-150 rounded-xl space-y-1.5">
                                   <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Production Lifecycle:</div>
                                   {[
-                                    { label: 'Production', done: ['production', 'ready', 'dispatched', 'delivered', 'completed'].includes(selectedAssignment.status) },
-                                    { label: 'Ready', done: ['ready', 'dispatched', 'delivered', 'completed'].includes(selectedAssignment.status) },
-                                    { label: 'Dispatched', done: ['dispatched', 'delivered', 'completed'].includes(selectedAssignment.status) }
+                                    { label: 'Production', done: ['production', 'ready', 'dispatched', 'delivered', 'completed'].includes((selectedAssignment.status || '').toLowerCase()) },
+                                    { label: 'Ready', done: ['ready', 'dispatched', 'delivered', 'completed'].includes((selectedAssignment.status || '').toLowerCase()) },
+                                    { label: 'Dispatched', done: ['dispatched', 'delivered', 'completed'].includes((selectedAssignment.status || '').toLowerCase()) }
                                   ].map((subStep, sidx) => (
                                     <div key={sidx} className="flex items-center gap-2">
                                       <div className={`w-3 h-3 rounded-full border flex items-center justify-center text-[7px] text-white ${
@@ -650,7 +624,7 @@ export default function VendorAssignmentsPage() {
                               )
                             },
                             { id: 'site_prep', label: 'Site Preparation', 
-                              isDone: ['ready', 'dispatched', 'delivered', 'completed'].includes((selectedAssignment.status || '').toLowerCase()), 
+                              isDone: ['dispatched', 'delivered', 'completed'].includes((selectedAssignment.status || '').toLowerCase()), 
                               isActive: false },
                             { id: 'installation', label: 'Installation', 
                               isDone: ['delivered', 'completed'].includes((selectedAssignment.status || '').toLowerCase()), 

@@ -57,6 +57,8 @@ backend/pdfs/renders/
 backend/pdfs/product_images/
 
 # Temporary diagnostic scripts & logs
+scratch_*.py
+backend/scratch_*.py
 check_images.py
 search_showcase.py
 search_backend.py

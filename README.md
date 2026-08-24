@@ -100,6 +100,14 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
     The budget tracker in the customizer splits into two clearly labeled and centered sub-boxes — *Remaining Budget* and *Variation (Spent)* — with improved contrast and centered layout.
 *   **Contextual Landing Page & Login Content (New):**
     Landing page hero updated to: *"Get Your Interiors Designed & Delivered Starting Under ₹3 Lakhs"* with CTA *"Design My Home Free"*. Login page shows a contextual testimonial based on whether the user is signing in or signing up.
+*   **Collapsible Vendor Sidebar Menu Toggle (New):**
+    Redesigned the sidebar navigation bar header in the Vendor Hub to display only the hamburger menu toggle button. Shows only icons when collapsed (`w-20`) and slides out to show text labels when expanded (`w-64`).
+*   **Vendor Sourcing Checklist Timeline & Sub-Milestones (New):**
+    Removed the redundant "Production Lifecycle Manager" select dropdown container card from the sourcing details drawer checklist tab. Replaced it by placing the 6-stage milestone progress timeline at the top of the tab, featuring sub-steps (*Production*, *Ready*, *Dispatched*) mapped directly from the item status.
+*   **Vendor Issues Tracking Panel (New):**
+    Added a new vendor issues dashboard `/vendor/issues` and its corresponding database API (`GET /api/v1/vendor/issues`) that scans the DB and aggregates customer-reported issues for the vendor's active product assignments.
+*   **Automatic Progress and Database State Propagation (New):**
+    Configured the backend to automatically map vendor status selections (`ACCEPTED`, `PRODUCTION`, `READY`, `DISPATCHED`) directly to the customer tracker's status fields (`ItemTracking` and `VendorAssignment`). Ensures that if the vendor updates an item's status before the customer tracking logs are seeded, the database automatically pre-populates default tracking structures to guarantee zero progress loss.
 
 ---
 
@@ -215,6 +223,12 @@ graph TD
     E -->|Finalize Configuration| G[Dynamic PDF Quote Generator]
     G -->|Pincode Match| H[Verified Vendor & Execution Tracking]
 ```
+
+### 🔀 B2C vs. B2B Branching Journey Flowchart
+
+Below is the visual architecture representing the branching B2C (Customer) and B2B (Enterprise) customer journeys merging at the Plan Selection Point:
+
+![Integrated Journey Flowchart](branch_merge_flow.jpg)
 
 ---
 

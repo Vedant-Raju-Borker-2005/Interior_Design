@@ -305,7 +305,7 @@ def get_tracking(
             if item:
                 component_id = f"CMP-{item.id[:8].upper()}"
                 if item.product:
-                    image_url = item.product.image_url
+                    image_url = item.product.thumbnail_url
                     about_details = {
                         "width": item.product.width,
                         "height": item.product.height,
@@ -886,11 +886,23 @@ def _populate_default_tracking(project_id: str, project: Project, db: Session):
     # Try using room items first
     for room in project.rooms:
         for item in room.items:
+            from ..models import VendorAssignment
+            va = db.query(VendorAssignment).filter(
+                VendorAssignment.project_id == project_id,
+                VendorAssignment.item_id == item.id
+            ).first()
+            
+            initial_status = "ordered"
+            if va and va.status:
+                initial_status = va.status.lower()
+                if initial_status in ["received_order", "assigned"]:
+                    initial_status = "ordered"
+
             track = ItemTracking(
                 project_id=project_id,
                 room_name=room.room_type,
                 item_name=item.product.name if item.product else "Furniture Item",
-                status="ordered",
+                status=initial_status,
                 expected_date=(datetime.datetime.utcnow() + datetime.timedelta(days=14)).strftime("%Y-%m-%d"),
                 actual_date="",
                 remarks=""
