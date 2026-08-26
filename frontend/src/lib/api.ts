@@ -279,6 +279,14 @@ export const adminAPI = {
   getVendorPerformance: (id: string) =>
     axiosInstance.get(`/api/v1/admin/vendors/${id}/performance`),
 
+  // Team Approvals
+  getTeamApprovals: () =>
+    axiosInstance.get('/api/v1/admin/team-approvals'),
+  approveTeamMember: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/team-approvals/${id}/approve`),
+  rejectTeamMember: (id: string) =>
+    axiosInstance.post(`/api/v1/admin/team-approvals/${id}/reject`),
+
   // Quotation Management
   getQuotations: () =>
     axiosInstance.get('/api/v1/admin/quotations'),
@@ -477,6 +485,8 @@ export const customerAPI = {
 
 // Project Team API
 export const teamAPI = {
+  getDirectory: () =>
+    axiosInstance.get('/api/v1/team/team/directory'),
   getMembers: (projectId: string) =>
     axiosInstance.get(`/api/v1/team/projects/${projectId}/team`),
   assignMember: (projectId: string, userId: string, role: string) =>
@@ -505,10 +515,17 @@ export const teamAPI = {
     axiosInstance.post(`/api/v1/team/issues/${issueId}/resolve`, { resolution }),
   getPhotos: (projectId: string) =>
     axiosInstance.get(`/api/v1/team/projects/${projectId}/photos`),
-  uploadPhoto: (projectId: string, data: { roomName?: string; category: string; imageUrl: string }) =>
-    axiosInstance.post(`/api/v1/team/projects/${projectId}/photos`, data),
+  uploadPhoto: (projectId: string, data: FormData) =>
+    axiosInstance.post(`/api/v1/team/projects/${projectId}/photos`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  getProjects: () =>
+    axiosInstance.get('/api/v1/team/team/projects'),
   getDashboard: () =>
     axiosInstance.get('/api/v1/team/team/dashboard'),
+  getDirectory: () =>
+    axiosInstance.get('/api/v1/team/team/directory'),
+
   getTracking: (projectId: string) =>
     axiosInstance.get(`/api/v1/team/projects/${projectId}/tracking`),
   updateTracking: (projectId: string, trackingId: string, status: string, remarks?: string) =>
