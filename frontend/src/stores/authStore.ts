@@ -14,6 +14,7 @@ interface User {
   furnishing_preference?: string
   furnishing_type?: string
   role?: string
+  status?: string
 }
 
 interface AuthState {

@@ -10,7 +10,7 @@ import Navbar from '@/components/Navbar';
 import {
   ArrowLeft, Plus, Image as ImageIcon, Calendar, Clock, CheckSquare, ClipboardList,
   PhoneCall, FileText, BarChart2, Shield, User, Trash2, Send, AlertTriangle, Upload,
-  Eye, Download, ShieldAlert, Award, MessageSquare, Check, X, Users, RefreshCw
+  Eye, Download, ShieldAlert, Award, MessageSquare, Check, X, Users, RefreshCw, Layers, Map
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -83,6 +83,8 @@ export default function ProjectExecutionPage() {
   const [photoRoom, setPhotoRoom] = useState('');
   const [photoCategory, setPhotoCategory] = useState('SITE_VISIT');
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+
 
   // New task form state
   const [taskTitle, setTaskTitle] = useState('');
@@ -167,30 +169,28 @@ export default function ProjectExecutionPage() {
 
   const handleAddPhoto = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!photoFile) {
+      toast.error('Please select an image file to upload as proof');
+      return;
+    }
     setIsUploadingPhoto(true);
 
-    const unsplashPics = [
-      'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace',
-      'https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e',
-      'https://images.unsplash.com/photo-1617806118233-18e1db207f62',
-      'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0',
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7',
-    ];
-    const randomPic = unsplashPics[Math.floor(Math.random() * unsplashPics.length)];
+    const fd = new FormData();
+    fd.append('roomName', photoRoom);
+    fd.append('category', photoCategory);
+    fd.append('file', photoFile);
 
     try {
-      await uploadPhoto(projectId, {
-        roomName: photoRoom,
-        category: photoCategory,
-        imageUrl: randomPic,
-      });
+      await uploadPhoto(projectId, fd);
       setPhotoRoom('');
-      toast.success('Verification photo added successfully!');
+      setPhotoFile(null);
+      toast.success('Verification proof photo uploaded successfully!');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to add photo');
+      toast.error(err.message || 'Failed to upload proof photo');
     }
     setIsUploadingPhoto(false);
   };
+
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -470,10 +470,9 @@ export default function ProjectExecutionPage() {
           </div>
         </div>
 
-        {/* Tab Controls */}
         <div className="flex border-b border-slate-200 overflow-x-auto gap-6 whitespace-nowrap bg-white p-2.5 rounded-2xl shadow-sm border border-slate-100">
           {[
-            { id: 'sourcing', label: '📦 Sourcing & Milestones' },
+            { id: 'sourcing', label: '📦 Item Tracking & Status' },
             { id: 'tasks', label: '📝 Tasks & Checklists' },
             { id: 'visits', label: '🚗 Site Visits & Logs' },
             { id: 'issues', label: `⚠️ Issues (${issues.length})` },
@@ -505,17 +504,31 @@ export default function ProjectExecutionPage() {
             {/* TAB CONTENT: Sourcing */}
             {activeTab === 'sourcing' && (
               <div className="space-y-6 animate-in fade-in duration-200">
-                {/* Progress Bar */}
-                <ExecutionProgressBar progress={progress} status={projectDetail?.status === 'Delayed' ? 'DELAYED' : 'ON_TRACK'} />
-
-                {/* Gantt Timeline */}
-                <TimelineView resources={timelineResources} />
+                {/* Overview Cards instead of Gantt */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Items</span>
+                    <div className="text-2xl font-black text-slate-800 mt-1">{tracking.length}</div>
+                  </div>
+                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider text-emerald-600">Installed</span>
+                    <div className="text-2xl font-black text-emerald-600 mt-1">{tracking.filter(t => t.status === 'installed').length}</div>
+                  </div>
+                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider text-amber-500">In Production</span>
+                    <div className="text-2xl font-black text-amber-500 mt-1">{tracking.filter(t => t.status === 'production').length}</div>
+                  </div>
+                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider text-indigo-600">Ordered</span>
+                    <div className="text-2xl font-black text-indigo-600 mt-1">{tracking.filter(t => t.status === 'ordered').length}</div>
+                  </div>
+                </div>
 
                 {/* Sourcing Item Table */}
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
                   <div>
-                    <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Item Sourcing & Fitments</h3>
-                    <p className="text-[10px] text-slate-400">Update item tracking status or allocate specific technician fitment task.</p>
+                    <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Item Tracking Board</h3>
+                    <p className="text-[10px] text-slate-400">Update item status, view proofs, or inspect 2D/3D layouts.</p>
                   </div>
 
                   <div className="overflow-hidden border border-slate-100 rounded-xl overflow-x-auto">
@@ -526,6 +539,7 @@ export default function ProjectExecutionPage() {
                           <th className="p-3">Status</th>
                           <th className="p-3">Expected Date</th>
                           <th className="p-3">Assignee Tech</th>
+                          <th className="p-3 text-center">Visuals</th>
                           <th className="p-3 text-right">Actions</th>
                         </tr>
                       </thead>
@@ -540,17 +554,16 @@ export default function ProjectExecutionPage() {
                               <select
                                 value={item.status?.toLowerCase()}
                                 onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                                disabled={isTechnician}
+                                disabled={isTechnician && members.find(m => m.user.id === assignmentHistory.find(h => h.role === 'TECHNICIAN' && h.target_item_id === item.id)?.assignee?.id)?.user.id !== authUser?.id}
                                 className="bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700 rounded p-1"
                               >
                                 <option value="ordered">Ordered</option>
-                                <option value="accepted">Accepted</option>
-                                <option value="production">Production</option>
-                                <option value="ready">Ready</option>
+                                <option value="production">In Production</option>
                                 <option value="dispatched">Dispatched</option>
                                 <option value="delivered">Delivered</option>
                                 <option value="installed">Installed</option>
                               </select>
+
                             </td>
                             <td className="p-3 font-semibold text-slate-500">{item.expected_date || 'N/A'}</td>
                             <td className="p-3">
@@ -577,6 +590,22 @@ export default function ProjectExecutionPage() {
                                   )}
                                 </span>
                               )}
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="flex justify-center gap-2">
+                                <button
+                                  className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 flex items-center justify-center transition-colors"
+                                  title="View 2D/3D Design"
+                                >
+                                  <Layers className="w-4 h-4" />
+                                </button>
+                                <button
+                                  className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors"
+                                  title="Upload / View Proof"
+                                >
+                                  <ImageIcon className="w-4 h-4" />
+                                </button>
+                              </div>
                             </td>
                             <td className="p-3 text-right">
                               <button
@@ -1335,8 +1364,38 @@ export default function ProjectExecutionPage() {
           {/* Right Sidebar Details Column */}
           <div className="space-y-6">
 
+            {/* Design & Visualization Links Card */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+              <div>
+                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Design & Visualization</h3>
+                <p className="text-[10px] text-slate-400 font-medium">Quick links to design canvases and room planners.</p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => router.push(`/visualize/${projectId}?tab=2d`)}
+                  className="w-full py-2 bg-indigo-50 hover:bg-indigo-150 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-xl transition shadow-sm text-center uppercase tracking-wider"
+                >
+                  [ 2D Floor Plan ]
+                </button>
+                <button
+                  onClick={() => router.push(`/visualize/${projectId}?tab=3d`)}
+                  className="w-full py-2 bg-indigo-50 hover:bg-indigo-150 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-xl transition shadow-sm text-center uppercase tracking-wider"
+                >
+                  [ Open 3D View ]
+                </button>
+                <button
+                  onClick={() => router.push(`/visualize/${projectId}?tab=render`)}
+                  className="w-full py-2 bg-indigo-50 hover:bg-indigo-150 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-xl transition shadow-sm text-center uppercase tracking-wider"
+                >
+                  [ Rendered Views ]
+                </button>
+              </div>
+            </div>
+
             {/* Customer Details Card */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+
               <div>
                 <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Customer Profile</h3>
                 <p className="text-[10px] text-slate-400 font-medium">Primary contact details for this project.</p>
@@ -1427,6 +1486,16 @@ export default function ProjectExecutionPage() {
                     <option value="FINAL_HANDOVER">Final Handover</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Verification Image Proof</label>
+                  <input
+                    type="file"
+                    required
+                    accept="image/*"
+                    onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                    className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2 outline-none"
+                  />
+                </div>
                 <button
                   type="submit"
                   disabled={isUploadingPhoto}
@@ -1435,6 +1504,7 @@ export default function ProjectExecutionPage() {
                   {isUploadingPhoto ? 'Uploading...' : <><Upload className="w-3.5 h-3.5" /> Add Sourcing Photo</>}
                 </button>
               </form>
+
 
               {/* Photos List Grid */}
               <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-1">

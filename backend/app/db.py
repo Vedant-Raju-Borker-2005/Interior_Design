@@ -144,7 +144,9 @@ def sync_demo_data(db):
     users_data = [
         {"name": "Seeded Customer", "phone": "+919900004444", "email": "customer@example.com", "role": "customer"},
         {"name": "Seeded Vendor", "phone": "+919900001111", "email": "vendor@example.com", "role": "vendor"},
-        {"name": "Seeded Team Member", "phone": "+919900002222", "email": "team@example.com", "role": "team"},
+        {"name": "Seeded Manager", "phone": "+919900002221", "email": "manager@example.com", "role": "team_manager"},
+        {"name": "Seeded Coordinator", "phone": "+919900002222", "email": "coordinator@example.com", "role": "team_coordinator"},
+        {"name": "Seeded Technician", "phone": "+919900002223", "email": "technician@example.com", "role": "team_technician"},
         {"name": "Seeded Admin", "phone": "+919900003333", "email": "admin@example.com", "role": "admin"},
         {"name": "Seeded Enterprise", "phone": "+919900005555", "email": "enterprise@example.com", "role": "enterprise"}
     ]
@@ -257,40 +259,47 @@ def sync_demo_data(db):
             db.add(demo_quote)
             db.commit()
 
-    # 4. Auto-assign all existing projects to the team user and the vendor
-    team_user = users.get("team")
+    # 4. Auto-assign all existing projects to the team users
+    manager_user = users.get("team_manager")
+    coordinator_user = users.get("team_coordinator")
+    technician_user = users.get("team_technician")
     all_projects = db.query(Project).all()
-    roles = ["MANAGER", "COORDINATOR", "TECHNICIAN"]
-    for i, proj in enumerate(all_projects):
-        # Assign to Team User
-        if team_user:
-            role = roles[i % len(roles)]
-            member = db.query(ProjectTeamMember).filter(
-                ProjectTeamMember.project_id == proj.id,
-                ProjectTeamMember.user_id == team_user.id
-            ).first()
-            if not member:
-                member = ProjectTeamMember(
-                    id=str(uuid.uuid4()),
-                    project_id=proj.id,
-                    user_id=team_user.id,
-                    role=role,
-                    status="ACTIVE"
-                )
-                db.add(member)
-                # Also add project assignment
-                assignment = ProjectAssignment(
-                    id=str(uuid.uuid4()),
-                    project_id=proj.id,
-                    assignee_id=team_user.id,
-                    assigned_by_id=team_user.id,
-                    role=role
-                )
-                db.add(assignment)
-                db.commit()
-            elif member.role != role:
-                member.role = role
-                db.commit()
+    
+    team_members_to_add = [
+        (manager_user, "MANAGER"),
+        (coordinator_user, "COORDINATOR"),
+        (technician_user, "TECHNICIAN")
+    ]
+    
+    for proj in all_projects:
+        for t_user, role in team_members_to_add:
+            if t_user:
+                member = db.query(ProjectTeamMember).filter(
+                    ProjectTeamMember.project_id == proj.id,
+                    ProjectTeamMember.user_id == t_user.id
+                ).first()
+                if not member:
+                    member = ProjectTeamMember(
+                        id=str(uuid.uuid4()),
+                        project_id=proj.id,
+                        user_id=t_user.id,
+                        role=role,
+                        status="ACTIVE"
+                    )
+                    db.add(member)
+                    # Also add project assignment
+                    assignment = ProjectAssignment(
+                        id=str(uuid.uuid4()),
+                        project_id=proj.id,
+                        assignee_id=t_user.id,
+                        assigned_by_id=manager_user.id if manager_user else t_user.id,
+                        role=role
+                    )
+                    db.add(assignment)
+                    db.commit()
+                elif member.role != role:
+                    member.role = role
+                    db.commit()
 
         # Sync assignments per RoomItem
         sync_project_vendor_assignments(proj.id, db)
@@ -328,18 +337,20 @@ def sync_project_vendor_assignments(project_id: str, db: Session):
                     "material_delivered": "pending",
                     "installation_complete": "pending"
                 }
+                product_name = product.name if product else "Custom Item"
                 va = VendorAssignment(
                     id=str(uuid.uuid4()),
                     project_id=project_id,
                     vendor_id=vendor.id,
                     item_id=item.id,
                     status="RECEIVED_ORDER",
-                    remarks=f"Fulfillment started for {product.name}",
+                    remarks=f"Fulfillment started for {product_name}",
                     milestones_status=milestones,
                     shipment_status="Pending"
                 )
                 db.add(va)
                 db.commit()
+
 
 
 def get_db():

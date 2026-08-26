@@ -36,9 +36,16 @@ def _check_role_allowed(user: User, requested_role: str, db: Session) -> bool:
         if vendor:
             return True
             
-    elif requested_role == "team":
-        if user.role in ["team", "COORDINATOR", "TECHNICIAN", "PROJECT_TEAM"]:
-            return True
+    elif requested_role in ["team", "team_manager", "team_coordinator", "team_technician"]:
+        user_roles = [r.strip() for r in (user.role or "").split(",")]
+        # For legacy "team" requests, allow any team role. For specific requests, match exact.
+        if requested_role == "team":
+            if any(r in ["team", "team_manager", "team_coordinator", "team_technician", "COORDINATOR", "TECHNICIAN", "PROJECT_TEAM"] for r in user_roles):
+                return True
+        else:
+            if requested_role in user_roles:
+                return True
+                
         from ..models import ProjectTeamMember
         member = db.query(ProjectTeamMember).filter(
             (ProjectTeamMember.user_id == user.id) | 
@@ -52,8 +59,15 @@ def _check_role_allowed(user: User, requested_role: str, db: Session) -> bool:
 
 
 def _add_role(user: User, role: str, db: Session):
-    """Add a new role to user without removing existing roles."""
+    """Add a new role to user without removing existing roles (except mutually exclusive team roles)."""
     user_roles = [r.strip() for r in (user.role or "customer").split(",")]
+    
+    # Team roles should be mutually exclusive
+    team_roles = {"team_manager", "team_coordinator", "team_technician"}
+    if role in team_roles:
+        # Remove any existing team roles
+        user_roles = [r for r in user_roles if r not in team_roles]
+
     if role not in user_roles:
         user_roles.append(role)
         user.role = ",".join(user_roles)
@@ -85,8 +99,7 @@ def signup(req: SignupReq, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == req.email).first()
 
     if not user:
-        # Brand new user — create with this role
-        user = User(phone=req.phone, email=req.email, name=req.name or "User", role=req.role or "customer")
+        user = User(phone=req.phone, email=req.email, name=req.name or "User", role=req.role or "customer", status="active")
         db.add(user)
         db.commit()
         db.refresh(user)
@@ -185,7 +198,10 @@ def verify_otp(req: VerifyOTPReq, db: Session = Depends(get_db)):
     sync_demo_data(db)
 
     token = create_access_token(user.id)
-    return {"access_token": token, "token_type": "bearer", "user_id": user.id, "role": req.role or user.role or "customer"}
+    # Return the REQUESTED role (not full role string) so frontend can route correctly
+    # If multiple roles are stored (e.g., "customer,team_manager"), return only the one being logged in with
+    return_role = req.role or "customer"
+    return {"access_token": token, "token_type": "bearer", "user_id": user.id, "role": return_role}
 
 
 @router.get("/me", summary="Get current user profile")

@@ -3,23 +3,31 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useProjectTeamStore } from '@/stores/projectTeamStore';
+import { useAuthStore } from '@/stores/authStore';
 import Navbar from '@/components/Navbar';
 import { ArrowLeft, UserPlus, Shield, User, Mail, CheckCircle2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { teamAPI } from '@/lib/api';
 
 export default function ProjectTeamPage() {
   const { projectId } = useParams() as { projectId: string };
   const router = useRouter();
+  const { user } = useAuthStore();
   const { members, fetchMembers, assignMember, isLoading, error, clearError } =
     useProjectTeamStore();
+  
+  // Check if user is customer (read-only mode)
+  const isCustomer = user?.role === 'customer';
 
   const [userId, setUserId] = useState('');
   const [role, setRole] = useState('TECHNICIAN');
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [directory, setDirectory] = useState<any[]>([]);
 
   useEffect(() => {
     fetchMembers(projectId);
+    teamAPI.getDirectory().then(res => setDirectory(res.data)).catch(() => {});
   }, [projectId, fetchMembers]);
 
   const handleAssign = async (e: React.FormEvent) => {
@@ -71,25 +79,32 @@ export default function ProjectTeamPage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Project Team</h1>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              {isCustomer ? 'View Team' : 'Project Team'}
+            </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Manage roles, workspace coordination, and technical executors.
+              {isCustomer 
+                ? 'View project team members assigned to your project.'
+                : 'Manage roles, workspace coordination, and technical executors.'
+              }
             </p>
           </div>
-          <button
-            onClick={() => {
-              setShowAssignForm(!showAssignForm);
-              clearError();
-            }}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-2"
-          >
-            {showAssignForm ? '✕ Close' : (
-              <>
-                <UserPlus className="w-4 h-4" />
-                Assign Team Member
-              </>
-            )}
-          </button>
+          {!isCustomer && (
+            <button
+              onClick={() => {
+                setShowAssignForm(!showAssignForm);
+                clearError();
+              }}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-2"
+            >
+              {showAssignForm ? '✕ Close' : (
+                <>
+                  <UserPlus className="w-4 h-4" />
+                  Assign Team Member
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* KPI Cards */}
@@ -137,8 +152,8 @@ export default function ProjectTeamPage() {
           </div>
         )}
 
-        {/* Assign Member Form */}
-        {showAssignForm && (
+        {/* Assign Member Form - Hidden for Customers */}
+        {!isCustomer && showAssignForm && (
           <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-md max-w-md animate-in fade-in slide-in-from-top-4 duration-200">
             <h3 className="font-bold text-slate-800 text-sm mb-4 uppercase tracking-wider flex items-center gap-2">
               <Shield className="w-4 h-4 text-indigo-600" />
@@ -147,16 +162,19 @@ export default function ProjectTeamPage() {
             <form onSubmit={handleAssign} className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  User ID (UUID)
+                  Select Verified Member
                 </label>
-                <input
-                  type="text"
-                  placeholder="Enter User UUID (e.g. 1a2b3c4d-...)"
+                <select
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   required
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none font-medium text-slate-700 transition-all"
-                />
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none font-semibold text-slate-700 transition-all"
+                >
+                  <option value="" disabled>Select a team member...</option>
+                  {directory.map(m => (
+                    <option key={m.id} value={m.id}>{m.name || 'User'} ({m.role.replace('team_', '')}) - {m.email}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

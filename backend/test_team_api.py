@@ -6,15 +6,27 @@ import random
 
 print("Starting backend uvicorn server...")
 proc = subprocess.Popen(
-    [r".venv\Scripts\python.exe", "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000"],
+    [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000"],
+    cwd="backend",
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
     text=True
 )
 
-# Wait for startup
-time.sleep(4)
 
+
+
+
+# Wait for startup
+time.sleep(6)
+
+if proc.poll() is not None:
+    print("Backend server crashed immediately! Logs:")
+    print(proc.stderr.read() if proc.stderr else "No stderr stream")
+    print(proc.stdout.read() if proc.stdout else "No stdout stream")
+    sys.exit(1)
+
+        
 try:
     # 2. Hitting auth
     print("Authenticating...")
@@ -39,6 +51,7 @@ try:
     token = verify_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     print("Authentication successful! Got token.")
+
 
     # 3. Create a project
     print("Creating a project for testing...")

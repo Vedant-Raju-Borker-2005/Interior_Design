@@ -126,16 +126,18 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
           )}
         </div>
 
-        {isExecution && user?.role !== 'customer' && (
+        {isExecution && (
           <div className="mt-3 pt-3 border-t border-slate-100 flex gap-2">
             <Link href={`/projects/${project.id}/team`}
               className="flex-1 text-center py-2 bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 text-slate-600 text-[10px] font-bold rounded-lg transition-all">
-              Manage Team
+              {user?.role === 'customer' ? 'View Team' : 'Manage Team'}
             </Link>
-            <Link href={`/projects/${project.id}/execution`}
-              className="flex-1 text-center py-2 bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 text-slate-600 text-[10px] font-bold rounded-lg transition-all">
-              Team Execution
-            </Link>
+            {user?.role !== 'customer' && (
+              <Link href={`/projects/${project.id}/execution`}
+                className="flex-1 text-center py-2 bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 text-slate-600 text-[10px] font-bold rounded-lg transition-all">
+                Team Execution
+              </Link>
+            )}
           </div>
         )}
       </div>
