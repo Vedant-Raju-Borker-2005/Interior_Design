@@ -24,20 +24,26 @@ def _check_role_allowed(user: User, requested_role: str, db: Session) -> bool:
     if _has_role(user, requested_role):
         return True
     
+    user_roles = [r.strip() for r in (user.role or "customer").split(",")]
+    
     if requested_role == "admin":
+        if "admin" in user_roles:
+            return True
         from ..models import AdminRole
         admin_role = db.query(AdminRole).filter(AdminRole.user_id == user.id).first()
         if admin_role:
             return True
             
     elif requested_role == "vendor":
+        if "vendor" in user_roles:
+            return True
         from ..models import Vendor
         vendor = db.query(Vendor).filter((Vendor.user_id == user.id) | (Vendor.phone == user.phone)).first()
         if vendor:
             return True
             
-    elif requested_role == "team":
-        if user.role in ["team", "COORDINATOR", "TECHNICIAN", "PROJECT_TEAM"]:
+    elif requested_role == "team" or requested_role.startswith("team_"):
+        if any(r in ["team", "team_manager", "team_coordinator", "team_technician", "COORDINATOR", "TECHNICIAN", "MANAGER", "PROJECT_TEAM", "admin"] for r in user_roles):
             return True
         from ..models import ProjectTeamMember
         member = db.query(ProjectTeamMember).filter(

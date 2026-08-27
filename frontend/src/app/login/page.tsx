@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [devOtp, setDevOtp] = useState('')
   const [role, setRole] = useState<'customer' | 'vendor' | 'team' | 'admin' | 'enterprise'>('customer')
+  const [teamRole, setTeamRole] = useState<'team_manager' | 'team_coordinator' | 'team_technician'>('team_manager')
 
   // Form Fields - Default pre-filled customer number for seamless reviewer login
   const [contact, setContact] = useState('+919900004444')
@@ -71,7 +72,7 @@ export default function LoginPage() {
           phone: method === 'phone' ? sanitizedContact : '+919999988888',
           city,
           furnishing_preference: furnishingPreference,
-          role
+          role: role === 'team' ? teamRole : role
         }
         const res = await authAPI.signup(payload)
         setDevOtp(res.data.dev_otp || '')
@@ -79,7 +80,8 @@ export default function LoginPage() {
         setStep('otp')
       } else {
         // Sign In - Require role
-        const payload = method === 'phone' ? { phone: sanitizedContact, role } : { email: sanitizedContact, role }
+        const activeRole = role === 'team' ? teamRole : role
+        const payload = method === 'phone' ? { phone: sanitizedContact, role: activeRole } : { email: sanitizedContact, role: activeRole }
         const res = await authAPI.login(payload)
         setDevOtp(res.data.dev_otp || '')
         toast.success(`Sign-in OTP sent! Check hint below.`)
@@ -97,9 +99,10 @@ export default function LoginPage() {
     setLoading(true)
     const sanitizedContact = contact.trim().replace(/\s+/g, '')
     try {
+      const activeRole = role === 'team' ? teamRole : role
       const payload = method === 'phone'
-        ? { phone: sanitizedContact, otp, role }
-        : { email: sanitizedContact, otp, role }
+        ? { phone: sanitizedContact, otp, role: activeRole }
+        : { email: sanitizedContact, otp, role: activeRole }
 
       const res = await authAPI.verifyOtp(payload)
 
@@ -132,7 +135,7 @@ export default function LoginPage() {
       // Redirect based on the authenticated role
       if (res.data.role === 'vendor') {
         router.push('/vendor/dashboard')
-      } else if (res.data.role === 'team') {
+      } else if (res.data.role.startsWith('team_')) {
         router.push('/team')
       } else if (res.data.role === 'admin') {
         router.push('/admin')
@@ -244,6 +247,40 @@ export default function LoginPage() {
                       )
                     })}
                   </div>
+                  
+                  <AnimatePresence>
+                    {role === 'team' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-3 overflow-hidden"
+                      >
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 mt-2">
+                          Select Team Role
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                           {([
+                             { id: 'team_manager', label: 'Manager' },
+                             { id: 'team_coordinator', label: 'Coordinator' },
+                             { id: 'team_technician', label: 'Technician' }
+                           ] as const).map(item => (
+                             <button
+                               key={item.id}
+                               type="button"
+                               onClick={() => setTeamRole(item.id)}
+                               className={clsx(
+                                 'py-2 px-3 text-xs font-bold rounded-lg border transition-all text-center',
+                                 teamRole === item.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                               )}
+                             >
+                               {item.label}
+                             </button>
+                           ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Method selector */}
@@ -497,22 +534,14 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-l from-indigo-950/60 via-indigo-950/20 to-transparent" />
 
         <div className="absolute bottom-12 left-8 right-8 glass rounded-2xl p-6 border border-white/20 shadow-glow-indigo">
-          {mode === 'signup' ? (
-            <p className="text-white font-medium text-lg leading-relaxed">
-              &quot;We don&apos;t just show you what your home could look like. We help you actually get it done.&quot;
-            </p>
-          ) : (
-            <>
-              <p className="text-white font-medium text-lg leading-relaxed">&quot;From designing my 3BHK to getting an execution-ready budget — InteriorAI made the entire process incredibly simple.&quot;</p>
-              <div className="flex items-center gap-3 mt-4">
-                <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-extrabold shadow-inner border border-white/20">PM</div>
-                <div>
-                  <div className="text-white text-sm font-bold">Priya Mehta</div>
-                  <div className="text-indigo-200 text-xs font-semibold">Homeowner, Bangalore</div>
-                </div>
-              </div>
-            </>
-          )}
+          <p className="text-white font-medium text-lg leading-relaxed">&quot;Designed my entire 3BHK in under 20 minutes with InteriorAI. The renders and budget calculator were incredibly accurate!&quot;</p>
+          <div className="flex items-center gap-3 mt-4">
+            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-extrabold shadow-inner border border-white/20">PM</div>
+            <div>
+              <div className="text-white text-sm font-bold">Priya Mehta</div>
+              <div className="text-indigo-200 text-xs font-semibold">Homeowner, Bangalore</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

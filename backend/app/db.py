@@ -144,11 +144,10 @@ def sync_demo_data(db):
     users_data = [
         {"name": "Seeded Customer", "phone": "+919900004444", "email": "customer@example.com", "role": "customer"},
         {"name": "Seeded Vendor", "phone": "+919900001111", "email": "vendor@example.com", "role": "vendor"},
-        {"name": "Seeded Team Member", "phone": "+919900002222", "email": "team@example.com", "role": "team"},
+        {"name": "Seeded Team Member", "phone": "+919900002222", "email": "team@example.com", "role": "team,team_manager,team_coordinator,team_technician"},
         {"name": "Seeded Admin", "phone": "+919900003333", "email": "admin@example.com", "role": "admin"},
         {"name": "Seeded Enterprise", "phone": "+919900005555", "email": "enterprise@example.com", "role": "enterprise"}
     ]
-
 
     users = {}
     for ud in users_data:
@@ -165,8 +164,12 @@ def sync_demo_data(db):
             db.add(u)
             db.commit()
             db.refresh(u)
-        elif u.role != ud["role"]:
-            u.role = ud["role"]
+        else:
+            # Ensure team roles are appended if missing
+            current_roles = [r.strip() for r in (u.role or "").split(",")]
+            target_roles = [r.strip() for r in ud["role"].split(",")]
+            merged_roles = list(dict.fromkeys(current_roles + target_roles))
+            u.role = ",".join([r for r in merged_roles if r])
             db.commit()
         users[ud["role"]] = u
 

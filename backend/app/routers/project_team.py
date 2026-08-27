@@ -1,8 +1,10 @@
 import uuid
 import datetime
 import os
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+import fastapi
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List, Optional
 
 from ..db import get_db
@@ -120,7 +122,23 @@ def auto_detect_delays(project_id: str, db: Session):
 
 
 @router.get("/projects/{project_id}/team")
-def get_project_team(project_id: str, db: Session = Depends(get_db)):
+def get_project_team(
+    project_id: str, 
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    # Get the project to check ownership
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+    
+    # Check authorization: customers can only view their own projects' teams
+    user_roles = [r.strip() for r in (user.role or "customer").split(",")]
+    is_customer = "customer" in user_roles and len(user_roles) == 1
+    
+    if is_customer and project.user_id != user.id:
+        raise HTTPException(403, "You can only view team members for your own projects")
+    
     members = db.query(ProjectTeamMember).filter(
         ProjectTeamMember.project_id == project_id,
         ProjectTeamMember.status == "ACTIVE"
@@ -148,6 +166,24 @@ def assign_project_team(
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
 ):
+    # Parse user roles (comma-separated string)
+    user_roles = [r.strip() for r in (user.role or "customer").split(",")]
+    
+    # Check if user has permission to assign (must be team_manager or admin)
+    has_permission = "team_manager" in user_roles or "admin" in user_roles
+    
+    # Also check if user is a manager assigned to this project
+    if not has_permission:
+        manager_assignment = db.query(ProjectTeamMember).filter(
+            ProjectTeamMember.project_id == project_id, 
+            ProjectTeamMember.user_id == user.id, 
+            ProjectTeamMember.role == "MANAGER"
+        ).first()
+        has_permission = manager_assignment is not None
+    
+    if not has_permission:
+        raise HTTPException(403, "Only managers can assign team members")
+    
     target_user_id = payload.get("userId")
     role = payload.get("role")
     if not target_user_id or not role:
@@ -210,6 +246,8 @@ def remove_assignment(
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
 ):
+    if user.role not in ["team_manager", "admin"] and not db.query(ProjectTeamMember).filter(ProjectTeamMember.project_id == project_id, ProjectTeamMember.user_id == user.id, ProjectTeamMember.role == "MANAGER").first():
+        raise HTTPException(403, "Only managers can remove team members")
     target_user_id = payload.get("userId")
     role = payload.get("role")
     
@@ -516,25 +554,47 @@ def get_project_photos(project_id: str, db: Session = Depends(get_db)):
     return result
 
 @router.post("/projects/{project_id}/photos")
-def upload_project_photo(
+async def upload_project_photo(
     project_id: str,
-    payload: dict,
+    roomName: str = Form("General"),
+    category: str = Form("SITE_VISIT"),
+    file: UploadFile = File(None),
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
 ):
-    room_name = payload.get("roomName", "General")
-    category = payload.get("category", "SITE_VISIT")
-    image_url = payload.get("imageUrl")
+    import os
+    import shutil
     
-    if not image_url:
-        raise HTTPException(400, "imageUrl is required")
+    # Verify project exists and user is active team member
+    member = db.query(ProjectTeamMember).filter(
+        ProjectTeamMember.project_id == project_id,
+        ProjectTeamMember.user_id == user.id,
+        ProjectTeamMember.status == "ACTIVE"
+    ).first()
+    is_pm_or_admin = user.role.upper() in ["ADMIN"] or (member and member.role == "MANAGER")
+    
+    if not member and not is_pm_or_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to upload photos for this project")
+        
+    url = ""
+    if file:
+        os.makedirs("pdfs/proofs", exist_ok=True)
+        file_id = str(uuid.uuid4())
+        ext = os.path.splitext(file.filename or "photo.jpg")[1] or ".jpg"
+        filename = f"proof_{file_id}{ext}"
+        filepath = os.path.join("pdfs", "proofs", filename)
+        with open(filepath, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        url = f"/static/pdfs/proofs/{filename}"
+    else:
+        raise HTTPException(status_code=400, detail="file is required")
         
     photo = ProjectPhoto(
         id=str(uuid.uuid4()),
         project_id=project_id,
-        room_name=room_name,
+        room_name=roomName,
         uploaded_by=user.name or user.email or user.id,
-        image_url=image_url,
+        image_url=url,
         caption=f"[{category}] site execution photo",
         category=category
     )
@@ -552,6 +612,93 @@ def upload_project_photo(
         "createdAt": photo.uploaded_at.isoformat() if photo.uploaded_at else None
     }
 
+
+@router.get("/team/projects")
+def get_team_projects(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    if user.role.upper() == "ADMIN":
+        projects = db.query(Project).all()
+    elif user.role.upper() == "CUSTOMER":
+        raise HTTPException(status_code=403, detail="Customer not authorized")
+    else:
+        # PM can see all projects; Coordinators and Technicians see assigned ones
+        memberships = db.query(ProjectTeamMember).filter(
+            ProjectTeamMember.user_id == user.id,
+            ProjectTeamMember.status == "ACTIVE"
+        ).all()
+        assigned_ids = [m.project_id for m in memberships]
+        is_manager = "team_manager" in user.role or any(m.role == "MANAGER" for m in memberships)
+        
+        if is_manager:
+            projects = db.query(Project).all()
+        else:
+            projects = db.query(Project).filter(Project.id.in_(assigned_ids)).all()
+            
+    result = []
+    for p in projects:
+        # calculate progress
+        all_tracks = db.query(ItemTracking).filter(ItemTracking.project_id == p.id).all()
+        status_weights = {
+            "ordered": 10,
+            "production": 30,
+            "ready": 40,
+            "dispatched": 50,
+            "delivered": 75,
+            "installed": 100,
+        }
+        total = sum(status_weights.get(t.status.lower(), 0) for t in all_tracks)
+        avg_progress = round(total / len(all_tracks)) if all_tracks else 0
+        
+        result.append({
+            "id": p.id,
+            "customerName": p.user.name if p.user else "N/A",
+            "propertyName": p.property_name,
+            "locality": p.locality or p.city,
+            "startDate": p.created_at.strftime("%Y-%m-%d") if p.created_at else "N/A",
+            "status": p.status,
+            "progress": avg_progress
+        })
+    return result
+
+
+@router.get("/team/directory")
+def get_team_directory(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    # Manager check — role field is comma-separated e.g. "customer,team_manager"
+    if "team_manager" not in (user.role or "") and user.role != "admin":
+        raise HTTPException(403, "Only managers can view the team directory")
+    
+    # Use LIKE queries because user.role is comma-separated e.g. "customer,team_coordinator"
+    members = db.query(User).filter(
+        User.status == "active",
+        or_(
+            User.role.like("%team_coordinator%"),
+            User.role.like("%team_technician%")
+        )
+    ).all()
+    
+    def get_primary_team_role(role_str: str) -> str:
+        for r in ["team_coordinator", "team_technician"]:
+            if r in (role_str or ""):
+                return r
+        return role_str
+    
+    return [
+        {
+            "id": m.id,
+            "name": m.name,
+            "email": m.email,
+            "phone": m.phone,
+            "role": get_primary_team_role(m.role)
+        }
+        for m in members
+    ]
+
+
 @router.get("/team/dashboard")
 def get_team_dashboard_stats(
     user: User = Depends(current_user),
@@ -567,55 +714,58 @@ def get_team_dashboard_stats(
     
     all_possible_roles = ["MANAGER", "COORDINATOR", "TECHNICIAN"]
     roles = [r for r in all_possible_roles if r in {m.role for m in memberships}]
+    
+    if "team_manager" in user.role:
+        roles.append("MANAGER")
+    if "team_coordinator" in user.role:
+        roles.append("COORDINATOR")
+    if "team_technician" in user.role:
+        roles.append("TECHNICIAN")
     if user.role.upper() == "ADMIN":
         roles.append("MANAGER")
+        
     roles = list(set(roles))
     
-    total_projects = db.query(Project).count()
-    active_projects = db.query(Project).filter(Project.status != "completed").count()
-    completed_projects = db.query(Project).filter(Project.status == "completed").count()
-    open_issues = db.query(Issue).filter(Issue.status != "closed").count()
+    # Check if user has MANAGER membership
+    is_manager_role = "MANAGER" in roles
     
-    assigned_project_ids = [m.project_id for m in memberships]
-    child_projects = db.query(Project).filter(Project.parent_project_id.in_(assigned_project_ids)).all() if assigned_project_ids else []
-    child_project_ids = [cp.id for cp in child_projects]
-    all_assigned_project_ids = list(set(assigned_project_ids + child_project_ids))
-    assigned_projects_count = len(all_assigned_project_ids)
-
-    
-    pending_tasks = db.query(Task).filter(Task.assigned_to == user.id, Task.status == "PENDING").count()
-    completed_tasks = db.query(Task).filter(Task.assigned_to == user.id, Task.status == "COMPLETED").count()
-    todays_tasks = db.query(Task).filter(
-        Task.assigned_to == user.id,
-        Task.due_date >= datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    ).count()
-    
-    # Delayed count
-    delayed_projects = db.query(ProjectDelay).filter(ProjectDelay.resolved_at == None).group_by(ProjectDelay.project_id).count()
-    
+    if is_manager_role:
+        total_projects = db.query(Project).count()
+        active_projects = db.query(Project).filter(Project.status != "completed").count()
+        # count total items
+        pending_items = db.query(ItemTracking).filter(ItemTracking.status != "installed").count()
+        completed_items = db.query(ItemTracking).filter(ItemTracking.status == "installed").count()
+    else:
+        assigned_project_ids = [m.project_id for m in memberships]
+        total_projects = len(assigned_project_ids)
+        active_projects = db.query(Project).filter(Project.id.in_(assigned_project_ids), Project.status != "completed").count()
+        pending_items = db.query(ItemTracking).filter(ItemTracking.project_id.in_(assigned_project_ids), ItemTracking.status != "installed").count()
+        completed_items = db.query(ItemTracking).filter(ItemTracking.project_id.in_(assigned_project_ids), ItemTracking.status == "installed").count()
+        
     return {
         "manager": {
             "totalProjects": total_projects,
             "activeProjects": active_projects,
-            "delayedProjects": delayed_projects,
-            "completedProjects": completed_projects,
-            "openIssues": open_issues,
+            "pendingItems": pending_items,
+            "completedProjects": completed_items,
+            "openIssues": db.query(Issue).filter(Issue.status != "closed").count() if is_manager_role else db.query(Issue).filter(Issue.project_id.in_([m.project_id for m in memberships]), Issue.status != "closed").count(),
             "teamUtilization": 85
         },
         "coordinator": {
-            "assignedProjects": assigned_projects_count,
-            "pendingTasks": pending_tasks,
-            "vendorDelays": int(open_issues * 0.4),
+            "assignedProjects": total_projects,
+            "pendingTasks": db.query(Task).filter(Task.assigned_to == user.id, Task.status == "PENDING").count(),
+            "vendorDelays": db.query(Issue).filter(Issue.status != "closed").count(),
             "upcomingVisits": 3
         },
         "technician": {
-            "assignedInstallations": assigned_projects_count,
-            "todaysTasks": todays_tasks,
-            "pendingTasks": pending_tasks,
-            "completedTasks": completed_tasks
+            "assignedInstallations": total_projects,
+            "todaysTasks": db.query(Task).filter(Task.assigned_to == user.id, Task.status == "PENDING").count(),
+            "pendingTasks": db.query(Task).filter(Task.assigned_to == user.id, Task.status == "PENDING").count(),
+            "completedTasks": db.query(Task).filter(Task.assigned_to == user.id, Task.status == "COMPLETED").count()
         },
         "roles": roles
     }
+
 
 
 def _populate_default_tracking(project_id: str, project: Project, db: Session):

@@ -179,11 +179,11 @@ export default function ProjectExecutionPage() {
     const randomPic = unsplashPics[Math.floor(Math.random() * unsplashPics.length)];
 
     try {
-      await uploadPhoto(projectId, {
-        roomName: photoRoom,
-        category: photoCategory,
-        imageUrl: randomPic,
-      });
+      const formData = new FormData();
+      formData.append('roomName', photoRoom);
+      formData.append('category', photoCategory);
+      formData.append('imageUrl', randomPic);
+      await uploadPhoto(projectId, formData);
       setPhotoRoom('');
       toast.success('Verification photo added successfully!');
     } catch (err: any) {
