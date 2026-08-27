@@ -71,9 +71,14 @@ interface ProjectTeamState {
   comments: Record<string, any[]> // threaded by issueId
   assignmentHistory: any[]
   trackingHistory: Record<string, any[]> // threaded by trackingId
+  projects: any[]
+  teamDirectory: any[]
+  teamDirectoryError: string | null
   isLoading: boolean
   error: string | null
 
+  fetchProjects: () => Promise<void>
+  fetchTeamDirectory: () => Promise<void>
   fetchMembers: (projectId: string) => Promise<void>
   assignMember: (projectId: string, userId: string, role: string) => Promise<void>
   removeMember: (projectId: string, userId: string, role: string) => Promise<void>
@@ -89,7 +94,7 @@ interface ProjectTeamState {
   fetchPhotos: (projectId: string) => Promise<void>
   uploadPhoto: (
     projectId: string,
-    data: { roomName?: string; category: string; imageUrl: string }
+    data: FormData
   ) => Promise<void>
   fetchDashboard: () => Promise<void>
   fetchTracking: (projectId: string) => Promise<void>
@@ -137,8 +142,12 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
   comments: {},
   assignmentHistory: [],
   trackingHistory: {},
+  projects: [],
+  teamDirectory: [],
+  teamDirectoryError: null,
   isLoading: false,
   error: null,
+
 
   fetchMembers: async (projectId) => {
     set({ isLoading: true })
@@ -243,6 +252,29 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
     }
   },
 
+  fetchProjects: async () => {
+    set({ isLoading: true })
+    try {
+      const res = await teamAPI.getProjects()
+      set({ projects: res.data, isLoading: false })
+    } catch (e: any) {
+      set({ error: e.response?.data?.detail || 'Failed to load projects list', isLoading: false })
+    }
+  },
+
+  fetchTeamDirectory: async () => {
+    try {
+      const res = await teamAPI.getDirectory()
+      console.log('[TeamDirectory] API response:', res.data)
+      set({ teamDirectory: res.data, teamDirectoryError: null })
+    } catch (e: any) {
+      const errMsg = e.response?.data?.detail || e.message || 'Failed to load team directory'
+      console.error('[TeamDirectory] Error:', errMsg, e.response?.status)
+      // Use separate state so it doesn't pollute the global error banner
+      set({ teamDirectoryError: errMsg })
+    }
+  },
+
   fetchDashboard: async () => {
     set({ isLoading: true })
     try {
@@ -252,6 +284,7 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
       set({ error: e.response?.data?.detail || 'Failed to load dashboard', isLoading: false })
     }
   },
+
 
   fetchTracking: async (projectId) => {
     set({ isLoading: true })

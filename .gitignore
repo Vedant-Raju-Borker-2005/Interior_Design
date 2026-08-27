@@ -15,6 +15,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
 
 # Node dependencies
 node_modules/
@@ -22,6 +23,7 @@ node_modules/
 # Next.js build output and caching
 .next/
 out/
+.turbo/
 
 # Environment files (sensitive keys)
 .env
@@ -30,10 +32,12 @@ out/
 .env.test.local
 .env.production.local
 
-# Databases
+# Databases & SQLite Journals
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
+*.db-wal
 
 # OS files
 .DS_Store
@@ -44,7 +48,6 @@ desktop.ini
 .vscode/
 .idea/
 
-# Backend generated PDFs and uploads
 # Backend generated PDFs and uploads
 backend/pdfs/*.pdf
 backend/pdfs/floor_plans/*.pdf
@@ -70,19 +73,11 @@ check_db.py
 fix_thumbnails.py
 ingest_antigravity_catalog.py
 backend/ingest_antigravity_catalog.py
-*.log
-.pytest_cache/
-.turbo/
-
-UPDATES/
-# *.docx
-
-# Antigravity and clean up exclusions
-.gemini/
-.system_generated/
 cleanup_test_runs.py
 backend/cleanup_test_runs.py
-.next/
-node_modules/
-*.db-journal
-*.db-wal
+*.log
+UPDATES/
+
+# Antigravity system exclusions
+.gemini/
+.system_generated/

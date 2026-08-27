@@ -1,134 +1,74 @@
 # 🏠 InteriorAI Platform
 
-> **AI-Based Modular Interior Design & Visualization Platform**
+> **AI-Based Modular Interior Design & Execution Platform**
 
-InteriorAI is a comprehensive, premium web application designed to simplify the interior design journey for homeowners. By combining interactive 3D rendering, AI-powered photorealistic visualizations, real-time pricing updates, and verified contractor matching, the platform takes you from a blank BHK layout to a professional quotation and ready-to-execute design in under 10 minutes.
+InteriorAI is an end-to-end web application that simplifies the interior design and execution journey for homeowners, real estate developers, contractors, site execution teams, and administrators. By combining interactive 3D/4-Wall rendering, AI photorealistic visualizations, real-time dynamic pricing updates, bank-compliant PDF quote generation, and contractor logistics tracking, the platform takes you from a blank BHK layout to a professional quotation and ready-to-execute design in under 10 minutes.
 
 ---
 
-## Key Features
+## 🌟 Key Features Across 5 Stakeholder Portals
 
-*   **Interactive 3D Room Canvas**  
-    Powered by **Three.js** and **React Three Fiber (R3F)**. Live 3D environment to customize walls, flooring, and adjust furniture arrangements (sofas, beds, wardrobes, kitchen counters, vanity units) in real time.
-*   **AI Photorealistic Rendering**  
-    Simulated **Stable Diffusion XL + ControlNet** rendering pipeline. Generate stunning, high-resolution photorealistic renders of your customized rooms under various interior styles (Modern, Scandinavian, Art-Deco, Luxury, Mediterranean, Tropical) in less than 15 seconds.
-*   **Normalized Product Catalog & Variant Customization (New)**  
-    Group catalog entries under single base models (e.g., Sofa A) instead of duplicate rows. Customize specific parameters (Color, Fabric, Wood Finish, Size, Texture, Cushion Style) dynamically from the configuration panel, with configurations stored in SQLAlchemy database JSON schemas.
-*   **Custom Bounded Category Dropdown & Vendor Catalog Management (New)**  
-    Unified single-category selection component (`CategoryDropdown`) with strict scroll height limits (`max-h-48`), downward drop positioning (`top-full mt-1`), grouped subcategory sections, and outside-click auto-closure. Features a 1-click **Refresh Catalog** button, direct storage of vendor uploads in `pdfs/catalog/`, and customer onboarding fabric preference integration (Linen, Velvet, Fabric).
-*   **Automated Catalog Ingestion & Room Checklist Alignment (New)**  
-    Includes an automated multi-view catalog ingestion script (`ingest_antigravity_catalog.py`) mapping color-to-material rules (Dark Brown $\rightarrow$ Walnut, Golden Brown $\rightarrow$ Teak, Warm Beige $\rightarrow$ Oak) and multi-view image grouping. Realigned customer component selection checklists (`MANDATORY_CATEGORIES`) for 100% catalog coverage across Living Room (added Shoe Racks), Master Bedroom (added Study Desk & Bedside Tables), and Bedroom 2 (added Bedside Tables).
-*   **Mandatory Room Layout Completeness (New)**  
-    Validates room progress checklists against mandatory categories (e.g., Living Room requires at least a Sofa, Coffee Table, and Rug) before enabling AI visualization. Displays visual alerts and missing requirements checklists.
-*   **Iterative Swap & Background Re-render (New)**  
-    Allow users to swap room products or modify customization parameters directly from the AI rendering canvas sidebar, auto-triggering background perspective re-rendering without losing other room selections.
-*   **Smart AI Recommendation Engine**  
-    Scores and ranks catalog items and furniture packages using dynamic style compatibility matrices and budget-fitting algorithms to present the most cost-effective and aesthetic choices for your home.
-*   **Real-Time Pricing & Dynamic Budgeting**  
-    Every furniture addition, finish change, or room size modification instantly updates your total cost. Maintain granular control over your budget with zero price surprises.
-*   **ReportLab PDF Quotation Generator**  
-    Dynamically generates professional, bank-compliant PDF quotes with detailed room-by-room line items, GST breakdown, terms and conditions, and customized styling.
-*   **Role-Based Login & Routing Flow**  
-    True role-based authentication separating Customer, Vendor, Project Team, and Admin portals. Accessing a role dynamically updates the navigation bar options, restricting views and links contextually (Home, Portal Link, and Support).
-*   **Reviewer Auto-Fill Test Profiles**  
-    Select your desired role tab (Customer, Vendor, Project Team, or Admin) on the login screen to automatically fill pre-registered reviewer test credentials, enabling instant login and walkthroughs.
-*   **Integrated Milestone Payments Portal**  
-    Granular timeline checklist (Booking Advance 10%, Production 40%, Installation 40%, Handover 10%) supporting mockup checkouts, invoice downloads, and receipt tracking.
-*   **Special Services Project Spawning**  
-    Simulates immediate card/UPI payment checkout for services (e.g. 3D rendering) to automatically spawn matching projects, quotations, and active milestones tracking logs.
-*   **Sourcing Progression & Vendor Payouts**  
-    Coordinators log item-by-item status updates (ordered to installed) that automatically recalculate overall project progress. Marking items as "Installed" triggers automated vendor payout logs.
-*   **Adaptive Landing Page CTA & Header:**  
-    Landing page CTA buttons ("Start Designing Free") dynamically detect login sessions to route authenticated users directly to their active portals instead of displaying redundant login forms.
-*   **Grouped Vendor Assignments & Onboarding (New):**  
-    Onboarding wizard category specialization checkboxes (Furniture, Kitchen, Lighting, Décor). Re-architected project-wise grouped assignments cards featuring inline milestone status update selects, immediate verification photo proof uploads, live shipment logistics tracking (Courier, Vehicle details, Tracking AWB), and interactive 5-stage milestone payouts checklist.
-*   **Project Workspace Details Sidebars & Access Control (New):**  
-    Enforces project-wise member access validation (Coordinator/Technician roles check against project assignments). Automatically calculates project-level status ("On Track", "Delayed", "Completed"). Added Customer Profile and Vendor directory sidebar grids directly into the team execution panel workspace.
-*   **4-Wall AI Rendering & Custom view modes (New):**  
-    Replaced the 3D canvas viewport on the visualization page with a 2x2 grid showing Wall A, B, C, D perspectives. Supports Blueprint Templates, custom wall Photo Uploads, and room Dimension inputs with automatic pillar clearance calculation.
-*   **Real-Time Selection State Monitoring & Debounced Sync (New):**  
-    Tracks onboarding and customize stage selections in the frontend Zustand store, syncing them via a debounced backend API to the database. Enables O(1) latency prompt compilation for Gemini on generation submit.
-*   **Instant Quotation Sourcing Sync (New):**  
-    Automatically synchronizes quotation items to verified vendor dashboards immediately upon quotation generation, removing vendor rejection permissions to ensure solid sourcing fulfillment.
-*   **AI Architecture Proposal Document (New):**  
-    Added a comprehensive architectural report (`ai_architecture_proposal.docx`) to the project root, detailing the agentic spatial layout and color harmonization rules.
-*   **Automatic Tab Progression & Customizer Wizard (New):**  
-    When a customer saves the selection for the last category of a room, the customizer wizard automatically switches to the next room tab and pre-selects its first category.
-*   **Multi-View Product Image Upload Pipeline (New):**  
-    Allows vendors to upload up to 3 high-resolution images (Main/Front View, Side View, Perspective View) concurrently. The backend API maps them to specific view slots and sets the index-0 image as the product's primary thumbnail.
-*   **Thumbnail-based Gallery Carousels (New):**  
-    Integrates an Amazon/Flipkart-style image gallery slider inside both the Customer Customize drawer and the Customer Visualize swap drawer. Displays "Front", "Side", and "Top" indicators with next/prev arrows, failing back to a clean placeholder card if optional views are not uploaded.
-*   **Auto-Regenerating Quotations (New):**  
-    If a customer returns to the quotation page after editing their configurations when their previous quote was `'rejected'` or `'under_revision'`, the page automatically triggers a new PDF and quote calculations to present updated figures immediately.
-*   **Custom Glassmorphic Project Deletion (New):**  
-    Replaces browser native alerts with a premium dark-themed glassmorphic confirmation modal featuring slide-up animations, backdrop blurs (`bg-slate-950/60`), and concise info copy.
-*   **Animated Swipe-to-Delete Notifications (New):**  
-    Enables horizontal swipe-left gesture triggers on notification cards to immediately delete notifications from the SQLite database. Restores cards using spring-back animations if release threshold is unmet. Dismisses the notification dropdown immediately upon clicking outside the menu box.
-*   **Material Onboarding & Product Dimensions (New):**  
-    Adds a new step in the customer onboarding wizard to select interior wood laminate preferences (Oak Laminate, Teak Laminate, Walnut Laminate) loaded from the database. Serializes nested product details (dimensions: width/height/depth, mounting type, suitable room, finish, style, and assembly) under room items.
-*   **Customer Tracking & Sourcing Redesign (New):**  
-    Replaces customer-side dropdown lists with a dual horizontal tracker system. A read-only **Vendor Status Bar** visualizes item sourcing progress (Ordered to Dispatched) in real-time. An interactive **Customer Verification Bar** permits the customer to directly confirm deliveries and installations.
-*   **Solid Container Backgrounds & Contrast Controls (New):**  
-    Ensures optimal text contrast on light/purple mesh gradients by wrapping primary dashboard tracking sections in a solid dark navy-indigo shade (`bg-[#0f1129]`).
-*   **Purple-Indigo Gradient File Uploader (New):**  
-    Features a high-visibility file upload action button styled with custom purple-to-indigo gradient layouts inside verification forms.
-*   **Seeded Assets Track Status:**  
-    The custom-generated component images in `backend/pdfs/catalog/` are tracked directly inside Git (deliberately omitted from `.gitignore`) to ensure a fresh repository clone receives the visual catalog out-of-the-box.
-*   **Project Team & Site Execution Center (New)**  
-    A cohesive operations console for site coordinators and technicians. Organize execution workflows into structured tabs covering Timeline & Sourcing (with status log history & technician mapping), Task Calendars, site visit outcomes, call/meeting minutes logs, customer communication history, local project document uploads, and Manager-specific SLA reporting.
-*   **Robust Sign-Up & Unique Contact Generation (New):**  
-    Automatically handles registration conflicts by dynamically generating unique backup credentials (phone-based emails for phone registrations, and random unique phone numbers for email registrations). This guarantees that new registration flows will never hit database unique key constraints (`UNIQUE constraint failed: users.email` or `users.phone`).
-*   **Real-Time Developer Activity Logging (New):**  
-    Logs and displays real-time developer actions (parent project setup completions and customer assignments) via database-backed `AuditLog` records.
-*   **Compulsory Allocation Form Fields (New):**  
-    Enforces name and email as required inputs on flat customer allocations, reordering fields to present email above the optional phone input.
-*   **Onboarding Blueprint Integration (New):**
-    The standalone "Select Floor Plan Layout" intermediate step has been removed from the post-onboarding flow. Floor plan input is handled exclusively inside the AI visualization stage. Customer onboarding flows directly from Plan Selection to the Component Customizer.
-*   **Dynamic Package Pricing (New):**  
-    Computes Basic, Premium, and Luxury package prices dynamically based on the customer's chosen onboarding budget limit (e.g. Basic = budget, Premium = budget + 2L, Luxury = budget + 5L).
-*   **Custom BHK Room Mixes (New):**  
-    Fully supports customized room distributions from 1BHK to 5BHK, with dynamic room labeling ("Bedroom" for 1BHK; "Master Bedroom 1", "Bedroom 2" etc. for 2BHK+) and category checklist mappings.
-*   **Budget-Aware Product Recommendations (New):**
-    Scores and ranks catalog options against the onboarding budget limit (max price caps per budget tier) while rendering compatibility warning labels in customizer cards if color/material/price conditions are not met.
-*   **Single-Select Design Vibe (New):**
-    The onboarding "Design Vibe" step now enforces single-selection — choosing a new style automatically deselects the previously selected one, ensuring a focused design direction.
-*   **Balcony Auto-Complete Override (New):**
-    Balcony rooms are always treated as complete in the component selection checklist across all BHK configurations, bypassing product selection requirements.
-*   **Configuration Complete Panel (New):**
-    When all rooms in the customizer are marked complete, the product selection area is replaced with a full-width confirmation panel prompting the user to *"Proceed to AI Render"*. Clicking any room category returns the user to the product grid.
-*   **Dual Budget Sub-Boxes (New):**
-    The budget tracker in the customizer splits into two clearly labeled and centered sub-boxes — *Remaining Budget* and *Variation (Spent)* — with improved contrast and centered layout.
-*   **Contextual Landing Page & Login Content (New):**
-    Landing page hero updated to: *"Get Your Interiors Designed & Delivered Starting Under ₹3 Lakhs"* with CTA *"Design My Home Free"*. Login page shows a contextual testimonial based on whether the user is signing in or signing up.
-*   **Collapsible Vendor Sidebar Menu Toggle (New):**
-    Redesigned the sidebar navigation bar header in the Vendor Hub to display only the hamburger menu toggle button. Shows only icons when collapsed (`w-20`) and slides out to show text labels when expanded (`w-64`).
-*   **Vendor Sourcing Checklist Timeline & Sub-Milestones (New):**
-    Removed the redundant "Production Lifecycle Manager" select dropdown container card from the sourcing details drawer checklist tab. Replaced it by placing the 6-stage milestone progress timeline at the top of the tab, featuring sub-steps (*Production*, *Ready*, *Dispatched*) mapped directly from the item status.
-*   **Vendor Issues Tracking Panel (New):**
-    Added a new vendor issues dashboard `/vendor/issues` and its corresponding database API (`GET /api/v1/vendor/issues`) that scans the DB and aggregates customer-reported issues for the vendor's active product assignments.
-*   **Automatic Progress and Database State Propagation (New):**
-    Configured the backend to automatically map vendor status selections (`ACCEPTED`, `PRODUCTION`, `READY`, `DISPATCHED`) directly to the customer tracker's status fields (`ItemTracking` and `VendorAssignment`). Ensures that if the vendor updates an item's status before the customer tracking logs are seeded, the database automatically pre-populates default tracking structures to guarantee zero progress loss.
+### 1. Customer (Homeowner B2C) Portal
+* **6-Step Interactive Onboarding Wizard**: Guided flow capturing project type (New Home vs. Renovation), BHK scope (1BHK to 5BHK), budget limit, completion timeline, single-select design vibe (Modern, Scandinavian, Indian Contemporary, Luxury, Mediterranean, Boho), wood laminate finish (Oak, Teak, Walnut), fabric preference (Linen, Velvet, Woven, Leatherette), and color explorer.
+* **Dynamic Package Pricing**: Packages automatically compute tier prices based on onboarding budget limit (`Basic` = budget, `Premium` = budget + ₹2L, `Luxury` = budget + ₹5L).
+* **Interactive 3D Room Canvas & 4-Wall AI Studio**: Powered by Three.js, `@react-three/fiber`, and Gemini / Imagen 3 AI. View Wall A, B, C, D perspectives, test blueprint templates, upload photo layouts, and input room dimensions with automatic pillar clearance.
+* **Smart Customizer & Dual Budget Tracking**: Customize room items with live cost updates. The budget tracker bar splits into two centered sub-boxes (*Remaining Budget* and *Variation Spent*). Features auto tab progression (switches to next room tab after last category selection), balcony auto-complete override, and an all-complete redirect panel.
+* **ReportLab PDF Quotation Generator**: Generates professional, bank-compliant PDF quotes with detailed room line items, GST breakdown, terms, and bank details. Automatically regenerates quotes if revised after customer review.
+* **Dual Customer Tracking System**: Read-only **Vendor Status Bar** visualizes item sourcing progress (Ordered to Dispatched) in real time; interactive **Customer Verification Bar** permits homeowners to confirm deliveries and installations.
+
+### 2. Enterprise / Builder (B2B2C) Portal
+* **4-Step Parent Project Creation Wizard**: Configure multi-unit parent projects with unit mix distributions (1BHK to 5BHK) and default design package assignments.
+* **Flat Allocation & Token Invitations**: Assign customer details (Name, Email, Phone) to specific flat units and generate secure invitation tokens (`/invite`).
+* **Portfolio Dashboard**: High-level portfolio completion metrics, flat allocation grids, and recent project activity timestamps.
+
+### 3. Vendor (B2B) Portal
+* **Vendor Onboarding & Document Verification**: Submit business details, GST/PAN numbers, and upload verification certificates for admin approval.
+* **Multi-View Catalog Management**: Manage catalog products and upload up to 3 perspective images (Front, Side, Perspective) mapped to thumbnail slots.
+* **Order Fulfillment & Logistics Tracking**: Accept/reject item assignments, update 6-stage milestone progress (PO Approved $\rightarrow$ Production $\rightarrow$ Ready $\rightarrow$ Dispatched), upload verification proof photos, and enter courier/vehicle tracking details.
+* **Issues Tracking & Milestone Payouts**: Review customer-reported product issues (`/vendor/issues`) and track milestone-based payout releases.
+
+### 4. Project Team / Site Execution Center
+* **Welcome Portal & Role Router**: Role selection hub (`/team`) routing users to dedicated manager, coordinator, or technician consoles.
+* **Role-Specific Execution Dashboards**:
+  * **Manager Console (`/team/manager`)**: Portfolio metrics, active vs. delayed projects, team utilization rate, SLA performance metrics, resource assignments.
+  * **Coordinator Console (`/team/coordinator`)**: Assigned projects, item sourcing tracking, vendor delay alerts, site visit scheduling, daily checklist forms.
+  * **Technician Field Console (`/team/technician`)**: Today's installation tasks, daily checklists, direct proof photo uploads with multipart form support.
+* **Operations Console**: Project execution workspace (`/projects/[projectId]/execution`) featuring item tracking, task calendars, checklists, site visit logs, document vault, and SLA delay reporting.
+
+### 5. Admin Control Center
+* **Unified Admin Portal Layout**: Super Admin console at `/admin` with persistent sidebar navigation across 10 specialized sub-routes.
+* **10 Dedicated Admin Sub-Pages**:
+  * **Client CRM (`/admin/customers`)**: Customer directory, profile management, account suspension, and reactivation.
+  * **Vendor Governance (`/admin/vendors`)**: Onboarding application review, document inspection, approval, rejection, and suspension.
+  * **Team Approvals (`/admin/project-team`)**: Pending team registration approvals and role matrix permissions assignment (`AdminRole`).
+  * **Project Control Center (`/admin/projects`)**: Project creation, manager/coordinator/technician/vendor resource assignment, project closing, and cancellation.
+  * **Master Data Management (`/admin/master-data`)**: Master product catalog CRUD, CSV bulk import, and CSV export.
+  * **Operational Reports (`/admin/reports`)**: Live CSV report generation for sales, revenue, projects, vendors, and customers.
+  * **AI Engine Tuning (`/admin/ai-engine`)**: AI model selection, rendering parameters, and prompt customization templates.
+  * **IT Box & System Settings (`/admin/settings`)**: Dynamic platform key-value settings management (`SystemSetting`).
+  * **Audit Logs (`/admin/audit-log` & `/admin/activity-log`)**: Full administrative action trail (`AuditLog`) and real-time developer activity stream.
 
 ---
 
 ## 🛠️ Tech Stack
 
 ### Frontend (Next-Gen Web Interface)
-*   **Framework:** Next.js 14 (App Router) & React 18
-*   **Language:** TypeScript
-*   **Styling:** TailwindCSS & Framer Motion (for smooth micro-animations)
-*   **3D Graphics:** Three.js, `@react-three/fiber`, `@react-three/drei`
-*   **State Management:** Zustand
-*   **Data Fetching:** SWR (Stale-While-Revalidate) & Axios
+* **Framework:** Next.js 14 (App Router) & React 18
+* **Language:** TypeScript
+* **Styling:** TailwindCSS & Framer Motion (micro-animations, swipe-to-delete notifications)
+* **3D Graphics:** Three.js, `@react-three/fiber`, `@react-three/drei`
+* **State Management:** Zustand (`authStore`, `projectStore`, `customerStore`, `vendorStore`, `projectTeamStore`)
+* **Data Fetching:** SWR & Axios
 
 ### Backend (Robust RESTful API)
-*   **Framework:** FastAPI (Python 3.10+)
-*   **Server:** Uvicorn (ASGI)
-*   **Database ORM:** SQLAlchemy (SQLite database by default: `interior_ai.db`)
-*   **Data Validation:** Pydantic v2
-*   **Authentication:** JWT (JSON Web Tokens) via `python-jose` & `passlib` (Bcrypt)
-*   **PDF Generation:** ReportLab PDF library
-*   **Image Processing:** Pillow
+* **Framework:** FastAPI (Python 3.10+)
+* **Server:** Uvicorn (ASGI)
+* **Database ORM:** SQLAlchemy (SQLite database: `interior_ai.db`)
+* **Data Validation:** Pydantic v2
+* **Authentication:** JWT (JSON Web Tokens) via `python-jose` & `passlib` (Bcrypt)
+* **PDF Generation:** ReportLab PDF library
+* **AI Image Generation:** Google Gemini API / Imagen 3 / ControlNet rendering simulation
+* **Image Processing:** Pillow
 
 ---
 
@@ -136,107 +76,102 @@ InteriorAI is a comprehensive, premium web application designed to simplify the 
 
 ```text
 Interior_Design/
-├── Click_Run.bat           # Windows automated launcher (Backend + Frontend + DB Seeding)
-├── .gitignore              # Configured file exclusions (venv, node_modules, build outputs)
+├── Click_Run.bat           # Automated launcher (Backend + Frontend + DB Seeding)
+├── AGENTS.md               # Root AI agent memory index & system rules
+├── ARCHITECTURE.md         # Full System Architecture & Stakeholder Flow Diagrams
+├── .gitignore              # Cleaned & deduplicated exclusion configuration
 ├── backend/
+│   ├── AGENTS.md           # Backend architecture & router guide
 │   ├── .env                # Server configuration & JWT secrets
 │   ├── requirements.txt    # Python package dependencies
+│   ├── interior_ai.db      # SQLite database instance
 │   ├── pdfs/               # Generated quotation PDFs & uploaded floor plans
 │   └── app/
-│       ├── __init__.py
-│       ├── main.py         # Application entry point & router mounting
-│       ├── db.py           # Database engine & session setup
+│       ├── main.py         # FastAPI application entry point & router mounting
+│       ├── db.py           # Database engine, session setup, and demo seeder
 │       ├── models.py       # SQLAlchemy database schemas (User, Project, Room, Product, etc.)
-│       ├── schemas.py      # Pydantic schemas for request/response serialization
-│       ├── auth_utils.py   # JWT token issuing and authentication dependencies
-│       ├── seed_data.py    # Mock products, design packages, and vendors seeding
-│       ├── routers/        # Modular API endpoints (Auth, Projects, Catalog, AI, PDF, etc.)
-│       └── services/       # Core service modules (PDF creation, AI render mocks)
+│       ├── schemas.py      # Pydantic schemas for request/response validation
+│       ├── auth_utils.py   # JWT token issuance and auth dependencies
+│       ├── seed_data.py    # Seed scripts for products, packages, and vendors
+│       ├── routers/        # 14 Modular API routers (auth, projects, catalog, vendors, team, etc.)
+│       └── services/       # Core service modules (pdf_service.py, render_mock.py)
 └── frontend/
-    ├── package.json        # Frontend NPM script definitions & dependencies
-    ├── next.config.js      # Next.js configurations
-    ├── tsconfig.json       # TypeScript rules
+    ├── AGENTS.md           # Frontend architecture & page routes guide
+    ├── package.json        # NPM dependencies and scripts
+    ├── next.config.js      # Next.js build options
+    ├── tsconfig.json       # TypeScript configuration
     └── src/
-        ├── app/            # Next.js App Router pages (Dashboard, Customizer, Visualizer, etc.)
-        ├── components/     # Reusable UI widgets & Three.js Canvas (`RoomCanvas3D`)
-        └── stores/         # State management stores (Auth, Project state synchronization)
+        ├── app/            # Next.js App Router pages (30 routes across 5 portals)
+        ├── components/     # Reusable UI widgets, CategoryDropdown, RoomCanvas3D
+        ├── lib/            # Axios API client and color utilities
+        └── stores/         # Zustand global state stores (5 stores)
 ```
 
 ---
 
-## Quick Start (Windows)
+## 🚀 Quick Start (Windows)
 
-The repository comes with a batch script that automates environment check, dependency installation, database initialization, seeding, and server startup.
+The repository includes an automated batch script that checks environment requirements, installs dependencies, seeds default data, and starts up both development servers.
 
-1. Double-click the **`Click_Run.bat`** file at the root folder of the project.
+1. Double-click **`Click_Run.bat`** at the root of the project folder.
 2. The script will:
-   * Validate that **Python 3.10+** and **Node.js 18+** are installed.
-   * Initialize a Python virtual environment (`.venv`) in `backend/` and install `requirements.txt`.
-   * Install frontend dependencies via `npm install` in `frontend/`.
-   * Initialize the SQLite database and seed it with high-quality default design packages, furniture catalogs, and vendor contacts.
-   * Run the FastAPI server (`http://localhost:8000`) and the Next.js development server (`http://localhost:3000`).
-   * Automatically open the platform in your browser at `http://localhost:3000`.
+   * Validate **Python 3.10+** and **Node.js 18+**.
+   * Create and activate a Python virtual environment (`.venv`) in `backend/` and install `requirements.txt`.
+   * Run `npm install` in `frontend/`.
+   * Initialize and seed the SQLite database with design packages, catalog products, and reviewer demo accounts.
+   * Start the FastAPI backend server (`http://localhost:8000`) and Next.js frontend dev server (`http://localhost:3000`).
+   * Automatically launch the web application in your browser at `http://localhost:3000`.
 
 ---
 
-## Manual Setup (All OS)
+## 💻 Manual Setup (All Operating Systems)
 
-If you prefer to run the components manually, open two terminal windows:
+To run the application components manually, open two terminal windows:
 
 ### 1. Backend Setup
 ```bash
 cd backend
-# Create and activate python virtual environment
 python -m venv .venv
 source .venv/bin/activate       # On Windows: .venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Start FastAPI server
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-*   **API Documentation**: Access Swagger UI at `http://localhost:8000/docs`.
+* **API Documentation**: Interactive Swagger UI is available at `http://localhost:8000/docs`.
 
 ### 2. Frontend Setup
 ```bash
 cd frontend
-# Install node packages
 npm install
-
-# Start Next.js development server
 npm run dev
 ```
-*   **Client App**: Access the interface at `http://localhost:3000`.
+* **Client Portal**: Access the web interface at `http://localhost:3000`.
 
 ---
 
-## 🔄 Core Application Flow
+## 🔄 System Architecture & Data Flow
 
 ```mermaid
 graph TD
-    A[User Landing Page] -->|Login/Register| B[BHK & Budget Selection]
-    B -->|AI Recommendation| C[Design Package Selection]
-    C -->|Auto-Generated Rooms| D[Interactive 3D Room Customizer]
-    D -->|Modify Furniture/Colors| E[Real-Time Pricing Updates]
-    D -->|SDXL Job Request| F[AI Photorealistic Visualizer]
-    E -->|Finalize Configuration| G[Dynamic PDF Quote Generator]
-    G -->|Pincode Match| H[Verified Vendor & Execution Tracking]
+    A[Landing Page] -->|Role Login / OTP| B[Role Portal Selection]
+    B -->|Customer| C[6-Step Onboarding Wizard]
+    C -->|Dynamic Package| D[Tier Package Selection]
+    D -->|Auto Rooms| E[Room Product Customizer]
+    E -->|Real-Time Budget| F[Dual Budget Tracker]
+    E -->|Gemini AI| G[4-Wall AI Render Studio]
+    F -->|Finalize Selection| H[ReportLab PDF Quotation]
+    H -->|Item Fulfillment| I[Dual Customer Verification Tracker]
+    
+    B -->|Enterprise Builder| J[Parent Project & Flat Allocation]
+    B -->|Vendor Contractor| K[Catalog Multi-View & Fulfillment]
+    B -->|Site Team| L[Site Execution Operations Center]
+    B -->|Platform Admin| M[Vendor Approvals & System Audits]
 ```
-
-### 🔀 B2C vs. B2B Branching Journey Flowchart
-
-Below is the visual architecture representing the branching B2C (Customer) and B2B (Enterprise) customer journeys merging at the Plan Selection Point:
-
-![Integrated Journey Flowchart](branch_merge_flow.jpg)
 
 ---
 
-## 🛡️ Security & Environment Settings
+## 🛡️ Security & Environment Configuration
 
-The configuration is managed via a `.env` file in the root directory. The batch launcher (`Click_Run.bat`) automatically synchronizes this file into the `backend/` directory during startup.
-
-In production environments, make sure to change the default values:
+Environment settings are managed via the `.env` file in `backend/`. Update default keys before deploying to production:
 
 ```env
 DATABASE_URL=sqlite:///./interior_ai.db
@@ -245,8 +180,6 @@ JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 PDF_OUTPUT_DIR=./pdfs
 
-# Google AI Studio API Key for AI Photorealistic Room Rendering (Imagen 3)
+# Google AI Studio API Key for AI Photorealistic Room Rendering
 GEMINI_KEY=your_gemini_api_key_here
 ```
-
----

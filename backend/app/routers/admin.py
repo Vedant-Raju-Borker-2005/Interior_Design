@@ -476,6 +476,68 @@ def get_vendor_performance(
     return perf
 
 
+# ── TEAM APPROVALS ──
+
+@router.get("/team-approvals", summary="List pending team registrations")
+def list_team_approvals(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user(["SUPER_ADMIN", "OPERATIONS_ADMIN"]))
+):
+    users = db.query(User).filter(
+        User.status == "pending_verification",
+        or_(
+            User.role.ilike("%team_manager%"),
+            User.role.ilike("%team_coordinator%"),
+            User.role.ilike("%team_technician%"),
+            User.role.ilike("%team%")
+        )
+    ).order_by(User.created_at.desc()).all()
+    
+    return [
+        {
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "phone": u.phone,
+            "role": u.role,
+            "city": u.city,
+            "status": u.status,
+            "created_at": u.created_at.isoformat() if u.created_at else None
+        }
+        for u in users
+    ]
+
+@router.post("/team-approvals/{user_id}/approve", summary="Approve team member registration")
+def approve_team_member(
+    user_id: str,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user(["SUPER_ADMIN", "OPERATIONS_ADMIN"]))
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    user.status = "active"
+    db.commit()
+    log_admin_action(db, admin.id, "TEAM_MEMBER_APPROVED", "User", user_id)
+    return {"message": "Team member approved and activated successfully"}
+
+@router.post("/team-approvals/{user_id}/reject", summary="Reject team member registration")
+def reject_team_member(
+    user_id: str,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user(["SUPER_ADMIN", "OPERATIONS_ADMIN"]))
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    user.status = "rejected"
+    db.commit()
+    log_admin_action(db, admin.id, "TEAM_MEMBER_REJECTED", "User", user_id)
+    return {"message": "Team member rejected"}
+
+
 # ── QUOTATION ADMINISTRATION ──
 
 @router.get("/quotations", summary="List all quotations")
