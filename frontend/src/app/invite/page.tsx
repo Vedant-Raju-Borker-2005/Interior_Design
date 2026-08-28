@@ -45,9 +45,8 @@ function InviteContent() {
     if (!token) return
 
     if (!isLoggedIn) {
-      // Not logged in -> Store invitation context in localStorage and redirect to login
       localStorage.setItem('inviteToken', token)
-      toast.success("Welcome! Please sign in or verify OTP to claim your flat.")
+      toast.success("Please sign in with your phone number or email to claim your flat.")
       router.push(`/login?inviteToken=${token}`)
       return
     }
@@ -55,8 +54,11 @@ function InviteContent() {
     setAccepting(true)
     try {
       const res = await enterpriseAPI.acceptInvitation(token)
-      const childProjId = res.data.project_id
-      toast.success("Invitation accepted! Let's complete your onboarding. 🎉")
+      if (res.data.access_token && res.data.user) {
+        localStorage.setItem('token', res.data.access_token)
+        useAuthStore.getState().setUser(res.data.user)
+      }
+      toast.success("Invitation accepted! Welcome to your customer portal. 🎉")
       router.push(`/onboarding?inviteToken=${token}`)
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || "Failed to accept invitation. Please try again.")

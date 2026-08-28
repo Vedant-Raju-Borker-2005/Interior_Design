@@ -25,7 +25,8 @@ export default function LoginPage() {
   const [method, setMethod] = useState<LoginMethod>('phone')
   const [loading, setLoading] = useState(false)
   const [devOtp, setDevOtp] = useState('')
-  const [role, setRole] = useState<'customer' | 'vendor' | 'team' | 'admin' | 'enterprise'>('customer')
+  const [portalGroup, setPortalGroup] = useState<'client' | 'vendor' | 'team' | 'admin'>('client')
+  const [clientRole, setClientRole] = useState<'customer' | 'enterprise'>('customer')
   const [teamRole, setTeamRole] = useState<'team_manager' | 'team_coordinator' | 'team_technician'>('team_manager')
 
   // Form Fields - Default pre-filled customer number for seamless reviewer login
@@ -35,19 +36,26 @@ export default function LoginPage() {
   const [furnishingPreference, setFurnishingPreference] = useState<'new' | 'upgrade'>('new')
   const [otp, setOtp] = useState('')
 
-  const getPrefilledContact = (roleId: 'customer' | 'vendor' | 'team' | 'admin' | 'enterprise', currentMethod: 'phone' | 'email') => {
+  const getActiveRole = (group = portalGroup, cRole = clientRole, tRole = teamRole) => {
+    if (group === 'client') return cRole
+    if (group === 'team') return tRole
+    return group
+  }
+
+  const getPrefilledContact = (group: string, cRole: string, tRole: string, currentMethod: 'phone' | 'email') => {
+    const activeRole = group === 'client' ? cRole : group === 'team' ? tRole : group
     if (currentMethod === 'phone') {
-      if (roleId === 'customer') return '+919900004444'
-      if (roleId === 'vendor') return '+919900001111'
-      if (roleId === 'team') return '+919900002222'
-      if (roleId === 'admin') return '+919900003333'
-      if (roleId === 'enterprise') return '+919900005555'
+      if (activeRole === 'customer') return '+919900004444'
+      if (activeRole === 'vendor') return '+919900001111'
+      if (activeRole.startsWith('team')) return '+919900002222'
+      if (activeRole === 'admin') return '+919900003333'
+      if (activeRole === 'enterprise') return '+919900005555'
     } else {
-      if (roleId === 'customer') return 'customer@example.com'
-      if (roleId === 'vendor') return 'vendor@example.com'
-      if (roleId === 'team') return 'team@example.com'
-      if (roleId === 'admin') return 'admin@example.com'
-      if (roleId === 'enterprise') return 'enterprise@example.com'
+      if (activeRole === 'customer') return 'customer@example.com'
+      if (activeRole === 'vendor') return 'vendor@example.com'
+      if (activeRole.startsWith('team')) return 'team@example.com'
+      if (activeRole === 'admin') return 'admin@example.com'
+      if (activeRole === 'enterprise') return 'enterprise@example.com'
     }
     return ''
   }
@@ -65,6 +73,7 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
+      const activeRole = getActiveRole()
       if (mode === 'signup') {
         const payload = {
           name,
@@ -72,7 +81,7 @@ export default function LoginPage() {
           phone: method === 'phone' ? sanitizedContact : '+919999988888',
           city,
           furnishing_preference: furnishingPreference,
-          role: role === 'team' ? teamRole : role
+          role: activeRole
         }
         const res = await authAPI.signup(payload)
         setDevOtp(res.data.dev_otp || '')
@@ -80,7 +89,6 @@ export default function LoginPage() {
         setStep('otp')
       } else {
         // Sign In - Require role
-        const activeRole = role === 'team' ? teamRole : role
         const payload = method === 'phone' ? { phone: sanitizedContact, role: activeRole } : { email: sanitizedContact, role: activeRole }
         const res = await authAPI.login(payload)
         setDevOtp(res.data.dev_otp || '')
@@ -99,7 +107,7 @@ export default function LoginPage() {
     setLoading(true)
     const sanitizedContact = contact.trim().replace(/\s+/g, '')
     try {
-      const activeRole = role === 'team' ? teamRole : role
+      const activeRole = getActiveRole()
       const payload = method === 'phone'
         ? { phone: sanitizedContact, otp, role: activeRole }
         : { email: sanitizedContact, otp, role: activeRole }
@@ -205,51 +213,87 @@ export default function LoginPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
                     Access Portal As
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {([
-                      { id: 'customer', label: 'Customer', icon: User, bg: 'from-blue-500 to-indigo-600' },
-                      { id: 'enterprise', label: 'Enterprise', icon: Building, bg: 'from-cyan-500 to-blue-600' },
+                      { id: 'client', label: 'Client', icon: User, bg: 'from-blue-500 to-indigo-600' },
                       { id: 'vendor', label: 'Vendor', icon: Compass, bg: 'from-emerald-500 to-teal-600' },
                       { id: 'team', label: 'Project Team', icon: Check, bg: 'from-amber-500 to-orange-600' },
                       { id: 'admin', label: 'Admin', icon: Sparkles, bg: 'from-purple-500 to-pink-600' }
                     ] as const).map((item) => {
                       const Icon = item.icon
-                      const isSelected = role === item.id
+                      const isSelected = portalGroup === item.id
                       return (
                         <button
                           key={item.id}
                           type="button"
                           onClick={() => {
-                            const targetRole = item.id
-                            setRole(targetRole)
-                            setContact(getPrefilledContact(targetRole, method))
-                            if (targetRole !== 'customer') {
-                              setName(`Seeded ${item.label}`)
-                            } else {
+                            const group = item.id
+                            setPortalGroup(group)
+                            setContact(getPrefilledContact(group, clientRole, teamRole, method))
+                            const actRole = getActiveRole(group, clientRole, teamRole)
+                            if (actRole === 'customer') {
                               setName('Seeded Customer')
+                            } else {
+                              setName(`Seeded ${actRole.charAt(0).toUpperCase() + actRole.slice(1)}`)
                             }
                           }}
                           className={clsx(
-                            'relative overflow-hidden p-3 rounded-xl flex items-center gap-3 transition-all duration-300 transform',
+                            'relative overflow-hidden p-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 transform',
                             isSelected
                               ? `bg-gradient-to-r ${item.bg} text-white shadow-lg scale-[1.02]`
                               : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
                           )}
                         >
                           <div className={clsx(
-                            'p-2 rounded-lg',
+                            'p-1.5 rounded-lg',
                             isSelected ? 'bg-white/20' : 'bg-white shadow-sm'
                           )}>
                             <Icon className={clsx("w-4 h-4", isSelected ? 'text-white' : 'text-slate-500')} />
                           </div>
-                          <span className="font-bold text-sm tracking-tight">{item.label}</span>
+                          <span className="font-bold text-xs tracking-tight">{item.label}</span>
                         </button>
                       )
                     })}
                   </div>
                   
                   <AnimatePresence>
-                    {role === 'team' && (
+                    {portalGroup === 'client' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-3 overflow-hidden"
+                      >
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 mt-2">
+                          Select Client Type
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                           {([
+                             { id: 'customer', label: 'Individual Customer' },
+                             { id: 'enterprise', label: 'Enterprise Partner' }
+                           ] as const).map(item => (
+                             <button
+                               key={item.id}
+                               type="button"
+                               onClick={() => {
+                                 const cr = item.id
+                                 setClientRole(cr)
+                                 setContact(getPrefilledContact('client', cr, teamRole, method))
+                                 setName(cr === 'customer' ? 'Seeded Customer' : 'Seeded Enterprise')
+                               }}
+                               className={clsx(
+                                 'py-2.5 px-3 text-xs font-bold rounded-lg border transition-all text-center',
+                                 clientRole === item.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                               )}
+                             >
+                               {item.label}
+                             </button>
+                           ))}
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {portalGroup === 'team' && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
@@ -268,7 +312,12 @@ export default function LoginPage() {
                              <button
                                key={item.id}
                                type="button"
-                               onClick={() => setTeamRole(item.id)}
+                               onClick={() => {
+                                 const tr = item.id
+                                 setTeamRole(tr)
+                                 setContact(getPrefilledContact('team', clientRole, tr, method))
+                                 setName('Seeded Team')
+                               }}
                                className={clsx(
                                  'py-2 px-3 text-xs font-bold rounded-lg border transition-all text-center',
                                  teamRole === item.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -289,7 +338,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => {
                       setMethod('phone')
-                      setContact(getPrefilledContact(role, 'phone'))
+                      setContact(getPrefilledContact(portalGroup, clientRole, teamRole, 'phone'))
                     }}
                     className={clsx(
                       'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all',
@@ -302,7 +351,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => {
                       setMethod('email')
-                      setContact(getPrefilledContact(role, 'email'))
+                      setContact(getPrefilledContact(portalGroup, clientRole, teamRole, 'email'))
                     }}
                     className={clsx(
                       'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all',

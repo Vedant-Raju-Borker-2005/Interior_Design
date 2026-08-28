@@ -27,7 +27,8 @@ const CITIES = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 
 
 function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: string) => void }) {
   const { user } = useAuthStore()
-  const status = STATUS_CONFIG[project.status] || STATUS_CONFIG.draft
+  const statusObj = STATUS_CONFIG[project.status] || STATUS_CONFIG.draft
+  const isOnboardingIncomplete = !project.package_id || project.status === 'onboarding' || (project.status === 'draft' && (!project.color_preferences || project.color_preferences.length === 0))
   const isExecution = ['ordered', 'done'].includes(project.status)
 
   return (
@@ -39,9 +40,10 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
       {/* Color accent bar */}
       <div className={clsx(
         'h-1.5',
-        project.status === 'done'    ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' :
-        project.status === 'ordered' ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
-        project.status === 'quoted'  ? 'bg-gradient-to-r from-amber-400 to-amber-600' :
+        project.status === 'done'       ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' :
+        project.status === 'ordered'    ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
+        isOnboardingIncomplete          ? 'bg-gradient-to-r from-amber-400 to-amber-600' :
+        project.status === 'quoted'     ? 'bg-gradient-to-r from-indigo-400 to-indigo-600' :
         'bg-gradient-to-r from-indigo-500 to-indigo-700'
       )} />
 
@@ -57,7 +59,7 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {['draft', 'quoted'].includes(project.status) && (
+            {['draft', 'quoted', 'onboarding'].includes(project.status) && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -69,9 +71,15 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
-            <span className={clsx('badge flex-shrink-0', status.color)}>
-              <status.icon className="w-3 h-3 inline mr-1" />{status.label}
-            </span>
+            {isOnboardingIncomplete ? (
+              <span className="badge flex-shrink-0 bg-amber-100 text-amber-700 font-bold border border-amber-200">
+                <Clock className="w-3 h-3 inline mr-1" /> Onboarding In Progress
+              </span>
+            ) : (
+              <span className={clsx('badge flex-shrink-0', statusObj.color)}>
+                <statusObj.icon className="w-3 h-3 inline mr-1" />{statusObj.label}
+              </span>
+            )}
           </div>
         </div>
 
@@ -84,7 +92,7 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           {[
-            { label: 'Budget Cap', value: `₹${(project.budget / 100000).toFixed(1)}L` },
+            { label: 'Budget Cap', value: project.budget ? `₹${(project.budget / 100000).toFixed(1)}L` : 'Pending' },
             { label: 'Created', value: new Date(project.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) },
           ].map((s) => (
             <div key={s.label} className="bg-slate-50 rounded-xl p-3">
@@ -105,7 +113,20 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
         )}
 
         <div className="flex gap-2 w-full">
-          {!isExecution ? (
+          {isOnboardingIncomplete ? (
+            <Link 
+              href={
+                !project.package_id && project.color_preferences?.length > 0 
+                  ? `/packages?projectId=${project.id}&bhk=${project.bhk_type}&budget=${project.budget || 1000000}` 
+                  : `/onboarding?projectId=${project.id}`
+              }
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-xs font-extrabold shadow-sm hover:from-indigo-700 hover:to-indigo-800 transition transform hover:scale-[1.01]"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              <span>Continue Onboarding</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          ) : !isExecution ? (
             <>
               <Link href={`/customize/${project.id}`}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition">

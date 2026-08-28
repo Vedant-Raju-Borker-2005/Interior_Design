@@ -220,16 +220,16 @@ def upload_vendor_documents(
         doc = VendorDocument(vendor_id=vendor.id, approval_status="PENDING")
         db.add(doc)
     
-    os.makedirs("pdfs/documents", exist_ok=True)
+    os.makedirs("assets/documents", exist_ok=True)
     uploaded_files = []
 
     def save_doc_file(file: UploadFile, label: str):
         file_ext = os.path.splitext(file.filename)[1]
         filename = f"{vendor.id}_{label}{file_ext}"
-        filepath = os.path.join("pdfs", "documents", filename)
+        filepath = os.path.join("assets", "documents", filename)
         with open(filepath, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        url = f"/static/pdfs/documents/{filename}"
+        url = f"/static/assets/documents/{filename}"
         return url
 
     if gstCertificate:
@@ -381,13 +381,15 @@ def get_vendor_dashboard(
         project = db.query(Project).filter(Project.id == a.project_id).first()
         item = db.query(RoomItem).filter(RoomItem.id == a.item_id).first()
         product = item.product if (item and item.product) else None
+        if not product and a.item_id:
+            product = db.query(Product).filter(or_(Product.id == a.item_id, Product.sku == a.item_id)).first()
         
         serialized_assignments.append({
             "id": a.id,
             "projectId": a.project_id,
             "projectName": f"{project.property_name} ({project.pincode})" if project else "Unknown Project",
             "itemId": a.item_id,
-            "itemName": product.name if product else "Custom Item",
+            "itemName": product.name if product else (item.custom_color or "Customized Item" if item else "Modular Custom Item"),
             "quantity": item.qty if item else 1,
             "status": a.status,
             "createdAt": a.created_at,
@@ -846,19 +848,19 @@ async def upload_product_image(
     mat_slug = slugify(primary_mat)
     finish_slug = slugify(finish_val)
 
-    os.makedirs(os.path.join("pdfs", "catalog"), exist_ok=True)
+    os.makedirs(os.path.join("assets", "catalog"), exist_ok=True)
     if fabric_val:
         fabric_slug = slugify(fabric_val)
         filename = f"{subcat_slug}-{color_slug}-{mat_slug}-{finish_slug}-{fabric_slug}-{view_name}{ext}"
     else:
         filename = f"{subcat_slug}-{color_slug}-{mat_slug}-{finish_slug}-{view_name}{ext}"
-    filepath = os.path.join("pdfs", "catalog", filename)
+    filepath = os.path.join("assets", "catalog", filename)
 
     contents = await file.read()
     with open(filepath, "wb") as f:
         f.write(contents)
 
-    image_url = f"/static/pdfs/catalog/{filename}"
+    image_url = f"/static/assets/catalog/{filename}"
 
     # Update vendor product images array at view_index
     images = list(product.images) if product.images else []
@@ -1031,6 +1033,8 @@ def get_vendor_assignments(
         item = db.query(RoomItem).filter(RoomItem.id == a.item_id).first()
         room = item.room if (item and item.room) else None
         product = item.product if (item and item.product) else None
+        if not product and a.item_id:
+            product = db.query(Product).filter(or_(Product.id == a.item_id, Product.sku == a.item_id)).first()
 
         history = db.query(ItemStatusHistory).filter(ItemStatusHistory.assignment_id == a.id).order_by(ItemStatusHistory.timestamp.asc()).all()
         proofs = db.query(ItemProofImage).filter(ItemProofImage.assignment_id == a.id).all()
@@ -1049,8 +1053,8 @@ def get_vendor_assignments(
             "expectedDeliveryDate": expected_delivery,
             "roomName": room.room_type if room else "General",
             "itemId": a.item_id,
-            "itemName": product.name if product else "Custom Item",
-            "sku": product.sku if product else "N/A",
+            "itemName": product.name if product else (item.custom_color or "Customized Item" if item else "Modular Custom Item"),
+            "sku": product.sku if product else (item.product_id if item else "N/A"),
             "quantity": item.qty if item else 1,
             "price": item.unit_price if (item and item.unit_price) else (product.price if product else 0.0),
             "customColor": item.custom_color if item else None,
@@ -1439,15 +1443,15 @@ def upload_proof_image(
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
-    os.makedirs("pdfs/proofs", exist_ok=True)
+    os.makedirs("assets/proofs", exist_ok=True)
     file_ext = os.path.splitext(file.filename)[1]
     filename = f"proof_{assignment.id}_{imageType.lower()}_{int(datetime.datetime.utcnow().timestamp())}{file_ext}"
-    filepath = os.path.join("pdfs", "proofs", filename)
+    filepath = os.path.join("assets", "proofs", filename)
     
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    url = f"/static/pdfs/proofs/{filename}"
+    url = f"/static/assets/proofs/{filename}"
 
     proof = ItemProofImage(
         assignment_id=assignment.id,

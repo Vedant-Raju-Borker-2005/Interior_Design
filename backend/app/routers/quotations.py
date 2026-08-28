@@ -94,7 +94,7 @@ def generate_quotation(
         valid_until=valid_until,
     )
 
-    pdf_url = f"{BACKEND_URL}/static/pdfs/{os.path.basename(pdf_path)}"
+    pdf_url = f"{BACKEND_URL}/static/assets/{os.path.basename(pdf_path)}"
 
     # Save to DB
     quotation = Quotation(

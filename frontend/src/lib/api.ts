@@ -76,16 +76,30 @@ export const projectsAPI = {
   }) =>
     axiosInstance.post('/api/v1/projects', data),
 
-  uploadFloorPlan: (projectId: string, file: File, roomId?: string) => {
-    const formData = new FormData()
-    formData.append('file', file)
+  uploadFloorPlan: (projectId: string, arg2?: File | FormData | string | null, arg3?: FormData | File) => {
+    let roomId: string | null = null
+    let fileObj: File | FormData | null = null
+
+    if (arg2 instanceof File || arg2 instanceof FormData) {
+      fileObj = arg2
+    } else if (typeof arg2 === 'string') {
+      roomId = arg2
+      if (arg3 instanceof File || arg3 instanceof FormData) {
+        fileObj = arg3
+      }
+    }
+
+    const formData = fileObj instanceof FormData ? fileObj : new FormData()
+    if (fileObj && !(fileObj instanceof FormData)) {
+      formData.append('file', fileObj)
+    }
+
     const url = roomId 
       ? `/api/v1/projects/${projectId}/floor-plan?room_id=${roomId}`
       : `/api/v1/projects/${projectId}/floor-plan`
+
     return axiosInstance.post(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+      headers: { 'Content-Type': 'multipart/form-data' }
     })
   },
 
@@ -104,6 +118,8 @@ export const projectsAPI = {
   addRoomItem: (projectId: string, roomId: string, data: {
     product_id: string;
     qty: number;
+    unit_price?: number;
+    custom_attributes?: any;
     custom_color?: string;
     custom_material?: string;
     custom_size?: string;
@@ -130,6 +146,9 @@ export const catalogAPI = {
     axiosInstance.get('/api/v1/catalog/packages', { params }),
   
   products: (params: { room_type?: string; category?: string; style?: string; limit?: number; skip?: number; pincode?: string; project_id?: string }) =>
+    axiosInstance.get('/api/v1/catalog/products', { params }),
+
+  getProducts: (params?: any) =>
     axiosInstance.get('/api/v1/catalog/products', { params }),
 
   productsByRoom: (roomType: string) =>
@@ -262,6 +281,10 @@ export const adminAPI = {
     axiosInstance.post(`/api/v1/admin/customers/${id}/suspend`),
   reactivateCustomer: (id: string) =>
     axiosInstance.post(`/api/v1/admin/customers/${id}/reactivate`),
+
+  // Enterprise Management
+  getEnterprises: (params?: { search?: string; status?: string; page?: number; limit?: number }) =>
+    axiosInstance.get('/api/v1/admin/enterprises', { params }),
 
   // Vendor Management
   getVendors: (params?: { status?: string }) =>

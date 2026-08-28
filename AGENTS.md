@@ -25,8 +25,8 @@ graph TD
 ### Main Directories
 * [`/frontend`](file:///d:/MyFiles/Interior_Design/frontend): Next.js 14 application built with TypeScript, React 18, Zustand, and Tailwind CSS.
 * [`/backend`](file:///d:/MyFiles/Interior_Design/backend): Python REST API built with FastAPI, SQLAlchemy, and SQLite.
-* [`/backend/pdfs/catalog`](file:///d:/MyFiles/Interior_Design/backend/pdfs/catalog): Visual product assets, thumbnails, laminate textures, and multi-view catalog images.
-* [`/backend/pdfs/floor_plans`](file:///d:/MyFiles/Interior_Design/backend/pdfs/floor_plans): Uploaded customer floor plan layout blueprints.
+* [`/backend/assets/catalog`](file:///d:/MyFiles/Interior_Design/backend/assets/catalog): Visual product assets, thumbnails, laminate textures, and multi-view catalog images.
+* [`/backend/assets/floor_plans`](file:///d:/MyFiles/Interior_Design/backend/assets/floor_plans): Uploaded customer floor plan layout blueprints.
 
 ---
 
@@ -77,12 +77,13 @@ graph TD
 3. **Execution Workspaces & Timeline**: Project workspace at `/projects/[projectId]/execution` with item tracking, tasks, site visit logs, document vault, and customer call logs.
 
 ### 5. Admin Portal Flow
-1. **Admin Control Hub & Layout**: Main dashboard at `/admin` with unified sidebar navigation across 10 specialized sub-routes.
+1. **Admin Control Hub & Layout**: Main dashboard at `/admin` with unified sidebar navigation across 11 specialized sub-routes.
 2. **Modular Admin Sub-Pages**:
-   * **Client CRM (`/admin/customers`)**: Directory of customers, profile editing, account suspension, and reactivation.
+   * **Client CRM (`/admin/customers`)**: Directory of customers, profile editing, account suspension, and reactivation. Auto-synced with enterprise project deletions to prevent ghost accounts.
+   * **Enterprise Partner Management (`/admin/enterprise`)**: Dedicated management page for B2B real-estate builder accounts, parent property setups, unit allocations, and developer portfolios.
    * **Vendor Governance (`/admin/vendors`)**: Onboarding application review, document inspection, approval, rejection, and vendor suspension.
    * **Team Onboarding & Approvals (`/admin/project-team`)**: Pending team registration approvals and role matrix assignment controls (`AdminRole`).
-   * **Project Control Center (`/admin/projects`)**: Project creation, team & vendor resource assignments, closing, and cancellation.
+   * **Project Control Center (`/admin/projects`)**: Master project creation, team & vendor resource assignments, closing, and cancellation.
    * **Master Data Management (`/admin/master-data`)**: Product catalog CRUD, CSV bulk import, and CSV export.
    * **Reports & Operational CSV Exports (`/admin/reports`)**: Live CSV report generation for sales, revenue, projects, vendors, and customers.
    * **AI Engine Customization (`/admin/ai-engine`)**: AI model selection, rendering parameters, and prompt tuning templates.
@@ -120,7 +121,7 @@ graph TD
 ## Technical Mappings & Seed Data
 
 * **Database Path**: [`backend/interior_ai.db`](file:///d:/MyFiles/Interior_Design/backend/interior_ai.db)
-* **Static Assets Server**: FastAPI mounts `/static/pdfs` serving generated PDF quotes, floor plans, and catalog images at `http://localhost:8000/static/pdfs/catalog/`.
+* **Static Assets Server**: FastAPI mounts `/static/assets` serving generated PDF quotes, floor plans, and catalog images at `http://localhost:8000/static/assets/catalog/`.
 * **Seed Scripts**: [`backend/app/seed_data.py`](file:///d:/MyFiles/Interior_Design/backend/app/seed_data.py) and [`backend/app/seed_catalog_images.py`](file:///d:/MyFiles/Interior_Design/backend/app/seed_catalog_images.py).
 
 ---

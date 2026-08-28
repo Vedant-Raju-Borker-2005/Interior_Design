@@ -578,14 +578,14 @@ async def upload_project_photo(
         
     url = ""
     if file:
-        os.makedirs("pdfs/proofs", exist_ok=True)
+        os.makedirs("assets/proofs", exist_ok=True)
         file_id = str(uuid.uuid4())
         ext = os.path.splitext(file.filename or "photo.jpg")[1] or ".jpg"
         filename = f"proof_{file_id}{ext}"
-        filepath = os.path.join("pdfs", "proofs", filename)
+        filepath = os.path.join("assets", "proofs", filename)
         with open(filepath, "wb") as f:
             shutil.copyfileobj(file.file, f)
-        url = f"/static/pdfs/proofs/{filename}"
+        url = f"/static/assets/proofs/{filename}"
     else:
         raise HTTPException(status_code=400, detail="file is required")
         
@@ -1284,14 +1284,14 @@ async def upload_project_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    os.makedirs("pdfs/documents", exist_ok=True)
+    os.makedirs("assets/documents", exist_ok=True)
     filename = f"{uuid.uuid4()}_{file.filename}"
-    filepath = os.path.join("pdfs", "documents", filename)
+    filepath = os.path.join("assets", "documents", filename)
     
     with open(filepath, "wb") as f:
         f.write(await file.read())
         
-    url = f"/static/pdfs/documents/{filename}"
+    url = f"/static/assets/documents/{filename}"
     
     # Version logic: check if document with same title exists
     existing = db.query(ProjectDocument).filter(

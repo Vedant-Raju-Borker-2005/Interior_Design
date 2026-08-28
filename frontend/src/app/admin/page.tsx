@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import Link from 'next/link';
 import {
   Users, Home, FileText, MessageCircle, TrendingUp,
-  BarChart3, CheckCircle2, Clock, AlertCircle, Building2,
+  BarChart3, CheckCircle2, Clock, AlertCircle, Building2, Building,
   ArrowRight, ShieldCheck, Database, Settings, Activity, Bot
 } from 'lucide-react';
 
@@ -19,6 +19,14 @@ const MODULES = [
     icon: Users,
     color: 'bg-indigo-50 text-indigo-700',
     borderColor: 'border-indigo-100'
+  },
+  {
+    title: 'Enterprise Management',
+    desc: 'Manage builder partnerships, property unit mix and bulk flat allocations.',
+    href: '/admin/enterprise',
+    icon: Building,
+    color: 'bg-cyan-50 text-cyan-700',
+    borderColor: 'border-cyan-100'
   },
   {
     title: 'Vendor Management',
@@ -118,14 +126,18 @@ export default function AdminLandingPage() {
         {loading ? (
           <div className="h-32 rounded-2xl bg-slate-100 animate-pulse border border-slate-200"></div>
         ) : stats ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
               <div className="text-sm text-slate-500 mb-1 font-medium">Total Customers</div>
               <div className="text-2xl font-bold text-slate-900">{stats.total_clients || 0}</div>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+              <div className="text-sm text-slate-500 mb-1 font-medium font-medium">Total Enterprises</div>
+              <div className="text-2xl font-bold text-indigo-600">{stats.total_enterprises || 0}</div>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
               <div className="text-sm text-slate-500 mb-1 font-medium">Active Projects</div>
-              <div className="text-2xl font-bold text-slate-900">{stats.active_projects || 0}</div>
+              <div className="text-2xl font-bold text-slate-900">{stats.total_projects || stats.active_projects || 0}</div>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
               <div className="text-sm text-slate-500 mb-1 font-medium">Total Vendors</div>

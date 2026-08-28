@@ -600,7 +600,8 @@ export default function ProjectExecutionPage() {
 
         {/* VIEW B: COMPONENT DETAILS SUBPAGE */}
         {view === 'component' && selectedComp && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             
             {/* Left Column: Image and specifications about block */}
             <div className="space-y-6">
@@ -751,49 +752,46 @@ export default function ProjectExecutionPage() {
                 </div>
               </div>
 
-              {/* Issues logged section */}
-              <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-4">
-                <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-100 pb-3">Logged Issues</h3>
-                <div className="space-y-3">
-                  {issues.filter(i => i.item_id === selectedComp.id).map(issue => (
-                    <div
-                      key={issue.id}
-                      onClick={() => handleEditIssueInit(issue)}
-                      className="p-4 bg-rose-50/40 border border-rose-100 hover:bg-rose-50 transition rounded-xl flex justify-between items-center cursor-pointer"
-                    >
-                      <div className="space-y-1">
-                        <span className="text-[9px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 uppercase tracking-widest">
-                          {issue.type.replace(/_/g, ' ')}
-                        </span>
-                        <h4 className="font-extrabold text-xs text-slate-800 mt-1">{issue.description.substring(0, 100)}...</h4>
-                        <span className="text-[10px] text-slate-400 block font-medium">Status: {issue.status}</span>
+              {/* Issues logged section - Only displayed when 1 or more issues exist for component */}
+              {issues.filter(i => i.item_id === selectedComp.id).length > 0 && (
+                <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-card space-y-4">
+                  <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-100 pb-3">Logged Issues</h3>
+                  <div className="space-y-3">
+                    {issues.filter(i => i.item_id === selectedComp.id).map(issue => (
+                      <div
+                        key={issue.id}
+                        onClick={() => handleEditIssueInit(issue)}
+                        className="p-4 bg-rose-50/40 border border-rose-100 hover:bg-rose-50 transition rounded-xl flex justify-between items-center cursor-pointer"
+                      >
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 uppercase tracking-widest">
+                            {issue.type.replace(/_/g, ' ')}
+                          </span>
+                          <h4 className="font-extrabold text-xs text-slate-800 mt-1">{issue.description.substring(0, 100)}...</h4>
+                          <span className="text-[10px] text-slate-400 block font-medium">Status: {issue.status}</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-rose-500" />
                       </div>
-                      <ChevronRight className="w-4 h-4 text-rose-505" />
-                    </div>
-                  ))}
-
-                  {issues.filter(i => i.item_id === selectedComp.id).length === 0 && (
-                    <div className="text-center py-6 text-slate-400 text-xs font-semibold bg-slate-50/50 rounded-xl">
-                      No issues created for this component yet.
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              {/* Bottom centered link to report issues */}
-              <div className="flex flex-col items-center justify-center py-8 border-t border-slate-200/60 space-y-2">
-                <span className="text-sm font-semibold text-slate-500">Have any issues?</span>
-                <button
-                  onClick={handleNewIssueInit}
-                  className="text-xs font-extrabold text-indigo-650 hover:underline uppercase tracking-wider"
-                >
-                  Raise new Issue / complaint
-                </button>
-              </div>
+              )}
 
             </div>
           </div>
-        )}
+
+          {/* Bottom centered link to report issues */}
+          <div className="flex flex-col items-center justify-center text-center py-8 border-t border-slate-200/60 space-y-2 max-w-md mx-auto mt-6">
+            <span className="text-sm font-semibold text-slate-500">Have any issues?</span>
+            <button
+              onClick={handleNewIssueInit}
+              className="text-xs font-black text-slate-800 hover:text-blue-600 hover:underline uppercase tracking-wider transition-colors duration-200 cursor-pointer"
+            >
+              Raise new Issue / complaint
+            </button>
+          </div>
+        </>
+      )}
 
         {/* VIEW C: ISSUE DETAILS (CREATE & EDIT) */}
         {view === 'issue' && selectedComp && (

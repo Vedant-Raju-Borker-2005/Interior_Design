@@ -44,13 +44,13 @@ def upload_floorplan(
     file_id = str(uuid.uuid4())
     ext = file.filename.split(".")[-1]
     filename = f"{file_id}.{ext}"
-    os.makedirs("pdfs/floor_plans", exist_ok=True)
-    filepath = f"pdfs/floor_plans/{filename}"
+    os.makedirs("assets/floor_plans", exist_ok=True)
+    filepath = f"assets/floor_plans/{filename}"
     
     with open(filepath, "wb") as f:
         f.write(file.file.read())
 
-    file_url = f"/static/pdfs/floor_plans/{filename}"
+    file_url = f"/static/assets/floor_plans/{filename}"
 
     floorplan = FloorPlan(
         id=file_id,
@@ -473,11 +473,11 @@ def upload_photo(
         file_id = str(uuid.uuid4())
         ext = file.filename.split(".")[-1]
         filename = f"{file_id}.{ext}"
-        os.makedirs("pdfs/floor_plans", exist_ok=True)
-        filepath = f"pdfs/floor_plans/{filename}"
+        os.makedirs("assets/floor_plans", exist_ok=True)
+        filepath = f"assets/floor_plans/{filename}"
         with open(filepath, "wb") as f:
             f.write(file.file.read())
-        url = f"/static/pdfs/floor_plans/{filename}"
+        url = f"/static/assets/floor_plans/{filename}"
 
     if not url:
         url = "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace"
@@ -596,11 +596,11 @@ def create_issue(
         file_id = str(uuid.uuid4())
         ext = f.filename.split(".")[-1]
         filename = f"{file_id}.{ext}"
-        os.makedirs("pdfs/floor_plans", exist_ok=True)
-        filepath = f"pdfs/floor_plans/{filename}"
+        os.makedirs("assets/floor_plans", exist_ok=True)
+        filepath = f"assets/floor_plans/{filename}"
         with open(filepath, "wb") as out:
             out.write(f.file.read())
-        url = f"/static/pdfs/floor_plans/{filename}"
+        url = f"/static/assets/floor_plans/{filename}"
         
         attachment = IssueAttachment(
             issue_id=issue.id,
@@ -678,11 +678,11 @@ def update_issue(
         file_id = str(uuid.uuid4())
         ext = f.filename.split(".")[-1]
         filename = f"{file_id}.{ext}"
-        os.makedirs("pdfs/floor_plans", exist_ok=True)
-        filepath = f"pdfs/floor_plans/{filename}"
+        os.makedirs("assets/floor_plans", exist_ok=True)
+        filepath = f"assets/floor_plans/{filename}"
         with open(filepath, "wb") as out:
             out.write(f.file.read())
-        url = f"/static/pdfs/floor_plans/{filename}"
+        url = f"/static/assets/floor_plans/{filename}"
         
         attachment = IssueAttachment(
             issue_id=issue.id,
@@ -1124,14 +1124,14 @@ def create_project_payment(
     )
     db.add(payment)
     
-    os.makedirs("pdfs/documents", exist_ok=True)
+    os.makedirs("assets/documents", exist_ok=True)
     
     invoice_filename = f"invoice_{project_id}_{int(datetime.datetime.utcnow().timestamp())}.pdf"
     receipt_filename = f"receipt_{project_id}_{int(datetime.datetime.utcnow().timestamp())}.pdf"
     
-    with open(f"pdfs/documents/{invoice_filename}", "w") as f:
+    with open(f"assets/documents/{invoice_filename}", "w") as f:
         f.write(f"INVOICE\nProject: {project.property_name}\nMilestone: {milestone_name}\nAmount: INR {amount}\nTxn: {tx_id}")
-    with open(f"pdfs/documents/{receipt_filename}", "w") as f:
+    with open(f"assets/documents/{receipt_filename}", "w") as f:
         f.write(f"RECEIPT\nProject: {project.property_name}\nMilestone: {milestone_name}\nAmount: INR {amount}\nTxn: {tx_id}\nStatus: PAID")
         
     doc_invoice = ProjectDocument(
@@ -1139,14 +1139,14 @@ def create_project_payment(
         project_id=project_id,
         title=f"Invoice - {milestone_name}",
         type="INVOICE",
-        url=f"/static/pdfs/documents/{invoice_filename}"
+        url=f"/static/assets/documents/{invoice_filename}"
     )
     doc_receipt = ProjectDocument(
         id=str(uuid.uuid4()),
         project_id=project_id,
         title=f"Receipt - {milestone_name}",
         type="RECEIPT",
-        url=f"/static/pdfs/documents/{receipt_filename}"
+        url=f"/static/assets/documents/{receipt_filename}"
     )
     db.add(doc_invoice)
     db.add(doc_receipt)

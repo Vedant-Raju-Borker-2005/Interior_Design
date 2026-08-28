@@ -34,7 +34,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     { href: '/vendor/onboarding', label: 'KYC & Onboarding', icon: UserCheck },
     { href: '/vendor/products', label: 'Product Catalog', icon: ShoppingBag },
     { href: '/vendor/inventory', label: 'Inventory Log', icon: Archive },
-    { href: '/vendor/assignments', label: 'Orders', icon: Briefcase },
+    { href: '/vendor/orders', label: 'Orders', icon: Briefcase },
     { href: '/vendor/payouts', label: 'Payouts Log', icon: CreditCard },
     { href: '/vendor/issues', label: 'Issues', icon: AlertCircle },
   ]

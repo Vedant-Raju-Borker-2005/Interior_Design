@@ -167,7 +167,7 @@ def seed_images_to_db():
         }
     }
 
-    catalog_dir = 'backend/pdfs/catalog'
+    catalog_dir = 'backend/assets/catalog'
     if not os.path.exists(catalog_dir):
         print(f"Catalog directory '{catalog_dir}' not found!")
         return
@@ -215,7 +215,7 @@ def seed_images_to_db():
         prod_id = str(uuid.uuid4())
         sku = f"CAT-{base_name.upper().replace(' ', '-')}-{color.upper().replace(' ', '-')}"
         prod_name = f"{color} {base_name}"
-        thumbnail_url = f"http://localhost:8000/static/pdfs/catalog/{urllib.parse.quote(filename)}"
+        thumbnail_url = f"http://localhost:8000/static/assets/catalog/{urllib.parse.quote(filename)}"
         
         # Color variants and dictionary
         color_variants = json.dumps([color])
