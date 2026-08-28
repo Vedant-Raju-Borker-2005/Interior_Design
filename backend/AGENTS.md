@@ -58,6 +58,9 @@ The backend is built with Python 3.10+, FastAPI, SQLAlchemy ORM, and SQLite data
 
 ## Technical Guidelines & API Conventions
 
+* **Quotation Approval Vendor Syncing**:
+  * `update_quotation_status` (`customer_routes.py`) calls `sync_project_vendor_assignments(project.id, db)` directly when quotation `status == "approved"`.
+  * `sync_project_vendor_assignments` (`db.py`) queries all live `RoomItem` records directly from SQLite for the project, matches registered or pincode-serviceable vendors, and populates `VendorAssignment` records immediately.
 * **Project Serialization (`_project_summary`)**:
   * `_project_summary(p: Project)` in `projects.py` MUST serialize associated `package` details (`id`, `name`, `base_price`, `tier`) and `created_at` timestamp.
 * **Catalog Query Scoring**:

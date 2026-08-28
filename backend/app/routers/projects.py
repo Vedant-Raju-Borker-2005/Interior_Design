@@ -141,8 +141,13 @@ def update_project(
     db: Session = Depends(get_db),
 ):
     project = _get_project_or_404(project_id, user.id, db)
-    for field in ["status", "package_id", "budget", "property_name", "floor_plan_url"]:
-        if field in payload:
+    updatable_fields = [
+        "status", "package_id", "budget", "property_name", "floor_plan_url",
+        "bhk_type", "material_preference", "interior_material_preference",
+        "fabric_preference", "furnishing_type", "pincode", "style_tags", "color_preferences"
+    ]
+    for field in updatable_fields:
+        if field in payload and payload[field] is not None:
             setattr(project, field, payload[field])
             
     flat = db.query(Flat).filter(Flat.customer_project_id == project.id).first()
@@ -229,12 +234,6 @@ def add_room_item(
     )
     db.add(item)
     db.commit()
-
-    try:
-        from ..db import sync_project_vendor_assignments
-        sync_project_vendor_assignments(project_id, db)
-    except Exception as e:
-        print("Vendor assignment sync error:", e)
 
     return {"message": "item added", "item_id": item.id}
 

@@ -61,18 +61,22 @@ export const projectsAPI = {
     `${API_BASE_URL}/api/v1/projects/${projectId}/floor-plan/download?token=${typeof window !== 'undefined' ? localStorage.getItem('access_token') : ''}`,
 
   
-  create: (data: { 
-    bhk_type: string; 
-    property_name: string; 
-    city: string; 
+  create: (data: {
+    bhk_type: string;
+    property_name: string;
+    city: string;
     budget: number;
+    package_id?: string;
     material_preference?: string;
     interior_material_preference?: string;
+    fabric_preference?: string;
+    style_tags?: string[];
     furnishing_type?: string;
     pincode?: string;
     floor_plan_type?: string;
     floor_plan_name?: string;
     color_preferences?: string[];
+    status?: string;
   }) =>
     axiosInstance.post('/api/v1/projects', data),
 
@@ -108,7 +112,7 @@ export const projectsAPI = {
   get: (id: string) =>
     axiosInstance.get(`/api/v1/projects/${id}`),
   
-  update: (id: string, data: Partial<{ title: string; bhk: string; budget: number; budget_min: number; budget_max: number; package_id: string; property_name: string; status: string; floor_plan_url: string }>) =>
+  update: (id: string, data: Partial<{ title: string; bhk: string; bhk_type: string; city: string; budget: number; budget_min: number; budget_max: number; package_id: string; property_name: string; status: string; floor_plan_url: string; material_preference: string; interior_material_preference: string; fabric_preference: string; furnishing_type: string; pincode: string; style_tags: string[]; color_preferences: string[] }>) =>
     axiosInstance.put(`/api/v1/projects/${id}`, data),
 
 

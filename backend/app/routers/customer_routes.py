@@ -194,7 +194,14 @@ def update_quotation_status(
         if not already_ordered:
             _populate_default_tracking(project_id, project, db)
 
-        # Trigger Vendor Assignments — only if not already ordered
+        # Trigger Vendor Assignments for all RoomItems directly from SQLite
+        from ..db import sync_project_vendor_assignments
+        try:
+            sync_project_vendor_assignments(project.id, db)
+        except Exception as sync_err:
+            print("Failed to sync vendor assignments on approval:", sync_err)
+
+        # Trigger Vendor Assignments for quotation line items
         from ..models import Vendor, VendorAssignment, VendorNotification, Product
         if quotation.line_items and not already_ordered:
             for item in quotation.line_items:

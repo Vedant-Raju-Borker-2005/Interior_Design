@@ -88,6 +88,9 @@ The frontend is a single-page application built with Next.js 14 (App Router), Re
 * **Styling**: Always use vanilla Tailwind CSS. Active selection styling uses `border-indigo-600` or `border-indigo-500` with subtle shadows. Dark navy containers use `bg-[#0f1129]` or `bg-slate-950/40`.
 * **API Base URL**: All API calls construct backend endpoints via `lib/api.ts` utilizing `process.env.NEXT_PUBLIC_API_URL` or `http://localhost:8000`.
 * **Single-Select Design Vibe**: Choosing a new style card in onboarding replaces the active choice (`toggleStyle`).
+* **Onboarding Draft Tracking**: Auto-saves B2C draft project at Step 1 and updates preferences on every `handleNext`. Submitting Step 6 updates the existing draft (`projectsAPI.update`) to prevent duplicate project errors.
+* **Enterprise Locked Onboarding**: Enterprise Child Projects (`isB2B2C`) lock Steps 0–2. Back button and step loading enforce a minimum step of Step 3 (Design Vibe).
+* **Preference Legend & Indicator Dots**: Product catalog section header displays a Preference Legend Card. Product cards display colored dots for mismatches (🟡 Material/Fabric, 🔵 Color, 🔴 Budget Cap).
 * **Balcony Auto-Complete**: `checkRoomCompleteness` treats `room_type === 'balcony'` as complete automatically.
 * **Auto Tab Progression**: Saving selection for the last category of a room automatically shifts tabs to the next room.
-* **Dual Budget Sub-Boxes**: Budget tracker bar renders two centered inner boxes (`Remaining Budget` and `Variation Spent`).
+* **Dual Budget Sub-Boxes**: Budget tracker bar renders two centered inner boxes (*Remaining Budget* and *Variation Spent*).
