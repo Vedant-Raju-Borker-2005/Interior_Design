@@ -4,6 +4,7 @@ import datetime
 import uuid
 import re
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel, EmailStr
@@ -291,6 +292,12 @@ def get_vendor_dashboard(
         db.add(vendor)
         db.commit()
         db.refresh(vendor)
+    else:
+        # Ensure active vendor status is APPROVED
+        if vendor.status != "APPROVED" or not vendor.active:
+            vendor.status = "APPROVED"
+            vendor.active = True
+            db.commit()
     
     # Self-healing sync hook for assignments
     all_projects = db.query(Project).all()
