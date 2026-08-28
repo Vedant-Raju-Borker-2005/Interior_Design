@@ -211,8 +211,8 @@ def list_products(
     from ..models import Vendor
 
     # Normalize room_type for custom BHK types
-    target_room_type = room_type
-    if room_type:
+    target_room_type = room_type if isinstance(room_type, str) else None
+    if isinstance(room_type, str) and room_type:
         if room_type.startswith("bedroom_") and room_type != "bedroom_master":
             target_room_type = "bedroom_2"
         elif room_type.startswith("bathroom_") and room_type != "bathroom":
@@ -222,17 +222,52 @@ def list_products(
 
     # ── Base query ─────────────────────────────────────────────────────────────
     q = db.query(Product)
-    if room_type:
+    if isinstance(target_room_type, str) and target_room_type:
         q = q.filter(Product.room_type == target_room_type)
-    if category:
-        # Normalize: replace underscores with spaces so "coffee_tables" matches "Coffee Tables"
-        cat_normalized = category.lower().replace("_", " ")
-        q = q.filter(
-            or_(
-                func.lower(func.replace(Product.category, "_", " ")) == cat_normalized,
-                func.lower(func.replace(Product.subcategory, "_", " ")) == cat_normalized,
+    if isinstance(category, str) and category:
+        cat_raw = category.lower().replace("_", " ").strip()
+        
+        if 'bedside' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%bedside%'), Product.name.ilike('%bedside%')))
+        elif 'bed' in cat_raw:
+            q = q.filter(
+                or_(
+                    Product.subcategory.ilike('%bed%'),
+                    Product.category.ilike('%bed%'),
+                    Product.name.ilike('%bed%')
+                )
+            ).filter(
+                ~Product.subcategory.ilike('%bedside%'),
+                ~Product.name.ilike('%bedside%')
             )
-        )
+        elif 'desk' in cat_raw or 'study' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%desk%'), Product.subcategory.ilike('%study%'), Product.name.ilike('%desk%'), Product.name.ilike('%study%')))
+        elif 'shoe' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%shoe%'), Product.name.ilike('%shoe%')))
+        elif 'sofa' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%sofa%'), Product.category.ilike('%sofa%'), Product.name.ilike('%sofa%')))
+        elif 'coffee' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%coffee%'), Product.category.ilike('%coffee%'), Product.name.ilike('%coffee%')))
+        elif 'side' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%side%'), Product.category.ilike('%side%'), Product.name.ilike('%side%'))).filter(~Product.name.ilike('%bedside%'))
+        elif 'chair' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%chair%'), Product.category.ilike('%chair%'), Product.name.ilike('%chair%')))
+        elif 'rug' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%rug%'), Product.category.ilike('%rug%'), Product.name.ilike('%rug%')))
+        elif 'light' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%light%'), Product.category.ilike('%light%'), Product.name.ilike('%light%')))
+        elif 'vanity' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%vanity%'), Product.name.ilike('%vanity%')))
+        elif 'fixture' in cat_raw or 'decor' in cat_raw:
+            q = q.filter(or_(Product.subcategory.ilike('%fixture%'), Product.category.ilike('%decor%'), Product.name.ilike('%fixture%'), Product.name.ilike('%towel%')))
+        else:
+            q = q.filter(
+                or_(
+                    func.lower(func.replace(Product.category, "_", " ")).contains(cat_raw),
+                    func.lower(func.replace(Product.subcategory, "_", " ")).contains(cat_raw),
+                    func.lower(Product.name).contains(cat_raw)
+                )
+            )
     if max_price:
         q = q.filter(Product.price <= max_price)
 

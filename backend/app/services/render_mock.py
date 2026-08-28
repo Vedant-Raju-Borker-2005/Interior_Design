@@ -77,7 +77,7 @@ def get_gemini_render_with_image(prompt: str, image_b64: str, mime_type: str = "
         print("[Render] GEMINI_KEY not set — using fallback images")
         return None
 
-    os.makedirs(os.path.join("pdfs", "renders"), exist_ok=True)
+    os.makedirs(os.path.join("assets", "renders"), exist_ok=True)
 
     # Combined redesign instruction
     redesign_instruction = (
@@ -113,11 +113,11 @@ def get_gemini_render_with_image(prompt: str, image_b64: str, mime_type: str = "
                     if "inlineData" in part:
                         img_bytes = base64.b64decode(part["inlineData"]["data"])
                         filename = f"gen_{int(datetime.datetime.utcnow().timestamp())}_img2img.jpg"
-                        filepath = os.path.join("pdfs", "renders", filename)
+                        filepath = os.path.join("assets", "renders", filename)
                         with open(filepath, "wb") as f:
                             f.write(img_bytes)
                         print(f"[Render] Img2Img render saved: {filename}")
-                        return f"/static/pdfs/renders/{filename}"
+                        return f"/static/assets/renders/{filename}"
         else:
             print(f"[Render] Gemini img2img error {resp.status_code}: {resp.text[:300]}")
     except Exception as e:
@@ -174,7 +174,7 @@ def get_gemini_render(prompt: str) -> str | None:
         print("[Render] GEMINI_KEY not set — using fallback images")
         return None
 
-    os.makedirs(os.path.join("pdfs", "renders"), exist_ok=True)
+    os.makedirs(os.path.join("assets", "renders"), exist_ok=True)
 
     # ── Primary: Gemini 2.0 Flash image generation ──────────────────────────
     flash_url = (
@@ -196,11 +196,11 @@ def get_gemini_render(prompt: str) -> str | None:
                     if "inlineData" in part:
                         img_bytes = base64.b64decode(part["inlineData"]["data"])
                         filename = f"gen_{int(datetime.datetime.utcnow().timestamp())}_flash.jpg"
-                        filepath = os.path.join("pdfs", "renders", filename)
+                        filepath = os.path.join("assets", "renders", filename)
                         with open(filepath, "wb") as f:
                             f.write(img_bytes)
                         print(f"[Render] Gemini Flash render saved: {filename}")
-                        return f"/static/pdfs/renders/{filename}"
+                        return f"/static/assets/renders/{filename}"
         else:
             print(f"[Render] Gemini Flash error {resp.status_code}: {resp.text[:200]}")
     except Exception as e:
@@ -228,11 +228,11 @@ def get_gemini_render(prompt: str) -> str | None:
             if predictions:
                 img_bytes = base64.b64decode(predictions[0].get("bytesBase64Encoded", ""))
                 filename = f"gen_{int(datetime.datetime.utcnow().timestamp())}_imagen.jpg"
-                filepath = os.path.join("pdfs", "renders", filename)
+                filepath = os.path.join("assets", "renders", filename)
                 with open(filepath, "wb") as f:
                     f.write(img_bytes)
                 print(f"[Render] Imagen 3 render saved: {filename}")
-                return f"/static/pdfs/renders/{filename}"
+                return f"/static/assets/renders/{filename}"
         else:
             print(f"[Render] Imagen 3 error {resp.status_code}: {resp.text[:200]}")
     except Exception as e:

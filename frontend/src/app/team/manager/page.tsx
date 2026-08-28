@@ -153,9 +153,7 @@ export default function ManagerDashboardPage() {
       <header className="h-16 bg-[#0a0f1d] text-white flex items-center justify-between px-6 shrink-0 shadow-md relative z-20">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-[0_0_15px_rgba(79,70,229,0.5)]">
-              AI
-            </div>
+            <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/static/assets/catalog/logo/Logo.png`} alt="Logo" className="w-8 h-8 object-contain" />
             <span className="font-bold text-xl tracking-tight hidden sm:block">InteriorAI</span>
           </Link>
           <div className="h-5 w-px bg-slate-700 mx-2 hidden sm:block"></div>

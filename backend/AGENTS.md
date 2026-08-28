@@ -6,7 +6,7 @@ The backend is built with Python 3.10+, FastAPI, SQLAlchemy ORM, and SQLite data
 
 ## Code Structure
 
-* [`app/main.py`](file:///d:/MyFiles/Interior_Design/backend/app/main.py): Entry point, mounts CORS middleware, mounts `/static/pdfs` static directories, executes database initialization and seeding on startup, and boots all 14 API routers.
+* [`app/main.py`](file:///d:/MyFiles/Interior_Design/backend/app/main.py): Entry point, mounts CORS middleware, mounts `/static/assets` static directories, executes database initialization and seeding on startup, and boots all 14 API routers.
 * [`app/models.py`](file:///d:/MyFiles/Interior_Design/backend/app/models.py): Declarative SQLite schema models via SQLAlchemy (880 lines).
 * [`app/schemas.py`](file:///d:/MyFiles/Interior_Design/backend/app/schemas.py): Pydantic input/output schemas for API request and response serialization and validation.
 * [`app/db.py`](file:///d:/MyFiles/Interior_Design/backend/app/db.py): Database engine, session setup, and `sync_demo_data()` seeder (includes pre-registered demo accounts for customer, vendor, enterprise, site team, and admin roles).
@@ -65,4 +65,4 @@ The backend is built with Python 3.10+, FastAPI, SQLAlchemy ORM, and SQLite data
   * Products return individual compatibility flags: `is_color_match`, `is_material_match`, `is_fabric_match`, `is_price_match`.
   * Sorting ranks items by match quality first (Perfect Match $\rightarrow$ Exceeds Budget $\rightarrow$ Mismatched Material $\rightarrow$ Mismatched Color), then vendor pincode tier (local $\rightarrow$ nearby $\rightarrow$ national).
 * **Static Asset Pathing**:
-  * Product images and floor plans are served under `/static/pdfs/`. Construct paths using `BACKEND_URL` environment variable.
+  * Product images and floor plans are served under `/static/assets/`. Construct paths using `BACKEND_URL` environment variable.

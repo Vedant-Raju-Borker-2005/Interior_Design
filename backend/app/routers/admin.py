@@ -155,6 +155,7 @@ def get_stats(
     delayed_projects = db.query(Project).filter(Project.status == "delayed").count()
     active_vendors = db.query(Vendor).filter(Vendor.status == "APPROVED").count()
     open_issues = db.query(Issue).filter(Issue.status.notin_(["resolved", "closed"])).count()
+    total_enterprises = db.query(User).filter(User.role.like("%enterprise%")).count()
 
     # Trends
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -196,6 +197,7 @@ def get_stats(
         "inquiries_by_status": inquiries_by_status,
         
         "total_clients": total_clients,
+        "total_enterprises": total_enterprises,
         "active_projects": active_projects,
         "total_revenue": total_revenue,
         "pending_payments": pending_payments,
@@ -231,6 +233,43 @@ def list_customers(
     
     return {
         "customers": [
+            {
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "phone": u.phone,
+                "city": u.city,
+                "status": u.status or "active",
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+                "project_count": db.query(Project).filter(Project.user_id == u.id).count(),
+            }
+            for u in users
+        ],
+        "total": total,
+        "page": page,
+        "limit": limit
+    }
+
+@router.get("/enterprises", summary="List all platform enterprise partners")
+def list_enterprises(
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user(["SUPER_ADMIN", "SALES_ADMIN"]))
+):
+    q = db.query(User).filter(User.role.like("%enterprise%"))
+    if search:
+        q = q.filter(or_(User.name.ilike(f"%{search}%"), User.email.ilike(f"%{search}%"), User.phone.ilike(f"%{search}%")))
+    if status:
+        q = q.filter(User.status == status)
+    
+    total = q.count()
+    users = q.order_by(User.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    
+    return {
+        "enterprises": [
             {
                 "id": u.id,
                 "name": u.name,
@@ -1235,7 +1274,7 @@ async def upload_vault_document(
     admin: User = Depends(get_admin_user(["SUPER_ADMIN", "OPERATIONS_ADMIN"]))
 ):
     import os, shutil
-    upload_dir = os.path.join("pdfs", "documents")
+    upload_dir = os.path.join("assets", "documents")
     os.makedirs(upload_dir, exist_ok=True)
     ext = os.path.splitext(file.filename or "file.pdf")[1] or ".pdf"
     filename = f"doc_{uuid.uuid4().hex[:8]}{ext}"
@@ -1248,7 +1287,7 @@ async def upload_vault_document(
         project_id=project_id,
         title=title,
         type=doc_type,
-        url=f"/static/pdfs/documents/{filename}",
+        url=f"/static/assets/documents/{filename}",
         version=1
     )
     db.add(doc)

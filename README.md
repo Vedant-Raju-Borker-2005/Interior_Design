@@ -36,12 +36,13 @@ InteriorAI is an end-to-end web application that simplifies the interior design 
 * **Operations Console**: Project execution workspace (`/projects/[projectId]/execution`) featuring item tracking, task calendars, checklists, site visit logs, document vault, and SLA delay reporting.
 
 ### 5. Admin Control Center
-* **Unified Admin Portal Layout**: Super Admin console at `/admin` with persistent sidebar navigation across 10 specialized sub-routes.
-* **10 Dedicated Admin Sub-Pages**:
-  * **Client CRM (`/admin/customers`)**: Customer directory, profile management, account suspension, and reactivation.
+* **Unified Admin Portal Layout**: Super Admin console at `/admin` with persistent sidebar navigation across 11 specialized sub-routes.
+* **11 Dedicated Admin Sub-Pages**:
+  * **Client CRM (`/admin/customers`)**: Customer directory, profile management, account suspension, and reactivation. Auto-synced with enterprise project deletions to prevent ghost accounts.
+  * **Enterprise Partner Management (`/admin/enterprise`)**: Isolated builder partner hub for developer accounts, parent property projects, unit mixes, and portfolio metrics.
   * **Vendor Governance (`/admin/vendors`)**: Onboarding application review, document inspection, approval, rejection, and suspension.
   * **Team Approvals (`/admin/project-team`)**: Pending team registration approvals and role matrix permissions assignment (`AdminRole`).
-  * **Project Control Center (`/admin/projects`)**: Project creation, manager/coordinator/technician/vendor resource assignment, project closing, and cancellation.
+  * **Project Control Center (`/admin/projects`)**: Master project creation, manager/coordinator/technician/vendor resource assignment, project closing, and cancellation.
   * **Master Data Management (`/admin/master-data`)**: Master product catalog CRUD, CSV bulk import, and CSV export.
   * **Operational Reports (`/admin/reports`)**: Live CSV report generation for sales, revenue, projects, vendors, and customers.
   * **AI Engine Tuning (`/admin/ai-engine`)**: AI model selection, rendering parameters, and prompt customization templates.

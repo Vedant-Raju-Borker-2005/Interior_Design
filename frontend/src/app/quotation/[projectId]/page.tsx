@@ -132,7 +132,10 @@ export default function QuotationPage() {
       const qId = quotation.id || quotation.quotation_id
       await updateQuotationStatus(projectId, qId, 'approved')
       setQuotation({ ...quotation, status: 'approved' })
-      toast.success('Quotation approved! Project status is now set to ordered.')
+      toast.success('Quotation approved! Redirecting to Project Progress...')
+      setTimeout(() => {
+        router.push(`/track/${projectId}`)
+      }, 800)
     } catch {
       toast.error('Failed to approve quotation')
     }
@@ -317,23 +320,15 @@ export default function QuotationPage() {
                   <Mail className="w-3.5 h-3.5 text-indigo-600" /> Share via Email
                 </a>
                 {quotation.status === 'approved' && (
-                  <>
-                    <a
-                      href={projectsAPI.downloadFloorPlan(projectId)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      id="download-floorplan-btn"
-                      className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2 rounded-xl transition border border-indigo-200 text-xs"
-                    >
-                      <FileText className="w-3.5 h-3.5" /> Floor Plan PDF
-                    </a>
-                    <Link
-                      href={`/track/${projectId}`}
-                      className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-4 py-2 rounded-xl transition border border-emerald-200 text-xs"
-                    >
-                      <Activity className="w-3.5 h-3.5" /> Track Project
-                    </Link>
-                  </>
+                  <a
+                    href={projectsAPI.downloadFloorPlan(projectId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    id="download-floorplan-btn"
+                    className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2 rounded-xl transition border border-indigo-200 text-xs"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Floor Plan PDF
+                  </a>
                 )}
               </div>
             </div>

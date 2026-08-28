@@ -77,11 +77,11 @@ echo.
 echo [3/5] Setting up backend...
 
 :: Pre-create static directories
-if not exist "%BACKEND%\pdfs" mkdir "%BACKEND%\pdfs"
-if not exist "%BACKEND%\pdfs\floor_plans" mkdir "%BACKEND%\pdfs\floor_plans"
-if not exist "%BACKEND%\pdfs\documents" mkdir "%BACKEND%\pdfs\documents"
-if not exist "%BACKEND%\pdfs\proofs" mkdir "%BACKEND%\pdfs\proofs"
-if not exist "%BACKEND%\pdfs\renders" mkdir "%BACKEND%\pdfs\renders"
+if not exist "%BACKEND%\assets" mkdir "%BACKEND%\assets"
+if not exist "%BACKEND%\assets\floor_plans" mkdir "%BACKEND%\assets\floor_plans"
+if not exist "%BACKEND%\assets\documents" mkdir "%BACKEND%\assets\documents"
+if not exist "%BACKEND%\assets\proofs" mkdir "%BACKEND%\assets\proofs"
+if not exist "%BACKEND%\assets\renders" mkdir "%BACKEND%\assets\renders"
 
 :: Sync .env file if it exists in root to backend folder
 if exist "%ROOT%\.env" (

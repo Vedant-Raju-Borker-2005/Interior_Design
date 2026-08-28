@@ -260,7 +260,7 @@ def upload_enterprise_floor_plan(
     if not project:
         raise HTTPException(404, "Project not found")
 
-    upload_dir = os.path.join("pdfs", "floor_plans")
+    upload_dir = os.path.join("assets", "floor_plans")
     os.makedirs(upload_dir, exist_ok=True)
     ext = os.path.splitext(file.filename or "plan.jpg")[1] or ".jpg"
     
@@ -272,7 +272,7 @@ def upload_enterprise_floor_plan(
         shutil.copyfileobj(file.file, f)
     
     backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
-    url = f"{backend_url}/static/pdfs/floor_plans/{filename}"
+    url = f"{backend_url}/static/assets/floor_plans/{filename}"
     
     fp = FloorPlan(
         id=file_id,
@@ -544,20 +544,25 @@ def accept_invitation(
         raise HTTPException(404, "Parent project not found.")
 
     try:
-        flat.customer_id = user.id
+        target_user = user
+        if flat.customer_id:
+            cust = db.query(User).filter(User.id == flat.customer_id).first()
+            if cust:
+                target_user = cust
+
         flat.status = "Onboarding"
         
-        # Ensure the child project is owned by this user
+        # Ensure the child project is owned by the target customer user
         if flat.customer_project_id:
             child_project = db.query(Project).filter(Project.id == flat.customer_project_id).first()
             if child_project:
-                child_project.user_id = user.id
+                child_project.user_id = target_user.id
             else:
                 # Recreate if missing/deleted
                 pid = str(uuid.uuid4())
                 child_project = Project(
                     id=pid,
-                    user_id=user.id,
+                    user_id=target_user.id,
                     parent_project_id=parent_project.id,
                     flat_id=flat.id,
                     bhk_type=flat.bhk_type,
@@ -593,7 +598,7 @@ def accept_invitation(
             pid = str(uuid.uuid4())
             child_project = Project(
                 id=pid,
-                user_id=user.id,
+                user_id=target_user.id,
                 parent_project_id=parent_project.id,
                 flat_id=flat.id,
                 bhk_type=flat.bhk_type,
@@ -626,7 +631,21 @@ def accept_invitation(
             flat.customer_project_id = pid
 
         db.commit()
-        return {"project_id": flat.customer_project_id}
+
+        from ..auth_utils import create_access_token
+        access_token = create_access_token({"sub": target_user.email, "role": target_user.role or "customer"})
+
+        return {
+            "project_id": flat.customer_project_id,
+            "access_token": access_token,
+            "user": {
+                "id": target_user.id,
+                "name": target_user.name,
+                "email": target_user.email,
+                "phone": target_user.phone,
+                "role": target_user.role or "customer"
+            }
+        }
     except Exception as e:
         db.rollback()
         raise HTTPException(500, detail=f"Failed to accept invitation: {str(e)}")
@@ -683,12 +702,24 @@ def delete_enterprise_project(
         raise HTTPException(404, "Enterprise project not found")
         
     try:
-        # Break foreign key references in flats to avoid SQLAlchemy circular dependency errors
+        # Collect customer IDs assigned to these flats before breaking foreign keys
         flats = db.query(Flat).filter(Flat.project_id == project_id).all()
+        flat_customer_ids = [f.customer_id for f in flats if f.customer_id]
+
+        # Break foreign key references in flats to avoid SQLAlchemy circular dependency errors
         for f in flats:
             f.customer_project_id = None
             f.customer_id = None
         db.flush()
+
+        # Delete related audit logs
+        flat_ids = [f.id for f in flats]
+        if flat_ids:
+            db.query(AuditLog).filter(
+                (AuditLog.entity_id == project_id) | (AuditLog.entity_id.in_(flat_ids))
+            ).delete(synchronize_session=False)
+        else:
+            db.query(AuditLog).filter(AuditLog.entity_id == project_id).delete(synchronize_session=False)
 
         # Find all child projects of this parent project
         child_projects = db.query(Project).filter(Project.parent_project_id == project_id).all()
@@ -696,6 +727,16 @@ def delete_enterprise_project(
             db.delete(cp)
             
         db.delete(project)
+        db.flush()
+
+        # Delete orphaned customer accounts created for this enterprise project
+        for cid in flat_customer_ids:
+            other_projs = db.query(Project).filter(Project.user_id == cid).count()
+            if other_projs == 0:
+                user_obj = db.query(User).filter(User.id == cid).first()
+                if user_obj and user_obj.phone != "+919900004444" and user_obj.email != "customer@example.com":
+                    db.delete(user_obj)
+
         db.commit()
         return {"success": True, "message": "Project and all associated unit configurations deleted successfully."}
     except Exception as e:
@@ -720,27 +761,30 @@ def get_enterprise_activity(
         if log.action == "PROJECT_CREATED":
             # Find project name
             proj = db.query(Project).filter(Project.id == log.entity_id).first()
-            proj_name = proj.property_name if proj else "Unknown Project"
+            if not proj:
+                continue
             activity.append({
                 "id": log.id,
-                "message": f"Project {proj_name} setup completed.",
+                "message": f"Project '{proj.property_name}' setup completed.",
                 "timestamp": time_str,
                 "type": "project"
             })
         elif log.action == "INVITATION_SENT":
             # Find flat and customer details
             flat = db.query(Flat).filter(Flat.id == log.entity_id).first()
-            if flat:
-                proj = db.query(Project).filter(Project.id == flat.project_id).first()
-                proj_name = proj.property_name if proj else ""
-                cust = db.query(User).filter(User.id == flat.customer_id).first()
-                cust_desc = f" ({cust.email})" if cust and cust.email else ""
-                activity.append({
-                    "id": log.id,
-                    "message": f"Flat {flat.flat_number} at {proj_name} assigned to buyer{cust_desc}.",
-                    "timestamp": time_str,
-                    "type": "invite"
-                })
+            if not flat:
+                continue
+            proj = db.query(Project).filter(Project.id == flat.project_id).first()
+            if not proj:
+                continue
+            cust = db.query(User).filter(User.id == flat.customer_id).first()
+            cust_desc = f" ({cust.email})" if cust and cust.email else ""
+            activity.append({
+                "id": log.id,
+                "message": f"Flat {flat.flat_number} at {proj.property_name} assigned to buyer{cust_desc}.",
+                "timestamp": time_str,
+                "type": "invite"
+            })
                 
     return {"activity": activity}
 

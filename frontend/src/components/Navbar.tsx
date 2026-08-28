@@ -52,9 +52,7 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-glow-indigo">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
+            <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/static/assets/catalog/logo/Logo.png`} alt="InteriorAI Logo" className="w-8 h-8 object-contain" />
             <span className="text-white font-bold text-xl tracking-tight">
               Interior<span className="text-indigo-400">AI</span>
             </span>

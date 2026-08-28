@@ -6,13 +6,23 @@ import { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import clsx from 'clsx';
-import {
-  LayoutDashboard, Users, Briefcase, BarChart3, Settings, Database, Activity, FileText, Bot, ShieldCheck
+import { 
+  Users, 
+  Briefcase, 
+  LayoutDashboard, 
+  Settings, 
+  Database, 
+  BarChart3, 
+  Bot, 
+  Activity, 
+  ShieldCheck,
+  Building
 } from 'lucide-react';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/customers', label: 'Customers', icon: Users },
+  { href: '/admin/enterprise', label: 'Enterprise', icon: Building },
   { href: '/admin/vendors', label: 'Vendors', icon: Briefcase },
   { href: '/admin/project-team', label: 'Project Team', icon: Users },
   { href: '/admin/projects', label: 'Projects', icon: LayoutDashboard },

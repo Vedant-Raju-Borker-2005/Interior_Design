@@ -48,22 +48,22 @@ const MANDATORY_CATEGORIES: Record<string, { id: string; label: string; desc: st
     { id: 'lighting', label: 'Lighting', desc: 'Ambient floor/table lamps' },
   ],
   bedroom_master: [
-    { id: 'Furniture', label: 'Master Bed', desc: 'Main sleeping set' },
+    { id: 'beds', label: 'Master Bed', desc: 'Main sleeping set' },
     { id: 'bedside_tables', label: 'Bedside Table', desc: 'Nightstand storage' },
     { id: 'study_desk', label: 'Study Desk', desc: 'Workstation setup' },
-    { id: 'Lighting', label: 'Lighting', desc: 'Bedside reading lamps' },
+    { id: 'lighting', label: 'Lighting', desc: 'Bedside reading lamps' },
   ],
   bedroom_2: [
-    { id: 'Furniture', label: 'Bed set', desc: 'Main sleeping frame' },
+    { id: 'beds', label: 'Bed set', desc: 'Main sleeping frame' },
     { id: 'bedside_tables', label: 'Bedside Table', desc: 'Nightstand storage' },
-    { id: 'Lighting', label: 'Lighting', desc: 'Lamps or spot lights' },
+    { id: 'lighting', label: 'Lighting', desc: 'Lamps or spot lights' },
   ],
   kitchen: [
-    { id: 'Kitchen', label: 'Modular Cabinets', desc: 'Base & wall counters' },
+    { id: 'kitchen', label: 'Modular Cabinets', desc: 'Base & wall counters' },
   ],
   bathroom: [
-    { id: 'Furniture', label: 'Vanity Counter', desc: 'Wash basin setup' },
-    { id: 'Décor', label: 'Fixtures', desc: 'Shower panels & hardware' },
+    { id: 'vanity', label: 'Vanity Counter', desc: 'Wash basin setup' },
+    { id: 'fixtures', label: 'Fixtures', desc: 'Shower panels & hardware' },
   ],
 }
 
@@ -79,7 +79,6 @@ export default function GuidedCustomizePage() {
   const [products, setProducts] = useState<any[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [exactColorMatchFound, setExactColorMatchFound] = useState(true)
-
 
   // Active customization state
   const [customizingProduct, setCustomizingProduct] = useState<any>(null)
@@ -125,7 +124,7 @@ export default function GuidedCustomizePage() {
     loadProject()
   }, [projectId])
 
-  // Resolve room-specific categories with fallbacks for custom BHK rooms
+  // Resolve room-specific categories
   const getRoomMandatoryCategories = (roomType: string) => {
     if (MANDATORY_CATEGORIES[roomType]) {
       return MANDATORY_CATEGORIES[roomType]
@@ -138,166 +137,262 @@ export default function GuidedCustomizePage() {
     }
     if (roomType === 'balcony') {
       return [
-        { id: 'Furniture', label: 'Outdoor Seating', desc: 'Balcony chairs/table' },
-        { id: 'Décor', label: 'Planters & Lights', desc: 'Decorative green elements' }
+        { id: 'chairs', label: 'Outdoor Seating', desc: 'Balcony chairs/table' },
+        { id: 'fixtures', label: 'Planters & Lights', desc: 'Decorative green elements' }
       ]
     }
     return [
-      { id: 'Furniture', label: 'Furniture', desc: 'Main elements' },
-      { id: 'Lighting', label: 'Lighting', desc: 'Room fixtures' }
+      { id: 'sofas', label: 'Furniture', desc: 'Main elements' },
+      { id: 'lighting', label: 'Lighting', desc: 'Room fixtures' }
     ]
   }
 
-  // Get categories list based on active room type
-  const getCategoriesForActiveRoom = () => {
-    if (!activeRoom) return []
-    return getRoomMandatoryCategories(activeRoom.room_type)
+  const matchCategory = (catId: string, prod: any) => {
+    if (!prod) return false
+    const norm = (str: string) => (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/_/g, ' ').trim()
+    const cleanCat = norm(catId)
+    const pCat = norm(prod.category)
+    const pSubCat = norm(prod.subCategory || prod.sub_category)
+    const pName = norm(prod.name)
+    
+    if (cleanCat.includes('sofa')) {
+      return pCat.includes('sofa') || pSubCat.includes('sofa') || pName.includes('sofa')
+    }
+    if (cleanCat.includes('coffee')) {
+      return pCat.includes('coffee') || pSubCat.includes('coffee') || pName.includes('coffee')
+    }
+    if (cleanCat.includes('bedside')) {
+      return pCat.includes('bedside') || pSubCat.includes('bedside') || pName.includes('bedside') || pName.includes('nightstand')
+    }
+    if (cleanCat.includes('side table')) {
+      return (pCat.includes('side') || pSubCat.includes('side') || pName.includes('side table')) && !pName.includes('bedside')
+    }
+    if (cleanCat.includes('desk') || cleanCat.includes('study')) {
+      return pCat.includes('desk') || pSubCat.includes('desk') || pName.includes('desk') || pName.includes('study')
+    }
+    if (cleanCat.includes('shoe')) {
+      return pCat.includes('shoe') || pSubCat.includes('shoe') || pName.includes('shoe') || pName.includes('rack')
+    }
+    if (cleanCat.includes('rug')) {
+      return pCat.includes('rug') || pSubCat.includes('rug') || pName.includes('rug') || pName.includes('carpet')
+    }
+    if (cleanCat.includes('lighting') || cleanCat.includes('lamp')) {
+      return pCat.includes('lighting') || pSubCat.includes('lamp') || pName.includes('light') || pName.includes('lamp')
+    }
+    if (cleanCat.includes('bed')) {
+      return (pCat.includes('bed') || pName.includes('bed')) && !pName.includes('bedside') && !pName.includes('side table') && !pName.includes('desk')
+    }
+    if (cleanCat.includes('chair')) {
+      return pCat.includes('chair') || pSubCat.includes('chair') || pName.includes('chair')
+    }
+    if (cleanCat.includes('kitchen') || cleanCat.includes('cabinet')) {
+      return pCat.includes('kitchen') || pSubCat.includes('cabinet') || pName.includes('cabinet')
+    }
+    if (cleanCat.includes('vanity')) {
+      return pCat.includes('vanity') || pSubCat.includes('vanity') || pName.includes('vanity') || pName.includes('basin') || pName.includes('counter')
+    }
+    if (cleanCat.includes('fixture') || cleanCat.includes('decor')) {
+      return pCat.includes('decor') || pCat.includes('fixture') || pSubCat.includes('fixture') || pName.includes('fixture') || pName.includes('towel') || pName.includes('rack') || pName.includes('shower') || pName.includes('hardware')
+    }
+
+    return pCat.includes(cleanCat) || pSubCat.includes(cleanCat) || pName.includes(cleanCat)
   }
 
-  // Robust category matcher for category IDs against product category & subcategory
-  const matchCategory = (catId: string, product: any) => {
-    if (!product) return false
-    const target = catId.toLowerCase().replace(/_/g, ' ').trim()
-    const cat = (product.category || '').toLowerCase().replace(/_/g, ' ').trim()
-    const sub = (product.subcategory || '').toLowerCase().replace(/_/g, ' ').trim()
-    
-    if (cat === target || sub === target) return true
-    
-    const targetBase = target.endsWith('s') ? target.slice(0, -1) : target
-    const catBase = cat.endsWith('s') ? cat.slice(0, -1) : cat
-    const subBase = sub.endsWith('s') ? sub.slice(0, -1) : sub
-    
-    if (catBase === targetBase || subBase === targetBase) return true
-    if (target.includes(sub) || sub.includes(target) || target.includes(cat) || cat.includes(target)) return true
-    return false
+  const checkRoomCompleteness = (room: any) => {
+    if (room.room_type === 'balcony') return { isComplete: true }
+    const reqCats = getRoomMandatoryCategories(room.room_type)
+    const savedItems = room.items || []
+    const isComplete = reqCats.every((cat) =>
+      savedItems.some((it: any) => matchCategory(cat.id, it.product))
+    )
+    return { isComplete }
   }
 
-  // Auto-select first incomplete category or first category
+  const getCompletedCategoriesCount = (room: any) => {
+    if (room.room_type === 'balcony') return getRoomMandatoryCategories(room.room_type).length
+    const reqCats = getRoomMandatoryCategories(room.room_type)
+    const savedItems = room.items || []
+    return reqCats.filter((cat) =>
+      savedItems.some((it: any) => matchCategory(cat.id, it.product))
+    ).length
+  }
+
+  const checkAllRoomsComplete = () => {
+    if (!project?.rooms || project.rooms.length === 0) return false
+    return project.rooms.every((r: any) => checkRoomCompleteness(r).isComplete)
+  }
+
+  const getSortedRoomsList = () => {
+    if (!project?.rooms) return []
+    return [...project.rooms].sort((a: any, b: any) => {
+      const aComp = checkRoomCompleteness(a).isComplete
+      const bComp = checkRoomCompleteness(b).isComplete
+      if (aComp === bComp) return 0
+      return aComp ? 1 : -1
+    })
+  }
+
   useEffect(() => {
-    const categories = getCategoriesForActiveRoom()
-    if (categories.length > 0) {
-      // Look for first category without a saved product
-      const incomplete = categories.find(
+    if (project?.rooms?.length > 0 && !hasSetInitialRoom) {
+      const firstIncomplete = project.rooms.find((r: any) => !checkRoomCompleteness(r).isComplete)
+      if (firstIncomplete) {
+        setActiveRoomId(firstIncomplete.id)
+      } else {
+        setActiveRoomId(project.rooms[0].id)
+      }
+      setHasSetInitialRoom(true)
+    }
+  }, [project, hasSetInitialRoom])
+
+  useEffect(() => {
+    if (activeRoom && !userEditingCategory) {
+      const mandatory = getRoomMandatoryCategories(activeRoom.room_type)
+      const firstUnconfigured = mandatory.find(
         (cat) => !activeRoomItems.some((it: any) => matchCategory(cat.id, it.product))
       )
-      setSelectedCategory(incomplete ? incomplete.id : categories[0].id)
-      setCustomizingProduct(null)
+      if (firstUnconfigured) {
+        setSelectedCategory(firstUnconfigured.id)
+      } else {
+        setSelectedCategory(mandatory[0]?.id || '')
+      }
     }
-  }, [activeRoomIdx, activeRoom?.room_type])
-
-  // Fetch products inside the selected category
-  const fetchProducts = async () => {
-    if (!activeRoom || !selectedCategory) return
-    setLoadingProducts(true)
-    try {
-      // Map frontend category filter tag to database categories
-      const res = await catalogAPI.products({
-        room_type: activeRoom.room_type,
-        category: selectedCategory,
-        pincode: project?.pincode,
-        project_id: projectId,
-        limit: 25
-      })
-      setProducts(res.data.items || [])
-      setExactColorMatchFound(res.data.exact_color_match_found ?? true)
-    } catch {
-      setProducts([])
-      setExactColorMatchFound(true)
-    } finally {
-      setLoadingProducts(false)
-    }
-  }
-
+  }, [activeRoomId, project, userEditingCategory])
 
   useEffect(() => {
-    fetchProducts()
-  }, [activeRoomIdx, activeRoom?.room_type, selectedCategory])
+    if (!selectedCategory || !activeRoom) return
+    const fetchCategoryProducts = async () => {
+      setLoadingProducts(true)
+      try {
+        const res = await catalogAPI.getProducts({
+          category: selectedCategory,
+          style: project?.style_vibe || 'Modern',
+          budget: project?.budget || 500000,
+          project_id: projectId
+        })
+        const raw = res.data
+        const items = Array.isArray(raw) 
+          ? raw 
+          : (Array.isArray(raw?.items) ? raw.items : (Array.isArray(raw?.products) ? raw.products : []))
+        
+        let colorMatchOk = true
+        if (typeof raw?.exact_color_match_found === 'boolean') {
+          colorMatchOk = raw.exact_color_match_found
+        } else {
+          const prefColors = project?.color_preferences || []
+          if (prefColors.length > 0 && items.length > 0) {
+            const hasColorAvailable = items.some((p: any) => {
+              const availColors = p.variants?.color || []
+              if (availColors.length === 0) return true
+              return availColors.some((c: string) =>
+                prefColors.some((pc: string) => c.toLowerCase().includes(pc.toLowerCase()) || pc.toLowerCase().includes(c.toLowerCase()))
+              )
+            })
+            if (!hasColorAvailable) {
+              colorMatchOk = false
+            }
+          }
+        }
+        setExactColorMatchFound(colorMatchOk)
+        setProducts(items)
+      } catch {
+        setProducts([])
+      } finally {
+        setLoadingProducts(false)
+      }
+    }
+    fetchCategoryProducts()
+  }, [selectedCategory, activeRoomId, project])
 
-  // Start customizing product attributes
   const handleSelectProduct = (product: any) => {
     setCustomizingProduct(product)
-    const v = product.variants || {}
-    const match = getBestColorMatch(v.color || [], project?.color_preferences || [])
-    setCustomColor(match.color)
-    setCustomFabric(v.fabric?.[0] || '')
-    setCustomWoodFinish(v.wood_finish?.[0] || '')
-    setCustomSize(v.size?.[0] || '')
-    setCustomTexture(v.texture?.[0] || '')
-    setCustomCushionStyle(v.cushion_style?.[0] || '')
+    const existingInRoom = activeRoomItems.find((it: any) => it.product_id === product.id)
+    
+    let defaultColor = product.variants?.color?.[0] || ''
+    if (project?.color_preferences?.length > 0 && product.variants?.color?.length > 0) {
+      const bestMatch = getBestColorMatch(product.variants.color, project.color_preferences)
+      defaultColor = bestMatch.color
+    }
+
+    if (existingInRoom?.custom_attributes) {
+      const ca = existingInRoom.custom_attributes
+      setCustomColor(ca.color || defaultColor)
+      setCustomFabric(ca.fabric || product.variants?.fabric?.[0] || '')
+      setCustomWoodFinish(ca.wood_finish || product.variants?.wood_finish?.[0] || '')
+      setCustomSize(ca.size || product.variants?.size?.[0] || '')
+      setCustomTexture(ca.texture || product.variants?.texture?.[0] || '')
+      setCustomCushionStyle(ca.cushion_style || product.variants?.cushion_style?.[0] || '')
+    } else {
+      setCustomColor(defaultColor)
+      setCustomFabric(product.variants?.fabric?.[0] || '')
+      setCustomWoodFinish(product.variants?.wood_finish?.[0] || '')
+      setCustomSize(product.variants?.size?.[0] || '')
+      setCustomTexture(product.variants?.texture?.[0] || '')
+      setCustomCushionStyle(product.variants?.cushion_style?.[0] || '')
+    }
   }
 
-  // Save the customized selection to the room configuration
   const handleSaveSelection = async () => {
-    if (!activeRoom || !customizingProduct) return
+    if (!customizingProduct || !activeRoomId) return
     setSavingItem(true)
     try {
-      // Clear existing item in this category first if any
-      const existing = activeRoomItems.find(
-        (it: any) => matchCategory(selectedCategory, it.product)
-      )
-      if (existing) {
-        await projectsAPI.removeRoomItem(projectId, activeRoom.id, existing.id)
-      }
+      const customAttributes: Record<string, string> = {}
+      if (customColor) customAttributes.color = customColor
+      if (customFabric) customAttributes.fabric = customFabric
+      if (customWoodFinish) customAttributes.wood_finish = customWoodFinish
+      if (customSize) customAttributes.size = customSize
+      if (customTexture) customAttributes.texture = customTexture
+      if (customCushionStyle) customAttributes.cushion_style = customCushionStyle
 
-      await projectsAPI.addRoomItem(projectId, activeRoom.id, {
-        product_id: customizingProduct.id,
-        qty: 1,
-        custom_color: customColor || undefined,
-        custom_fabric: customFabric || undefined,
-        custom_wood_finish: customWoodFinish || undefined,
-        custom_size: customSize || undefined,
-        custom_texture: customTexture || undefined,
-        custom_cushion_style: customCushionStyle || undefined,
-      })
-
-      toast.success(`${customizingProduct.name} saved! ✓`)
-      setCustomizingProduct(null)
-      const updatedProject = await loadProject()
-      
-      if (updatedProject) {
-        let totalCost = 0
-        updatedProject.rooms?.forEach((room: any) => {
-          (room.items || []).forEach((item: any) => {
-            const price = item.unit_price || item.product?.price || 0
-            const qty = item.qty || 1
-            totalCost += price * qty
-          })
-        })
-        const budgetLimit = updatedProject.budget || 300000
-        const tier = updatedProject.package?.tier || 'basic'
-        if (totalCost > budgetLimit) {
-          if (tier === 'luxury') {
-            toast.error(`You are going off-budget, but since you had chosen the Luxury package, you can spend up to ₹${(budgetLimit + 500000).toLocaleString('en-IN')}.`, {
-              duration: 6000
-            })
-          } else if (tier === 'premium') {
-            toast.error(`You are going off-budget, but you are on the Premium package, so you could spend up to ₹${(budgetLimit + 200000).toLocaleString('en-IN')}.`, {
-              duration: 6000
-            })
-          } else {
-            toast.error(`You are going off-budget! You are on the Basic package. You have exceeded your ₹${budgetLimit.toLocaleString('en-IN')} limit.`, {
-              duration: 6000
-            })
-          }
+      // Delete any previously saved item in the SAME category for this room to enforce 1 item per category
+      const existingInCat = activeRoomItems.find((it: any) => matchCategory(selectedCategory, it.product))
+      if (existingInCat && existingInCat.product_id !== customizingProduct.id) {
+        try {
+          await projectsAPI.removeRoomItem(projectId, activeRoomId, existingInCat.id)
+        } catch (e) {
+          console.error('Failed to remove previous item in category', e)
         }
       }
 
-      // Automatically move to the next category or next room tab
-      const categories = getCategoriesForActiveRoom()
-      const currentIdx = categories.findIndex((c) => c.id === selectedCategory)
-      if (currentIdx !== -1) {
-        if (currentIdx < categories.length - 1) {
-          // Go to next category in current room
-          setSelectedCategory(categories[currentIdx + 1].id)
-        } else if (updatedProject) {
-          // Last category of current room is done; auto-progress to the next incomplete room
-          const incomplete = updatedProject.rooms.filter((r: any) => !checkRoomCompleteness(r).isComplete)
-          if (incomplete.length > 0) {
-            setActiveRoomId(incomplete[0].id)
-            const nextRoomName = incomplete[0].room_type.replace('_', ' ').toUpperCase()
-            toast.success(`Switching to next room: ${nextRoomName}! 🚪`)
-          } else {
-            toast.success("All rooms complete! Ready for rendering. ✨")
+      await projectsAPI.addRoomItem(projectId, activeRoomId, {
+        product_id: customizingProduct.id,
+        qty: 1,
+        unit_price: customizingProduct.price,
+        custom_attributes: customAttributes,
+      })
+
+      const updatedProj = await loadProject()
+      toast.success(`${customizingProduct.name} saved to ${getRoomLabelAndIcon(activeRoom.room_type, project?.bhk_type).label}!`)
+
+      setCustomizingProduct(null)
+      setUserEditingCategory(false)
+
+      // Smooth scroll back to top of customizer selection container
+      setTimeout(() => {
+        document.getElementById('product-selection-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 50)
+
+      if (updatedProj && activeRoom) {
+        const mandatory = getRoomMandatoryCategories(activeRoom.room_type)
+        const currentCatIdx = mandatory.findIndex((cat) => cat.id === selectedCategory)
+        
+        // Refresh active room completeness
+        const refreshedActiveRoom = updatedProj.rooms?.find((r: any) => r.id === activeRoomId)
+        const isRoomNowComplete = refreshedActiveRoom ? checkRoomCompleteness(refreshedActiveRoom).isComplete : false
+
+        if (currentCatIdx !== -1 && currentCatIdx < mandatory.length - 1) {
+          const nextCat = mandatory[currentCatIdx + 1]
+          setSelectedCategory(nextCat.id)
+        } else if (isRoomNowComplete) {
+          // Room complete! Auto-progress to top incomplete room
+          const incompleteRooms = (updatedProj.rooms || []).filter((r: any) => !checkRoomCompleteness(r).isComplete)
+          if (incompleteRooms.length > 0) {
+            const nextRoom = incompleteRooms[0]
+            setActiveRoomId(nextRoom.id)
+            const nextRoomMandatory = getRoomMandatoryCategories(nextRoom.room_type)
+            const firstUncfg = nextRoomMandatory.find(
+              (cat) => !(nextRoom.items || []).some((it: any) => matchCategory(cat.id, it.product))
+            )
+            setSelectedCategory(firstUncfg?.id || nextRoomMandatory[0]?.id || '')
           }
         }
       }
@@ -308,99 +403,36 @@ export default function GuidedCustomizePage() {
     }
   }
 
-
   const handleFloorPlanUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !activeRoom) return
-
+    if (!file || !activeRoomId) return
     setUploadingPlan(true)
     try {
-      const res = await projectsAPI.uploadFloorPlan(projectId, file, activeRoom.id)
-      const roomLabel = getRoomLabelAndIcon(activeRoom.room_type, project?.bhk_type).label
-      toast.success(`${roomLabel} blueprint uploaded successfully! 📐`)
-      await loadProject() // Reload project info to update UI and floor plan reference path
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await projectsAPI.uploadFloorPlan(projectId, activeRoomId, formData)
+      await loadProject()
+      toast.success('Room floor plan blueprint uploaded successfully!')
     } catch (err: any) {
-      console.error(err)
-      toast.error(err?.response?.data?.detail || 'Failed to upload floor plan blueprint')
+      toast.error(err.response?.data?.detail || 'Failed to upload floor plan blueprint')
     } finally {
       setUploadingPlan(false)
     }
   }
 
-
-  // Room completeness validation logic
-  const isCategoryDone = (catId: string, room: any) => {
-    if (!room || !room.items) return false
-    return room.items.some((it: any) => matchCategory(catId, it.product))
-  }
-
-  const checkRoomCompleteness = (room: any) => {
-    if (!room) return { isComplete: false, missing: [] }
-    if (room.room_type === 'balcony') return { isComplete: true, missing: [] }
-    const categories = getRoomMandatoryCategories(room.room_type)
-    const missing = categories.filter((cat) => !isCategoryDone(cat.id, room))
-    return {
-      isComplete: missing.length === 0,
-      missing: missing.map((m) => m.label)
-    }
-  }
-
-  const getCompletedCategoriesCount = (room: any) => {
-    if (!room || !room.items) return 0
-    const categories = getRoomMandatoryCategories(room.room_type)
-    if (room.room_type === 'balcony') return categories.length
-    return categories.filter((cat) => isCategoryDone(cat.id, room)).length
-  }
-
-  const getSortedRoomsList = () => {
-    if (!project?.rooms) return []
-    const incomplete = project.rooms.filter((r: any) => !checkRoomCompleteness(r).isComplete)
-    const complete = project.rooms.filter((r: any) => checkRoomCompleteness(r).isComplete)
-    return [...incomplete, ...complete]
-  }
-
-  useEffect(() => {
-    if (project?.rooms?.length > 0 && !hasSetInitialRoom) {
-      const incomplete = project.rooms.find((r: any) => !checkRoomCompleteness(r).isComplete)
-      setActiveRoomId(incomplete ? incomplete.id : project.rooms[0].id)
-      setHasSetInitialRoom(true)
-    }
-  }, [project, hasSetInitialRoom])
-
-  const activeRoomCheck = checkRoomCompleteness(activeRoom)
-  const allRoomsComplete = project?.rooms?.every((room: any) => checkRoomCompleteness(room).isComplete)
-  useEffect(() => {
-    if (allRoomsComplete) {
-      setUserEditingCategory(false)
-    }
-  }, [allRoomsComplete])
-  const anyRoomComplete = project?.rooms?.some((room: any) => checkRoomCompleteness(room).isComplete)
-  const anyItemAdded = project?.rooms?.some((room: any) => room.items && room.items.length > 0)
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)' }}>
-        <div className="text-center space-y-4 bg-white/40 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-xl">
-          <div className="w-16 h-16 border-4 border-indigo-600/10 border-t-indigo-600 rounded-full animate-spin mx-auto" />
-          <p className="text-slate-800 text-sm font-extrabold animate-pulse">Initializing selection wizard…</p>
+      <div className="min-h-screen bg-[#F7F8FF] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-[#64748B] font-bold text-sm">Loading workspace customizer...</p>
         </div>
       </div>
     )
   }
 
-  const calculateCurrentCost = () => {
-    if (!project || !project.rooms) return 0
-    let totalItemsCost = 0
-    project.rooms.forEach((room: any) => {
-      (room.items || []).forEach((item: any) => {
-        const price = item.unit_price || item.product?.price || 0
-        const qty = item.qty || 1
-        totalItemsCost += price * qty
-      })
-    })
-    const basePrice = project.package?.base_price || 300000
-    return totalItemsCost > 0 ? totalItemsCost : basePrice
-  }
+  const anyItemAdded = project?.rooms?.some((r: any) => r.items && r.items.length > 0)
+  const allRoomsComplete = checkAllRoomsComplete()
 
   const initialBudget = project?.budget || 300000
   let totalCustomizedCost = 0
@@ -412,14 +444,13 @@ export default function GuidedCustomizePage() {
     })
   })
   const remainingBudget = Math.max(0, initialBudget - totalCustomizedCost)
-  const isOffBudget = totalCustomizedCost > initialBudget
 
   const galleryImages = customizingProduct
     ? (customizingProduct.images || customizingProduct.variants?.images || [])
     : []
 
   return (
-    <div className="min-h-screen text-slate-800 pb-20" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)', backgroundAttachment: 'fixed' }}>
+    <div className="min-h-screen bg-[#F7F8FF] text-[#172554] pb-20">
       <Navbar />
 
       {/* MAIN CONTAINER */}
@@ -429,17 +460,17 @@ export default function GuidedCustomizePage() {
         <div className="flex items-center justify-between w-full">
           <button
             onClick={() => router.push(`/dashboard`)}
-            className="py-2.5 px-5 bg-gradient-to-r from-slate-100 to-white text-slate-800 border border-slate-200 hover:from-slate-200 hover:to-slate-100 text-xs font-bold rounded-xl transition shadow-sm"
+            className="py-2.5 px-5 bg-white text-[#172554] border border-[#E5E7F2] hover:bg-slate-50 text-xs font-bold rounded-xl transition shadow-sm"
           >
             ← Exit to Dashboard
           </button>
           <button
             onClick={() => router.push(`/visualize/${projectId}`)}
             className={clsx(
-              'py-2.5 px-6 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md hover:shadow-lg active:scale-[0.98]',
+              'py-2.5 px-6 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm hover:shadow-md active:scale-[0.98]',
               anyItemAdded
-                ? 'bg-indigo-700 hover:bg-indigo-850 text-white'
-                : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+                ? 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
+                : 'bg-slate-100 text-slate-400 border border-[#E5E7F2] cursor-not-allowed'
             )}
             disabled={!anyItemAdded}
           >
@@ -456,28 +487,28 @@ export default function GuidedCustomizePage() {
           <div className="lg:col-span-4 space-y-4">
             
             {/* Project Details Box */}
-            <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 shadow-xl flex items-center justify-between">
-              <span className="font-extrabold text-white text-sm truncate">
+            <div className="bg-white border border-[#E5E7F2] rounded-2xl p-4 shadow-sm flex items-center justify-between">
+              <span className="font-extrabold text-[#172554] text-sm truncate">
                 {project?.property_name}
               </span>
-              <span className="bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase">
+              <span className="bg-[#F5F3FF] border border-[#6366F1]/30 text-[#4F46E5] text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase">
                 {project?.bhk_type}
               </span>
             </div>
           
           {/* Main Configuration Container */}
-          <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl space-y-5">
+          <div className="bg-white border border-[#E5E7F2] rounded-3xl p-5 shadow-sm space-y-5">
             
             {/* Sidebar Tabs */}
-            <div className="flex gap-2 p-1 bg-slate-950/60 rounded-2xl border border-white/5">
+            <div className="flex gap-2 p-1 bg-[#F7F8FF] rounded-2xl border border-[#E5E7F2]">
               <button
                 type="button"
                 onClick={() => setActiveSidebarTab('customizer')}
                 className={clsx(
                   'flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5',
                   activeSidebarTab === 'customizer'
-                    ? 'bg-indigo-650 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                    ? 'bg-white text-[#4F46E5] border border-[#E5E7F2] shadow-sm'
+                    : 'text-[#64748B] hover:text-[#172554]'
                 )}
               >
                 <Sliders className="w-3.5 h-3.5" />
@@ -489,8 +520,8 @@ export default function GuidedCustomizePage() {
                 className={clsx(
                   'flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5',
                   activeSidebarTab === 'floorplan'
-                    ? 'bg-indigo-650 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                    ? 'bg-white text-[#4F46E5] border border-[#E5E7F2] shadow-sm'
+                    : 'text-[#64748B] hover:text-[#172554]'
                 )}
               >
                 <Layout className="w-3.5 h-3.5" />
@@ -511,8 +542,8 @@ export default function GuidedCustomizePage() {
                       className={clsx(
                         'rounded-2xl border transition-all duration-200 overflow-hidden',
                         isActive
-                          ? 'bg-slate-950/40 border-indigo-500/40 shadow-lg'
-                          : 'bg-slate-950/20 border-white/5 hover:border-white/10'
+                          ? 'bg-[#F5F3FF] border-[#6366F1] shadow-sm'
+                          : 'bg-white border-[#E5E7F2] hover:border-slate-300'
                       )}
                     >
                       {/* Accordion Room Header Button */}
@@ -525,41 +556,41 @@ export default function GuidedCustomizePage() {
                           }
                           setCustomizingProduct(null)
                         }}
-                        className="w-full text-left p-4 flex items-center justify-between transition-colors hover:bg-white/[0.02]"
+                        className="w-full text-left p-4 flex items-center justify-between transition-colors hover:bg-slate-50/50"
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-xl">{getRoomLabelAndIcon(room.room_type, project?.bhk_type).icon}</span>
                           <div>
-                            <span className="font-extrabold text-white text-sm block">
+                            <span className="font-extrabold text-[#172554] text-sm block">
                               {getRoomLabelAndIcon(room.room_type, project?.bhk_type).label}
                             </span>
-                            <span className="text-[10px] text-slate-450 block font-medium mt-0.5">
+                            <span className="text-[10px] text-[#64748B] block font-medium mt-0.5">
                               {room.items?.length || 0} items configured
                             </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           {check.isComplete ? (
-                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-bold">
+                            <span className="text-[10px] bg-emerald-50 text-[#10B981] border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">
                               Complete ✓
                             </span>
                           ) : (
-                            <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full font-bold">
+                            <span className="text-[10px] bg-[#FFF8E7] text-[#F59E0B] border border-[#FDE68A] px-2.5 py-0.5 rounded-full font-bold">
                               {getCompletedCategoriesCount(room)}/{getRoomMandatoryCategories(room.room_type).length} Done
                             </span>
                           )}
                           <ChevronDown
                             className={clsx(
-                              'w-4 h-4 text-slate-500 transition-transform duration-200',
-                              isActive && 'rotate-180 text-white'
+                              'w-4 h-4 text-[#64748B] transition-transform duration-200',
+                              isActive && 'rotate-180 text-[#4F46E5]'
                             )}
                           />
                         </div>
                       </button>
 
-                      {/* Expanded Accordion Body (Checklist under the room) */}
+                      {/* Expanded Accordion Body */}
                       {isActive && (
-                        <div className="border-t border-white/5 p-4 bg-slate-950/60 space-y-2">
+                        <div className="border-t border-[#E5E7F2] p-4 bg-white space-y-2">
                           <div className="space-y-1.5">
                             {getRoomMandatoryCategories(room.room_type).map((cat) => {
                               const savedItemInCat = room.items?.find(
@@ -578,27 +609,27 @@ export default function GuidedCustomizePage() {
                                   className={clsx(
                                     'w-full p-3.5 rounded-xl border transition-all text-left flex items-start justify-between gap-3',
                                     isSelected
-                                      ? 'bg-indigo-650 border-indigo-500 text-white font-extrabold shadow-md'
+                                      ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5] font-extrabold shadow-sm'
                                       : savedItemInCat
-                                        ? 'bg-slate-900/40 border-emerald-500/10 text-slate-300'
-                                        : 'bg-slate-900/60 border-white/5 text-slate-400 hover:text-white hover:border-white/10'
+                                        ? 'bg-white border-emerald-200 text-[#172554]'
+                                        : 'bg-white border-[#E5E7F2] text-[#64748B] hover:text-[#172554] hover:border-slate-300'
                                   )}
                                 >
                                   <div className="flex-1 min-w-0">
                                     <div className="text-xs font-extrabold flex items-center gap-1.5">
                                       <span className="truncate">{cat.label}</span>
-                                      {savedItemInCat && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
+                                      {savedItemInCat && <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0" />}
                                     </div>
-                                    <p className="text-[10px] text-slate-500 font-normal mt-0.5 truncate leading-relaxed">
+                                    <p className="text-[10px] text-[#64748B] font-normal mt-0.5 truncate leading-relaxed">
                                       {cat.desc}
                                     </p>
                                     {savedItemInCat && (
-                                      <div className="text-[10px] text-indigo-300 font-bold mt-1 truncate">
+                                      <div className="text-[10px] text-[#4F46E5] font-bold mt-1 truncate">
                                         Chosen: {savedItemInCat.product?.name}
                                       </div>
                                     )}
                                   </div>
-                                  <ChevronRight className="w-3.5 h-3.5 text-slate-500 mt-1 flex-shrink-0" />
+                                  <ChevronRight className="w-3.5 h-3.5 text-[#64748B] mt-1 flex-shrink-0" />
                                 </button>
                               )
                             })}
@@ -614,32 +645,32 @@ export default function GuidedCustomizePage() {
             {/* TAB CONTENT: FLOOR PLAN */}
             {activeSidebarTab === 'floorplan' && activeRoom && (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-white pb-2 border-b border-white/5">
-                  <Layout className="w-4 h-4 text-indigo-400" />
-                  <h3 className="font-extrabold text-xs tracking-wider uppercase text-slate-350">
+                <div className="flex items-center gap-2 text-[#172554] pb-2 border-b border-[#E5E7F2]">
+                  <Layout className="w-4 h-4 text-[#4F46E5]" />
+                  <h3 className="font-extrabold text-xs tracking-wider uppercase text-[#64748B]">
                     {getRoomLabelAndIcon(activeRoom.room_type, project?.bhk_type).label} Floor Plan
                   </h3>
                 </div>
 
                 {activeRoom.custom_config?.floor_plan_url ? (
-                  <div className="space-y-3 bg-slate-950/40 p-3.5 rounded-2xl border border-white/5">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
+                  <div className="space-y-3 bg-[#F7F8FF] p-3.5 rounded-2xl border border-[#E5E7F2]">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-[#10B981]">
                       <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                       <span>Custom Blueprint Active</span>
                     </div>
 
-                    <div className="aspect-[4/3] rounded-xl overflow-hidden border border-white/10 bg-slate-900 relative">
+                    <div className="aspect-[4/3] rounded-xl overflow-hidden border border-[#E5E7F2] bg-white relative">
                       <img
                         src={activeRoom.custom_config.floor_plan_url}
                         alt="Floor Plan"
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent flex items-end p-2.5">
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent flex items-end p-2.5">
                         <a
                           href={activeRoom.custom_config.floor_plan_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[10px] font-bold text-white bg-slate-900/80 hover:bg-slate-900 px-2 py-1 rounded border border-white/10 truncate max-w-full"
+                          className="text-[10px] font-bold text-white bg-slate-900/80 hover:bg-slate-900 px-2 py-1 rounded border border-white/20 truncate max-w-full"
                         >
                           View Full Size ↗
                         </a>
@@ -647,10 +678,10 @@ export default function GuidedCustomizePage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-5 bg-slate-950/30 rounded-2xl border border-dashed border-white/10 text-center">
-                    <FileText className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-                    <div className="text-xs font-bold text-slate-350">Using Default Rooms Layout</div>
-                    <p className="text-[10px] text-slate-500 mt-1 max-w-[200px] mx-auto leading-normal">
+                  <div className="p-5 bg-[#F7F8FF] rounded-2xl border border-dashed border-[#E5E7F2] text-center">
+                    <FileText className="w-8 h-8 text-[#64748B] mx-auto mb-2" />
+                    <div className="text-xs font-bold text-[#172554]">Using Default Rooms Layout</div>
+                    <p className="text-[10px] text-[#64748B] mt-1 max-w-[200px] mx-auto leading-normal">
                       Vector blueprints will fall back to standard room structures.
                     </p>
                   </div>
@@ -670,14 +701,14 @@ export default function GuidedCustomizePage() {
                     className={clsx(
                       "w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border shadow-sm duration-200",
                       uploadingPlan
-                        ? "bg-slate-850 text-slate-400 border-white/5 cursor-not-allowed"
-                        : "bg-indigo-650 hover:bg-indigo-500 text-white border-indigo-500 hover:shadow-indigo-500/20"
+                        ? "bg-slate-100 text-[#64748B] border-[#E5E7F2] cursor-not-allowed"
+                        : "bg-[#4F46E5] hover:bg-[#4338CA] text-white border-[#4F46E5]"
                     )}
                     disabled={uploadingPlan}
                   >
                     {uploadingPlan ? (
                       <>
-                        <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-white rounded-full animate-spin" />
+                        <div className="w-3.5 h-3.5 border-2 border-[#64748B] border-t-white rounded-full animate-spin" />
                         <span>Uploading...</span>
                       </>
                     ) : (
@@ -696,19 +727,19 @@ export default function GuidedCustomizePage() {
 
 
         {/* RIGHT AREA: PRODUCT DESIGN SELECTION AND CUSTOMIZER (8 cols) */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="lg:col-span-8 space-y-6" id="product-selection-container">
           
           {/* Budget & Variation Tracking Box */}
-          <div className="bg-slate-900 border border-white/5 rounded-3xl p-4 shadow-2xl grid grid-cols-2 gap-4">
-            <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-4 shadow-inner flex flex-col items-center justify-center text-center">
-              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">Remaining Budget</span>
-              <span className="text-lg font-black text-white mt-1.5 block">
+          <div className="bg-white border border-[#E5E7F2] rounded-3xl p-4 shadow-sm grid grid-cols-2 gap-4">
+            <div className="bg-[#F7F8FF] border border-[#E5E7F2] rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+              <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block">Remaining Budget</span>
+              <span className="text-xl font-black text-[#172554] mt-1 block">
                 ₹{remainingBudget.toLocaleString('en-IN')}
               </span>
             </div>
-            <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-4 shadow-inner flex flex-col items-center justify-center text-center">
-              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">Variation (Spent)</span>
-              <span className="text-lg font-black text-white mt-1.5 block">
+            <div className="bg-[#F7F8FF] border border-[#E5E7F2] rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+              <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block">Variation (Spent)</span>
+              <span className="text-xl font-black text-[#4F46E5] mt-1 block">
                 ₹{totalCustomizedCost.toLocaleString('en-IN')}
               </span>
             </div>
@@ -721,22 +752,22 @@ export default function GuidedCustomizePage() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
-                className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl min-h-[400px] flex flex-col justify-between"
+                className="bg-white border border-[#E5E7F2] rounded-3xl p-8 shadow-sm min-h-[400px] flex flex-col justify-between"
               >
                 <div>
-                  <div className="border-b border-white/5 pb-4 mb-6">
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Configuration Complete</span>
-                    <h2 className="text-xl font-extrabold text-white mt-1">Ready for Visualization</h2>
-                    <p className="text-slate-400 text-xs mt-0.5">All categories under all rooms have been successfully customized.</p>
+                  <div className="border-b border-[#E5E7F2] pb-4 mb-6">
+                    <span className="text-[10px] font-bold text-[#10B981] uppercase tracking-widest">Configuration Complete</span>
+                    <h2 className="text-xl font-extrabold text-[#172554] mt-1">Ready for Visualization</h2>
+                    <p className="text-[#64748B] text-xs mt-0.5">All categories under all rooms have been successfully customized.</p>
                   </div>
                   
-                  <div className="bg-slate-950/40 p-6 rounded-2xl border border-white/5 space-y-4 text-center my-6">
-                    <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
+                  <div className="bg-[#F7F8FF] p-6 rounded-2xl border border-[#E5E7F2] space-y-4 text-center my-6">
+                    <div className="w-12 h-12 bg-emerald-50 text-[#10B981] border border-emerald-200 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
                       ✓
                     </div>
                     <div>
-                      <p className="text-slate-200 text-sm font-extrabold">All design selections chosen!</p>
-                      <p className="text-slate-400 text-xs mt-1">
+                      <p className="text-[#172554] text-sm font-extrabold">All design selections chosen!</p>
+                      <p className="text-[#64748B] text-xs mt-1">
                         Please proceed to the AI Render Studio to generate photorealistic 4-wall visual designs of your configured home.
                       </p>
                     </div>
@@ -746,7 +777,7 @@ export default function GuidedCustomizePage() {
                 <div className="flex items-center justify-end">
                   <button
                     onClick={() => router.push(`/visualize/${projectId}`)}
-                    className="py-3 px-8 bg-indigo-700 hover:bg-indigo-850 text-white text-sm font-bold rounded-xl transition shadow-md flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                    className="py-3 px-8 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-bold rounded-xl transition shadow-sm flex items-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
                   >
                     <Sparkles className="w-4 h-4 text-amber-300" />
                     <span>Proceed to AI Render</span>
@@ -755,42 +786,40 @@ export default function GuidedCustomizePage() {
                 </div>
               </motion.div>
             ) : !customizingProduct ? (
-              // STEP A: CHOOSE DESIGN
+              // CHOOSE DESIGN
               <motion.div
                 key="catalog"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
-                className="bg-slate-900 border border-white/5 rounded-3xl p-6 shadow-2xl min-h-[400px] flex flex-col justify-between"
+                className="bg-white border border-[#E5E7F2] rounded-3xl p-6 shadow-sm min-h-[400px] flex flex-col justify-between"
               >
                 <div>
-                  <div className="border-b border-white/5 pb-4 mb-5">
-                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Step 3</span>
-                    <h2 className="text-xl font-extrabold text-white mt-1">Choose Design Category Product</h2>
-                    <p className="text-slate-400 text-xs mt-0.5">Select a base design layout for your active room category.</p>
+                  <div className="border-b border-[#E5E7F2] pb-4 mb-5">
+                    <h2 className="text-xl font-extrabold text-[#172554]">Choose Design Category Product</h2>
+                    <p className="text-[#64748B] text-xs mt-0.5">Select a base design layout for your active room category.</p>
                   </div>
 
                   {!exactColorMatchFound && !loadingProducts && products.length > 0 && (
-                    <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-2 text-[11px] font-medium text-amber-200">
-                      <Sparkles className="w-4 h-4 flex-shrink-0 text-amber-350 animate-pulse" />
-                      <span>The selected color is currently unavailable for this product category. Showing the closest available shades instead.</span>
+                    <div className="mb-4 p-3 bg-[#FFF8E7] border border-[#FDE68A] rounded-2xl flex items-center gap-2 text-[11px] font-semibold text-[#F59E0B]">
+                      <Sparkles className="w-4 h-4 flex-shrink-0 text-[#F59E0B]" />
+                      <span>The selected color is currently unavailable for this product category. Showing closest available shades instead.</span>
                     </div>
                   )}
 
                   {loadingProducts ? (
-
                     <div className="grid md:grid-cols-2 gap-4 py-8">
                       {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-28 rounded-2xl bg-slate-950/50 border border-white/5 animate-pulse" />
+                        <div key={i} className="h-28 rounded-2xl bg-slate-50 border border-[#E5E7F2] animate-pulse" />
                       ))}
                     </div>
-                  ) : products.length === 0 ? (
-                    <div className="text-center py-20 text-slate-500 text-xs">
+                  ) : (Array.isArray(products) ? products : []).length === 0 ? (
+                    <div className="text-center py-20 text-[#64748B] text-xs">
                       No products catalogued for this room style category yet.
                     </div>
                   ) : (
                     <div className="grid md:grid-cols-2 gap-4">
-                      {products.map((p) => {
+                      {(Array.isArray(products) ? products : []).map((p) => {
                         const isChosen = activeRoomItems.some((it: any) => it.product_id === p.id)
                         return (
                           <div
@@ -799,8 +828,8 @@ export default function GuidedCustomizePage() {
                             className={clsx(
                               'p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3 group',
                               isChosen
-                                ? 'bg-indigo-950/20 border-indigo-500/40 shadow-inner'
-                                : 'bg-slate-950/50 border-white/5 hover:border-white/10'
+                                ? 'bg-[#F5F3FF] border-[#6366F1] shadow-sm'
+                                : 'bg-white border-[#E5E7F2] hover:border-[#6366F1] hover:shadow-sm'
                             )}
                           >
                             <div className="flex items-center justify-between gap-4 w-full">
@@ -808,47 +837,51 @@ export default function GuidedCustomizePage() {
                                 <img
                                   src={p.thumbnail_url}
                                   alt={p.name}
-                                  className="w-14 h-14 object-cover rounded-xl flex-shrink-0"
+                                  className="w-14 h-14 object-cover rounded-xl flex-shrink-0 border border-[#E5E7F2]"
                                 />
                                 <div className="min-w-0">
-                                  <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors truncate">
+                                  <h4 className="text-xs font-extrabold text-[#172554] group-hover:text-[#4F46E5] transition-colors truncate">
                                     {p.name}
                                   </h4>
-                                  <div className="text-xs font-bold text-indigo-400 mt-0.5">
+                                  <div className="text-xs font-extrabold text-[#4F46E5] mt-0.5">
                                     ₹{p.price.toLocaleString('en-IN')}
                                   </div>
-                                  {/* Availability tier badge */}
                                   <span className={clsx(
                                     'inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full',
                                     p.availability_tier === 'local'
-                                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                                      ? 'bg-emerald-50 text-[#10B981] border border-emerald-200'
                                       : p.availability_tier === 'nearby'
-                                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
-                                      : 'bg-slate-700/50 text-slate-400 border border-white/5'
+                                      ? 'bg-[#FFF8E7] text-[#F59E0B] border border-[#FDE68A]'
+                                      : 'bg-slate-100 text-[#64748B] border border-[#E5E7F2]'
                                   )}>
                                     {p.availability_tier === 'local' ? '📍 Your Area' : p.availability_tier === 'nearby' ? '🏙️ Nearby' : '🌐 National'}
                                   </span>
                                 </div>
                               </div>
-                              <button className="py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-md shrink-0">
-                                {isChosen ? 'Configure' : 'Choose'}
+                              <button className={clsx(
+                                'py-2 px-4 text-xs font-bold rounded-xl transition shrink-0',
+                                isChosen
+                                  ? 'bg-[#10B981] text-white'
+                                  : 'bg-white border border-[#4F46E5] text-[#4F46E5] hover:bg-[#4F46E5] hover:text-white'
+                              )}>
+                                {isChosen ? 'Configured ✓' : 'Choose'}
                               </button>
                             </div>
 
                             {/* Match feedback warning banners */}
                             <div className="space-y-1 w-full text-[9px] font-semibold">
                               {p.is_price_match === false && (
-                                <div className="text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-1 rounded-lg">
+                                <div className="text-rose-600 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg">
                                   ⚠️ The component is not within your price range.
                                 </div>
                               )}
                               {(p.is_material_match === false || p.is_fabric_match === false) && (
-                                <div className="text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg">
+                                <div className="text-[#F59E0B] bg-[#FFF8E7] border border-[#FDE68A] px-2 py-1 rounded-lg">
                                   💡 Within your material/fabric preference, the component is not available.
                                 </div>
                               )}
                               {p.is_color_match === false && (
-                                <div className="text-indigo-300 bg-indigo-550/10 border border-indigo-550/20 px-2 py-1 rounded-lg">
+                                <div className="text-[#3B82F6] bg-[#EFF6FF] border border-[#BFDBFE] px-2 py-1 rounded-lg">
                                   🎨 Within your color preference, the component is not available.
                                 </div>
                               )}
@@ -860,116 +893,114 @@ export default function GuidedCustomizePage() {
                   )}
                 </div>
 
-                <div className="text-slate-500 text-[10px] mt-6 flex items-center gap-1.5 bg-slate-950/30 p-3.5 rounded-2xl">
-                  <Info className="w-4 h-4 text-slate-600" />
+                <div className="text-[#64748B] text-[10px] mt-6 flex items-center gap-1.5 bg-[#F7F8FF] p-3.5 rounded-2xl border border-[#E5E7F2]">
+                  <Info className="w-4 h-4 text-[#3B82F6]" />
                   <span>Choose any design structure to expose variant and custom styling options.</span>
                 </div>
               </motion.div>
             ) : (
-              // STEP B: CUSTOMIZE ATTRIBUTES
+              // STEP 4: CUSTOMIZE ATTRIBUTES
               <motion.div
                 key="customizer"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
-                className="bg-slate-900 border border-white/5 rounded-3xl p-6 shadow-2xl"
+                className="bg-white border border-[#E5E7F2] rounded-3xl p-6 shadow-sm"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-5">
+                <div className="flex items-center justify-between border-b border-[#E5E7F2] pb-4 mb-5">
                   <div>
-                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Step 4</span>
-                    <h2 className="text-xl font-extrabold text-white mt-1">Customize Product</h2>
-                    <p className="text-slate-400 text-xs mt-0.5">Customize variant attributes for {customizingProduct.name}</p>
+                    <span className="text-[10px] font-bold text-[#4F46E5] uppercase tracking-widest">Step 4</span>
+                    <h2 className="text-xl font-extrabold text-[#172554] mt-1">Customize Product</h2>
+                    <p className="text-[#64748B] text-xs mt-0.5">Customize variant attributes for {customizingProduct.name}</p>
                   </div>
                   <button
                     onClick={() => setCustomizingProduct(null)}
-                    className="py-1 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg transition"
+                    className="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-[#172554] text-xs font-bold rounded-lg transition"
                   >
                     Go Back
                   </button>
                 </div>
 
                 <div className="grid md:grid-cols-12 gap-6">
-                  {/* Left Column: Product Info Card with Image Gallery Slider */}
-                  <div className="md:col-span-5 bg-slate-950/40 border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
+                  {/* Left Column: Product Info Card */}
+                  <div className="md:col-span-5 bg-[#F7F8FF] border border-[#E5E7F2] p-4 rounded-2xl flex flex-col justify-between">
                     <div>
-                            {/* Image Viewer with Navigation Arrows */}
-                            <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3 group bg-slate-900 border border-white/5 flex items-center justify-center">
-                              {galleryImages[activeImageIdx] ? (
+                      <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3 group bg-white border border-[#E5E7F2] flex items-center justify-center">
+                        {galleryImages[activeImageIdx] ? (
+                          <img
+                            src={galleryImages[activeImageIdx].startsWith('/') ? `http://localhost:8000${galleryImages[activeImageIdx]}` : galleryImages[activeImageIdx]}
+                            alt={customizingProduct.name}
+                            className="w-full h-full object-cover transition-all duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-50 select-none">
+                            <ImageIcon className="w-8 h-8 text-[#64748B] mb-2" />
+                            <h5 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Optional View Not Uploaded</h5>
+                            <p className="text-[9px] text-[#64748B] mt-1 max-w-xs leading-relaxed">
+                              The vendor has provided primary perspective for this component.
+                            </p>
+                          </div>
+                        )}
+                        
+                        <button
+                          type="button"
+                          onClick={() => setActiveImageIdx((prev) => (prev === 0 ? 2 : prev - 1))}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-[#172554] flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm border border-[#E5E7F2]"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveImageIdx((prev) => (prev === 2 ? 0 : prev + 1))}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-[#172554] flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm border border-[#E5E7F2]"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Thumbnails */}
+                      <div className="grid grid-cols-3 gap-2.5 mb-4">
+                        {[0, 1, 2].map((idx) => {
+                          const imgUrl = galleryImages[idx]
+                          const isActive = activeImageIdx === idx
+                          const label = idx === 0 ? "Front" : idx === 1 ? "Side" : "Top"
+                          
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setActiveImageIdx(idx)}
+                              className={clsx(
+                                "relative h-12 rounded-lg overflow-hidden border transition flex flex-col items-center justify-center text-center p-1",
+                                isActive ? "border-[#6366F1] bg-[#F5F3FF] shadow-sm" : "border-[#E5E7F2] bg-white hover:bg-slate-50"
+                              )}
+                            >
+                              {imgUrl ? (
                                 <img
-                                  src={galleryImages[activeImageIdx].startsWith('/') ? `http://localhost:8000${galleryImages[activeImageIdx]}` : galleryImages[activeImageIdx]}
-                                  alt={customizingProduct.name}
-                                  className="w-full h-full object-cover transition-all duration-300"
+                                  src={imgUrl.startsWith('/') ? `http://localhost:8000${imgUrl}` : imgUrl}
+                                  alt={`Thumb ${idx}`}
+                                  className="w-full h-full object-cover rounded"
                                 />
                               ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-900/90 select-none">
-                                  <ImageIcon className="w-8 h-8 text-slate-600 mb-2 animate-pulse" />
-                                  <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Optional View Not Uploaded</h5>
-                                  <p className="text-[9px] text-slate-500 mt-1 max-w-xs leading-relaxed">
-                                    The vendor has only provided the primary view for this component.
-                                  </p>
+                                <div className="flex flex-col items-center justify-center">
+                                  <ImageIcon className="w-3.5 h-3.5 text-[#64748B] mb-0.5" />
+                                  <span className="text-[7px] text-[#64748B] font-bold uppercase tracking-wider">{label} N/A</span>
                                 </div>
                               )}
-                              
-                              {/* Navigation Arrows */}
-                              <button
-                                type="button"
-                                onClick={() => setActiveImageIdx((prev) => (prev === 0 ? 2 : prev - 1))}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-900/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md border border-white/10"
-                              >
-                                <ChevronLeft className="w-4 h-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setActiveImageIdx((prev) => (prev === 2 ? 0 : prev + 1))}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-900/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md border border-white/10"
-                              >
-                                <ChevronRight className="w-4 h-4" />
-                              </button>
-                            </div>
+                            </button>
+                          )
+                        })}
+                      </div>
 
-                            {/* Thumbnail Indicators (Amazon/Flipkart style) */}
-                            <div className="grid grid-cols-3 gap-2.5 mb-4">
-                              {[0, 1, 2].map((idx) => {
-                                const imgUrl = galleryImages[idx]
-                                const isActive = activeImageIdx === idx
-                                const label = idx === 0 ? "Front" : idx === 1 ? "Side" : "Top"
-                                
-                                return (
-                                  <button
-                                    key={idx}
-                                    type="button"
-                                    onClick={() => setActiveImageIdx(idx)}
-                                    className={clsx(
-                                      "relative h-12 rounded-lg overflow-hidden border transition flex flex-col items-center justify-center text-center p-1",
-                                      isActive ? "border-indigo-500 bg-indigo-500/10 shadow-sm" : "border-white/5 bg-slate-900/40 hover:bg-slate-900/80 hover:border-slate-700"
-                                    )}
-                                  >
-                                    {imgUrl ? (
-                                      <img
-                                        src={imgUrl.startsWith('/') ? `http://localhost:8000${imgUrl}` : imgUrl}
-                                        alt={`Thumb ${idx}`}
-                                        className="w-full h-full object-cover rounded"
-                                      />
-                                    ) : (
-                                      <div className="flex flex-col items-center justify-center">
-                                        <ImageIcon className="w-3.5 h-3.5 text-slate-650 mb-0.5" />
-                                        <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider">{label} N/A</span>
-                                      </div>
-                                    )}
-                                  </button>
-                                )
-                              })}
-                            </div>
-
-                            <h4 className="text-sm font-extrabold text-white">{customizingProduct.name}</h4>
-                      <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                      <h4 className="text-sm font-extrabold text-[#172554]">{customizingProduct.name}</h4>
+                      <p className="text-[10px] text-[#64748B] mt-1 leading-relaxed">
                         Design variant elements will overlay inside the visual rendering engine.
                       </p>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
-                      <span className="text-slate-400 text-xs font-semibold">Base Price:</span>
-                      <span className="text-base font-extrabold text-indigo-400">
+                    <div className="mt-4 pt-3 border-t border-[#E5E7F2] flex items-center justify-between">
+                      <span className="text-[#64748B] text-xs font-semibold">Base Price:</span>
+                      <span className="text-base font-extrabold text-[#4F46E5]">
                         ₹{customizingProduct.price.toLocaleString('en-IN')}
                       </span>
                     </div>
@@ -977,64 +1008,54 @@ export default function GuidedCustomizePage() {
 
                   {/* Right Column: Custom Attribute Selectors */}
                   <div className="md:col-span-7 space-y-5">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Sliders className="w-4 h-4 text-indigo-400" />
+                    <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Sliders className="w-4 h-4 text-[#4F46E5]" />
                       <span>Available Variants</span>
                     </h3>
 
                     {/* Color Options */}
-                    {customizingProduct.variants?.color && (() => {
-                      const matchResult = getBestColorMatch(customizingProduct.variants.color, project?.color_preferences || []);
-                      return (
-                        <div className="space-y-2">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase block">Color</span>
-                            {project?.color_preferences?.length > 0 && (
-                              <span className="text-[9px] text-slate-400">
-                                🎨 Selected Palette: <strong className="text-indigo-400">{project.color_preferences.join(', ')}</strong>
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-1.5">
-                            {customizingProduct.variants.color.map((val: string) => {
-                              const isSelected = customColor === val;
-                              const isBestMatch = matchResult.color === val;
-                              return (
-                                <button
-                                  key={val}
-                                  type="button"
-                                  onClick={() => setCustomColor(val)}
-                                  className={clsx(
-                                    'px-3 py-1.5 rounded-xl text-xs transition border font-semibold flex items-center gap-1',
-                                    isSelected
-                                      ? 'bg-indigo-600 border-indigo-500 text-white'
-                                      : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white'
-                                  )}
-                                >
-                                  {isBestMatch && <span>⭐</span>}
-                                  {val}
-                                  {isBestMatch && <span className="text-[9px] opacity-75 font-normal ml-0.5">(Best Match)</span>}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          
-                          {/* Banner for exact match unavailable */}
-                          {project?.color_preferences?.length > 0 && !matchResult.isExact && (
-                            <div className="bg-amber-950/30 border border-amber-900/30 rounded-xl p-2.5 text-[10px] text-amber-400 leading-normal flex items-start gap-1.5">
-                              <span className="text-amber-500 font-bold">⚠️ Note:</span>
-                              <span>Your preferred color isn't available for this product. We've selected the closest matching variant.</span>
-                            </div>
+                    {customizingProduct.variants?.color && (
+                      <div className="space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <span className="text-[10px] font-bold text-[#64748B] uppercase block">Color</span>
+                          {project?.color_preferences?.length > 0 && (
+                            <span className="text-[9px] text-[#64748B]">
+                              🎨 Selected Palette: <strong className="text-[#4F46E5]">{project.color_preferences.join(', ')}</strong>
+                            </span>
                           )}
                         </div>
-                      );
-                    })()}
+                        
+                        <div className="flex flex-wrap gap-1.5">
+                          {customizingProduct.variants.color.map((val: string) => {
+                            const matchResult = getBestColorMatch(customizingProduct.variants.color, project?.color_preferences || []);
+                            const isSelected = customColor === val;
+                            const isBestMatch = matchResult.color === val;
+                            return (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => setCustomColor(val)}
+                                className={clsx(
+                                  'px-3 py-1.5 rounded-xl text-xs transition border font-semibold flex items-center gap-1',
+                                  isSelected
+                                    ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
+                                    : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
+                                )}
+                              >
+                                {isBestMatch && <span>⭐</span>}
+                                {val}
+                                {isBestMatch && <span className="text-[9px] opacity-75 font-normal ml-0.5">(Best Match)</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Fabric Options */}
                     {customizingProduct.variants?.fabric && (
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Fabric Choice</label>
+                        <label className="text-[10px] font-bold text-[#64748B] uppercase block mb-1">Fabric Choice</label>
                         <div className="flex flex-wrap gap-1.5">
                           {customizingProduct.variants.fabric.map((val: string) => (
                             <button
@@ -1043,8 +1064,8 @@ export default function GuidedCustomizePage() {
                               className={clsx(
                                 'px-3 py-1.5 rounded-xl text-xs transition border font-semibold',
                                 customFabric === val
-                                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                                  : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white'
+                                  ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
+                                  : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
                               )}
                             >
                               {val}
@@ -1057,7 +1078,7 @@ export default function GuidedCustomizePage() {
                     {/* Wood Finish Options */}
                     {customizingProduct.variants?.wood_finish && (
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Wood Finish</label>
+                        <label className="text-[10px] font-bold text-[#64748B] uppercase block mb-1">Wood Finish</label>
                         <div className="flex flex-wrap gap-1.5">
                           {customizingProduct.variants.wood_finish.map((val: string) => (
                             <button
@@ -1066,8 +1087,8 @@ export default function GuidedCustomizePage() {
                               className={clsx(
                                 'px-3 py-1.5 rounded-xl text-xs transition border font-semibold',
                                 customWoodFinish === val
-                                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                                  : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white'
+                                  ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
+                                  : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
                               )}
                             >
                               {val}
@@ -1080,7 +1101,7 @@ export default function GuidedCustomizePage() {
                     {/* Size Options */}
                     {customizingProduct.variants?.size && (
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Size Option</label>
+                        <label className="text-[10px] font-bold text-[#64748B] uppercase block mb-1">Size Option</label>
                         <div className="flex flex-wrap gap-1.5">
                           {customizingProduct.variants.size.map((val: string) => (
                             <button
@@ -1089,54 +1110,8 @@ export default function GuidedCustomizePage() {
                               className={clsx(
                                 'px-3 py-1.5 rounded-xl text-xs transition border font-semibold',
                                 customSize === val
-                                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                                  : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white'
-                              )}
-                            >
-                              {val}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Texture Options */}
-                    {customizingProduct.variants?.texture && (
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Texture</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {customizingProduct.variants.texture.map((val: string) => (
-                            <button
-                              key={val}
-                              onClick={() => setCustomTexture(val)}
-                              className={clsx(
-                                'px-3 py-1.5 rounded-xl text-xs transition border font-semibold',
-                                customTexture === val
-                                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                                  : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white'
-                              )}
-                            >
-                              {val}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Cushion Style Options */}
-                    {customizingProduct.variants?.cushion_style && (
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Cushion Style</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {customizingProduct.variants.cushion_style.map((val: string) => (
-                            <button
-                              key={val}
-                              onClick={() => setCustomCushionStyle(val)}
-                              className={clsx(
-                                'px-3 py-1.5 rounded-xl text-xs transition border font-semibold',
-                                customCushionStyle === val
-                                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                                  : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white'
+                                  ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
+                                  : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
                               )}
                             >
                               {val}
@@ -1149,7 +1124,7 @@ export default function GuidedCustomizePage() {
                     <button
                       onClick={handleSaveSelection}
                       disabled={savingItem}
-                      className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 mt-6 transition shadow-lg"
+                      className="w-full py-3 bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold rounded-xl flex items-center justify-center gap-1.5 mt-6 transition shadow-sm"
                     >
                       {savingItem ? (
                         <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -1164,71 +1139,56 @@ export default function GuidedCustomizePage() {
                 </div>
 
                 {/* About this Product */}
-                <div className="border-t border-white/5 pt-5 mt-6 space-y-4">
-                  <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">About this Product</h3>
+                <div className="border-t border-[#E5E7F2] pt-5 mt-6 space-y-4">
+                  <h3 className="text-sm font-extrabold text-[#172554] uppercase tracking-wider">About this Product</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-xs">
                     
                     {/* Left Column */}
                     <div className="space-y-1">
-                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
-                        <span className="col-span-1 text-slate-400 font-semibold">Material</span>
-                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.primary_material || customizingProduct.primaryMaterial || 'Solid Wood'}</span>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                        <span className="col-span-1 text-[#64748B] font-semibold">Material</span>
+                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.primary_material || customizingProduct.primaryMaterial || 'Solid Wood'}</span>
                       </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
-                        <span className="col-span-1 text-slate-400 font-semibold">Dimensions</span>
-                        <span className="col-span-2 text-white font-bold pl-2">
+                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                        <span className="col-span-1 text-[#64748B] font-semibold">Dimensions</span>
+                        <span className="col-span-2 text-[#172554] font-bold pl-2">
                           {customizingProduct.width || 1200}w × {customizingProduct.height || 750}h × {customizingProduct.depth || 600}d mm
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
-                        <span className="col-span-1 text-slate-400 font-semibold">Weight</span>
-                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.weight || 15} kg</span>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                        <span className="col-span-1 text-[#64748B] font-semibold">Weight</span>
+                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.weight || 15} kg</span>
                       </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
-                        <span className="col-span-1 text-slate-400 font-semibold">Capacity</span>
-                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.weight_capacity || customizingProduct.weightCapacity || 120} kg</span>
-                      </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
-                        <span className="col-span-1 text-slate-400 font-semibold">Suitable Room</span>
-                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.suitable_room || customizingProduct.suitableRoom || 'Living Room'}</span>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                        <span className="col-span-1 text-[#64748B] font-semibold">Capacity</span>
+                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.weight_capacity || customizingProduct.weightCapacity || 120} kg</span>
                       </div>
                     </div>
 
                     {/* Right Column */}
                     <div className="space-y-1">
-                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
-                        <span className="col-span-1 text-slate-400 font-semibold">Style</span>
-                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.style || 'Modern'}</span>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                        <span className="col-span-1 text-[#64748B] font-semibold">Style</span>
+                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.style || 'Modern'}</span>
                       </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
-                        <span className="col-span-1 text-slate-400 font-semibold">Finish</span>
-                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.finish || 'Matte'}</span>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                        <span className="col-span-1 text-[#64748B] font-semibold">Finish</span>
+                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.finish || 'Matte'}</span>
                       </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
-                        <span className="col-span-1 text-slate-400 font-semibold">Mounting</span>
-                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.mounting_type || customizingProduct.mountingType || 'Floor Standing'}</span>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                        <span className="col-span-1 text-[#64748B] font-semibold">Mounting</span>
+                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.mounting_type || customizingProduct.mountingType || 'Floor Standing'}</span>
                       </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
-                        <span className="col-span-1 text-slate-400 font-semibold">Assembly</span>
-                        <span className="col-span-2 text-white font-bold pl-2">{customizingProduct.assembly_required || customizingProduct.assemblyRequired || 'No'}</span>
-                      </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-white/5">
-                        <span className="col-span-1 text-slate-400 font-semibold">Colors</span>
-                        <span className="col-span-2 text-white font-bold pl-2">{(customizingProduct.color_variants || customizingProduct.colorVariants || []).join(', ') || 'N/A'}</span>
+                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                        <span className="col-span-1 text-[#64748B] font-semibold">Assembly</span>
+                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.assembly_required || customizingProduct.assemblyRequired || 'No'}</span>
                       </div>
                     </div>
 
                   </div>
-                  {customizingProduct.description && (
-                    <div className="text-xs text-slate-400 mt-2 bg-slate-950/40 p-3 rounded-xl border border-white/5">
-                      <div className="font-bold text-white mb-1">Description / Notes</div>
-                      {customizingProduct.description}
-                    </div>
-                  )}
                 </div>
 
               </motion.div>
-
             )}
           </AnimatePresence>
 

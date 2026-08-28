@@ -496,9 +496,16 @@ export default function EnterpriseProjectPage() {
                       />
                       <button
                         onClick={handleAssignCustomer}
-                        className="w-full py-2 bg-indigo-650 hover:bg-indigo-700 text-white font-bold rounded-lg transition text-xs shadow-sm"
+                        disabled={!assignName.trim() || !assignEmail.trim()}
+                        className={clsx(
+                          "w-full py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5",
+                          (assignName.trim() && assignEmail.trim())
+                            ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 shadow-md cursor-pointer hover:scale-[1.01]"
+                            : "bg-slate-200 text-slate-500 border border-slate-300 cursor-not-allowed"
+                        )}
                       >
-                        Assign Buyer
+                        <User className="w-3.5 h-3.5" />
+                        <span>{(assignName.trim() && assignEmail.trim()) ? "Assign Buyer" : "Fill Name & Email to Assign"}</span>
                       </button>
                     </div>
                   </div>

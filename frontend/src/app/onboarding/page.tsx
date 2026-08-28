@@ -16,25 +16,25 @@ import { getColorHex, getColorFamily } from '@/lib/colorUtils'
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 const STYLE_OPTIONS = [
-  { id: 'modern',              label: 'Modern',              emoji: '🔲', desc: 'Clean lines, neutral tones', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Warm Beige.png` },
-  { id: 'scandinavian',        label: 'Scandinavian',        emoji: '🪵', desc: 'Light wood, cozy textures', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Emerald Green.png` },
-  { id: 'indian_contemporary', label: 'Indian Contemporary', emoji: '🪔', desc: 'Warm tones, brass accents', img: `${BACKEND_URL}/static/pdfs/catalog/Master Bed Set Blush Pink.png` },
-  { id: 'luxury',              label: 'Luxury',              emoji: '💎', desc: 'Marble, velvet, bespoke', img: `${BACKEND_URL}/static/pdfs/catalog/Master Bed Set Royal Navy Blue.png` },
-  { id: 'mediterranean',       label: 'Mediterranean',       emoji: '🌊', desc: 'Arches, terracotta, sea palette', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Royal Navy Blue.png` },
-  { id: 'boho',                label: 'Boho',                emoji: '🪴', desc: 'Rattan, macramé, warm amber', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Blush Pink.png` },
+  { id: 'modern',              label: 'Modern',              emoji: '🔲', desc: 'Clean lines, neutral tones', img: `${BACKEND_URL}/static/assets/catalog/design_vibe/Modern.png` },
+  { id: 'scandinavian',        label: 'Scandinavian',        emoji: '🪵', desc: 'Light wood, cozy textures', img: `${BACKEND_URL}/static/assets/catalog/design_vibe/Scandinavian.png` },
+  { id: 'indian_contemporary', label: 'Indian Contemporary', emoji: '🪔', desc: 'Warm tones, brass accents', img: `${BACKEND_URL}/static/assets/catalog/design_vibe/Indian Contemporary.png` },
+  { id: 'luxury',              label: 'Luxury',              emoji: '💎', desc: 'Marble, velvet, bespoke', img: `${BACKEND_URL}/static/assets/catalog/design_vibe/Luxury.png` },
+  { id: 'mediterranean',       label: 'Mediterranean',       emoji: '🌊', desc: 'Arches, terracotta, sea palette', img: `${BACKEND_URL}/static/assets/catalog/design_vibe/Mediterranean.png` },
+  { id: 'boho',                label: 'Boho',                emoji: '🪴', desc: 'Rattan, macramé, warm amber', img: `${BACKEND_URL}/static/assets/catalog/design_vibe/Boho.png` },
 ]
 
 const MATERIAL_IMAGES: Record<string, string> = {
-  'Oak Laminate': `${BACKEND_URL}/static/pdfs/catalog/wardrobes-warm_beige-oak-laminated-front_view.png`,
-  'Teak Laminate': `${BACKEND_URL}/static/pdfs/catalog/wardrobes-golden_brown-teak-laminated-front_view.png`,
-  'Walnut Laminate': `${BACKEND_URL}/static/pdfs/catalog/wardrobes-dark_brown-walnut-laminated-front_view.png`,
+  'Oak Laminate': `${BACKEND_URL}/static/assets/catalog/wardrobes-warm_beige-oak-laminated-front_view.png`,
+  'Teak Laminate': `${BACKEND_URL}/static/assets/catalog/wardrobes-golden_brown-teak-laminated-front_view.png`,
+  'Walnut Laminate': `${BACKEND_URL}/static/assets/catalog/wardrobes-dark_brown-walnut-laminated-front_view.png`,
 }
 
 const FABRIC_OPTIONS = [
-  { id: 'Linen', name: 'Linen', emoji: '🧵', desc: 'Breathable, natural, crisp texture.', img: `${BACKEND_URL}/static/pdfs/catalog/Accent Chair Warm Beige.png` },
-  { id: 'Velvet', name: 'Velvet', emoji: '✨', desc: 'Plush, soft, rich plush texture.', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Blush Pink.png` },
-  { id: 'Woven Fabric', name: 'Woven Fabric', emoji: '🪡', desc: 'Versatile woven upholstery fabric.', img: `${BACKEND_URL}/static/pdfs/catalog/Area Rug Blush Pink.png` },
-  { id: 'Leatherette', name: 'Leatherette', emoji: '🛋️', desc: 'Sleek, spill-resistant leather finish.', img: `${BACKEND_URL}/static/pdfs/catalog/Sofa Set Charcoal Grey.png` },
+  { id: 'Linen', name: 'Linen', emoji: '🧵', desc: 'Breathable, natural, crisp texture.', img: `${BACKEND_URL}/static/assets/catalog/fabric_preference/Linen.png` },
+  { id: 'Velvet', name: 'Velvet', emoji: '✨', desc: 'Plush, soft, rich plush texture.', img: `${BACKEND_URL}/static/assets/catalog/fabric_preference/Velvet.png` },
+  { id: 'Woven Fabric', name: 'Woven Fabric', emoji: '🪡', desc: 'Versatile woven upholstery fabric.', img: `${BACKEND_URL}/static/assets/catalog/fabric_preference/Woven Fabric.png` },
+  { id: 'Leatherette', name: 'Leatherette', emoji: '🛋️', desc: 'Sleek, spill-resistant leather finish.', img: `${BACKEND_URL}/static/assets/catalog/fabric_preference/Leatherette.png` },
 ]
 
 const BUDGET_RANGES = [
@@ -546,7 +546,7 @@ export default function OnboardingPage() {
                       'Teak Laminate': 'Classic golden-brown look with rich textures.',
                       'Walnut Laminate': 'Deep, dark, and sophisticated premium finish.'
                     }
-                    const imageUrl = MATERIAL_IMAGES[m] || `${BACKEND_URL}/static/pdfs/catalog/wardrobes-warm_beige-oak-laminated-front_view.png`
+                    const imageUrl = MATERIAL_IMAGES[m] || `${BACKEND_URL}/static/assets/catalog/wardrobes-warm_beige-oak-laminated-front_view.png`
                     const isSelected = local.interior_material_preference === m
                     return (
                       <button

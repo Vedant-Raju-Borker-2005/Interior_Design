@@ -47,7 +47,7 @@ graph TD
 
     subgraph StorageEngine ["Persistence & File Storage Layer"]
         DB[(SQLite DB: interior_ai.db)]
-        PDF_STATIC[/static/pdfs/ Catalog, Quotes, Proofs/]
+        PDF_STATIC[/static/assets/ Catalog, Quotes, Proofs/]
     end
 
     ClientLayer --> StateStore
@@ -132,7 +132,7 @@ graph TD
     AssignBuyer --> GenInvite[Generate Unique Invitation Token]
     GenInvite --> SendInvite[Send Invitation Link to Homebuyer]
     
-    SendInvite --> BuyerAccept[/invite?token=xyz Token Redemption]
+    SendInvite --> BuyerAccept["Redeem Token at /invite?token=xyz"]
     BuyerAccept --> ChildProject[Auto-Create Linked Child Customer Project]
     ChildProject --> OnboardingComplete[Homebuyer Handoff to B2C Customizer]
 ```

@@ -229,6 +229,13 @@ def add_room_item(
     )
     db.add(item)
     db.commit()
+
+    try:
+        from ..db import sync_project_vendor_assignments
+        sync_project_vendor_assignments(project_id, db)
+    except Exception as e:
+        print("Vendor assignment sync error:", e)
+
     return {"message": "item added", "item_id": item.id}
 
 
@@ -241,6 +248,11 @@ def remove_room_item(
     item = db.query(RoomItem).filter(RoomItem.id == item_id, RoomItem.room_id == room_id).first()
     if not item:
         raise HTTPException(404, "Item not found")
+    
+    # Delete associated VendorAssignment
+    from ..models import VendorAssignment
+    db.query(VendorAssignment).filter(VendorAssignment.item_id == item.id).delete(synchronize_session=False)
+
     db.delete(item)
     db.commit()
     return {"message": "item removed"}
@@ -291,7 +303,7 @@ async def upload_floor_plan(
     db: Session = Depends(get_db),
 ):
     project = _get_project_or_404(project_id, user.id, db)
-    upload_dir = os.path.join("pdfs", "floor_plans")
+    upload_dir = os.path.join("assets", "floor_plans")
     os.makedirs(upload_dir, exist_ok=True)
     ext = os.path.splitext(file.filename or "plan.jpg")[1] or ".jpg"
     
@@ -301,7 +313,7 @@ async def upload_floor_plan(
     filepath = os.path.join(upload_dir, filename)
     with open(filepath, "wb") as f:
         shutil.copyfileobj(file.file, f)
-    url = f"{BACKEND_URL}/static/pdfs/floor_plans/{filename}"
+    url = f"{BACKEND_URL}/static/assets/floor_plans/{filename}"
     
     if room_id:
         room = db.query(Room).filter(Room.id == room_id, Room.project_id == project_id).first()

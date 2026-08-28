@@ -287,7 +287,7 @@ export default function VendorDashboardPage() {
               <p className="text-[10px] text-slate-400 mt-0.5">Accept or decline custom fabrication items.</p>
             </div>
             <Link 
-              href="/vendor/assignments" 
+              href="/vendor/orders" 
               className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-0.5"
             >
               <span>View All</span>
@@ -332,7 +332,7 @@ export default function VendorDashboardPage() {
                         </button>
                       ) : (
                         <Link
-                          href="/vendor/assignments"
+                          href="/vendor/orders"
                           className="inline-block px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold transition"
                         >
                           Details

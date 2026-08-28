@@ -25,8 +25,8 @@ CORS_ORIGINS = [
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    os.makedirs("pdfs", exist_ok=True)
-    os.makedirs("pdfs/floor_plans", exist_ok=True)
+    os.makedirs("assets", exist_ok=True)
+    os.makedirs("assets/floor_plans", exist_ok=True)
     init_db()
     db = SessionLocal()
     try:
@@ -53,9 +53,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files (for serving generated PDFs and floor plans)
-os.makedirs("pdfs", exist_ok=True)
-app.mount("/static/pdfs", StaticFiles(directory="pdfs"), name="pdfs")
+# Static files (for serving catalog assets, floor plans, proof images, and generated PDFs)
+os.makedirs("assets", exist_ok=True)
+app.mount("/static/assets", StaticFiles(directory="assets"), name="assets")
+app.mount("/static/pdfs", StaticFiles(directory="assets"), name="assets_legacy")
 
 # Routers
 app.include_router(auth.router,             prefix="/api/v1/auth",            tags=["Auth"])

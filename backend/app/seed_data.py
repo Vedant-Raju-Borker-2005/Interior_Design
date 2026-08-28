@@ -6,7 +6,7 @@ import uuid
 from sqlalchemy.orm import Session
 from .models import Package, Product, Vendor, VendorProduct, ProductVariant, Inventory, InteriorMaterial
 
-BASE_CATALOG_URL = "http://localhost:8000/static/pdfs/catalog"
+BASE_CATALOG_URL = "http://localhost:8000/static/assets/catalog"
 
 PACKAGE_THUMBNAILS = {
     ("1BHK", "basic"):    f"{BASE_CATALOG_URL}/Sofa%20Set%20Warm%20Beige.png",
@@ -181,9 +181,9 @@ MAPPING = {
 
 
 def load_catalog_products():
-    catalog_dir = 'backend/pdfs/catalog'
+    catalog_dir = 'backend/assets/catalog'
     if not os.path.exists(catalog_dir):
-        catalog_dir = 'pdfs/catalog'
+        catalog_dir = 'assets/catalog'
 
     if not os.path.exists(catalog_dir):
         return []

@@ -50,13 +50,13 @@ desktop.ini
 
 # Backend generated PDFs and uploads
 backend/pdfs/*.pdf
-backend/pdfs/floor_plans/*.pdf
-backend/pdfs/floor_plans/*.png
-backend/pdfs/floor_plans/*.jpg
-backend/pdfs/floor_plans/*.jpeg
-backend/pdfs/documents/
-backend/pdfs/proofs/
-backend/pdfs/renders/
+backend/assets/floor_plans/*.pdf
+backend/assets/floor_plans/*.png
+backend/assets/floor_plans/*.jpg
+backend/assets/floor_plans/*.jpeg
+backend/assets/documents/
+backend/assets/proofs/
+backend/assets/renders/
 backend/pdfs/product_images/
 
 # Temporary diagnostic scripts & logs
