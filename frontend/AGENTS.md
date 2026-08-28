@@ -90,7 +90,7 @@ The frontend is a single-page application built with Next.js 14 (App Router), Re
 * **Single-Select Design Vibe**: Choosing a new style card in onboarding replaces the active choice (`toggleStyle`).
 * **Onboarding Draft Tracking**: Auto-saves B2C draft project at Step 1 and updates preferences on every `handleNext`. Submitting Step 6 updates the existing draft (`projectsAPI.update`) to prevent duplicate project errors.
 * **Enterprise Locked Onboarding**: Enterprise Child Projects (`isB2B2C`) lock Steps 0–2. Back button and step loading enforce a minimum step of Step 3 (Design Vibe).
-* **Preference Legend & Indicator Dots**: Product catalog section header displays a Preference Legend Card. Product cards display colored dots for mismatches (🟡 Material/Fabric, 🔵 Color, 🔴 Budget Cap).
+* **Vendor Portal Order Tracking**: Vendor dashboard (`/vendor/dashboard`) loads assignments for approved vendor accounts. If a newly logged-in vendor user arrives, status is set to `APPROVED` and `sync_project_vendor_assignments` links orders.
 * **Balcony Auto-Complete**: `checkRoomCompleteness` treats `room_type === 'balcony'` as complete automatically.
 * **Auto Tab Progression**: Saving selection for the last category of a room automatically shifts tabs to the next room.
 * **Dual Budget Sub-Boxes**: Budget tracker bar renders two centered inner boxes (*Remaining Budget* and *Variation Spent*).

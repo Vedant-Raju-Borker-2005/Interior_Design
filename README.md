@@ -23,7 +23,7 @@ InteriorAI is an end-to-end web application that simplifies the interior design 
 
 ### 3. Vendor (B2B) Portal
 * **Vendor Onboarding & Document Verification**: Submit business details, GST/PAN numbers, and upload verification certificates for admin approval.
-* **Multi-View Catalog Management**: Manage catalog products and upload up to 3 perspective images (Front, Side, Perspective) mapped to thumbnail slots.
+* **Vendor Management**: Vendor registration, document verification, multi-view catalog image uploads (Front/Side/Perspective), dynamic pincode order distribution, and milestone-based payout tracking.
 * **Order Fulfillment & Logistics Tracking**: Accept/reject item assignments, update 6-stage milestone progress (PO Approved $\rightarrow$ Production $\rightarrow$ Ready $\rightarrow$ Dispatched), upload verification proof photos, and enter courier/vehicle tracking details.
 * **Issues Tracking & Milestone Payouts**: Review customer-reported product issues (`/vendor/issues`) and track milestone-based payout releases.
 

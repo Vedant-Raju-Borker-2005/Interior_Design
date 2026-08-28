@@ -303,46 +303,59 @@ def sync_project_vendor_assignments(project_id: str, db: Session):
     from .models import Room, RoomItem, VendorAssignment, Product, Vendor
     import uuid
 
+    # Fetch all active/approved vendors
+    active_vendors = db.query(Vendor).filter(
+        (Vendor.status == "APPROVED") | (Vendor.active == True)
+    ).all()
+    
+    if not active_vendors:
+        return
+
     rooms = db.query(Room).filter(Room.project_id == project_id).all()
     for room in rooms:
         items = db.query(RoomItem).filter(RoomItem.room_id == room.id).all()
         for item in items:
             product = db.query(Product).filter(Product.id == item.product_id).first()
-            vendor = None
-            if product and product.vendor_id:
-                vendor = db.query(Vendor).filter(Vendor.id == product.vendor_id).first()
-            if not vendor:
-                vendor = db.query(Vendor).filter(Vendor.status == "APPROVED").first()
-            if not vendor:
+            if not product:
                 continue
 
-            # Verify if VendorAssignment already exists for this RoomItem
-            va = db.query(VendorAssignment).filter(
-                VendorAssignment.project_id == project_id,
-                VendorAssignment.vendor_id == vendor.id,
-                VendorAssignment.item_id == item.id
-            ).first()
+            target_vendors = []
+            if product.vendor_id:
+                v = db.query(Vendor).filter(Vendor.id == product.vendor_id).first()
+                if v:
+                    target_vendors.append(v)
+            
+            if not target_vendors:
+                target_vendors = active_vendors
 
-            if not va:
-                milestones = {
-                    "po_approved": "paid" if item.unit_price and item.unit_price > 0 else "pending",
-                    "design_approved": "pending",
-                    "manufacturing_started": "pending",
-                    "material_delivered": "pending",
-                    "installation_complete": "pending"
-                }
-                va = VendorAssignment(
-                    id=str(uuid.uuid4()),
-                    project_id=project_id,
-                    vendor_id=vendor.id,
-                    item_id=item.id,
-                    status="RECEIVED_ORDER",
-                    remarks=f"Fulfillment started for {product.name}",
-                    milestones_status=milestones,
-                    shipment_status="Pending"
-                )
-                db.add(va)
-                db.commit()
+            for vendor in target_vendors:
+                # Verify if VendorAssignment already exists for this RoomItem and Vendor
+                va = db.query(VendorAssignment).filter(
+                    VendorAssignment.project_id == project_id,
+                    VendorAssignment.vendor_id == vendor.id,
+                    VendorAssignment.item_id == item.id
+                ).first()
+
+                if not va:
+                    milestones = {
+                        "po_approved": "paid" if item.unit_price and item.unit_price > 0 else "pending",
+                        "design_approved": "pending",
+                        "manufacturing_started": "pending",
+                        "material_delivered": "pending",
+                        "installation_complete": "pending"
+                    }
+                    va = VendorAssignment(
+                        id=str(uuid.uuid4()),
+                        project_id=project_id,
+                        vendor_id=vendor.id,
+                        item_id=item.id,
+                        status="RECEIVED_ORDER",
+                        remarks=f"Fulfillment started for {product.name}",
+                        milestones_status=milestones,
+                        shipment_status="Pending"
+                    )
+                    db.add(va)
+    db.commit()
 
 
 def get_db():

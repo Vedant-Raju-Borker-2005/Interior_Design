@@ -47,24 +47,17 @@ export default function QuotationPage() {
           activeQuote = quoteRes.value.data
         }
         
-        // Auto-regenerate in these cases:
-        // 1. Status is rejected/under_revision (re-customized, need fresh quote)
-        // 2. Status is 'generated' but line_items is empty/missing (stale quote from before products were selected)
+        // Auto-regenerate ONLY when customer returns after requesting revision / rejecting
         const needsRegeneration = activeQuote && (
           activeQuote.status === 'rejected' ||
-          activeQuote.status === 'under_revision' ||
-          (activeQuote.status === 'generated' && (!activeQuote.line_items || activeQuote.line_items.length === 0))
+          activeQuote.status === 'under_revision'
         )
 
         if (needsRegeneration) {
           try {
             const genRes = await quotationsAPI.generate(projectId)
             activeQuote = genRes.data
-            if (activeQuote.status !== 'rejected' && activeQuote.status !== 'under_revision') {
-              toast.success('Quotation ready with your latest selections! 📋')
-            } else {
-              toast.success('Regenerated quote based on your new selections! 📋')
-            }
+            toast.success('Quotation updated with your revised selections! 📋')
           } catch (e) {
             console.error("Failed to auto-regenerate quote:", e)
           }
