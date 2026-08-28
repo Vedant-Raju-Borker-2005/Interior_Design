@@ -112,6 +112,10 @@ graph TD
 
 ### 4. Customizer & Navigation Rules
 * **Single-Select Design Vibe**: Selecting a new style card in onboarding replaces the previous selection.
+* **Onboarding Draft Auto-Save & Step Tracking**: B2C onboarding creates a draft project at Step 1 and updates preferences on every step transition (`projectsAPI.update`). Clicking *Continue Onboarding* on `/dashboard` resumes at the exact incomplete step without creating duplicate projects.
+* **Enterprise Locked Onboarding Steps**: For Enterprise Child Projects (`parent_project_id != null`), Steps 0–2 (Property Details, BHK, Budget, Timeline) are strictly locked. Homebuyers resume directly at Step 3 (Design Vibe).
+* **Preference Legend & Indicator Dots UI**: Customizer section header features a Preference Legend Card. Product cards display compact indicator dots for preference mismatches: 🟡 Material/Fabric, 🔵 Color, and 🔴 Budget Cap limit.
+* **Quotation Approval Vendor Syncing**: Approving a quotation (`status == "approved"`) triggers `sync_project_vendor_assignments(project.id, db)`, querying live `room_items` from SQLite and creating `VendorAssignment` records for all customized items.
 * **Balcony Auto-Complete**: `checkRoomCompleteness` automatically returns `true` for balcony rooms.
 * **Auto Tab Progression**: Completing product selection for the last category in a room automatically switches to the next room tab.
 * **Configuration Complete Panel**: When all rooms are complete, the product selection area swaps to a green-accented prompt to proceed to AI Render.

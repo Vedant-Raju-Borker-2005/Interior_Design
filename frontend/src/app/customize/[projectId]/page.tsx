@@ -795,9 +795,27 @@ export default function GuidedCustomizePage() {
                 className="bg-white border border-[#E5E7F2] rounded-3xl p-6 shadow-sm min-h-[400px] flex flex-col justify-between"
               >
                 <div>
-                  <div className="border-b border-[#E5E7F2] pb-4 mb-5">
-                    <h2 className="text-xl font-extrabold text-[#172554]">Choose Design Category Product</h2>
-                    <p className="text-[#64748B] text-xs mt-0.5">Select a base design layout for your active room category.</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E5E7F2] pb-4 mb-5 gap-3">
+                    <div>
+                      <h2 className="text-xl font-extrabold text-[#172554]">Choose Design Category Product</h2>
+                      <p className="text-[#64748B] text-xs mt-0.5">Select a base design layout for your active room category.</p>
+                    </div>
+
+                    {/* Preference Legend Card */}
+                    <div className="bg-[#F7F8FF] border border-[#E5E7F2] rounded-2xl px-3.5 py-2 flex flex-wrap items-center gap-3.5 text-[10px] font-bold text-slate-700 self-start sm:self-auto shadow-2xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block shadow-sm shrink-0" />
+                        <span>Not within Material & Fabric Preference</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block shadow-sm shrink-0" />
+                        <span>Not within Color Preference</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-sm shrink-0" />
+                        <span>Exceeds Budget Cap</span>
+                      </div>
+                    </div>
                   </div>
 
                   {!exactColorMatchFound && !loadingProducts && products.length > 0 && (
@@ -821,12 +839,16 @@ export default function GuidedCustomizePage() {
                     <div className="grid md:grid-cols-2 gap-4">
                       {(Array.isArray(products) ? products : []).map((p) => {
                         const isChosen = activeRoomItems.some((it: any) => it.product_id === p.id)
+                        const hasMaterialMismatch = p.is_material_match === false || p.is_fabric_match === false
+                        const hasColorMismatch = p.is_color_match === false
+                        const hasPriceMismatch = p.is_price_match === false
+
                         return (
                           <div
                             key={p.id}
                             onClick={() => handleSelectProduct(p)}
                             className={clsx(
-                              'p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3 group',
+                              'p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 group',
                               isChosen
                                 ? 'bg-[#F5F3FF] border-[#6366F1] shadow-sm'
                                 : 'bg-white border-[#E5E7F2] hover:border-[#6366F1] hover:shadow-sm'
@@ -868,24 +890,20 @@ export default function GuidedCustomizePage() {
                               </button>
                             </div>
 
-                            {/* Match feedback warning banners */}
-                            <div className="space-y-1 w-full text-[9px] font-semibold">
-                              {p.is_price_match === false && (
-                                <div className="text-rose-600 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg">
-                                  ⚠️ The component is not within your price range.
-                                </div>
-                              )}
-                              {(p.is_material_match === false || p.is_fabric_match === false) && (
-                                <div className="text-[#F59E0B] bg-[#FFF8E7] border border-[#FDE68A] px-2 py-1 rounded-lg">
-                                  💡 Within your material/fabric preference, the component is not available.
-                                </div>
-                              )}
-                              {p.is_color_match === false && (
-                                <div className="text-[#3B82F6] bg-[#EFF6FF] border border-[#BFDBFE] px-2 py-1 rounded-lg">
-                                  🎨 Within your color preference, the component is not available.
-                                </div>
-                              )}
-                            </div>
+                            {/* Pure Indicator Dots */}
+                            {(hasMaterialMismatch || hasColorMismatch || hasPriceMismatch) && (
+                              <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                                {hasMaterialMismatch && (
+                                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block shadow-sm" title="Not within material/fabric preference" />
+                                )}
+                                {hasColorMismatch && (
+                                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block shadow-sm" title="Not within color preference" />
+                                )}
+                                {hasPriceMismatch && (
+                                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-sm" title="Exceeds budget cap" />
+                                )}
+                              </div>
+                            )}
                           </div>
                         )
                       })}

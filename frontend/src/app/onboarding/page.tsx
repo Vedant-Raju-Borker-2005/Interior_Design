@@ -118,11 +118,13 @@ export default function OnboardingPage() {
     pincode:             '',
   })
 
-  // Parse inviteToken from URL (client-side only)
+  // Parse inviteToken or projectId from URL (client-side only)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       const token = params.get('inviteToken')
+      const pid = params.get('projectId')
+
       if (token) {
         setInviteToken(token)
         setIsB2B2C(true)
@@ -150,6 +152,50 @@ export default function OnboardingPage() {
             toast.error("Invalid or expired invitation token.")
             router.push('/login')
           })
+      } else if (pid) {
+        projectsAPI.get(pid).then((res) => {
+          const p = res.data
+          setChildProjectId(p.id)
+          const isEnt = !!p.parent_project_id || !!p.flat_id
+          setIsB2B2C(isEnt)
+
+          let budgetId = '1000000'
+          if (p.budget) {
+            const foundRange = BUDGET_RANGES.find(b => p.budget >= b.min && p.budget <= b.max)
+            if (foundRange) budgetId = foundRange.id
+          }
+
+          setLocal(s => ({
+            ...s,
+            bhk: p.bhk_type || s.bhk,
+            property_name: p.property_name || s.property_name,
+            city: p.city || s.city,
+            budget: budgetId,
+            timeline: p.timeline || s.timeline,
+            material_preference: p.material_preference || s.material_preference,
+            interior_material_preference: p.interior_material_preference || s.interior_material_preference,
+            fabric_preference: p.fabric_preference || s.fabric_preference,
+            color_preferences: p.color_preferences || s.color_preferences,
+            style_tags: p.style_tags || s.style_tags
+          }))
+
+          if (isEnt) {
+            if (!p.style_tags || p.style_tags.length === 0) setStep(3)
+            else if (!p.interior_material_preference) setStep(4)
+            else if (!p.color_preferences || p.color_preferences.length === 0) setStep(5)
+            else router.push(`/packages?projectId=${p.id}&bhk=${p.bhk_type || '2BHK'}&budget=${p.budget || 1000000}`)
+          } else {
+            if (!p.property_name) setStep(0)
+            else if (!p.bhk_type) setStep(1)
+            else if (!p.budget) setStep(2)
+            else if (!p.style_tags || p.style_tags.length === 0) setStep(3)
+            else if (!p.interior_material_preference) setStep(4)
+            else if (!p.color_preferences || p.color_preferences.length === 0) setStep(5)
+            else router.push(`/packages?projectId=${p.id}&bhk=${p.bhk_type || '2BHK'}&budget=${p.budget || 1000000}`)
+          }
+        }).catch(err => {
+          console.error("Failed to load project for onboarding resume:", err)
+        })
       }
     }
   }, [router])
@@ -226,13 +272,52 @@ export default function OnboardingPage() {
     return false
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 0) {
       if (local.pincode && (local.pincode.length !== 6 || !/^\d+$/.test(local.pincode))) {
         toast.error("Pincode must be a 6-digit number.")
         return
       }
     }
+
+    // Direct B2C: Auto-create draft project at Step 1 if not created yet
+    if (!isB2B2C && step === 1 && !childProjectId) {
+      try {
+        const budgetObj = BUDGET_RANGES.find((b) => b.id === local.budget)
+        const res = await projectsAPI.create({
+          bhk_type: local.bhk,
+          property_name: local.property_name,
+          city: local.city,
+          budget: budgetObj?.max || 1000000,
+          furnishing_type: local.furnishing_type,
+          pincode: local.pincode || undefined,
+          status: 'onboarding'
+        })
+        setChildProjectId(res.data.project_id)
+      } catch (err) {
+        console.error("Failed to auto-create draft project at Step 1:", err)
+      }
+    } else if (childProjectId && !isB2B2C) {
+      // Auto-update project fields on step advance
+      try {
+        const budgetObj = BUDGET_RANGES.find((b) => b.id === local.budget)
+        await projectsAPI.update(childProjectId, {
+          bhk_type: local.bhk,
+          property_name: local.property_name,
+          city: local.city,
+          budget: budgetObj?.max,
+          material_preference: local.material_preference,
+          interior_material_preference: local.interior_material_preference,
+          fabric_preference: local.fabric_preference,
+          furnishing_type: local.furnishing_type,
+          style_tags: local.style_tags,
+          color_preferences: local.color_preferences
+        })
+      } catch (err) {
+        console.error("Failed to update draft project step:", err)
+      }
+    }
+
     setStep((s) => s + 1)
   }
 
@@ -264,8 +349,36 @@ export default function OnboardingPage() {
         toast.success('Preferences saved successfully! 🎉')
         // B2B2C Customer skips floor plan selector and goes straight to catalog
         router.push(`/packages?projectId=${childProjectId}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
+      } else if (childProjectId) {
+        // B2C existing draft project update
+        await projectsAPI.update(childProjectId, {
+          bhk_type: local.bhk,
+          property_name: local.property_name,
+          city: local.city,
+          budget: budgetObj?.max || 1000000,
+          material_preference: local.material_preference,
+          interior_material_preference: local.interior_material_preference,
+          fabric_preference: local.fabric_preference,
+          furnishing_type: local.furnishing_type,
+          pincode: local.pincode || undefined,
+          style_tags: local.style_tags,
+          color_preferences: local.color_preferences,
+        })
+
+        setOnboarding({
+          bhk: local.bhk,
+          style_tags: local.style_tags,
+          interior_material_preference: local.interior_material_preference,
+          color_preferences: local.color_preferences,
+          budget: budgetObj?.max,
+          city: local.city,
+        })
+
+        toast.success("Welcome details saved! Let's choose your pricing package. 📦")
+        // B2C Customer goes straight to packages selection page
+        router.push(`/packages?projectId=${childProjectId}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
       } else {
-        // Standard B2C onboarding creation
+        // Standard B2C onboarding creation fallback
         const res = await projectsAPI.create({
           bhk_type: local.bhk,
           property_name: local.property_name,
@@ -273,6 +386,8 @@ export default function OnboardingPage() {
           budget: budgetObj?.max || 1000000,
           material_preference: local.material_preference,
           interior_material_preference: local.interior_material_preference,
+          fabric_preference: local.fabric_preference,
+          style_tags: local.style_tags,
           furnishing_type: local.furnishing_type,
           pincode: local.pincode || undefined,
           floor_plan_type: 'select',
@@ -908,8 +1023,8 @@ export default function OnboardingPage() {
         {/* Navigation */}
         <div className="flex justify-between mt-10">
           <button 
-            onClick={() => setStep((s) => Math.max(0, s - 1))} 
-            disabled={step === 0 || (isB2B2C && step === 2)}
+            onClick={() => setStep((s) => Math.max(isB2B2C ? 3 : 0, s - 1))} 
+            disabled={(isB2B2C && step <= 3) || step === 0}
             className="btn-ghost flex items-center gap-2 disabled:opacity-30"
           >
             <ArrowLeft className="w-4 h-4" /> Back
