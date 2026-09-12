@@ -58,6 +58,17 @@ os.makedirs("assets", exist_ok=True)
 app.mount("/static/assets", StaticFiles(directory="assets"), name="assets")
 app.mount("/static/pdfs", StaticFiles(directory="assets"), name="assets_legacy")
 
+# Mount Backend-AI interactive studio & rendered assets
+from pathlib import Path
+BACKEND_AI_DIR = Path(__file__).resolve().parents[2] / "backend-ai"
+ai_fe = BACKEND_AI_DIR / "frontend"
+if ai_fe.exists():
+    app.mount("/static/ai-viewer", StaticFiles(directory=str(ai_fe)), name="ai_viewer")
+ai_out = BACKEND_AI_DIR / "out"
+if ai_out.exists():
+    app.mount("/static/ai-out", StaticFiles(directory=str(ai_out)), name="ai_out")
+
+
 # Routers
 app.include_router(auth.router,             prefix="/api/v1/auth",            tags=["Auth"])
 app.include_router(projects.router,         prefix="/api/v1/projects",        tags=["Projects"])

@@ -199,6 +199,11 @@ export default function ControlledVisualizePage() {
   const [generating, setGenerating] = useState(false)
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null)
 
+  // IDS Backend-AI state
+  const [activeStudioTab, setActiveStudioTab] = useState<'4wall' | '3dscene'>('4wall')
+  const [idsResult, setIdsResult] = useState<any>(null)
+  const [solvingIds, setSolvingIds] = useState(false)
+
   // Swap / variant customization drawer
   const [swappingItem, setSwappingItem] = useState<any>(null)
   const [activeSwapImageIdx, setActiveSwapImageIdx] = useState(0)
@@ -288,7 +293,7 @@ export default function ControlledVisualizePage() {
     } catch {}
   }
 
-  const handleCalculateClearance = () => {
+  const handleCalculateClearance = async () => {
     const l = parseFloat(roomLength) || 12
     const w = parseFloat(roomWidth) || 10
     const h = parseFloat(roomHeight) || 9
@@ -302,6 +307,23 @@ export default function ControlledVisualizePage() {
     })
     setClearanceCalculated(true)
     toast.success('Clearance metrics calculated successfully!')
+
+    // Run IDS spatial solver for room
+    try {
+      setSolvingIds(true)
+      const bhkText = project?.bhk ? (project.bhk.includes('BHK') ? project.bhk : `${project.bhk} BHK`) : '2 BHK'
+      const styleName = selectedStyle === 'scandinavian' ? 'Scandinavian' : (selectedStyle === 'indian_contemporary' ? 'Indian Contemporary' : 'Modern')
+      const res = await aiAPI.design({
+        bhk: bhkText,
+        style: styleName,
+        solve: true,
+      })
+      setIdsResult(res.data)
+    } catch (err) {
+      console.warn('IDS solver background query:', err)
+    } finally {
+      setSolvingIds(false)
+    }
   }
 
   const handleWallUpload = (wallKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -324,6 +346,15 @@ export default function ControlledVisualizePage() {
     setGenerating(true)
     setCurrentRender(null)
     setRenderedWallImages(null)
+
+    // Trigger IDS backend-ai solver in parallel
+    const bhkText = project?.bhk ? (project.bhk.includes('BHK') ? project.bhk : `${project.bhk} BHK`) : '2 BHK'
+    const styleName = selectedStyle === 'scandinavian' ? 'Scandinavian' : (selectedStyle === 'indian_contemporary' ? 'Indian Contemporary' : 'Modern')
+    aiAPI.design({
+      bhk: bhkText,
+      style: styleName,
+      solve: true,
+    }).then(r => setIdsResult(r.data)).catch(() => {})
 
     try {
       const baseViewsList = BASE_VIEWS[activeRoom.room_type] || []
@@ -645,6 +676,30 @@ export default function ControlledVisualizePage() {
                         </div>
                       </div>
                     )}
+
+                    {idsResult && (
+                      <div className="bg-indigo-950/40 p-3 rounded-2xl border border-indigo-500/20 space-y-1.5 text-[9px]">
+                        <div className="flex justify-between items-center font-bold text-slate-300">
+                          <span className="flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-indigo-400" />
+                            <span>IDS Spatial Solver:</span>
+                          </span>
+                          <span className={idsResult.feasible ? "text-emerald-400" : "text-amber-400"}>
+                            {idsResult.feasible ? "Feasible (0 Violations)" : "Adjustments Needed"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between font-bold text-slate-300">
+                          <span>Predicted Package Cost:</span>
+                          <span className="text-indigo-300">₹{Number(idsResult.price).toLocaleString('en-IN')}</span>
+                        </div>
+                        {idsResult.recommendations && idsResult.recommendations.length > 0 && (
+                          <div className="text-[8px] text-slate-400 pt-1 border-t border-white/5">
+                            <span className="font-bold text-indigo-400">Associative Add-ons: </span>
+                            {idsResult.recommendations.slice(0, 3).map((r: any) => r.category || r).join(', ')}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -701,25 +756,82 @@ export default function ControlledVisualizePage() {
 
           </div>
 
-          {/* RIGHT COLUMN: 4-WALL VIEWPORT + FINALIZATION + PRODUCT ITEMS LIST (7 cols) */}
+          {/* RIGHT COLUMN: 4-WALL VIEWPORT + PHOTOREAL 3D SCENE + FINALIZATION (7 cols) */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* 4-Wall Render Studio Viewport */}
-            <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl space-y-4 text-slate-100 min-h-[500px] flex flex-col justify-between">
-              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            {/* 4-Wall Render Studio Viewport & 3D Spatial Scene */}
+            <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl space-y-4 text-slate-100 min-h-[520px] flex flex-col justify-between">
+              <div className="flex flex-wrap items-center justify-between border-b border-white/5 pb-3 gap-2">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-indigo-400" />
-                  <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-350">
-                    4-Wall Perspective Studio
-                  </h3>
+                  <div className="flex bg-slate-950/60 p-1 rounded-xl border border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveStudioTab('4wall')}
+                      className={clsx(
+                        'px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5',
+                        activeStudioTab === '4wall'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      )}
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      <span>4-Wall Studio</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveStudioTab('3dscene')}
+                      className={clsx(
+                        'px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5',
+                        activeStudioTab === '3dscene'
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      )}
+                    >
+                      <Layout className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Photoreal 3D Scene (IDS)</span>
+                    </button>
+                  </div>
                 </div>
-                <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 px-2.5 py-0.5 rounded-full font-bold uppercase">
-                  {renderedWallImages ? '✨ Rendered Space' : '📋 Blueprints View'}
-                </span>
+
+                <div className="flex items-center gap-2">
+                  {activeStudioTab === '3dscene' && (
+                    <a
+                      href={aiAPI.getInteractiveViewerUrl(projectId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] bg-white/10 hover:bg-white/20 border border-white/10 text-slate-200 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition"
+                    >
+                      <span>Open Fullscreen</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </a>
+                  )}
+                  <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                    {activeStudioTab === '3dscene' ? '🌐 WebGL Photoreal' : (renderedWallImages ? '✨ Rendered Space' : '📋 Blueprints View')}
+                  </span>
+                </div>
               </div>
 
               <div className="relative flex-1 flex items-center justify-center">
-                {generating ? (
+                {activeStudioTab === '3dscene' ? (
+                  <div className="w-full flex flex-col gap-3">
+                    <div className="relative w-full h-[520px] rounded-2xl overflow-hidden border border-white/10 bg-slate-950 shadow-inner">
+                      <iframe
+                        src={aiAPI.getInteractiveViewerUrl(projectId)}
+                        className="w-full h-full border-0"
+                        title="Photoreal 3D Scene Viewer"
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-slate-400">
+                      <span>Interactive 3D Engine • Three.js PBR texturing • Synchronized 2D architectural plan</span>
+                      {idsResult && (
+                        <span className="text-emerald-400 font-semibold">
+                          Spatial solver: {idsResult.feasible ? '100% Collision-free' : 'Soft constraint layout'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : generating ? (
                   <div className="flex flex-col items-center justify-center text-center p-6 my-auto">
                     <div className="w-16 h-16 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin mb-4" />
                     <h4 className="text-white font-bold text-sm">Controlled 4-Wall Rendering in Progress</h4>
@@ -761,9 +873,9 @@ export default function ControlledVisualizePage() {
                 )}
               </div>
 
-              {!generating && !renderedWallImages && (
+              {activeStudioTab === '4wall' && !generating && !renderedWallImages && (
                 <div className="text-[10px] text-center text-slate-500 mt-4 leading-normal">
-                  Configure your room variant preferences on the left and click <strong>Generate Controlled Render</strong> to render all 4 walls.
+                  Configure your room variant preferences on the left and click <strong>Generate Controlled Render</strong> to render all 4 walls, or switch to <strong>Photoreal 3D Scene</strong> to explore interactive 3D layout.
                 </div>
               )}
             </div>
