@@ -183,6 +183,36 @@ export const aiAPI = {
   renderPdf: (projectId: string) =>
     `${API_BASE_URL}/api/v1/ai/render-pdf/${projectId}`,
 
+  // IDS Backend-AI Integration
+  design: (data: {
+    city?: string
+    bhk?: string
+    scope?: string
+    budget?: string
+    quality?: string
+    timeline?: string
+    style?: string
+    wood?: string
+    fabric?: string
+    colors?: string[]
+    solve?: boolean
+  }) =>
+    axiosInstance.post('/api/v1/ai/design', data),
+
+  designOptions: () =>
+    axiosInstance.get('/api/v1/ai/design/options'),
+
+  health: () =>
+    axiosInstance.get('/api/v1/ai/health'),
+
+  getInteractiveViewerUrl: (projectId?: string) =>
+    projectId
+      ? `${API_BASE_URL}/api/v1/ai/interactive-viewer/${projectId}`
+      : `${API_BASE_URL}/api/v1/ai/interactive-viewer`,
+
+  getAiStudioUrl: () =>
+    `${API_BASE_URL}/static/ai-viewer/index.html`,
+
   // Legacy mappings
   renderProject: (projectId: string, data: { style: string }) =>
     axiosInstance.post(`/api/v1/ai/render/${projectId}`, data),

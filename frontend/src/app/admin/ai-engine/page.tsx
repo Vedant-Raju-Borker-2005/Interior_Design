@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { adminAPI } from '@/lib/api';
+import { adminAPI, aiAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Bot, Sparkles, Cpu, Zap, Brain, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 export default function AdminAIEnginePage() {
   const [stats, setStats] = useState<any>(null);
+  const [aiHealth, setAiHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     adminAPI.stats().then(r => { setStats(r.data); setLoading(false); }).catch(() => setLoading(false));
+    aiAPI.health().then(r => setAiHealth(r.data)).catch(() => {});
   }, []);
 
   const AI_MODULES = [
@@ -24,7 +26,7 @@ export default function AdminAIEnginePage() {
       status: 'active',
       metrics: [
         { label: 'Total Products Indexed', value: loading ? '...' : (stats?.total_projects || 0) * 3 },
-        { label: 'Recommendation Calls', value: 'Live' },
+        { label: 'Model Pipeline', value: aiHealth?.status === 'healthy' ? 'FP-Growth & GBR' : 'Live' },
       ]
     },
     {
@@ -36,8 +38,8 @@ export default function AdminAIEnginePage() {
       accent: 'text-purple-400',
       status: 'active',
       metrics: [
-        { label: 'Active Projects', value: loading ? '...' : stats?.active_projects || 0 },
-        { label: 'Layout Generations', value: 'On-demand' },
+        { label: 'Spatial Solver', value: aiHealth?.status === 'healthy' ? 'IDS CP-SAT / Sweep' : 'On-demand' },
+        { label: 'Layout Generations', value: 'Live' },
       ]
     },
     {

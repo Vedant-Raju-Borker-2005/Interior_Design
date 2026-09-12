@@ -218,3 +218,79 @@ def get_render_pdf(project_id: str, db: Session = Depends(get_db)):
         media_type="application/pdf",
         filename=os.path.basename(pdf_path)
     )
+
+
+# =====================================================================
+# Integrated Backend-AI (IDS) Endpoints
+# =====================================================================
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, Field
+from ..services.ids_service import (
+    run_ids_design,
+    get_ids_options,
+    get_ids_health,
+    get_viewer_html,
+)
+
+
+class IdsDesignReq(BaseModel):
+    city: str = Field(default="Mumbai")
+    bhk: str = Field(default="2 BHK")
+    scope: str = Field(default="Full Home")
+    budget: str = Field(default="₹8L–₹12L")
+    quality: str = Field(default="Standard")
+    timeline: str = Field(default="45 Days")
+    style: str = Field(default="Modern")
+    wood: str = Field(default="Teak Laminate")
+    fabric: str = Field(default="Woven Fabric")
+    colors: list[str] = Field(default_factory=lambda: ["Off White", "Charcoal Grey", "Burnt Orange"])
+    solve: bool = Field(default=True)
+
+
+@router.get("/health", summary="Get AI engine and IDS model health")
+def get_ai_health():
+    return get_ids_health()
+
+
+@router.post("/design", summary="Run IDS spatial solver and recommendation engine")
+def solve_design(req: IdsDesignReq):
+    try:
+        return run_ids_design(
+            city=req.city,
+            bhk=req.bhk,
+            scope=req.scope,
+            budget=req.budget,
+            quality=req.quality,
+            timeline=req.timeline,
+            style=req.style,
+            wood=req.wood,
+            fabric=req.fabric,
+            colors=req.colors,
+            solve=req.solve,
+        )
+    except Exception as e:
+        raise HTTPException(400, f"IDS Design pipeline error: {str(e)}")
+
+
+@router.get("/design/options", summary="Get IDS design vocabulary and catalog options")
+def get_design_options():
+    try:
+        return get_ids_options()
+    except Exception as e:
+        raise HTTPException(500, f"Failed to retrieve IDS options: {str(e)}")
+
+
+@router.get("/interactive-viewer", response_class=HTMLResponse, summary="Serve interactive 3D scene HTML viewer")
+def get_interactive_viewer_default():
+    html = get_viewer_html()
+    return HTMLResponse(content=html, media_type="text/html")
+
+
+@router.get("/interactive-viewer/{project_id}", response_class=HTMLResponse, summary="Serve interactive 3D scene HTML viewer for specific project")
+def get_interactive_viewer_project(project_id: str, db: Session = Depends(get_db)):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+    html = get_viewer_html(project)
+    return HTMLResponse(content=html, media_type="text/html")
+
