@@ -6,6 +6,7 @@ import { useProjectTeamStore } from '@/stores/projectTeamStore';
 import { useAuthStore } from '@/stores/authStore';
 import { ExecutionProgressBar } from '@/components/vendor/ExecutionProgressBar';
 import { TimelineView } from '@/components/vendor/TimelineView';
+import ItemTrackingBoard from '@/components/ItemTrackingBoard';
 import Navbar from '@/components/Navbar';
 import {
   ArrowLeft, Plus, Image as ImageIcon, Calendar, Clock, CheckSquare, ClipboardList,
@@ -511,93 +512,58 @@ export default function ProjectExecutionPage() {
                 {/* Gantt Timeline */}
                 <TimelineView resources={timelineResources} />
 
-                {/* Sourcing Item Table */}
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
-                  <div>
-                    <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Item Sourcing & Fitments</h3>
-                    <p className="text-[10px] text-slate-400">Update item tracking status or allocate specific technician fitment task.</p>
-                  </div>
+                {/* Sourcing items — vendor and technician tracks kept apart,
+                    photos on the item itself (stakeholder feedback 3.1–3.5) */}
+                <ItemTrackingBoard
+                  projectId={projectId}
+                  viewAs={isTechnician ? 'technician' : undefined}
+                  refreshKey={tracking.length}
+                  onChanged={() => fetchTracking(projectId)}
+                  renderAssignee={(item) => (
+                    <div className="text-[10px]">
+                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider xl:text-right">Installer</span>
+                      {assigningItem === item.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={assigneeTechId}
+                            onChange={(e) => setAssigneeTechId(e.target.value)}
+                            className="bg-white border text-[10px] rounded p-1 font-bold text-slate-650"
+                          >
+                            <option value="">Select Tech...</option>
+                            {technicians.map(t => (
+                              <option key={t.id} value={t.user.id}>{t.user.name}</option>
+                            ))}
+                          </select>
+                          <button onClick={() => handleItemTechAssign(item.id)} className="p-1 bg-green-500 text-white rounded"><Check className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => setAssigningItem(null)} className="p-1 bg-red-400 text-white rounded"><X className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ) : (
+                        <span className="font-bold text-indigo-650 flex items-center gap-1 xl:justify-end">
+                          {members.find(m => m.user.id === assignmentHistory.find(h => h.role === 'TECHNICIAN' && h.target_item_id === item.id)?.assignee?.id)?.user.name || 'Unassigned'}
+                          {isManager && (
+                            <button onClick={() => { setAssigningItem(item.id); setAssigneeTechId(''); }} className="text-[10px] text-slate-400 hover:text-indigo-600 ml-1">✎</button>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  renderActions={(item) => (
+                    <button
+                      onClick={() => {
+                        if (selectedItemHistory === item.id) setSelectedItemHistory(null);
+                        else {
+                          setSelectedItemHistory(item.id);
+                          fetchTrackingHistory(projectId, item.id);
+                        }
+                      }}
+                      className="text-[10px] text-indigo-600 hover:underline font-bold whitespace-nowrap"
+                    >
+                      {selectedItemHistory === item.id ? 'Hide History' : 'View History'}
+                    </button>
+                  )}
+                />
 
-                  <div className="overflow-hidden border border-slate-100 rounded-xl overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[500px]">
-                      <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          <th className="p-3">Item details</th>
-                          <th className="p-3">Status</th>
-                          <th className="p-3">Expected Date</th>
-                          <th className="p-3">Assignee Tech</th>
-                          <th className="p-3 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-xs font-medium">
-                        {tracking.map((item) => (
-                          <tr key={item.id} className="hover:bg-slate-50/50">
-                            <td className="p-3">
-                              <span className="text-[9px] bg-slate-100 border border-slate-200 text-slate-500 rounded px-1.5 py-0.5 mr-1 uppercase font-bold">{item.room_name}</span>
-                              <span className="font-bold text-slate-700">{item.item_name}</span>
-                            </td>
-                            <td className="p-3">
-                              <select
-                                value={item.status?.toLowerCase()}
-                                onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                                disabled={isTechnician}
-                                className="bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700 rounded p-1"
-                              >
-                                <option value="ordered">Ordered</option>
-                                <option value="accepted">Accepted</option>
-                                <option value="production">Production</option>
-                                <option value="ready">Ready</option>
-                                <option value="dispatched">Dispatched</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="installed">Installed</option>
-                              </select>
-                            </td>
-                            <td className="p-3 font-semibold text-slate-500">{item.expected_date || 'N/A'}</td>
-                            <td className="p-3">
-                              {assigningItem === item.id ? (
-                                <div className="flex items-center gap-1.5">
-                                  <select
-                                    value={assigneeTechId}
-                                    onChange={(e) => setAssigneeTechId(e.target.value)}
-                                    className="bg-white border text-[10px] rounded p-1 font-bold text-slate-650"
-                                  >
-                                    <option value="">Select Tech...</option>
-                                    {technicians.map(t => (
-                                      <option key={t.id} value={t.user.id}>{t.user.name}</option>
-                                    ))}
-                                  </select>
-                                  <button onClick={() => handleItemTechAssign(item.id)} className="p-1 bg-green-500 text-white rounded"><Check className="w-3.5 h-3.5" /></button>
-                                  <button onClick={() => setAssigningItem(null)} className="p-1 bg-red-400 text-white rounded"><X className="w-3.5 h-3.5" /></button>
-                                </div>
-                              ) : (
-                                <span className="font-bold text-indigo-650 flex items-center gap-1">
-                                  {members.find(m => m.user.id === assignmentHistory.find(h => h.role === 'TECHNICIAN' && h.target_item_id === item.id)?.assignee?.id)?.user.name || 'Unassigned'}
-                                  {isManager && (
-                                    <button onClick={() => { setAssigningItem(item.id); setAssigneeTechId(''); }} className="text-[10px] text-slate-400 hover:text-indigo-600 ml-1">✎</button>
-                                  )}
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-3 text-right">
-                              <button
-                                onClick={() => {
-                                  if (selectedItemHistory === item.id) setSelectedItemHistory(null);
-                                  else {
-                                    setSelectedItemHistory(item.id);
-                                    fetchTrackingHistory(projectId, item.id);
-                                  }
-                                }}
-                                className="text-[10px] text-indigo-600 hover:underline font-bold"
-                              >
-                                {selectedItemHistory === item.id ? 'Hide History' : 'View History'}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
+                <div className="space-y-4">
                   {/* History Logs panel */}
                   {selectedItemHistory && (
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 animate-in slide-in-from-top-2 duration-150">

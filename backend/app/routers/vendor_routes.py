@@ -473,6 +473,9 @@ def list_vendor_products(
             "description": p.description,
             "basePrice": p.base_price,
             "images": p.images or [],
+            # Feedback 4.1 — the supplier's availability switch
+            "isAvailable": True if p.is_available is None else bool(p.is_available),
+            "unavailableReason": p.unavailable_reason,
             "variants": [
                 {
                     "id": v.id,
@@ -855,17 +858,24 @@ async def upload_product_image(
     mat_slug = slugify(primary_mat)
     finish_slug = slugify(finish_val)
 
-    os.makedirs(os.path.join("assets", "catalog"), exist_ok=True)
+    catalog_dir = os.path.join("assets", "catalog")
+    os.makedirs(catalog_dir, exist_ok=True)
     if fabric_val:
         fabric_slug = slugify(fabric_val)
-        filename = f"{subcat_slug}-{color_slug}-{mat_slug}-{finish_slug}-{fabric_slug}-{view_name}{ext}"
+        stem = f"{subcat_slug}-{color_slug}-{mat_slug}-{finish_slug}-{fabric_slug}-{view_name}"
     else:
-        filename = f"{subcat_slug}-{color_slug}-{mat_slug}-{finish_slug}-{view_name}{ext}"
-    filepath = os.path.join("assets", "catalog", filename)
+        stem = f"{subcat_slug}-{color_slug}-{mat_slug}-{finish_slug}-{view_name}"
 
     contents = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(contents)
+    # Feedback 1.6 — store a bounded WebP rather than the raw camera/renderer
+    # file, which is what made catalog pages stall. Fall back to the original
+    # bytes only if the image cannot be decoded.
+    from ..services.image_optimizer import optimise_to_webp
+    filename = optimise_to_webp(contents, catalog_dir, stem)
+    if filename is None:
+        filename = f"{stem}{ext}"
+        with open(os.path.join(catalog_dir, filename), "wb") as f:
+            f.write(contents)
 
     image_url = f"/static/assets/catalog/{filename}"
 

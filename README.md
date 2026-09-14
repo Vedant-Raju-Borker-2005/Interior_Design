@@ -183,4 +183,47 @@ PDF_OUTPUT_DIR=./pdfs
 
 # Google AI Studio API Key for AI Photorealistic Room Rendering
 GEMINI_KEY=your_gemini_api_key_here
+# Model used for the paid post-payment render batch (feedback 1.8)
+GEMINI_PREMIUM_MODEL=gemini-3-pro-image
+
+# Offline payment details shown to customers (feedback 1.9).
+# Leave unset and the payment page says the team will share them instead.
+PAYMENT_ACCOUNT_NAME=
+PAYMENT_ACCOUNT_NUMBER=
+PAYMENT_IFSC=
+PAYMENT_BANK_NAME=
+PAYMENT_UPI_ID=
 ```
+
+---
+
+## 📋 Stakeholder Feedback Modules (September 2026 review)
+
+| Area | What changed | Where |
+|---|---|---|
+| **AI visualisation** | The 3D viewer renders straight from the customer's onboarding answers (no second control panel); opens by default | `/visualize/[id]`, `GET /api/v1/ai/interactive-viewer/{id}`, `GET /api/v1/ai/viewer-brief/{id}` |
+| 1.1 Floor plan | Upload at onboarding *or skip and upload later*; an uploaded plan is sent to the image model with every render | `/floor-layout/[id]`, `POST /api/v1/ai/floor-plan/{id}` |
+| 1.3 / 1.4 GST & quotation ID | GSTIN/PAN/billing profile, frozen onto each quotation; `QT-YYYY-NNNNN` numbers on screen and PDF | `/profile/billing`, `PUT /api/v1/auth/me` |
+| 1.5 / 1.9 / 1.10 | Admin quotation search → customer/project, mark paid offline, convert to project | `/admin/quotations`, `/api/v1/quotation-admin/*` |
+| 1.6 Product images | Catalog re-encoded 495 MB → 7.6 MB WebP; uploads auto-optimised; relative image paths resolved | `ProductImage`, `services/image_optimizer.py` |
+| 1.7 / 1.8 Rendering | Free AI visualisation; up to 20 premium renders unlocked by payment | `RenderEntitlementPanel`, `/api/v1/ai/premium-render/*` |
+| 1.11 / 1.12 | B2C pays in full (B2B keeps milestones); pre-checkout page captures special services + confirmations | `/checkout/[id]`, `/api/v1/special-services/checkout/{id}` |
+| 2.1–2.4 B2B | Project-level bulk discount, original vs discounted per unit, unit-wise roll-up, customisations | `/admin/approvals` (Pricing), enterprise project page |
+| 3.1–3.5 Project team | Separate vendor and technician status tracks; technician sees only installation; photos on the item | `ItemTrackingBoard`, `/api/v1/item-tracking/*` |
+| 4.1–4.5 Vendor | Mark product unavailable (hidden from marketplace); admin approval queue; supplier allocation after approval | `/vendor/products`, `/admin/approvals`, `/api/v1/approvals/*` |
+| 5.1–5.8 Special services | Consultant directory & onboarding, lead routing, consultant portal, commission ledger | `/admin/special-services`, `/consultant`, `/api/v1/special-services/*` |
+
+### Running the tests
+
+```bash
+cd backend
+.venv\Scripts\python -m pytest tests -q          # feedback modules, end to end (throwaway DB)
+
+cd ../backend-ai
+..\backend\.venv\Scripts\python -m pytest tests -q   # IDS solver / pricing engine
+```
+
+### Notes
+
+* The interactive 3D model uses the pre-solved standard layout for the BHK. Uploaded floor plans drive the AI photoreal renders; they do not reshape the 3D geometry.
+* Projects that existed before the approval queue were marked approved on migration, so live work is not frozen. New projects enter the queue.

@@ -27,6 +27,16 @@ class User(Base):
     role = Column(String, default="customer", nullable=False)
     status = Column(String, default="active")  # active / suspended
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    # Feedback 1.3 — GST & billing details carried onto every quotation
+    gst_number = Column(String, nullable=True)
+    company_name = Column(String, nullable=True)
+    pan_number = Column(String, nullable=True)
+    billing_address = Column(Text, nullable=True)
+    billing_city = Column(String, nullable=True)
+    billing_pincode = Column(String, nullable=True)
+    billing_state = Column(String, nullable=True)
+
     projects = relationship("Project", back_populates="user")
 
 
@@ -66,6 +76,9 @@ class Project(Base):
     fabric_preference = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     color_preferences = Column(JSON, default=list)
+    # Onboarding has always sent style_tags on every step, but without a column
+    # the chosen design vibe was silently dropped.
+    style_tags = Column(JSON, default=list)
 
     # Enterprise / Parent-Child Project References
     parent_project_id = Column(String, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
@@ -74,6 +87,25 @@ class Project(Base):
     defaults = Column(JSON, default=dict)
     flat_id = Column(String, ForeignKey("flats.id", ondelete="SET NULL"), nullable=True)
 
+    # Feedback 4.2/4.3 — every project lands in an admin approval queue first
+    approval_status = Column(String, default="PENDING")  # PENDING / APPROVED / REJECTED
+    approved_by = Column(String, nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+
+    # Feedback 4.4/4.5 — supplier allocated once the project is approved
+    allocated_vendor_id = Column(String, ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
+    allocated_at = Column(DateTime, nullable=True)
+    allocated_by = Column(String, nullable=True)
+
+    # Feedback 2.1-2.3 — B2B bulk discount held at project level, not on products
+    discount_type = Column(String, nullable=True)       # PERCENT / FLAT_PER_UNIT / FLAT_TOTAL
+    discount_value = Column(Float, default=0.0)
+    original_unit_price = Column(Float, default=0.0)
+    discount_note = Column(String, nullable=True)
+
+    # Feedback 1.8 — premium render entitlement granted after payment
+    premium_render_credits = Column(Integer, default=0)
 
     user = relationship("User", back_populates="projects")
     rooms = relationship("Room", back_populates="project", cascade="all, delete-orphan")
@@ -168,12 +200,18 @@ class Product(Base):
     suitable_room = Column(String, default="Living Room")
     description = Column(Text, nullable=True)
 
+    # Feedback 4.1 — marked unavailable by the supplier, hidden from customers
+    is_available = Column(Boolean, default=True)
+    unavailable_reason = Column(String, nullable=True)
+    availability_updated_at = Column(DateTime, nullable=True)
+
     vendor = relationship("Vendor", backref="catalog_products")
 
 
 
 class RoomItem(Base):
     __tablename__ = "room_items"
+
     id = Column(String, primary_key=True, default=gen_uuid)
     room_id = Column(String, ForeignKey("rooms.id", ondelete="CASCADE"))
     product_id = Column(String, ForeignKey("products.id"))
@@ -200,9 +238,30 @@ class Quotation(Base):
     total = Column(Float, default=0)
     pdf_url = Column(String)
     valid_until = Column(String)
-    status = Column(String, default="draft")
+    status = Column(String, default="draft")  # draft / sent / paid / converted / cancelled
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     line_items = Column(JSON, default=list)
+
+    # Feedback 1.4 — human-readable unique id printed on the quotation
+    quotation_no = Column(String, unique=True, nullable=True, index=True)
+
+    # Feedback 1.3 — billing identity frozen at the moment of issue
+    gst_number = Column(String, nullable=True)
+    billing_snapshot = Column(JSON, default=dict)
+
+    # Feedback 2.2 — original vs discounted, shown side by side
+    original_total = Column(Float, default=0.0)
+    discount_amount = Column(Float, default=0.0)
+
+    # Feedback 1.9 — admin marks payment received offline
+    paid_at = Column(DateTime, nullable=True)
+    paid_by = Column(String, nullable=True)
+    payment_mode = Column(String, nullable=True)     # BANK_TRANSFER / UPI / CHEQUE / CASH / GATEWAY
+    payment_reference = Column(String, nullable=True)
+
+    # Feedback 1.10 — quotation converts into a delivery project
+    converted_project_id = Column(String, nullable=True)
+    converted_at = Column(DateTime, nullable=True)
 
     project = relationship("Project", back_populates="quotations")
 
@@ -220,6 +279,10 @@ class Render(Base):
     style = Column(String, default="modern")
     color_palette = Column(JSON, default=list)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    # Feedback 1.7/1.8 — free AI preview vs paid post-payment photoreal batch
+    tier = Column(String, default="free")  # free / premium
+    batch_id = Column(String, nullable=True)
 
     room = relationship("Room", back_populates="renders")
 
@@ -325,10 +388,25 @@ class ItemTracking(Base):
     project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"))
     room_name = Column(String)
     item_name = Column(String)
-    status = Column(String, default="ordered") # ordered / accepted / production / ready / dispatched / delivered / installed
+    status = Column(String, default="ordered")  # legacy combined status, kept for old rows
     expected_date = Column(String)
     actual_date = Column(String)
     remarks = Column(Text)
+
+    # Feedback 3.1/3.3 — two independent tracks. The vendor owns the item until
+    # handover; the technician owns it afterwards. Neither sees the other's
+    # vocabulary (see VENDOR_STATUSES / TECHNICIAN_STATUSES below).
+    vendor_status = Column(String, default="ORDERED")
+    technician_status = Column(String, default="NOT_RECEIVED")
+    vendor_updated_at = Column(DateTime, nullable=True)
+    technician_updated_at = Column(DateTime, nullable=True)
+
+    # Feedback 3.4/3.5 — the product, its photos and its status are one record
+    product_id = Column(String, nullable=True)
+    technician_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    handover_at = Column(DateTime, nullable=True)
+    installed_at = Column(DateTime, nullable=True)
+    photos = Column(JSON, default=list)   # [{url, caption, stage, uploaded_at, uploaded_by}]
 
 
 class ProjectPhoto(Base):
@@ -380,8 +458,15 @@ class Payment(Base):
     amount = Column(Float, nullable=False)
     payment_date = Column(DateTime, default=datetime.datetime.utcnow)
     status = Column(String, default="completed")  # completed / pending / failed
-    milestone_name = Column(String)  # e.g., "10% Booking Advance"
+    milestone_name = Column(String)  # legacy: retained for existing B2B milestone rows
     transaction_id = Column(String)
+
+    # Feedback 1.11 — B2C collects the full amount in one go, no milestones
+    payment_type = Column(String, default="FULL")  # FULL / MILESTONE
+    quotation_id = Column(String, nullable=True)
+    payment_mode = Column(String, nullable=True)
+    recorded_by = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
 
 
 
@@ -447,6 +532,11 @@ class VendorProduct(Base):
     mounting_type = Column(String, default="Floor Standing")
     assembly_required = Column(String, default="No")
     suitable_room = Column(String, default="Living Room")
+
+    # Feedback 4.1 — supplier-side availability switch
+    is_available = Column(Boolean, default=True)
+    unavailable_reason = Column(String, nullable=True)
+    availability_updated_at = Column(DateTime, nullable=True)
 
     vendor = relationship("Vendor", back_populates="products")
 
@@ -877,3 +967,127 @@ class AuditLog(Base):
 
     user = relationship("User")
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Feedback 3.1-3.3 — role-scoped status vocabularies
+#
+# The old single `status` list mixed vendor and technician steps together, so a
+# technician was offered "in production" and a vendor was offered "installed".
+# Each role now reads only its own list.
+# ══════════════════════════════════════════════════════════════════════════════
+
+VENDOR_STATUSES = [
+    "ORDERED",          # PO raised with the supplier
+    "ACCEPTED",         # supplier confirmed the order
+    "IN_PRODUCTION",    # being manufactured
+    "READY",            # finished, awaiting pickup
+    "DISPATCHED",       # left the supplier
+    "DELIVERED",        # arrived at site / handed to the technician
+]
+
+TECHNICIAN_STATUSES = [
+    "NOT_RECEIVED",     # still with the vendor, nothing for the technician to do
+    "RECEIVED",         # physically handed over
+    "INSTALLATION",     # Feedback 3.2 — the technician's primary action
+    "INSTALLED",        # fitted and working
+    "SNAG",             # installed but defective / needs rework
+]
+
+# The only vendor status that hands control to the technician.
+VENDOR_HANDOVER_STATUS = "DELIVERED"
+
+SPECIAL_SERVICE_TYPES = [
+    "House Design",
+    "Survey Plan",
+    "Special Vending Services",
+    "Measurable Drawings",
+]
+
+
+class Consultant(Base):
+    """Feedback 5.1/5.2 — partnered consultants who actually deliver the
+    special services. The platform is a referral layer (5.8), so a consultant is
+    a partner record, not a staff member."""
+    __tablename__ = "consultants"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    name = Column(String, nullable=False)
+    company_name = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    services = Column(JSON, default=list)        # subset of SPECIAL_SERVICE_TYPES
+    commission_rate = Column(Float, default=15.0)  # platform's cut, percent
+    rating = Column(Float, default=4.5)
+    status = Column(String, default="ACTIVE")    # ACTIVE / INACTIVE / SUSPENDED
+    notes = Column(Text, nullable=True)
+    onboarded_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User")
+
+
+class ServiceLead(Base):
+    """Feedback 5.3-5.7 — a special-service inquiry routed to a consultant,
+    tracked to completion, with the commission split recorded on the row."""
+    __tablename__ = "service_leads"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    lead_no = Column(String, unique=True, nullable=True, index=True)
+    service_type = Column(String, nullable=False)
+    customer_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+
+    customer_name = Column(String, nullable=True)
+    customer_phone = Column(String, nullable=True)
+    customer_email = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    requirements = Column(Text, nullable=True)
+
+    # Feedback 5.3 — assignment to a partner
+    consultant_id = Column(String, ForeignKey("consultants.id", ondelete="SET NULL"), nullable=True)
+    assigned_at = Column(DateTime, nullable=True)
+    assigned_by = Column(String, nullable=True)
+
+    # Feedback 5.5 — the consultant moves this along, admin just watches
+    status = Column(String, default="NEW")
+    # NEW / ASSIGNED / CONTACTED / IN_PROGRESS / COMPLETED / CANCELLED
+    status_note = Column(Text, nullable=True)
+
+    # Feedback 5.6/5.7 — commission maths kept on the lead
+    service_value = Column(Float, default=0.0)       # what the customer pays
+    commission_rate = Column(Float, default=15.0)    # percent retained by platform
+    platform_earning = Column(Float, default=0.0)
+    consultant_payout = Column(Float, default=0.0)
+    payout_status = Column(String, default="PENDING")  # PENDING / PAID
+
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    consultant = relationship("Consultant", backref="leads")
+    customer = relationship("User")
+
+
+class ServiceLeadEvent(Base):
+    """Feedback 5.5 — status trail so the admin never has to chase an update."""
+    __tablename__ = "service_lead_events"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    lead_id = Column(String, ForeignKey("service_leads.id", ondelete="CASCADE"))
+    status = Column(String)
+    note = Column(Text, nullable=True)
+    actor = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    lead = relationship("ServiceLead", backref=backref("events", cascade="all, delete-orphan"))
+
+
+class ProjectApprovalEvent(Base):
+    """Feedback 4.2/4.3 — audit trail for the admin approval queue."""
+    __tablename__ = "project_approval_events"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"))
+    action = Column(String)          # SUBMITTED / APPROVED / REJECTED / ALLOCATED
+    actor = Column(String, nullable=True)
+    reason = Column(Text, nullable=True)
+    vendor_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)

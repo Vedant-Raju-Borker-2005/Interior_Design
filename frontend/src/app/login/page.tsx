@@ -6,7 +6,7 @@ import { authAPI, enterpriseAPI } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useProjectStore } from '@/stores/projectStore'
 import toast from 'react-hot-toast'
-import { Sparkles, Phone, Mail, ArrowRight, RefreshCw, MapPin, User, Compass, HelpCircle, Check, Info, Building } from 'lucide-react'
+import { Sparkles, Phone, Mail, ArrowRight, RefreshCw, MapPin, User, Compass, HelpCircle, Check, Info, Building, Briefcase } from 'lucide-react'
 import Link from 'next/link'
 import clsx from 'clsx'
 
@@ -25,7 +25,7 @@ export default function LoginPage() {
   const [method, setMethod] = useState<LoginMethod>('phone')
   const [loading, setLoading] = useState(false)
   const [devOtp, setDevOtp] = useState('')
-  const [portalGroup, setPortalGroup] = useState<'client' | 'vendor' | 'team' | 'admin'>('client')
+  const [portalGroup, setPortalGroup] = useState<'client' | 'vendor' | 'team' | 'consultant' | 'admin'>('client')
   const [clientRole, setClientRole] = useState<'customer' | 'enterprise'>('customer')
   const [teamRole, setTeamRole] = useState<'team_manager' | 'team_coordinator' | 'team_technician'>('team_manager')
 
@@ -143,6 +143,8 @@ export default function LoginPage() {
       // Redirect based on the authenticated role
       if (res.data.role === 'vendor') {
         router.push('/vendor/dashboard')
+      } else if (res.data.role === 'consultant') {
+        router.push('/consultant')
       } else if (res.data.role.startsWith('team_')) {
         router.push('/team')
       } else if (res.data.role === 'admin') {
@@ -213,11 +215,13 @@ export default function LoginPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
                     Access Portal As
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     {([
                       { id: 'client', label: 'Client', icon: User, bg: 'from-blue-500 to-indigo-600' },
                       { id: 'vendor', label: 'Vendor', icon: Compass, bg: 'from-emerald-500 to-teal-600' },
                       { id: 'team', label: 'Project Team', icon: Check, bg: 'from-amber-500 to-orange-600' },
+                      // Feedback 5.4 — partner consultants sign in to work their leads
+                      { id: 'consultant', label: 'Consultant', icon: Briefcase, bg: 'from-cyan-500 to-sky-600' },
                       { id: 'admin', label: 'Admin', icon: Sparkles, bg: 'from-purple-500 to-pink-600' }
                     ] as const).map((item) => {
                       const Icon = item.icon

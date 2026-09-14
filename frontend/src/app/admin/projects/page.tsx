@@ -20,6 +20,12 @@ export default function AdminProjectsPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  // Deep link from quotation search: /admin/<page>?q=<customer or project>
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) setSearch(q);
+  }, []);
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
 

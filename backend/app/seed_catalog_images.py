@@ -176,7 +176,7 @@ def seed_images_to_db():
     seeded_count = 0
 
     for filename in files:
-        if not filename.lower().endswith(('.png', '.jpeg', '.jpg')):
+        if not filename.lower().endswith(('.webp', '.png', '.jpeg', '.jpg')):
             continue
 
         # Extract base name and color

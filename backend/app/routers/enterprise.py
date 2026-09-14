@@ -12,6 +12,7 @@ from ..schemas import (
     CreateEnterpriseProjectReq, ConfigureUnitMixReq, UpdateFlatReq,
     AssignCustomerReq, AcceptInvitationReq, UpdateCustomerOnboardingReq
 )
+from ..services.business_rules import normalize_bhk
 from ..auth_utils import current_user
 
 router = APIRouter()
@@ -403,7 +404,7 @@ def assign_customer(
 
             # Initialize Rooms for child project
             from .projects import BHK_ROOMS, ROOM_DEFAULTS
-            for rtype in BHK_ROOMS.get(flat.bhk_type, []):
+            for rtype in BHK_ROOMS.get(normalize_bhk(flat.bhk_type), []):
                 defaults = ROOM_DEFAULTS.get(rtype, {})
                 room = Room(
                     id=str(uuid.uuid4()),
@@ -581,7 +582,7 @@ def accept_invitation(
                 db.add(child_project)
                 
                 from .projects import BHK_ROOMS, ROOM_DEFAULTS
-                for rtype in BHK_ROOMS.get(flat.bhk_type, []):
+                for rtype in BHK_ROOMS.get(normalize_bhk(flat.bhk_type), []):
                     defaults = ROOM_DEFAULTS.get(rtype, {})
                     room = Room(
                         id=str(uuid.uuid4()),
@@ -617,7 +618,7 @@ def accept_invitation(
             db.add(child_project)
             
             from .projects import BHK_ROOMS, ROOM_DEFAULTS
-            for rtype in BHK_ROOMS.get(flat.bhk_type, []):
+            for rtype in BHK_ROOMS.get(normalize_bhk(flat.bhk_type), []):
                 defaults = ROOM_DEFAULTS.get(rtype, {})
                 room = Room(
                     id=str(uuid.uuid4()),

@@ -10,6 +10,12 @@ export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  // Deep link from quotation search: /admin/<page>?q=<customer or project>
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) setSearch(q);
+  }, []);
   
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   const [customerDetail, setCustomerDetail] = useState<any | null>(null);

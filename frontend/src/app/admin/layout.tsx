@@ -16,7 +16,10 @@ import {
   Bot, 
   Activity, 
   ShieldCheck,
-  Building
+  Building,
+  ClipboardCheck,
+  FileSearch,
+  Handshake
 } from 'lucide-react';
 
 const navItems = [
@@ -26,6 +29,9 @@ const navItems = [
   { href: '/admin/vendors', label: 'Vendors', icon: Briefcase },
   { href: '/admin/project-team', label: 'Project Team', icon: Users },
   { href: '/admin/projects', label: 'Projects', icon: LayoutDashboard },
+  { href: '/admin/approvals', label: 'Project Approvals', icon: ClipboardCheck },
+  { href: '/admin/quotations', label: 'Quotations', icon: FileSearch },
+  { href: '/admin/special-services', label: 'Special Services', icon: Handshake },
   { href: '/admin/settings', label: 'IT Box / Settings', icon: Settings },
   { href: '/admin/master-data', label: 'Master Data', icon: Database },
   { href: '/admin/reports', label: 'Reports & Analytics', icon: BarChart3 },

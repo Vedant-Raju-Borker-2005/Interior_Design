@@ -1,4 +1,5 @@
 import random
+import re
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
@@ -207,7 +208,22 @@ def me(db: Session = Depends(get_db),
         "budget_min": user.budget_min,
         "budget_max": user.budget_max,
         "role": user.role or "customer",
+        # Feedback 1.3 — billing identity printed on quotations
+        "gst_number": user.gst_number,
+        "company_name": user.company_name,
+        "pan_number": user.pan_number,
+        "billing_address": user.billing_address,
+        "billing_city": user.billing_city,
+        "billing_state": user.billing_state,
+        "billing_pincode": user.billing_pincode,
     }
+
+
+# GSTIN: 2-digit state code, 10-char PAN, entity digit, 'Z', checksum char.
+_GSTIN = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
+_PAN = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]$")
+_BILLING_FIELDS = ["gst_number", "company_name", "pan_number", "billing_address",
+                   "billing_city", "billing_state", "billing_pincode"]
 
 
 @router.put("/me", summary="Update user profile")
@@ -216,6 +232,30 @@ def update_me(payload: dict, db: Session = Depends(get_db),
     for field in ["name", "city", "style_tags", "budget_min", "budget_max"]:
         if field in payload:
             setattr(user, field, payload[field])
+
+    # Feedback 1.3 — GST & billing details. Validated here so a malformed GSTIN
+    # never reaches a quotation.
+    for field in _BILLING_FIELDS:
+        if field not in payload:
+            continue
+        value = payload[field]
+        if isinstance(value, str):
+            value = value.strip() or None
+        if field in ("gst_number", "pan_number") and value:
+            value = value.upper().replace(" ", "")
+            pattern = _GSTIN if field == "gst_number" else _PAN
+            if not pattern.match(value):
+                label = "GSTIN" if field == "gst_number" else "PAN"
+                raise HTTPException(400, f"Invalid {label} format: {value}")
+        setattr(user, field, value)
+
+    # A GSTIN embeds the PAN at positions 3-12; fill it in when not given.
+    if user.gst_number and not user.pan_number:
+        user.pan_number = user.gst_number[2:12]
+
     db.commit()
     db.refresh(user)
-    return {"id": user.id, "name": user.name, "city": user.city}
+    return {
+        "id": user.id, "name": user.name, "city": user.city,
+        **{f: getattr(user, f) for f in _BILLING_FIELDS},
+    }

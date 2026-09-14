@@ -13,6 +13,16 @@ from contextlib import asynccontextmanager
 from .db import init_db, SessionLocal
 from .seed_data import seed_database
 from .routers import auth, projects, catalog, ai_render, quotations, vendors, inquiry, tracking, admin, recommendations, customer_routes, vendor_routes, project_team, enterprise
+# Stakeholder-feedback modules
+from .routers import (
+    approvals,            # 4.2-4.5 approval queue & supplier allocation, 2.1-2.4 B2B pricing
+    design_studio,        # full-page 2D/3D studio: edit design, GLB export
+    item_tracking,        # 3.1-3.5 vendor vs technician status tracks
+    premium_render,       # 1.1 plan-specific render, 1.7 free tier, 1.8 paid batch
+    quotation_admin,      # 1.5 search, 1.9 mark paid, 1.10 convert, 1.11 full payment
+    special_services,     # 5.1-5.8 consultants, leads, commissions
+    vendor_availability,  # 4.1 supplier availability switch
+)
 
 DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
 CORS_ORIGINS = [
@@ -55,6 +65,36 @@ app.add_middleware(
 
 # Static files (for serving catalog assets, floor plans, proof images, and generated PDFs)
 os.makedirs("assets", exist_ok=True)
+# Windows' MIME registry often lacks .webp, which makes StaticFiles label the
+# catalog images text/plain. Register it explicitly so browsers and image
+# loaders are handed the right type on every platform.
+import mimetypes
+mimetypes.add_type("image/webp", ".webp")
+mimetypes.add_type("model/gltf-binary", ".glb")   # exported 3D models
+
+# Catalog images were re-encoded to WebP (feedback 1.6). Stored URLs were
+# migrated, but a link baked into an already-issued PDF, a browser cache or a
+# vendor's bookmark still says .png/.jpg — serve the WebP twin for those rather
+# than a 404.
+_LEGACY_IMAGE_EXTS = (".png", ".jpg", ".jpeg")
+
+
+@app.middleware("http")
+async def legacy_catalog_image_fallback(request, call_next):
+    path = request.scope.get("path", "")
+    if path.startswith("/static/assets/catalog/") and path.lower().endswith(_LEGACY_IMAGE_EXTS):
+        from urllib.parse import unquote
+        rel = unquote(path[len("/static/assets/"):])
+        original = os.path.join("assets", rel)
+        if not os.path.exists(original):
+            webp_rel = os.path.splitext(rel)[0] + ".webp"
+            if os.path.exists(os.path.join("assets", webp_rel)):
+                new_path = "/static/assets/" + webp_rel
+                request.scope["path"] = new_path
+                request.scope["raw_path"] = new_path.encode("utf-8")
+    return await call_next(request)
+
+
 app.mount("/static/assets", StaticFiles(directory="assets"), name="assets")
 app.mount("/static/pdfs", StaticFiles(directory="assets"), name="assets_legacy")
 
@@ -85,6 +125,15 @@ app.include_router(vendor_routes.router,    prefix="/api/v1/vendor",          ta
 app.include_router(enterprise.router,       prefix="/api/v1/enterprise",      tags=["Enterprise"])
 app.include_router(project_team.router,     prefix="/api",                    tags=["Project Team Legacy"])
 app.include_router(project_team.router,     prefix="/api/v1/team",            tags=["Project Team"])
+
+# ── Stakeholder feedback (Sept 2026 review) ──────────────────────────────────
+app.include_router(quotation_admin.router,  prefix="/api/v1/quotation-admin", tags=["Quotation Admin"])
+app.include_router(approvals.router,        prefix="/api/v1/approvals",       tags=["Approvals & B2B"])
+app.include_router(item_tracking.router,    prefix="/api/v1/item-tracking",   tags=["Item Tracking"])
+app.include_router(vendor_availability.router, prefix="/api/v1/vendor",       tags=["Vendor Availability"])
+app.include_router(special_services.router, prefix="/api/v1/special-services", tags=["Special Services"])
+app.include_router(premium_render.router,   prefix="/api/v1/ai",              tags=["AI Render"])
+app.include_router(design_studio.router,    prefix="/api/v1/ai",              tags=["Design Studio"])
 
 
 @app.get("/health", tags=["Health"])

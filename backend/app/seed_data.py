@@ -9,21 +9,21 @@ from .models import Package, Product, Vendor, VendorProduct, ProductVariant, Inv
 BASE_CATALOG_URL = "http://localhost:8000/static/assets/catalog"
 
 PACKAGE_THUMBNAILS = {
-    ("1BHK", "basic"):    f"{BASE_CATALOG_URL}/Sofa%20Set%20Warm%20Beige.png",
-    ("1BHK", "premium"):  f"{BASE_CATALOG_URL}/Sofa%20Set%20Emerald%20Green.png",
-    ("1BHK", "luxury"):   f"{BASE_CATALOG_URL}/Sofa%20Set%20Royal%20Navy%20Blue.png",
-    ("2BHK", "basic"):    f"{BASE_CATALOG_URL}/Coffee%20Table%20Warm%20Beige.png",
-    ("2BHK", "premium"):  f"{BASE_CATALOG_URL}/Master%20Bed%20Set%20Blush%20Pink.png",
-    ("2BHK", "luxury"):   f"{BASE_CATALOG_URL}/Master%20Bed%20Set%20Royal%20Navy%20Blue.png",
-    ("3BHK", "basic"):    f"{BASE_CATALOG_URL}/Area%20Rug%20Royal%20Navy%20Blue.png",
-    ("3BHK", "premium"):  f"{BASE_CATALOG_URL}/Base%20Cabinets%20Royal%20Navy%20Blue.jpeg",
-    ("3BHK", "luxury"):   f"{BASE_CATALOG_URL}/Master%20Bed%20Set%20Warm%20Beige.png",
-    ("4BHK", "basic"):    f"{BASE_CATALOG_URL}/Wardrobe%20Closet%20Charcoal%20Grey.png",
-    ("4BHK", "premium"):  f"{BASE_CATALOG_URL}/Wardrobe%20Closet%20Royal%20Navy%20Blue.png",
-    ("4BHK", "luxury"):   f"{BASE_CATALOG_URL}/Sofa%20Set%20Charcoal%20Grey.png",
-    ("5BHK", "basic"):    f"{BASE_CATALOG_URL}/Accent%20Chair%20Emerald%20Green.png",
-    ("5BHK", "premium"):  f"{BASE_CATALOG_URL}/Accent%20Chair%20Royal%20Navy%20Blue.png",
-    ("5BHK", "luxury"):   f"{BASE_CATALOG_URL}/Sofa%20Set%20Blush%20Pink.png",
+    ("1BHK", "basic"):    f"{BASE_CATALOG_URL}/Sofa%20Set%20Warm%20Beige.webp",
+    ("1BHK", "premium"):  f"{BASE_CATALOG_URL}/Sofa%20Set%20Emerald%20Green.webp",
+    ("1BHK", "luxury"):   f"{BASE_CATALOG_URL}/Sofa%20Set%20Royal%20Navy%20Blue.webp",
+    ("2BHK", "basic"):    f"{BASE_CATALOG_URL}/Coffee%20Table%20Warm%20Beige.webp",
+    ("2BHK", "premium"):  f"{BASE_CATALOG_URL}/Master%20Bed%20Set%20Blush%20Pink.webp",
+    ("2BHK", "luxury"):   f"{BASE_CATALOG_URL}/Master%20Bed%20Set%20Royal%20Navy%20Blue.webp",
+    ("3BHK", "basic"):    f"{BASE_CATALOG_URL}/Area%20Rug%20Royal%20Navy%20Blue.webp",
+    ("3BHK", "premium"):  f"{BASE_CATALOG_URL}/Base%20Cabinets%20Royal%20Navy%20Blue.webp",
+    ("3BHK", "luxury"):   f"{BASE_CATALOG_URL}/Master%20Bed%20Set%20Warm%20Beige.webp",
+    ("4BHK", "basic"):    f"{BASE_CATALOG_URL}/Wardrobe%20Closet%20Charcoal%20Grey.webp",
+    ("4BHK", "premium"):  f"{BASE_CATALOG_URL}/Wardrobe%20Closet%20Royal%20Navy%20Blue.webp",
+    ("4BHK", "luxury"):   f"{BASE_CATALOG_URL}/Sofa%20Set%20Charcoal%20Grey.webp",
+    ("5BHK", "basic"):    f"{BASE_CATALOG_URL}/Accent%20Chair%20Emerald%20Green.webp",
+    ("5BHK", "premium"):  f"{BASE_CATALOG_URL}/Accent%20Chair%20Royal%20Navy%20Blue.webp",
+    ("5BHK", "luxury"):   f"{BASE_CATALOG_URL}/Sofa%20Set%20Blush%20Pink.webp",
 }
 
 PACKAGES = [
@@ -192,7 +192,7 @@ def load_catalog_products():
     products = []
 
     for filename in files:
-        if not filename.lower().endswith(('.png', '.jpeg', '.jpg')):
+        if not filename.lower().endswith(('.webp', '.png', '.jpeg', '.jpg')):
             continue
 
         base_name = ""
@@ -303,7 +303,7 @@ def seed_database(db: Session):
 
     # Seed packages
     pkg_tier_names = {"basic": "Basic", "premium": "Premium", "luxury": "Luxury"}
-    fallback_thumb = f"{BASE_CATALOG_URL}/Sofa%20Set%20Warm%20Beige.png"
+    fallback_thumb = f"{BASE_CATALOG_URL}/Sofa%20Set%20Warm%20Beige.webp"
     for p in PACKAGES:
         thumb = PACKAGE_THUMBNAILS.get((p["bhk"], p["tier"]), fallback_thumb)
         pkg = Package(

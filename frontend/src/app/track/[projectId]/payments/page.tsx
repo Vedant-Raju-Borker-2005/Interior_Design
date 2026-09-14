@@ -54,6 +54,11 @@ export default function ProjectPaymentsPage() {
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+  // Feedback 1.11 — B2C pays the quotation in full; only bulk (B2B) work keeps milestones.
+  const isFullPayment = projectPayments?.paymentModel !== 'MILESTONE'
+  const offline = projectPayments?.offlinePayment
+  const reference = projectPayments?.quotationNo
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
@@ -67,8 +72,12 @@ export default function ProjectPaymentsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Milestone Payments</h1>
-            <p className="text-xs text-slate-500 mt-1">Track contract transactions, pay milestone advances, and view payment receipts.</p>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{isFullPayment ? 'Payment' : 'Milestone Payments'}</h1>
+            <p className="text-xs text-slate-500 mt-1">
+              {isFullPayment
+                ? 'Your interiors are booked once the full quotation amount is received.'
+                : 'Track contract transactions, pay milestone advances, and view payment receipts.'}
+            </p>
           </div>
           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold text-[10px] uppercase tracking-wider">
             <ShieldCheck className="w-4 h-4" /> Secured by SSL
@@ -91,7 +100,7 @@ export default function ProjectPaymentsPage() {
 
         {/* Timeline of Milestones */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
-          <h3 className="font-extrabold text-slate-800 text-base">Payment Milestones Checklist</h3>
+          <h3 className="font-extrabold text-slate-800 text-base">{isFullPayment ? 'Amount due' : 'Payment Milestones Checklist'}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
@@ -158,7 +167,7 @@ export default function ProjectPaymentsPage() {
                           onClick={() => setCheckoutMilestone(m)}
                           className="text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-lg shadow-sm hover:shadow transition"
                         >
-                          Pay Advance
+                          {isFullPayment ? 'Pay online' : 'Pay Advance'}
                         </button>
                       )}
                     </td>
@@ -169,13 +178,54 @@ export default function ProjectPaymentsPage() {
           </div>
         </div>
 
+        {/* Offline payment — feedback 1.9: most customers pay by bank transfer */}
+        {isFullPayment && (projectPayments?.pendingAmount ?? 0) > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <h3 className="font-extrabold text-slate-800 text-base mb-1">Prefer to pay by bank transfer?</h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Transfer {formatINR(projectPayments?.pendingAmount ?? 0)} and use
+              {reference ? <> <span className="font-mono font-bold text-indigo-700">{reference}</span></> : ' your quotation number'} as
+              the payment reference. Our team confirms receipt and marks your quotation as paid — you’ll see it here.
+            </p>
+            {offline?.configured ? (
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs bg-slate-50 border border-slate-100 rounded-xl p-4">
+                {[
+                  ['Account name', offline.account_name],
+                  ['Account number', offline.account_number],
+                  ['IFSC', offline.ifsc],
+                  ['Bank', offline.bank_name],
+                  ['UPI ID', offline.upi_id],
+                  ['Reference', reference],
+                ].filter(([, v]) => v).map(([k, v]) => (
+                  <div key={k as string} className="flex justify-between gap-3">
+                    <dt className="text-slate-400 font-semibold">{k}</dt>
+                    <dd className="font-mono font-bold text-slate-800 select-all">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-4">
+                Our team will share the account details with you by phone or email.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Information Callout */}
         <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-3 text-xs text-indigo-900 leading-relaxed font-medium">
           <HelpCircle className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <span className="font-extrabold block text-indigo-950 mb-0.5">Milestone Structure:</span>
-            Booking Advance initiates structural designing. Sourcing begins on 40% production setup advance. Delivery advance prepares dispatch validation. Handover is released upon final sign-off.
-          </div>
+          {isFullPayment ? (
+            <div>
+              <span className="font-extrabold block text-indigo-950 mb-0.5">How payment works:</span>
+              Interiors are paid for in full, once. After payment is confirmed, your project is reviewed by our team,
+              allocated to a supplier, and your premium photoreal renders are unlocked.
+            </div>
+          ) : (
+            <div>
+              <span className="font-extrabold block text-indigo-950 mb-0.5">Milestone Structure:</span>
+              Booking Advance initiates structural designing. Sourcing begins on 40% production setup advance. Delivery advance prepares dispatch validation. Handover is released upon final sign-off.
+            </div>
+          )}
         </div>
       </div>
 

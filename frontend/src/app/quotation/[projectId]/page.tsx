@@ -105,7 +105,7 @@ export default function QuotationPage() {
     a.href = url
     a.target = '_blank'
     a.rel = 'noopener noreferrer'
-    a.download = `Quotation_${(quotation?.quotation_id || quotation?.id)?.substring(0, 8)?.toUpperCase() || 'INTERIORAI'}.pdf`
+    a.download = `Quotation_${quotation?.quotation_no || (quotation?.quotation_id || quotation?.id)?.substring(0, 8)?.toUpperCase() || 'INTERIORAI'}.pdf`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -125,9 +125,10 @@ export default function QuotationPage() {
       const qId = quotation.id || quotation.quotation_id
       await updateQuotationStatus(projectId, qId, 'approved')
       setQuotation({ ...quotation, status: 'approved' })
-      toast.success('Quotation approved! Redirecting to Project Progress...')
+      toast.success('Quotation approved! Taking you to checkout...')
       setTimeout(() => {
-        router.push(`/track/${projectId}`)
+        // Feedback 1.12 — special services are confirmed before payment.
+        router.push(`/checkout/${projectId}`)
       }, 800)
     } catch {
       toast.error('Failed to approve quotation')
@@ -264,10 +265,14 @@ export default function QuotationPage() {
           /* Quotation display */
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
 
-            {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-4 mb-5">
+            {/* Summary cards — original vs discounted when a bulk discount applies (feedback 2.2) */}
+            <div className={`grid gap-4 mb-5 ${quotation.discount_amount > 0 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'}`}>
               {[
-                { label: 'Subtotal',   value: formatINR(quotation.subtotal), color: 'text-slate-700' },
+                ...(quotation.discount_amount > 0 ? [
+                  { label: 'Original price', value: formatINR(quotation.original_total), color: 'text-slate-400 line-through' },
+                  { label: 'Discount',       value: `− ${formatINR(quotation.discount_amount)}`, color: 'text-emerald-600' },
+                ] : []),
+                { label: quotation.discount_amount > 0 ? 'Taxable value' : 'Subtotal', value: formatINR(quotation.subtotal), color: 'text-slate-700' },
                 { label: 'GST (18%)', value: formatINR(quotation.gst),      color: 'text-amber-600' },
                 { label: 'TOTAL',     value: formatINR(quotation.total),    color: 'text-indigo-600' },
               ].map((card) => (
@@ -278,13 +283,54 @@ export default function QuotationPage() {
               ))}
             </div>
 
+            {/* Billed to — GST & customer details on the quotation (feedback 1.3) */}
+            <div className="bg-white rounded-2xl shadow-card px-5 py-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs text-slate-600 leading-relaxed">
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Billed to</span>
+                <span className="font-bold text-slate-800">
+                  {quotation.billing?.company_name || quotation.billing?.name || user?.name || 'Customer'}
+                </span>
+                {quotation.billing?.billing_address && <span className="block">{quotation.billing.billing_address}</span>}
+                {(quotation.billing?.billing_city || quotation.billing?.billing_state) && (
+                  <span className="block">
+                    {[quotation.billing?.billing_city, quotation.billing?.billing_state, quotation.billing?.billing_pincode].filter(Boolean).join(', ')}
+                  </span>
+                )}
+                {quotation.gst_number ? (
+                  <span className="block font-mono font-semibold text-slate-700 mt-0.5">GSTIN {quotation.gst_number}</span>
+                ) : (
+                  <span className="block text-slate-400 mt-0.5">No GSTIN on this quotation</span>
+                )}
+              </div>
+              {!['paid', 'converted'].includes(quotation.status) && (
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/profile/billing?next=${encodeURIComponent(`/quotation/${projectId}`)}`}
+                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs"
+                  >
+                    {quotation.gst_number ? 'Edit billing details' : 'Add GST details'}
+                  </Link>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={generating}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs disabled:opacity-60"
+                    title="Billing details are frozen when a quotation is issued; regenerate to apply changes"
+                  >
+                    {generating ? 'Regenerating…' : 'Regenerate quotation'}
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* ── Top Action Bar: Download + Share + Meta ── */}
             <div className="bg-white rounded-2xl shadow-card px-5 py-4 mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               {/* Quotation metadata */}
               <div className="flex items-center gap-4 text-xs text-slate-500">
                 <span>
-                  <span className="font-semibold text-slate-700">ID:</span>{' '}
-                  {(quotation.quotation_id || quotation.id)?.substring(0, 8)?.toUpperCase()}
+                  <span className="font-semibold text-slate-700">Quotation No:</span>{' '}
+                  <span className="font-mono font-bold text-indigo-700">
+                    {quotation.quotation_no || (quotation.quotation_id || quotation.id)?.substring(0, 8)?.toUpperCase()}
+                  </span>
                 </span>
                 <span className="text-slate-300">|</span>
                 <span>
@@ -373,8 +419,44 @@ export default function QuotationPage() {
               </div>
             </div>
 
+            {/* Approved / paid — next step is checkout, then full payment (feedback 1.11, 1.12) */}
+            {['approved', 'paid', 'converted'].includes(quotation.status) && (
+              <div className={`rounded-2xl p-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                quotation.status === 'approved' ? 'bg-gradient-to-r from-indigo-600 to-indigo-800 text-white' : 'bg-emerald-50 border border-emerald-200'
+              }`}>
+                {quotation.status === 'approved' ? (
+                  <>
+                    <div>
+                      <h3 className="font-bold text-lg">Quotation approved</h3>
+                      <p className="text-indigo-200 text-sm">
+                        Confirm any special services, then pay {formatINR(quotation.total)} in full quoting <span className="font-mono font-bold text-white">{quotation.quotation_no}</span>.
+                      </p>
+                    </div>
+                    <Link href={`/checkout/${projectId}`}
+                      className="bg-white text-indigo-700 font-bold px-5 py-3 rounded-xl hover:bg-indigo-50 transition flex items-center gap-2 whitespace-nowrap text-sm">
+                      <CreditCard className="w-4 h-4" /> Proceed to Checkout
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <h3 className="font-bold text-lg text-emerald-800 flex items-center gap-2"><CheckCircle2 className="w-5 h-5" /> Payment received</h3>
+                      <p className="text-emerald-700 text-sm">
+                        {quotation.paid_at ? `Recorded on ${new Date(quotation.paid_at).toLocaleDateString('en-IN')}. ` : ''}
+                        Your project is with our team for approval and supplier allocation.
+                      </p>
+                    </div>
+                    <Link href={`/track/${projectId}`}
+                      className="bg-emerald-600 text-white font-bold px-5 py-3 rounded-xl hover:bg-emerald-700 transition whitespace-nowrap text-sm">
+                      Track project
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Quotation Status & Approval Actions */}
-            {quotation.status !== 'approved' && (
+            {!['approved', 'paid', 'converted'].includes(quotation.status) && (
               <>
                 <div className="bg-white rounded-2xl shadow-card p-6 mb-6 space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -413,14 +495,14 @@ export default function QuotationPage() {
                   ) : (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <p className="text-xs text-slate-500 font-semibold">
-                        This quotation has been <span className="font-bold text-slate-700 uppercase">{quotation.status}</span>. You can track progress, make milestone payments, or download receipts.
+                        This quotation has been <span className="font-bold text-slate-700 uppercase">{quotation.status}</span>. Continue to checkout to confirm any special services and pay in full.
                       </p>
                       {quotation.status === 'approved' && (
                         <Link
-                          href={`/track/${projectId}/payments`}
+                          href={`/checkout/${projectId}`}
                           className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white font-bold rounded-xl text-xs transition shadow-glow-indigo flex items-center gap-1.5 whitespace-nowrap"
                         >
-                          <CreditCard className="w-3.5 h-3.5" /> Make Milestone Payment
+                          <CreditCard className="w-3.5 h-3.5" /> Proceed to Checkout
                         </Link>
                       )}
                     </div>
