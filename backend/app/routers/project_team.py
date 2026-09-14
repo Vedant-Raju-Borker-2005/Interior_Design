@@ -776,6 +776,11 @@ def _populate_default_tracking(project_id: str, project: Project, db: Session):
                 project_id=project_id,
                 room_name=room.room_type,
                 item_name=item.product.name if item.product else "Furniture Item",
+                # Feedback 3.5 — the tracked row points at its product.
+                product_id=item.product_id,
+                vendor_status="ORDERED",
+                technician_status="NOT_RECEIVED",
+                photos=[],
                 status="ordered",
                 expected_date=(datetime.datetime.utcnow() + datetime.timedelta(days=14)).strftime("%Y-%m-%d"),
                 actual_date="",
@@ -904,6 +909,26 @@ def update_team_project_tracking(
     track.status = status.lower()
     if remarks is not None:
         track.remarks = remarks
+
+    # Older screens still post the combined status. Mirror it onto the split
+    # vendor/technician tracks (feedback 3.1) so both views stay consistent.
+    legacy_to_tracks = {
+        "ordered": ("ORDERED", None), "accepted": ("ACCEPTED", None),
+        "production": ("IN_PRODUCTION", None), "ready": ("READY", None),
+        "dispatched": ("DISPATCHED", None), "delivered": ("DELIVERED", "RECEIVED"),
+        "installed": ("DELIVERED", "INSTALLED"),
+    }
+    if status.lower() in legacy_to_tracks:
+        vendor_stage, tech_stage = legacy_to_tracks[status.lower()]
+        track.vendor_status = vendor_stage
+        track.vendor_updated_at = datetime.datetime.utcnow()
+        if tech_stage:
+            track.technician_status = tech_stage
+            track.technician_updated_at = datetime.datetime.utcnow()
+            if not track.handover_at:
+                track.handover_at = datetime.datetime.utcnow()
+            if tech_stage == "INSTALLED":
+                track.installed_at = datetime.datetime.utcnow()
         
     if status.lower() == "installed" and not track.actual_date:
         track.actual_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")

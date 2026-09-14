@@ -58,9 +58,12 @@ The backend is built with Python 3.10+, FastAPI, SQLAlchemy ORM, and SQLite data
 
 ## Technical Guidelines & API Conventions
 
-* **Quotation Approval Vendor Syncing**:
-  * `update_quotation_status` (`customer_routes.py`) calls `sync_project_vendor_assignments(project.id, db)` directly when quotation `status == "approved"`.
-  * `sync_project_vendor_assignments` (`db.py`) queries all live `RoomItem` records directly from SQLite for the project, matches registered or pincode-serviceable vendors, and populates `VendorAssignment` records for all active approved vendor profiles in the system.
+* **Supplier Assignment is Gated (stakeholder feedback 4.2–4.5)**:
+  * `update_quotation_status` (`customer_routes.py`), quotation generation and the vendor dashboard all call `sync_project_vendor_assignments(project.id, db)`.
+  * `sync_project_vendor_assignments` (`db.py`) does nothing until the project is `approval_status == "APPROVED"` **and** has `allocated_vendor_id`; it then creates `VendorAssignment` rows for every `RoomItem`, for the allocated supplier only. Approval and allocation happen in `routers/approvals.py`.
+* **Stakeholder-feedback modules**: `approvals.py` (queue, allocation, B2B pricing), `quotation_admin.py` (search, mark paid, convert), `item_tracking.py` (vendor vs technician tracks), `vendor_availability.py`, `special_services.py` (consultants, leads, commission, pre-checkout), `premium_render.py` (free/paid renders, plan upload). Shared rules live in `services/business_rules.py`; end-to-end tests in `tests/test_feedback_features.py`.
+* **BHK lookups**: packages and `BHK_ROOMS` are keyed `3BHK`; always pass user input through `normalize_bhk()`.
+* **New columns**: SQLite cannot add columns via `create_all()`; declare them in `init_db()`'s `add_cols(...)` block as well as on the model.
 * **Project Serialization (`_project_summary`)**:
   * `_project_summary(p: Project)` in `projects.py` MUST serialize associated `package` details (`id`, `name`, `base_price`, `tier`) and `created_at` timestamp.
 * **Catalog Query Scoring**:

@@ -748,6 +748,171 @@ export const customerExtrasAPI = {
     axiosInstance.get(`/api/v1/customer/projects/${projectId}/proof-photos`),
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// Stakeholder feedback (Sept 2026 review)
+// ════════════════════════════════════════════════════════════════════════════
+
+export type BillingDetails = {
+  gst_number?: string | null
+  company_name?: string | null
+  pan_number?: string | null
+  billing_address?: string | null
+  billing_city?: string | null
+  billing_state?: string | null
+  billing_pincode?: string | null
+}
+
+// 1.3 — customer GST & billing profile
+export const billingAPI = {
+  get: () => axiosInstance.get('/api/v1/auth/me'),
+  update: (data: BillingDetails) => axiosInstance.put('/api/v1/auth/me', data),
+}
+
+// 1.5 / 1.9 / 1.10 — admin quotation lifecycle
+export const quotationAdminAPI = {
+  search: (params?: { q?: string; status?: string; limit?: number }) =>
+    axiosInstance.get('/api/v1/quotation-admin/search', { params }),
+  paymentModes: () => axiosInstance.get('/api/v1/quotation-admin/payment-modes'),
+  markPaid: (quotationId: string, data: { payment_mode: string; payment_reference?: string; amount?: number; notes?: string }) =>
+    axiosInstance.post(`/api/v1/quotation-admin/${quotationId}/mark-paid`, data),
+  convertToProject: (quotationId: string, data: { property_name?: string; note?: string } = {}) =>
+    axiosInstance.post(`/api/v1/quotation-admin/${quotationId}/convert-to-project`, data),
+}
+
+// 4.2-4.5 approval queue & supplier allocation · 2.1-2.4 B2B pricing
+export const approvalsAPI = {
+  queue: (params?: { status?: string; include_drafts?: boolean }) =>
+    axiosInstance.get('/api/v1/approvals/queue', { params }),
+  approve: (projectId: string, note?: string) =>
+    axiosInstance.post(`/api/v1/approvals/projects/${projectId}/approve`, { note }),
+  reject: (projectId: string, reason: string) =>
+    axiosInstance.post(`/api/v1/approvals/projects/${projectId}/reject`, { reason }),
+  allocate: (projectId: string, vendorId: string, note?: string) =>
+    axiosInstance.post(`/api/v1/approvals/projects/${projectId}/allocate`, { vendor_id: vendorId, note }),
+  history: (projectId: string) =>
+    axiosInstance.get(`/api/v1/approvals/projects/${projectId}/history`),
+  pricing: (projectId: string) =>
+    axiosInstance.get(`/api/v1/approvals/projects/${projectId}/pricing`),
+  setDiscount: (projectId: string, data: { discount_type: string; discount_value: number; note?: string }) =>
+    axiosInstance.post(`/api/v1/approvals/projects/${projectId}/discount`, data),
+  clearDiscount: (projectId: string) =>
+    axiosInstance.delete(`/api/v1/approvals/projects/${projectId}/discount`),
+}
+
+// 3.1-3.5 separate vendor and technician tracks, photos on the item
+export const itemTrackingAPI = {
+  statuses: (role: 'vendor' | 'technician') =>
+    axiosInstance.get('/api/v1/item-tracking/statuses', { params: { role } }),
+  list: (projectId: string, role?: 'vendor' | 'technician') =>
+    axiosInstance.get(`/api/v1/item-tracking/project/${projectId}`, { params: role ? { role } : {} }),
+  create: (data: { project_id: string; room_name: string; item_name: string; product_id?: string; expected_date?: string }) =>
+    axiosInstance.post('/api/v1/item-tracking', data),
+  setVendorStatus: (itemId: string, data: { vendor_status: string; remarks?: string; expected_date?: string }) =>
+    axiosInstance.patch(`/api/v1/item-tracking/${itemId}/vendor-status`, data),
+  setTechnicianStatus: (itemId: string, data: { technician_status: string; remarks?: string }) =>
+    axiosInstance.patch(`/api/v1/item-tracking/${itemId}/technician-status`, data),
+  uploadPhoto: (itemId: string, file: File, opts: { caption?: string; stage?: string } = {}) => {
+    const form = new FormData()
+    form.append('file', file)
+    return axiosInstance.post(`/api/v1/item-tracking/${itemId}/photos`, form, {
+      params: opts,
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  deletePhoto: (itemId: string, url: string) =>
+    axiosInstance.delete(`/api/v1/item-tracking/${itemId}/photos`, { params: { url } }),
+}
+
+// 4.1 supplier availability switch
+export const availabilityAPI = {
+  setCatalogProduct: (productId: string, data: { is_available: boolean; reason?: string }) =>
+    axiosInstance.patch(`/api/v1/vendor/products/${productId}/availability`, data),
+  setVendorProduct: (productId: string, data: { is_available: boolean; reason?: string }) =>
+    axiosInstance.patch(`/api/v1/vendor/my-products/${productId}/availability`, data),
+  overview: (only?: 'available' | 'unavailable') =>
+    axiosInstance.get('/api/v1/vendor/availability', { params: only ? { only } : {} }),
+}
+
+// 5.1-5.8 special services: consultants, leads, commission
+export const specialServicesAPI = {
+  types: () => axiosInstance.get('/api/v1/special-services/types'),
+  consultants: (params?: { service_type?: string; status?: string; q?: string }) =>
+    axiosInstance.get('/api/v1/special-services/consultants', { params }),
+  createConsultant: (data: any) => axiosInstance.post('/api/v1/special-services/consultants', data),
+  updateConsultant: (id: string, data: any) => axiosInstance.put(`/api/v1/special-services/consultants/${id}`, data),
+  leads: (params?: { status?: string; service_type?: string; consultant_id?: string }) =>
+    axiosInstance.get('/api/v1/special-services/leads', { params }),
+  createLead: (data: {
+    service_type: string; requirements?: string; project_id?: string; city?: string
+    customer_name?: string; customer_phone?: string; customer_email?: string; service_value?: number
+  }) => axiosInstance.post('/api/v1/special-services/leads', data),
+  assign: (leadId: string, consultantId: string, note?: string) =>
+    axiosInstance.post(`/api/v1/special-services/leads/${leadId}/assign`, { consultant_id: consultantId, note }),
+  updateStatus: (leadId: string, data: { status: string; note?: string; service_value?: number }) =>
+    axiosInstance.patch(`/api/v1/special-services/leads/${leadId}/status`, data),
+  updatePayout: (leadId: string, payout_status: 'PENDING' | 'PAID') =>
+    axiosInstance.patch(`/api/v1/special-services/leads/${leadId}/payout`, { payout_status }),
+  earnings: (consultantId?: string) =>
+    axiosInstance.get('/api/v1/special-services/earnings', { params: consultantId ? { consultant_id: consultantId } : {} }),
+  previewCommission: (service_value: number, commission_rate: number) =>
+    axiosInstance.get('/api/v1/special-services/quote', { params: { service_value, commission_rate } }),
+  // 1.12 — pre-checkout special services & confirmations
+  getCheckout: (projectId: string) => axiosInstance.get(`/api/v1/special-services/checkout/${projectId}`),
+  saveCheckout: (projectId: string, data: {
+    services: { service_type: string; requirements?: string }[]
+    confirmations: Record<string, boolean>
+    site_access_from?: string
+    notes?: string
+  }) => axiosInstance.post(`/api/v1/special-services/checkout/${projectId}`, data),
+}
+
+// 1.1 plan-specific rendering · 1.7 free tier · 1.8 paid batch
+export const premiumRenderAPI = {
+  entitlement: (projectId: string) => axiosInstance.get(`/api/v1/ai/render-entitlement/${projectId}`),
+  queueBatch: (projectId: string, data: { count: number; style?: string; rooms?: string[]; notes?: string }) =>
+    axiosInstance.post(`/api/v1/ai/premium-render/${projectId}`, data),
+  batch: (batchId: string) => axiosInstance.get(`/api/v1/ai/premium-render/batch/${batchId}`),
+  uploadFloorPlan: (projectId: string, file: File, roomId?: string) => {
+    const form = new FormData()
+    form.append('file', file)
+    return axiosInstance.post(`/api/v1/ai/floor-plan/${projectId}`, form, {
+      params: roomId ? { room_id: roomId } : {},
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  clearFloorPlan: (projectId: string) => axiosInstance.delete(`/api/v1/ai/floor-plan/${projectId}`),
+  viewerBrief: (projectId: string) => axiosInstance.get(`/api/v1/ai/viewer-brief/${projectId}`),
+}
+
+// Full-page design studio: edit the design, keep 2D/3D in step, GLB export
+export type DesignValues = {
+  bhk_type: string
+  style: string | null
+  budget: number | null
+  quality: string | null
+  wood: string | null
+  fabric: string | null
+  colors: string[]
+  city: string | null
+  timeline: string | null
+  scope: string | null
+}
+
+export const designStudioAPI = {
+  get: (projectId: string) => axiosInstance.get(`/api/v1/ai/design-brief/${projectId}`),
+  update: (projectId: string, values: Partial<DesignValues>) =>
+    axiosInstance.put(`/api/v1/ai/design-brief/${projectId}`, values),
+  uploadGlb: (projectId: string, blob: Blob) => {
+    const form = new FormData()
+    form.append('file', blob, 'model.glb')
+    return axiosInstance.post(`/api/v1/ai/scene-glb/${projectId}`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  downloadGlb: (projectId: string) =>
+    axiosInstance.get(`/api/v1/ai/scene-glb/${projectId}`, { responseType: 'blob' }),
+}
+
 export default axiosInstance
 
 

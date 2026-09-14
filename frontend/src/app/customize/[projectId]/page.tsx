@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { projectsAPI, catalogAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
+import ProductImage from '@/components/ProductImage'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -856,8 +857,9 @@ export default function GuidedCustomizePage() {
                           >
                             <div className="flex items-center justify-between gap-4 w-full">
                               <div className="flex items-center gap-3.5 min-w-0">
-                                <img
+                                <ProductImage
                                   src={p.thumbnail_url}
+                                  fallbacks={p.images}
                                   alt={p.name}
                                   className="w-14 h-14 object-cover rounded-xl flex-shrink-0 border border-[#E5E7F2]"
                                 />
@@ -946,9 +948,12 @@ export default function GuidedCustomizePage() {
                     <div>
                       <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3 group bg-white border border-[#E5E7F2] flex items-center justify-center">
                         {galleryImages[activeImageIdx] ? (
-                          <img
-                            src={galleryImages[activeImageIdx].startsWith('/') ? `http://localhost:8000${galleryImages[activeImageIdx]}` : galleryImages[activeImageIdx]}
+                          <ProductImage
+                            src={galleryImages[activeImageIdx]}
+                            fallbacks={[customizingProduct.thumbnail_url]}
                             alt={customizingProduct.name}
+                            eager
+                            iconClassName="w-10 h-10"
                             className="w-full h-full object-cover transition-all duration-300"
                           />
                         ) : (
@@ -995,9 +1000,10 @@ export default function GuidedCustomizePage() {
                               )}
                             >
                               {imgUrl ? (
-                                <img
-                                  src={imgUrl.startsWith('/') ? `http://localhost:8000${imgUrl}` : imgUrl}
+                                <ProductImage
+                                  src={imgUrl}
                                   alt={`Thumb ${idx}`}
+                                  iconClassName="w-3.5 h-3.5"
                                   className="w-full h-full object-cover rounded"
                                 />
                               ) : (

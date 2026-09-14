@@ -115,7 +115,9 @@ def recommend_packages(
         if project and project.color_preferences:
             color_prefs = project.color_preferences
 
-    packages = db.query(Package).filter(Package.bhk == bhk).all()
+    from ..services.business_rules import normalize_bhk
+
+    packages = db.query(Package).filter(Package.bhk == normalize_bhk(bhk)).all()
 
     scored = []
     for pkg in packages:

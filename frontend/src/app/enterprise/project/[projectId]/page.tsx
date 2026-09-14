@@ -4,6 +4,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { enterpriseAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
+import BulkPricingCard from '@/components/BulkPricingCard'
 import toast from 'react-hot-toast'
 import { ArrowLeft, User, Mail, Phone, Link2, Copy, Trash2, Calendar, MapPin, Building, Activity, Layout, Eye, CheckCircle2 } from 'lucide-react'
 import clsx from 'clsx'
@@ -229,6 +230,9 @@ export default function EnterpriseProjectPage() {
             </div>
           </div>
         )}
+
+        {/* Unit-wise pricing with original vs discounted (feedback 2.2 / 2.3) */}
+        {project && <BulkPricingCard projectId={projectId as string} />}
 
         {/* Filter bar */}
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide select-none">

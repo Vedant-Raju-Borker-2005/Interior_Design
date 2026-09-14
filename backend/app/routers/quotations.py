@@ -10,6 +10,12 @@ from ..models import Project, Room, RoomItem, Product, Quotation, User
 from ..schemas import GenerateQuotationReq
 from ..auth_utils import current_user
 from ..services.pdf_service import generate_quotation_pdf
+from ..services.business_rules import (
+    billing_snapshot_for,
+    compute_discount,
+    effective_discount,
+    next_quotation_no,
+)
 
 router = APIRouter()
 
@@ -48,6 +54,12 @@ def generate_quotation(
                     "total": (item.unit_price or product.price) * item.qty,
                     "custom_color": item.custom_color,
                     "custom_material": item.custom_material,
+                    # Feedback 2.4 — the full customisation set reaches the quote
+                    "custom_size": item.custom_size,
+                    "custom_fabric": item.custom_fabric,
+                    "custom_wood_finish": item.custom_wood_finish,
+                    "custom_texture": item.custom_texture,
+                    "custom_cushion_style": item.custom_cushion_style,
                 })
 
     # If no items, add package base price as single line
@@ -76,10 +88,22 @@ def generate_quotation(
             "total": project.budget * 0.85,
         })
 
-    subtotal = sum(li["total"] for li in line_items)
+    gross = sum(li["total"] for li in line_items)
+
+    # Feedback 2.1/2.2 — a project-level bulk discount reduces the order total
+    # without altering any product price.
+    units = max(1, project.total_units or 1)
+    discount_type, discount_value = effective_discount(project, db)   # 2.1 — inherited by units
+    breakdown = compute_discount(gross, discount_type, discount_value, units)
+    subtotal = breakdown["discounted_total"]
     gst = round(subtotal * GST_RATE, 2)
     total = round(subtotal + gst, 2)
     valid_until = (datetime.datetime.utcnow() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+
+    # Feedback 1.3 — freeze the billing identity as invoiced.
+    billing = billing_snapshot_for(user)
+    # Feedback 1.4 — a unique, quotable reference.
+    quotation_no = next_quotation_no(db)
 
     # Generate PDF
     quot_id = str(uuid.uuid4())
@@ -92,6 +116,9 @@ def generate_quotation(
         gst=gst,
         total=total,
         valid_until=valid_until,
+        quotation_no=quotation_no,
+        billing=billing,
+        discount=breakdown,
     )
 
     pdf_url = f"{BACKEND_URL}/static/assets/{os.path.basename(pdf_path)}"
@@ -100,6 +127,7 @@ def generate_quotation(
     quotation = Quotation(
         id=quot_id,
         project_id=project.id,
+        quotation_no=quotation_no,
         subtotal=subtotal,
         gst=gst,
         total=total,
@@ -107,6 +135,10 @@ def generate_quotation(
         valid_until=valid_until,
         status="generated",
         line_items=line_items,
+        gst_number=billing.get("gst_number"),
+        billing_snapshot=billing,
+        original_total=breakdown["original_total"],
+        discount_amount=breakdown["discount_amount"],
     )
     db.add(quotation)
     db.commit()
@@ -122,8 +154,17 @@ def generate_quotation(
     return {
         "id": quot_id,
         "quotation_id": quot_id,
+        "quotation_no": quotation_no,
         "subtotal": subtotal,
         "gst": gst,
+        "gst_number": billing.get("gst_number"),
+        "billing": billing,
+        "original_total": breakdown["original_total"],
+        "discount_amount": breakdown["discount_amount"],
+        "discounted_unit_price": breakdown["discounted_unit_price"],
+        "original_unit_price": breakdown["original_unit_price"],
+        "savings_per_unit": breakdown["savings_per_unit"],
+        "units": breakdown["units"],
         "total": total,
         "pdf_url": pdf_url,
         "valid_until": valid_until,
@@ -144,12 +185,20 @@ def get_quotation(quotation_id_or_project_id: str, db: Session = Depends(get_db)
     return {
         "id": q.id,
         "project_id": q.project_id,
+        "quotation_no": q.quotation_no,                 # 1.4
         "subtotal": q.subtotal,
         "gst": q.gst,
+        "gst_number": q.gst_number,                     # 1.3
+        "billing": q.billing_snapshot or {},            # 1.3
+        "original_total": q.original_total,             # 2.2
+        "discount_amount": q.discount_amount,           # 2.2
         "total": q.total,
         "pdf_url": q.pdf_url,
         "valid_until": q.valid_until,
         "status": q.status,
+        "paid_at": q.paid_at.isoformat() if q.paid_at else None,
+        "payment_mode": q.payment_mode,
+        "payment_reference": q.payment_reference,
         "line_items": q.line_items or [],
         "created_at": q.created_at.isoformat() if q.created_at else None,
     }

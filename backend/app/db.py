@@ -129,10 +129,172 @@ def init_db():
                 if "status" not in user_columns:
                     cursor.execute("ALTER TABLE users ADD COLUMN status VARCHAR DEFAULT 'active'")
 
+                # ── Stakeholder-feedback columns ──────────────────────────────
+                # SQLite cannot add these through create_all() once the table
+                # exists, so every new column is declared here as well.
+                def add_cols(table, cols):
+                    cursor.execute(f"PRAGMA table_info({table})")
+                    existing = [row[1] for row in cursor.fetchall()]
+                    if not existing:
+                        return  # table not created yet; create_all will handle it
+                    for name, ddl in cols.items():
+                        if name not in existing:
+                            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+
+                add_cols("users", {           # 1.3 GST & billing
+                    "gst_number": "VARCHAR",
+                    "company_name": "VARCHAR",
+                    "pan_number": "VARCHAR",
+                    "billing_address": "TEXT",
+                    "billing_city": "VARCHAR",
+                    "billing_pincode": "VARCHAR",
+                    "billing_state": "VARCHAR",
+                })
+                add_cols("projects", {        # 4.2-4.5 approval + allocation, 2.1-2.3 B2B, 1.8 credits
+                    "approval_status": "VARCHAR DEFAULT 'PENDING'",
+                    "approved_by": "VARCHAR",
+                    "approved_at": "DATETIME",
+                    "rejection_reason": "TEXT",
+                    "allocated_vendor_id": "VARCHAR",
+                    "allocated_at": "DATETIME",
+                    "allocated_by": "VARCHAR",
+                    "discount_type": "VARCHAR",
+                    "discount_value": "FLOAT DEFAULT 0",
+                    "original_unit_price": "FLOAT DEFAULT 0",
+                    "discount_note": "VARCHAR",
+                    "premium_render_credits": "INTEGER DEFAULT 0",
+                    "style_tags": "TEXT DEFAULT '[]'",
+                })
+                add_cols("quotations", {      # 1.3, 1.4, 1.9, 1.10, 2.2
+                    "quotation_no": "VARCHAR",
+                    "gst_number": "VARCHAR",
+                    "billing_snapshot": "TEXT DEFAULT '{}'",
+                    "original_total": "FLOAT DEFAULT 0",
+                    "discount_amount": "FLOAT DEFAULT 0",
+                    "paid_at": "DATETIME",
+                    "paid_by": "VARCHAR",
+                    "payment_mode": "VARCHAR",
+                    "payment_reference": "VARCHAR",
+                    "converted_project_id": "VARCHAR",
+                    "converted_at": "DATETIME",
+                })
+                add_cols("renders", {         # 1.7/1.8 free vs premium
+                    "tier": "VARCHAR DEFAULT 'free'",
+                    "batch_id": "VARCHAR",
+                })
+                add_cols("payments", {        # 1.11 full-payment model
+                    "payment_type": "VARCHAR DEFAULT 'FULL'",
+                    "quotation_id": "VARCHAR",
+                    "payment_mode": "VARCHAR",
+                    "recorded_by": "VARCHAR",
+                    "notes": "TEXT",
+                })
+                for _t in ("products", "vendor_products"):   # 4.1 availability
+                    add_cols(_t, {
+                        "is_available": "BOOLEAN DEFAULT 1",
+                        "unavailable_reason": "VARCHAR",
+                        "availability_updated_at": "DATETIME",
+                    })
+                add_cols("item_trackings", {  # 3.1-3.5 split statuses
+                    "vendor_status": "VARCHAR DEFAULT 'ORDERED'",
+                    "technician_status": "VARCHAR DEFAULT 'NOT_RECEIVED'",
+                    "vendor_updated_at": "DATETIME",
+                    "technician_updated_at": "DATETIME",
+                    "product_id": "VARCHAR",
+                    "technician_id": "VARCHAR",
+                    "handover_at": "DATETIME",
+                    "installed_at": "DATETIME",
+                    "photos": "TEXT DEFAULT '[]'",
+                })
+
+                # Backfill: projects that existed before the approval queue was
+                # introduced are already live work — they must not be frozen
+                # behind a PENDING gate. Only new projects enter the queue.
+                cursor.execute(
+                    "UPDATE projects SET approval_status='APPROVED' "
+                    "WHERE approval_status IS NULL OR "
+                    "(approval_status='PENDING' AND status NOT IN ('draft',''))"
+                )
+                # Backfill: give pre-existing quotations a readable number.
+                cursor.execute(
+                    "SELECT id FROM quotations WHERE quotation_no IS NULL OR quotation_no=''"
+                )
+                legacy = [r[0] for r in cursor.fetchall()]
+                for i, qid in enumerate(legacy, start=1):
+                    cursor.execute(
+                        "UPDATE quotations SET quotation_no=? WHERE id=?",
+                        (f"QT-LEGACY-{i:05d}", qid),
+                    )
+                # Backfill: mirror the old combined status onto the vendor track
+                # so existing tracking rows keep showing the right stage.
+                cursor.execute(
+                    "UPDATE item_trackings SET vendor_status=UPPER(status) "
+                    "WHERE (vendor_status IS NULL OR vendor_status='ORDERED') "
+                    "AND status IS NOT NULL AND status<>''"
+                )
+                cursor.execute(
+                    "UPDATE item_trackings SET technician_status='INSTALLED', "
+                    "vendor_status='DELIVERED' WHERE LOWER(status)='installed'"
+                )
+
+                # Catalog images were re-encoded from 6-10 MB PNG/JPEG to WebP
+                # (feedback 1.6: product images failing to load). Point stored
+                # URLs at the new files — but only where the .webp really exists,
+                # so a vendor's own later upload is never rewritten to a 404.
+                _migrate_catalog_image_urls(cursor)
+
+                # BHK is keyed as '3BHK' by packages and room templates; rows
+                # written as '3 BHK' could not find their packages.
+                for _table in ("projects", "flats"):
+                    cursor.execute(f"PRAGMA table_info({_table})")
+                    if "bhk_type" in [row[1] for row in cursor.fetchall()]:
+                        cursor.execute(
+                            f"UPDATE {_table} SET bhk_type = REPLACE(UPPER(bhk_type), ' ', '') "
+                            f"WHERE bhk_type LIKE '% %'"
+                        )
+
                 conn.commit()
                 conn.close()
             except Exception as e:
                 print(f"Database auto-migration failed: {e}")
+
+
+def _migrate_catalog_image_urls(cursor):
+    import re
+    from pathlib import Path
+
+    catalog = Path(__file__).resolve().parents[1] / "assets" / "catalog"
+    pattern = re.compile(r"(/static/assets/catalog/)([^\"'\s]+?)\.(png|jpe?g)\b", re.IGNORECASE)
+
+    def rewrite(text):
+        if not text or "/static/assets/catalog/" not in text:
+            return text
+
+        def swap(m):
+            from urllib.parse import unquote
+            stem = m.group(2)
+            if (catalog / (unquote(stem) + ".webp")).exists():
+                return f"{m.group(1)}{stem}.webp"
+            return m.group(0)
+
+        return pattern.sub(swap, text)
+
+    targets = [
+        ("products", "thumbnail_url"), ("products", "images"),
+        ("vendor_products", "images"),
+        ("packages", "thumbnail_url"), ("packages", "images"),
+    ]
+    for table, column in targets:
+        cursor.execute(f"PRAGMA table_info({table})")
+        if column not in [row[1] for row in cursor.fetchall()]:
+            continue
+        cursor.execute(
+            f"SELECT id, {column} FROM {table} WHERE {column} LIKE '%/static/assets/catalog/%'"
+        )
+        for row_id, value in cursor.fetchall():
+            updated = rewrite(value)
+            if updated != value:
+                cursor.execute(f"UPDATE {table} SET {column}=? WHERE id=?", (updated, row_id))
 
 
 def sync_demo_data(db):
@@ -300,16 +462,20 @@ def sync_demo_data(db):
 
 
 def sync_project_vendor_assignments(project_id: str, db: Session):
-    from .models import Room, RoomItem, VendorAssignment, Product, Vendor
+    from .models import Room, RoomItem, VendorAssignment, Product, Vendor, Project
     import uuid
 
-    # Fetch all active/approved vendors
-    active_vendors = db.query(Vendor).filter(
-        (Vendor.status == "APPROVED") | (Vendor.active == True)
-    ).all()
-    
-    if not active_vendors:
+    # Stakeholder feedback 4.2/4.4/4.5 — there is no straight-through flow.
+    # A supplier receives a project's items only after an admin has approved
+    # the project AND allocated it to that supplier. Until then this is a no-op,
+    # whichever path calls it (quotation, vendor dashboard, demo sync).
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project or project.approval_status != "APPROVED" or not project.allocated_vendor_id:
         return
+    allocated = db.query(Vendor).filter(Vendor.id == project.allocated_vendor_id).first()
+    if not allocated:
+        return
+    active_vendors = [allocated]
 
     rooms = db.query(Room).filter(Room.project_id == project_id).all()
     for room in rooms:
@@ -319,14 +485,8 @@ def sync_project_vendor_assignments(project_id: str, db: Session):
             if not product:
                 continue
 
-            target_vendors = []
-            if product.vendor_id:
-                v = db.query(Vendor).filter(Vendor.id == product.vendor_id).first()
-                if v:
-                    target_vendors.append(v)
-            
-            if not target_vendors:
-                target_vendors = active_vendors
+            # The whole order goes to the supplier the admin allocated.
+            target_vendors = active_vendors
 
             for vendor in target_vendors:
                 # Verify if VendorAssignment already exists for this RoomItem and Vendor

@@ -74,6 +74,77 @@ main { display:flex; height:calc(100vh - 248px); min-height:520px; }
 {"imports": {"three": "https://unpkg.com/three@0.160.0/build/three.module.js",
               "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"}}
 </script>
+<style>
+/* Embedded mode: the host app has already collected the brief, so the
+   onboarding controls are redundant here — the design is shown directly. */
+body.embedded #panel,
+body.embedded #colours,
+body.embedded #layers { display: none !important; }
+body.embedded header { display: none; }
+/* The host page shows the title and brief, so each view gets the whole frame. */
+body.embedded main { height: 100vh; min-height: 0; }
+
+/* The 2D plan and the 3D model are shown separately, never side by side. */
+body.layout-plan #view-pane { display: none; }
+body.layout-3d #plan-pane { display: none; }
+
+/* 2D plan: the whole drawing fits the frame (no scrolling to find a room),
+   with the recommendations in a panel beside it. */
+body.layout-plan #plan-pane {
+  width: 100%; min-width: 0; border-right: 0; overflow: hidden;
+  display: flex; gap: 18px; padding: 16px 18px; box-sizing: border-box;
+}
+#plan-stage { position: relative; }
+#plan-zoom, #plan-hint { display: none; }
+body.layout-plan #plan-stage { flex: 1; min-width: 0; min-height: 0; }
+body.layout-plan #plan {
+  position: absolute; inset: 0; overflow: hidden;
+  cursor: grab; touch-action: none; background: #FFF; border-radius: 10px;
+}
+body.layout-plan #plan.dragging { cursor: grabbing; }
+body.layout-plan #plan svg { width: 100%; height: 100%; max-width: none; display: block; }
+body.layout-plan #plan-zoom {
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+  position: absolute; right: 12px; bottom: 44px; z-index: 5;
+}
+#plan-zoom button {
+  width: 34px; height: 34px; border-radius: 9px; cursor: pointer; font-size: 17px;
+  border: 1px solid #D6D0C6; background: rgba(255,255,255,.96); color: #2C2822;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+#plan-zoom button:hover { background: #FFF; border-color: #B9B0A2; }
+#plan-zoom-level {
+  font-size: 10.5px; color: #5F594F; background: rgba(255,255,255,.94);
+  border-radius: 6px; padding: 2px 5px; min-width: 34px; text-align: center;
+}
+body.layout-plan #plan-hint {
+  display: block; position: absolute; left: 10px; bottom: 10px; z-index: 5;
+  font-size: 11px; color: #5F594F; background: rgba(255,255,255,.92);
+  padding: 4px 8px; border-radius: 6px; pointer-events: none;
+}
+body.layout-plan #reco {
+  width: 300px; flex-shrink: 0; overflow-y: auto; margin-top: 0;
+  border-top: 0; border-left: 1px solid #E7E2D9; padding: 4px 0 4px 16px;
+}
+@media (max-width: 900px) {
+  body.layout-plan #plan-pane { flex-direction: column; overflow-y: auto; }
+  body.layout-plan #plan-stage { height: 70vh; flex: none; }
+  body.layout-plan #plan-hint { display: none; }
+  body.layout-plan #reco { width: auto; border-left: 0; border-top: 1px solid #E7E2D9; padding: 12px 0 0; }
+}
+/* Dragging across the drawing used to select its labels (blue boxes). */
+#plan, #plan svg, #plan text { -webkit-user-select: none; user-select: none; }
+
+/* 3D model: full frame, with on-screen view controls. */
+body.layout-3d #view-pane { width: 100%; }
+#zoom button { display: flex; align-items: center; justify-content: center;
+               font-size: 15px; line-height: 1; color: #2C2822; }
+#zoom button:hover { background: #fff; border-color: #B9B0A2; }
+#zoom .sep { height: 6px; }
+#viewport canvas { touch-action: none; outline: none; cursor: grab; }
+#viewport canvas:active { cursor: grabbing; }
+</style>
 </head><body>
 
 <header>
@@ -85,12 +156,31 @@ main { display:flex; height:calc(100vh - 248px); min-height:520px; }
 <div id="colours"></div>
 <div id="layers"></div>
 <main>
-  <section id="plan-pane"><div id="plan"></div><div id="reco"></div></section>
+  <section id="plan-pane">
+    <div id="plan-stage">
+      <div id="plan"></div>
+      <div id="plan-zoom" aria-label="Plan zoom">
+        <button type="button" data-pz="in" title="Zoom in (+)">+</button>
+        <button type="button" data-pz="out" title="Zoom out (−)">−</button>
+        <button type="button" data-pz="fit" title="Fit whole plan (0)">&#x2922;</button>
+        <span id="plan-zoom-level">100%</span>
+      </div>
+      <div id="plan-hint">Scroll or pinch to zoom · drag to move · double-click to zoom in · click a room to go to it</div>
+    </div>
+    <div id="reco"></div>
+  </section>
   <section id="view-pane">
     <div id="viewport"></div>
     <div id="toolbar"></div>
-    <div id="zoom"><button id="zoom-in">+</button><button id="zoom-out">−</button></div>
-    <div id="hint">Drag to orbit · right-drag to pan · scroll to zoom · hover any item for specs</div>
+    <div id="zoom">
+      <button id="zoom-in" title="Zoom in (+)">+</button>
+      <button id="zoom-out" title="Zoom out (−)">−</button>
+      <div class="sep"></div>
+      <button id="rot-left" title="Rotate left (Q)">&#x27F2;</button>
+      <button id="rot-right" title="Rotate right (E)">&#x27F3;</button>
+      <button id="view-reset" title="Reset view (R)">&#x2302;</button>
+    </div>
+    <div id="hint">Drag to turn · right-drag to pan · scroll or pinch to zoom · double-click to zoom in · hover an item for specs</div>
     <div id="status">loading…</div>
     <div id="tooltip"></div>
   </section>
@@ -120,7 +210,33 @@ const H = C.colors;
 const TEX = window.__TEX__.maps;
 const MEAN = window.__TEX__.means;
 const MODEL = window.__MODEL__;
-let cfg = Object.assign({}, window.__DEFAULTS__);
+const EMBED = window.__EMBED__ || null;
+// When the host app passes a brief (the customer already answered all of this
+// during onboarding) it wins over the defaults baked into this file.
+let cfg = Object.assign({}, window.__DEFAULTS__, (EMBED && EMBED.brief) || {});
+
+/* The host app's vocabulary is not this catalogue's vocabulary — a project may
+   carry a BHK, style or budget band that was never baked into this build. Clamp
+   every field to something renderable so an odd brief degrades instead of
+   throwing on first paint. */
+(function coerceBrief() {
+  const pick = (value, allowed, fallback) =>
+    allowed.includes(value) ? value : fallback;
+  cfg.bhk      = pick(cfg.bhk,      C.bhks,                  '2 BHK');
+  cfg.style    = pick(cfg.style,    Object.keys(C.styles),   'Modern');
+  cfg.city     = pick(cfg.city,     C.cities,                'Other');
+  cfg.scope    = pick(cfg.scope,    C.scopes,                'NEW HOME');
+  cfg.budget   = pick(cfg.budget,   C.budgets,               C.budgets[2]);
+  cfg.quality  = pick(cfg.quality,  C.qualities,             'Standard');
+  cfg.timeline = pick(cfg.timeline, C.timelines,             C.timelines[1]);
+  cfg.wood     = pick(cfg.wood,     Object.keys(C.woods),    'Oak Laminate');
+  cfg.fabric   = pick(cfg.fabric,   Object.keys(C.fabrics),  'Woven Fabric');
+  const known = Array.isArray(cfg.colors)
+    ? cfg.colors.filter(c => Object.prototype.hasOwnProperty.call(H, c))
+    : [];
+  // assignPalette needs between one and three colours to work with.
+  cfg.colors = known.length ? known.slice(0, 3) : C.styles[cfg.style].colors.slice(0, 3);
+})();
 cfg.rquality = 'Balanced';
 const LAYERS = { ground: true, decor: true, shadows: true, textures: true };
 
@@ -1174,13 +1290,18 @@ controls.enableZoom = true;
 controls.enablePan = true;
 controls.minPolarAngle = 0.06;                 // not quite straight down
 controls.maxPolarAngle = Math.PI / 2 - 0.05;   // never below the floor plane
-controls.rotateSpeed = 0.42;
+// Tuned so the model glides: responsive rotation, eased stop, zoom that
+// follows the cursor, and room to zoom right into a single piece of furniture.
+controls.rotateSpeed = 0.75;
 controls.screenSpacePanning = true;
 controls.enableDamping = true;
-controls.dampingFactor = 0.055;
-controls.zoomSpeed = 0.62;
-controls.panSpeed = 0.8;
-controls.minZoom = 0.5; controls.maxZoom = 9.0;
+controls.dampingFactor = 0.08;
+controls.zoomSpeed = 1.1;
+controls.panSpeed = 0.9;
+controls.zoomToCursor = true;
+controls.minZoom = 0.3; controls.maxZoom = 18.0;
+controls.keyPanSpeed = 18;
+controls.listenToKeyEvents(window);            // arrow keys pan
 controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
 controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 
@@ -1195,13 +1316,12 @@ function setDPR(v) {
 }
 setDPR(DPR_HI());
 let settleTimer = 0;
-controls.addEventListener('start', () => {
-  clearTimeout(settleTimer);
-  setDPR(DPR_LO());
-});
+// Resolution used to drop on every drag and snap back 180 ms after release
+// (while damping was still moving the view), which read as blur + stutter.
+// Keep one steady pixel ratio instead; only refresh the static shadow map.
 controls.addEventListener('end', () => {
   clearTimeout(settleTimer);
-  settleTimer = setTimeout(() => { setDPR(DPR_HI()); sun.shadow.needsUpdate = true; }, 180);
+  settleTimer = setTimeout(() => { sun.shadow.needsUpdate = true; }, 180);
 });
 
 let world = new THREE.Group(); scene.add(world);
@@ -1508,6 +1628,36 @@ function buildWorld(data) {
 }
 
 /* ══════════════════════════ camera framing ══════════════════════════════ */
+/* Fit the whole home (plus a margin) into the frame. The old fit only used the
+   larger floor dimension against the frame height, so a wide or narrow frame
+   cropped the sides. Project the home's corners onto the camera instead. */
+function computeView(B0) {
+  camera.lookAt(controls.target);
+  camera.updateMatrixWorld();
+  const inv = camera.matrixWorldInverse;
+  const t = controls.target.clone().applyMatrix4(inv);
+  const m = 1.2, H = 3.2;
+  let halfW = 0, halfH = 0;
+  for (const x of [-m, B0.width + m])
+    for (const z of [m, -B0.depth - m])
+      for (const y of [0, H]) {
+        const q = new THREE.Vector3(x, y, z).applyMatrix4(inv);
+        halfW = Math.max(halfW, Math.abs(q.x - t.x));
+        halfH = Math.max(halfH, Math.abs(q.y - t.y));
+      }
+  const aspect = container.clientWidth / Math.max(1, container.clientHeight);
+  return Math.max(halfH * 2, (halfW * 2) / aspect) * 1.06;
+}
+function applyFrustum() {
+  // A hidden pane (2D view active) has no size yet; fit when it is shown.
+  if (!container.clientWidth || !container.clientHeight || !sceneData) return;
+  VIEW = computeView(sceneData.bounds);
+  const aspect = container.clientWidth / container.clientHeight;
+  camera.left = -VIEW * aspect / 2; camera.right = VIEW * aspect / 2;
+  camera.top = VIEW / 2; camera.bottom = -VIEW / 2;
+  camera.updateProjectionMatrix();
+}
+
 function frameHome(data) {
   const B0 = data.bounds;
   centre = new THREE.Vector3(B0.width / 2, 0, -B0.depth / 2);
@@ -1516,11 +1666,7 @@ function frameHome(data) {
     camera.position.copy(centre.clone().add(DIR.clone().multiplyScalar(160)));
     camPlaced = true;
   }
-  VIEW = Math.max(B0.width, B0.depth) * 1.38;
-  const aspect = container.clientWidth / container.clientHeight;
-  camera.left = -VIEW * aspect / 2; camera.right = VIEW * aspect / 2;
-  camera.top = VIEW / 2; camera.bottom = -VIEW / 2;
-  camera.updateProjectionMatrix();
+  applyFrustum();
   sun.position.set(B0.width * 0.7 + 16, 30, -B0.depth * 0.25 + 18);
   sun.target.position.copy(centre);
   const half = Math.max(B0.width, B0.depth) * 1.35;
@@ -1553,6 +1699,21 @@ function focusRoom(roomId) {
 }
 const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 let zoomTween = null;
+let viewTween = null;
+const UP = new THREE.Vector3(0, 1, 0);
+function orbitBy(angle) {
+  viewTween = { kind: 'orbit', t0: performance.now(), dur: 560, angle,
+    from: camera.position.clone().sub(controls.target) };
+}
+function resetView() {
+  const offset = camera.position.clone().sub(controls.target);
+  tween = null; zoomTween = null;
+  viewTween = { kind: 'reset', t0: performance.now(), dur: 700,
+    fromT: controls.target.clone(), fromDir: offset.clone().normalize(),
+    dist: Math.max(offset.length(), 60), fromZ: camera.zoom };
+  document.querySelectorAll('.focus-btn').forEach(b => b.classList.toggle('active', b.dataset.room === 'home'));
+  document.querySelectorAll('#plan [data-room]').forEach(g => g.classList.remove('focus'));
+}
 
 /* ══════════════ 2D plan: swap + re-tint to the live palette ═════════════ */
 const SHADES = { b: 0.55, d: 0.35, l: 0.42, s: 0.72, o: 0.25 };
@@ -1644,10 +1805,19 @@ function renderModelPanel() {
 function applyConfig() {
   tier = resolveTier(cfg.budget, cfg.quality);
   palette = assignPalette(cfg.colors, cfg.style);
-  const variant = VARIANTS[`${cfg.bhk}|${tier}`];
+  let variant = VARIANTS[`${cfg.bhk}|${tier}`];
+  if (!variant) {
+    // A brief can name a BHK/tier combination that was never baked. Fall back
+    // along the tier first, then the BHK, rather than throwing.
+    const sameBhk = Object.keys(VARIANTS).filter(k => k.startsWith(`${cfg.bhk}|`));
+    const key = sameBhk[0] || Object.keys(VARIANTS)[0];
+    variant = VARIANTS[key];
+    tier = key.split('|')[1];
+  }
   sceneData = variant.scene;
 
   document.getElementById('plan').innerHTML = variant.svg;
+  planView.attach(document.querySelector('#plan svg'));
   buildSurfaces();
   retintPlan();
   document.querySelectorAll('#plan [data-room]').forEach(g =>
@@ -1664,6 +1834,25 @@ function applyConfig() {
   focusRoom(null);
   updateReadout();
   renderModelPanel();
+  notifyHost();
+}
+
+/* ════════════════ host-page bridge (design studio) ═════════════════════ */
+function notifyHost() {
+  if (window.parent === window) return;
+  const B0 = sceneData.bounds;
+  window.parent.postMessage({
+    type: 'ids:ready',
+    summary: {
+      tier, bhk: cfg.bhk, style: cfg.style, budget: cfg.budget, quality: cfg.quality,
+      wood: cfg.wood, fabric: cfg.fabric, colors: cfg.colors,
+      palette: palette ? [palette.dominant, palette.secondary, palette.accent] : [],
+      area_m2: B0.area_m2, area_sqft: Math.round(B0.area_m2 * 10.764),
+      width_m: B0.width, depth_m: B0.depth,
+      rooms: sceneData.rooms.map(r => ({ id: r.room_id, label: r.label })),
+      objects: sceneData.objects.length,
+    },
+  }, '*');
 }
 
 function updateReadout() {
@@ -1797,12 +1986,41 @@ const stepZoom = f => {
 };
 document.getElementById('zoom-in').addEventListener('click', () => stepZoom(1.3));
 document.getElementById('zoom-out').addEventListener('click', () => stepZoom(1 / 1.3));
+document.getElementById('rot-left').addEventListener('click', () => orbitBy(-Math.PI / 4));
+document.getElementById('rot-right').addEventListener('click', () => orbitBy(Math.PI / 4));
+document.getElementById('view-reset').addEventListener('click', resetView);
+
+// Double-click: glide into whatever is under the cursor.
+renderer.domElement.addEventListener('dblclick', e => {
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(pointer, camera);
+  const hit = ray.intersectObjects(world.children, true)[0];
+  if (!hit) return;
+  tween = { t0: performance.now(), fromT: controls.target.clone(), toT: hit.point.clone(),
+    fromZ: camera.zoom, toZ: Math.min(camera.zoom * 2, controls.maxZoom) };
+});
+
+// Keyboard (when the model has focus): Q/E rotate, +/− zoom, R reset.
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (document.body.classList.contains('layout-plan')) {
+    if (k === '+' || k === '=') planView.zoomAt(1.25);
+    else if (k === '-' || k === '_') planView.zoomAt(1 / 1.25);
+    else if (k === '0') planView.fitAll();
+    else if (k === 'r') { planView.touched = false; planView.reset(); }
+    return;
+  }
+  if (k === 'q') orbitBy(-Math.PI / 8);
+  else if (k === 'e') orbitBy(Math.PI / 8);
+  else if (k === '+' || k === '=') stepZoom(1.25);
+  else if (k === '-' || k === '_') stepZoom(1 / 1.25);
+  else if (k === 'r') resetView();
+});
 addEventListener('resize', () => {
-  const aspect = container.clientWidth / container.clientHeight;
-  camera.left = -VIEW * aspect / 2; camera.right = VIEW * aspect / 2;
-  camera.top = VIEW / 2; camera.bottom = -VIEW / 2;
-  camera.updateProjectionMatrix();
+  if (!container.clientWidth || !container.clientHeight) return;
   renderer.setSize(container.clientWidth, container.clientHeight);
+  applyFrustum();                 // refit the home to the new frame shape
   sun.shadow.needsUpdate = true;
 });
 
@@ -1824,12 +2042,266 @@ function animate() {
     camera.updateProjectionMatrix();
     if (t >= 1) zoomTween = null;
   }
+  if (viewTween) {
+    const t = Math.min(1, (performance.now() - viewTween.t0) / viewTween.dur);
+    const k = ease(t);
+    if (viewTween.kind === 'orbit') {
+      const o = viewTween.from.clone().applyAxisAngle(UP, viewTween.angle * k);
+      camera.position.copy(controls.target).add(o);
+    } else if (viewTween.kind === 'reset') {
+      controls.target.lerpVectors(viewTween.fromT, centre, k);
+      const dir = viewTween.fromDir.clone().lerp(DIR, k).normalize();
+      camera.position.copy(controls.target).add(dir.multiplyScalar(viewTween.dist));
+      camera.zoom = viewTween.fromZ + (1 - viewTween.fromZ) * k;
+      camera.updateProjectionMatrix();
+    }
+    if (t >= 1) { viewTween = null; sun.shadow.needsUpdate = true; }
+  }
   controls.update();
   renderer.render(scene, camera);
 }
 
-buildPanel();
-applyConfig();
+/* ═══════════════ 2D plan: pan / zoom (studio plan view) ════════════════════
+   Zoom works on the SVG viewBox rather than a CSS transform, so walls and
+   labels stay vector-sharp at every level. Movement eases toward a target
+   state each frame, which is what makes wheel / button zoom feel smooth. */
+const PLAN_MIN_Z = 0.6, PLAN_MAX_Z = 8;
+const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
+const planView = {
+  svg: null, base: null,
+  z: 1, cx: 0, cy: 0,          // current
+  tz: 1, tcx: 0, tcy: 0,       // target
+  touched: false, raf: 0,
+  pointers: new Map(), pinchDist: 0, dragged: false, last: null,
+  el() { return document.getElementById('plan'); },
+  active() { return !!this.svg && document.body.classList.contains('layout-plan'); },
+  size() { return this.el().getBoundingClientRect(); },
+  fit0() { const r = this.size(); return Math.min(r.width / this.base.w, r.height / this.base.h); },
+
+  attach(svg) {
+    if (!svg) return;
+    this.svg = svg;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    this.base = {
+      x: vb && vb.width ? vb.x : 0, y: vb && vb.height ? vb.y : 0,
+      w: (vb && vb.width) || +svg.getAttribute('width') || 1000,
+      h: (vb && vb.height) || +svg.getAttribute('height') || 1000,
+    };
+    // Let CSS size the drawing; the viewBox does the zooming.
+    svg.removeAttribute('width'); svg.removeAttribute('height');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.querySelectorAll('[data-room]').forEach(g => g.addEventListener('click', () => {
+      if (this.active() && !this.dragged) this.zoomToRoom(g.getAttribute('data-room'));
+    }));
+    this.touched = false;
+    this.reset(true);
+  },
+
+  // Phones and portrait frames see the whole plan (as before). Laptops and
+  // desktops start a little closer so the rooms are readable at a glance.
+  defaultZoom() {
+    const r = this.size();
+    if (!r.width || !r.height) return 1;
+    if (r.width < 768 || r.height >= r.width) return 1;
+    const fillWidth = (r.width * 0.94) / (this.base.w * this.fit0());
+    return clampN(fillWidth, 1, 1.6);
+  },
+  centre() { return [this.base.x + this.base.w / 2, this.base.y + this.base.h / 2]; },
+  reset(instant) {
+    this.tz = this.defaultZoom();
+    [this.tcx, this.tcy] = this.centre();
+    if (instant) { this.z = this.tz; this.cx = this.tcx; this.cy = this.tcy; this.apply(); }
+    this.kick();
+  },
+  fitAll() {
+    this.tz = 1; [this.tcx, this.tcy] = this.centre();
+    this.touched = true; this.kick();
+  },
+
+  clampTargets() {
+    this.tz = clampN(this.tz, PLAN_MIN_Z, PLAN_MAX_Z);
+    this.tcx = clampN(this.tcx, this.base.x, this.base.x + this.base.w);
+    this.tcy = clampN(this.tcy, this.base.y, this.base.y + this.base.h);
+  },
+  apply() {
+    if (!this.svg) return;
+    if (!document.body.classList.contains('layout-plan')) {
+      // Outside the studio plan view the drawing is shown whole, unzoomed.
+      this.svg.setAttribute('viewBox', `${this.base.x} ${this.base.y} ${this.base.w} ${this.base.h}`);
+      return;
+    }
+    const r = this.size();
+    if (!r.width || !r.height) return;
+    const k = this.fit0() * this.z;
+    const w = r.width / k, h = r.height / k;
+    this.svg.setAttribute('viewBox', `${this.cx - w / 2} ${this.cy - h / 2} ${w} ${h}`);
+    const label = document.getElementById('plan-zoom-level');
+    if (label) label.textContent = `${Math.round(this.z * 100)}%`;
+  },
+  kick() {
+    this.clampTargets();
+    if (!this.raf) this.raf = requestAnimationFrame(() => this.step());
+  },
+  step() {
+    this.raf = 0;
+    const a = 0.24;
+    this.z += (this.tz - this.z) * a;
+    this.cx += (this.tcx - this.cx) * a;
+    this.cy += (this.tcy - this.cy) * a;
+    const done = Math.abs(this.tz - this.z) < 0.0015 &&
+      Math.abs(this.tcx - this.cx) < 0.05 && Math.abs(this.tcy - this.cy) < 0.05;
+    if (done) { this.z = this.tz; this.cx = this.tcx; this.cy = this.tcy; }
+    this.apply();
+    if (!done) this.raf = requestAnimationFrame(() => this.step());
+  },
+
+  // Zoom so the plan point under (clientX, clientY) stays under the cursor.
+  zoomAt(factor, clientX, clientY) {
+    const r = this.size();
+    const mx = (clientX == null ? r.left + r.width / 2 : clientX) - r.left - r.width / 2;
+    const my = (clientY == null ? r.top + r.height / 2 : clientY) - r.top - r.height / 2;
+    const k = this.fit0() * this.tz;
+    const px = this.tcx + mx / k, py = this.tcy + my / k;
+    this.tz = clampN(this.tz * factor, PLAN_MIN_Z, PLAN_MAX_Z);
+    const k2 = this.fit0() * this.tz;
+    this.tcx = px - mx / k2; this.tcy = py - my / k2;
+    this.touched = true; this.kick();
+  },
+  panBy(dx, dy) {
+    const k = this.fit0() * this.z;
+    this.tcx -= dx / k; this.tcy -= dy / k;
+    this.clampTargets();
+    this.cx = this.tcx; this.cy = this.tcy;     // drag follows the finger exactly
+    this.touched = true; this.apply();
+  },
+  zoomToRoom(roomId) {
+    const g = this.svg.querySelector(`[data-room="${roomId}"]`);
+    if (!g) return;
+    const b = g.getBBox();
+    if (!b.width || !b.height) return;
+    const r = this.size();
+    const f = this.fit0();
+    this.tz = clampN(Math.min(r.width / (f * b.width * 1.35), r.height / (f * b.height * 1.35)), 1, PLAN_MAX_Z);
+    this.tcx = b.x + b.width / 2; this.tcy = b.y + b.height / 2;
+    this.touched = true; this.kick();
+  },
+  onLayout() {
+    if (!this.svg) return;
+    if (this.active() && !this.touched) this.reset(true); else this.apply();
+  },
+};
+
+(function wirePlanGestures() {
+  const el = planView.el();
+  el.addEventListener('wheel', e => {
+    if (!planView.active()) return;
+    e.preventDefault();
+    // Exponential so trackpads (small deltas) and mouse wheels both feel even.
+    planView.zoomAt(Math.exp(-e.deltaY * 0.0018), e.clientX, e.clientY);
+  }, { passive: false });
+
+  el.addEventListener('pointerdown', e => {
+    if (!planView.active()) return;
+    // No pointer capture yet: capturing here would retarget the click away
+    // from the room under the cursor. Capture only once a drag begins.
+    planView.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    planView.origin = { x: e.clientX, y: e.clientY };
+    planView.dragged = false;
+    if (planView.pointers.size === 2) {
+      const [a, b] = [...planView.pointers.values()];
+      planView.pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+  });
+  el.addEventListener('pointermove', e => {
+    if (!planView.active() || !planView.pointers.has(e.pointerId)) return;
+    const prev = planView.pointers.get(e.pointerId);
+    const cur = { x: e.clientX, y: e.clientY };
+    planView.pointers.set(e.pointerId, cur);
+    if (planView.pointers.size === 1) {
+      if (!planView.dragged) {
+        // Start dragging only after moving 3px from where the press began, so
+        // a plain click on a room still counts as a click.
+        const o = planView.origin;
+        if (!o || Math.hypot(cur.x - o.x, cur.y - o.y) < 3) return;
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        planView.dragged = true;
+        el.classList.add('dragging');
+      }
+      planView.panBy(cur.x - prev.x, cur.y - prev.y);
+    } else if (planView.pointers.size === 2) {
+      const [a, b] = [...planView.pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (planView.pinchDist) planView.zoomAt(d / planView.pinchDist, (a.x + b.x) / 2, (a.y + b.y) / 2);
+      planView.pinchDist = d;
+      planView.dragged = true;
+    }
+  });
+  const end = e => {
+    planView.pointers.delete(e.pointerId);
+    if (planView.pointers.size < 2) planView.pinchDist = 0;
+    if (!planView.pointers.size) el.classList.remove('dragging');
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+  // A drag must not also count as a click on the room under the cursor.
+  el.addEventListener('click', e => { if (planView.dragged) { e.stopPropagation(); planView.dragged = false; } }, true);
+  el.addEventListener('dblclick', e => { if (planView.active()) planView.zoomAt(2, e.clientX, e.clientY); });
+
+  document.getElementById('plan-zoom').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.pz === 'in') planView.zoomAt(1.4);
+    else if (btn.dataset.pz === 'out') planView.zoomAt(1 / 1.4);
+    else if (btn.dataset.pz === 'fit') planView.fitAll();
+  });
+
+  // Rotating a phone or resizing the window: re-fit unless the viewer has zoomed.
+  new ResizeObserver(() => planView.onLayout()).observe(el);
+})();
+
+// The renderer measured its container once at start-up. Inside a host page
+// the frame can be laid out (or resized, or switched to 3D-only) afterwards,
+// which left a zero-sized, blank canvas. Track the container instead.
+new ResizeObserver(() => window.dispatchEvent(new Event('resize'))).observe(container);
+
+window.addEventListener('message', async (event) => {
+  const msg = event.data || {};
+  const reply = (data, transfer) => event.source && event.source.postMessage(data, event.origin || '*', transfer || []);
+
+  if (msg.type === 'ids:layout') {
+    document.body.classList.remove('layout-plan', 'layout-3d');
+    if (msg.mode === 'plan') document.body.classList.add('layout-plan');
+    if (msg.mode === '3d') document.body.classList.add('layout-3d');
+    requestAnimationFrame(() => { window.dispatchEvent(new Event('resize')); planView.onLayout(); });
+  }
+
+  if (msg.type === 'ids:focus') focusRoom(msg.roomId || null);
+
+  if (msg.type === 'ids:export-glb') {
+    // Export exactly what is on screen — the solved home with its furniture
+    // and materials — as a binary glTF.
+    try {
+      const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
+      const exporter = new GLTFExporter();
+      const buffer = await exporter.parseAsync(world, { binary: true, onlyVisible: true, maxTextureSize: 2048 });
+      reply({ type: 'ids:glb', requestId: msg.requestId, buffer, bytes: buffer.byteLength }, [buffer]);
+    } catch (err) {
+      reply({ type: 'ids:glb-error', requestId: msg.requestId, message: String(err && err.message || err) });
+    }
+  }
+});
+
+if (EMBED && EMBED.chrome === false) {
+  // Feedback: the duplicate onboarding section is not wanted inside the app.
+  // The inputs the customer already gave are routed in instead, and the
+  // design renders straight away.
+  document.body.classList.add('embedded', 'layout-plan');
+  renderColourChips();   // still needed: it seeds the palette cfg reads
+  applyConfig();
+} else {
+  buildPanel();
+  applyConfig();
+}
 animate();
 
 </script>

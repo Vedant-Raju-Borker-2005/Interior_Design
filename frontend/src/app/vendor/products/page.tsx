@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useVendorStore } from '@/stores/vendorStore'
-import { vendorAPI, catalogAPI } from '@/lib/api'
+import { vendorAPI, catalogAPI, availabilityAPI } from '@/lib/api'
 
 import { Plus, Edit3, X, Package, Trash2, Camera, Image as ImageIcon, RotateCw, ChevronDown, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -456,6 +456,27 @@ export default function VendorProductsPage() {
     } catch (err: any) { toast.error(err.message || 'Failed') }
   }
 
+  // Feedback 4.1 — "Not available" pulls the item out of the customer marketplace at once.
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const toggleAvailability = async (p: any) => {
+    const makeAvailable = p.isAvailable === false
+    let reason: string | undefined
+    if (!makeAvailable) {
+      reason = window.prompt(`Why is "${p.name}" unavailable? (optional — e.g. out of stock)`) ?? undefined
+      if (reason === undefined) return   // cancelled
+    }
+    setTogglingId(p.id)
+    try {
+      await availabilityAPI.setVendorProduct(p.id, { is_available: makeAvailable, reason: reason || undefined })
+      toast.success(makeAvailable ? `${p.name} is live in the marketplace again` : `${p.name} hidden from customers`)
+      await loadProducts()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Could not update availability')
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
   const fmt = (n: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
 
   return (
@@ -547,15 +568,24 @@ export default function VendorProductsPage() {
             const totalQty = p.inventory?.availableQty ?? 0
             const displayImage = p.images?.[0] || ''
             return (
-              <div key={p.id} className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+              <div key={p.id} className={clsx('bg-white border rounded-2xl shadow-sm overflow-hidden flex flex-col', p.isAvailable === false ? 'border-rose-200' : 'border-slate-100')}>
                 {displayImage && (
                   <div className="relative w-full h-36 bg-slate-100 overflow-hidden flex-shrink-0">
                     <img
                       src={displayImage.startsWith('/') ? `http://localhost:8000${displayImage}` : displayImage}
                       alt={p.name}
-                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      className={clsx('w-full h-full object-cover', p.isAvailable === false && 'grayscale opacity-60')}
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                     />
+                    {p.isAvailable === false && (
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-bold">Not available</span>
+                    )}
+                  </div>
+                )}
+                {p.isAvailable === false && (
+                  <div className="px-4 py-1.5 bg-rose-50 text-rose-700 text-[10px] font-semibold">
+                    Hidden from customers{p.unavailableReason ? ` · ${p.unavailableReason}` : ''}
                   </div>
                 )}
                 <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
@@ -593,6 +623,20 @@ export default function VendorProductsPage() {
                   <button onClick={() => handleDelete(p.id)}
                     className="px-3 py-1.5 bg-white border border-red-200 hover:border-red-300 hover:text-red-650 text-red-500 font-bold rounded-lg text-[10px] flex items-center gap-1 transition shadow-sm">
                     <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                  <button
+                    type="button"
+                    disabled={togglingId === p.id}
+                    onClick={() => toggleAvailability(p)}
+                    className={clsx(
+                      'px-3 py-1.5 border font-bold rounded-lg text-[10px] transition shadow-sm disabled:opacity-60',
+                      p.isAvailable === false
+                        ? 'bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-rose-200 hover:text-rose-600',
+                    )}
+                    title={p.isAvailable === false ? 'Show this product to customers again' : 'Hide from the customer marketplace'}
+                  >
+                    {p.isAvailable === false ? 'Mark available' : 'Mark unavailable'}
                   </button>
                   <button onClick={() => openEditModal(p)}
                     className="px-3 py-1.5 bg-white border border-slate-200 hover:border-indigo-200 hover:text-indigo-600 text-slate-600 font-bold rounded-lg text-[10px] flex items-center gap-1 transition shadow-sm">

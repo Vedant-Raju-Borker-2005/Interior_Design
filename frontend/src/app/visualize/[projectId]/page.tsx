@@ -1,14 +1,16 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { projectsAPI, aiAPI, catalogAPI } from '@/lib/api'
+import { projectsAPI, aiAPI, catalogAPI, premiumRenderAPI, designStudioAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
+import RenderEntitlementPanel from '@/components/RenderEntitlementPanel'
+import DesignEditForm from '@/components/DesignEditForm'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, ArrowLeft, Clock, CheckCircle2, Download,
   Image as ImageIcon, RefreshCw, X, Layout, AlignLeft, Settings,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Lock, PencilRuler, Box, Map as MapIcon, Loader2, FileText
 } from 'lucide-react'
 import clsx from 'clsx'
 import { getBestColorMatch, getColorHex } from '@/lib/colorUtils'
@@ -200,7 +202,22 @@ export default function ControlledVisualizePage() {
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null)
 
   // IDS Backend-AI state
+  // The 3D model now fills the page; the drawer only hosts the Gemini 4-wall studio.
   const [activeStudioTab, setActiveStudioTab] = useState<'4wall' | '3dscene'>('4wall')
+
+  // ── Full-page design studio ────────────────────────────────────────────────
+  const viewerRef = useRef<HTMLIFrameElement | null>(null)
+  const [viewerKey, setViewerKey] = useState(0)            // bump to redraw 2D + 3D
+  const [viewerReady, setViewerReady] = useState(false)
+  const [studioSummary, setStudioSummary] = useState<any>(null)
+  // 2D plan and 3D model are separate views (never merged side by side).
+  const [layoutMode, setLayoutMode] = useState<'plan' | '3d'>('plan')
+  const [editOpen, setEditOpen] = useState(false)
+  const [renderStudioOpen, setRenderStudioOpen] = useState(false)
+  const [geminiUnlocked, setGeminiUnlocked] = useState(false)
+  const [glbInfo, setGlbInfo] = useState<{ url: string | null; updated_at: string | null; stale: boolean } | null>(null)
+  const [exportingGlb, setExportingGlb] = useState<'download' | 'save' | null>(null)
+  const glbRequest = useRef<{ id: string; mode: 'download' | 'save' } | null>(null)
   const [idsResult, setIdsResult] = useState<any>(null)
   const [solvingIds, setSolvingIds] = useState(false)
 
@@ -415,6 +432,100 @@ export default function ControlledVisualizePage() {
     }
   }
 
+  // ── Design studio: Gemini lock + saved 3D model ─────────────────────────────
+  const viewerOrigin = new URL(aiAPI.getInteractiveViewerUrl()).origin
+
+  const loadStudioMeta = useCallback(async () => {
+    const [ent, brief] = await Promise.allSettled([
+      premiumRenderAPI.entitlement(projectId),
+      designStudioAPI.get(projectId),
+    ])
+    if (ent.status === 'fulfilled') {
+      const d = ent.value.data || {}
+      setGeminiUnlocked(!!(d.gemini_rendering?.unlocked ?? d.premium_rendering?.unlocked))
+    }
+    if (brief.status === 'fulfilled') setGlbInfo(brief.value.data.glb)
+  }, [projectId])
+
+  useEffect(() => { loadStudioMeta() }, [loadStudioMeta])
+
+  const postToViewer = useCallback((msg: any) => {
+    viewerRef.current?.contentWindow?.postMessage(msg, viewerOrigin)
+  }, [viewerOrigin])
+
+  const requestGlb = useCallback((mode: 'download' | 'save') => {
+    if (!viewerReady || glbRequest.current) return
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    glbRequest.current = { id, mode }
+    setExportingGlb(mode)
+    postToViewer({ type: 'ids:export-glb', requestId: id })
+  }, [viewerReady, postToViewer])
+
+  // Messages from the 2D/3D viewer.
+  useEffect(() => {
+    const onMessage = async (event: MessageEvent) => {
+      if (event.origin !== viewerOrigin) return
+      const msg = event.data || {}
+
+      if (msg.type === 'ids:ready') {
+        setViewerReady(true)
+        setStudioSummary(msg.summary)
+      }
+
+      const pending = glbRequest.current
+      if ((msg.type === 'ids:glb' || msg.type === 'ids:glb-error') && pending && pending.id === msg.requestId) {
+        const { mode } = pending
+        glbRequest.current = null
+        if (msg.type === 'ids:glb-error') {
+          setExportingGlb(null)
+          if (mode === 'download') toast.error(`Could not export the 3D model: ${msg.message}`)
+          return
+        }
+        const blob = new Blob([msg.buffer], { type: 'model/gltf-binary' })
+        if (mode === 'download') {
+          const href = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = href
+          a.download = `${(project?.property_name || 'design').replace(/[^\w\- ]+/g, '').trim() || 'design'}.glb`
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          setTimeout(() => URL.revokeObjectURL(href), 10000)
+        }
+        try {
+          // Keep the server copy of the model in step with what is on screen.
+          const r = await designStudioAPI.uploadGlb(projectId, blob)
+          setGlbInfo({ url: r.data.url, updated_at: r.data.updated_at, stale: false })
+          if (mode === 'download') toast.success(`3D model exported (${(blob.size / 1024 / 1024).toFixed(1)} MB)`)
+        } catch {
+          if (mode === 'download') toast('Downloaded — but a copy could not be saved to your project', { icon: '⚠️' })
+        } finally {
+          setExportingGlb(null)
+        }
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [viewerOrigin, projectId, project?.property_name])
+
+  // Layout: 2D plan / split / 3D model.
+  useEffect(() => {
+    if (viewerReady) postToViewer({ type: 'ids:layout', mode: layoutMode })
+  }, [layoutMode, viewerReady, postToViewer])
+
+  // First visit or after an edit: save the current 3D model to the project.
+  useEffect(() => {
+    if (viewerReady && glbInfo && (!glbInfo.url || glbInfo.stale)) requestGlb('save')
+  }, [viewerReady, glbInfo, requestGlb])
+
+  const handleDesignSaved = (payload: any) => {
+    setViewerReady(false)
+    setStudioSummary(null)
+    setGlbInfo(payload?.glb || null)
+    setViewerKey((k) => k + 1)          // reload the 2D plan and 3D model
+    loadProject()
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)' }}>
@@ -430,39 +541,173 @@ export default function ControlledVisualizePage() {
     ? (swappingItem.product.images || swappingItem.product.variants?.images || [])
     : []
 
+  const viewerSrc = `${aiAPI.getInteractiveViewerUrl(projectId)}?v=${viewerKey}`
+  const COLOR_SWATCH: Record<string, string> = {
+    'Warm White': '#F4EFE8', 'Off White': '#F7F5F0', 'Soft Grey': '#C9CBC8', 'Greige': '#CFC6B8', 'Charcoal Grey': '#3C3F43',
+    'Ivory': '#F2E8D5', 'Terracotta': '#C1663F', 'Clay Beige': '#C9A98A', 'Olive Green': '#6B7248', 'Sand': '#D9C7A8',
+    'Rust': '#A34D2A', 'Warm Taupe': '#9C8672', 'Deep Emerald': '#14553F', 'Royal Blue': '#23408E', 'Wine Maroon': '#6E1F2E',
+    'Champagne Gold': '#C8A96A', 'Onyx Black': '#1C1C1E', 'Pearl Grey': '#D6D3CD', 'Blush Pink': '#E7C4C0',
+    'Mustard Yellow': '#D9A521', 'Teal': '#1F7A78', 'Coral': '#E4735B', 'Sage Green': '#A7B79C', 'Burnt Orange': '#C25A2B',
+  }
+
+  const goBack = () => {
+    if (fromParam === 'dashboard') router.push('/dashboard')
+    else if (fromParam === 'track') router.push(`/track/${projectId}`)
+    else router.push(`/customize/${projectId}`)
+  }
+
   return (
-    <div className="min-h-screen text-slate-800 pb-20" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)', backgroundAttachment: 'fixed' }}>
+    <div className="h-screen flex flex-col overflow-hidden bg-slate-950 text-slate-800">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-6 pt-24">
-        
-        {/* HEADER BAR */}
-        <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                if (fromParam === 'dashboard') {
-                  router.push('/dashboard')
-                } else if (fromParam === 'track') {
-                  router.push(`/track/${projectId}`)
-                } else {
-                  router.push(`/customize/${projectId}`)
-                }
-              }}
-              className="p-2 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl transition shadow-sm text-slate-700"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-black text-slate-800">
-                Controlled AI Render Studio
-              </h1>
-              <p className="text-slate-500 text-xs mt-0.5">{project?.property_name} • Visual pipeline</p>
+      {/* ═══════════════ STUDIO BAR ═══════════════ */}
+      <div className="pt-16 shrink-0">
+        <div className="bg-slate-900 border-b border-white/10 px-4 lg:px-6 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-slate-100">
+          <button onClick={goBack} className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10" title="Back">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-black truncate">{project?.property_name || 'Your home'}</h1>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-400">
+              {studioSummary ? (
+                <>
+                  <span className="font-bold text-slate-200">{studioSummary.bhk}</span>
+                  <span>·</span><span>{studioSummary.style}</span>
+                  <span>·</span><span>{studioSummary.tier} tier</span>
+                  <span>·</span><span>{studioSummary.area_sqft?.toLocaleString('en-IN')} sq ft</span>
+                  <span>·</span><span>{studioSummary.rooms?.length} rooms</span>
+                  <span>·</span><span>{studioSummary.objects} items</span>
+                  <span className="flex items-center gap-1 ml-1">
+                    {(studioSummary.colors || []).map((c: string) => (
+                      <i key={c} title={c} className="w-3 h-3 rounded-full border border-white/20" style={{ background: COLOR_SWATCH[c] || '#999' }} />
+                    ))}
+                  </span>
+                </>
+              ) : (
+                <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Building your 2D plan and 3D model…</span>
+              )}
             </div>
           </div>
+
+          {/* View: 2D plan or 3D model — shown separately */}
+          <div className="flex bg-slate-950/70 p-1 rounded-xl border border-white/10">
+            {([
+              { id: 'plan', label: '2D plan', icon: MapIcon },
+              { id: '3d', label: '3D model', icon: Box },
+            ] as const).map((m) => (
+              <button key={m.id} type="button" onClick={() => setLayoutMode(m.id)}
+                className={clsx('px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition',
+                  layoutMode === m.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white')}>
+                <m.icon className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{m.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setEditOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-white text-slate-900 hover:bg-indigo-50 text-xs font-extrabold flex items-center gap-1.5">
+              <PencilRuler className="w-4 h-4 text-indigo-600" /> Edit design
+            </button>
+
+            <button type="button" onClick={() => requestGlb('download')} disabled={!viewerReady || !!exportingGlb}
+              title={glbInfo?.updated_at ? `Saved copy updated ${new Date(glbInfo.updated_at).toLocaleString('en-IN')}` : 'Export the 3D model as a .glb file'}
+              className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50">
+              {exportingGlb === 'download' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              3D model (.glb)
+            </button>
+
+            {/* Gemini photoreal renders — locked until the quotation is paid */}
+            <button type="button" onClick={() => setRenderStudioOpen(true)}
+              title={geminiUnlocked ? 'Photoreal renders with Gemini' : 'Unlocks once your quotation is paid'}
+              className={clsx('px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border',
+                geminiUnlocked
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 border-transparent'
+                  : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10')}>
+              {geminiUnlocked ? <Sparkles className="w-4 h-4" /> : <Lock className="w-4 h-4 text-amber-300" />}
+              Photoreal · Gemini
+            </button>
+
+            <button type="button" onClick={() => router.push(`/quotation/${projectId}`)}
+              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold flex items-center gap-1.5">
+              <FileText className="w-4 h-4" /> Quotation
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════════ 2D PLAN + 3D MODEL (full page) ═══════════════ */}
+      <div className="flex-1 relative bg-[#F7F5F1] min-h-0">
+        {!viewerReady && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#F7F5F1] text-slate-500 pointer-events-none">
+            <div className="w-12 h-12 border-4 border-indigo-600/10 border-t-indigo-600 rounded-full animate-spin" />
+            <p className="text-sm font-bold">Building your 2D plan and 3D model…</p>
+          </div>
+        )}
+        <iframe
+          key={viewerKey}
+          ref={viewerRef}
+          src={viewerSrc}
+          title="2D plan and 3D model"
+          className="absolute inset-0 w-full h-full border-0"
+        />
+        {exportingGlb === 'save' && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full bg-slate-900/85 text-white text-[11px] font-semibold flex items-center gap-1.5">
+            <Loader2 className="w-3 h-3 animate-spin" /> Saving 3D model to your project…
+          </div>
+        )}
+      </div>
+
+      <DesignEditForm
+        projectId={projectId}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onSaved={handleDesignSaved}
+      />
+
+      {/* ═══════════════ PHOTOREAL RENDERS · GEMINI (drawer) ═══════════════ */}
+      {renderStudioOpen && (
+      <div className="fixed inset-0 z-50 flex">
+        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setRenderStudioOpen(false)} />
+        <aside className="relative ml-auto w-full max-w-7xl h-full overflow-y-auto shadow-2xl"
+          style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)' }}>
+        <div className="px-6 pt-6 pb-20">
+
+        <div className="flex items-center justify-between mb-6 border-b border-white/30 pb-4">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              {geminiUnlocked ? <Sparkles className="w-6 h-6 text-indigo-600" /> : <Lock className="w-6 h-6 text-amber-600" />}
+              Photoreal renders
+            </h2>
+            <p className="text-slate-600 text-xs mt-0.5">Powered by Gemini • {project?.property_name}</p>
+          </div>
+          <button onClick={() => setRenderStudioOpen(false)} className="p-2 bg-white/80 hover:bg-white rounded-xl border border-white">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-8">
+        {!geminiUnlocked && (
+          <div className="mb-6 bg-slate-900 text-white rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-11 h-11 rounded-xl bg-amber-400/15 text-amber-300 flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold">Locked until your quotation is paid</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Your 2D plan and 3D model are free. Gemini photoreal renders — wall views and up to 20 high-quality images — unlock after payment.
+                </p>
+              </div>
+            </div>
+            <button onClick={() => router.push(`/quotation/${projectId}`)}
+              className="px-4 py-2.5 rounded-xl bg-white text-slate-900 font-bold text-xs whitespace-nowrap">
+              View quotation
+            </button>
+          </div>
+        )}
+
+        <div className={clsx('grid lg:grid-cols-12 gap-8', !geminiUnlocked && 'pointer-events-none select-none opacity-40 grayscale')}
+          aria-disabled={!geminiUnlocked}>
           
           {/* LEFT COLUMN: BASE ROOM + SELECTS + STYLE SELECTOR + GENERATE ACTION (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
@@ -763,75 +1008,17 @@ export default function ControlledVisualizePage() {
             <div className="bg-slate-900 border border-white/5 rounded-3xl p-5 shadow-2xl space-y-4 text-slate-100 min-h-[520px] flex flex-col justify-between">
               <div className="flex flex-wrap items-center justify-between border-b border-white/5 pb-3 gap-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-indigo-400" />
-                  <div className="flex bg-slate-950/60 p-1 rounded-xl border border-white/5">
-                    <button
-                      type="button"
-                      onClick={() => setActiveStudioTab('4wall')}
-                      className={clsx(
-                        'px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5',
-                        activeStudioTab === '4wall'
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-white'
-                      )}
-                    >
-                      <ImageIcon className="w-3.5 h-3.5" />
-                      <span>4-Wall Studio</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveStudioTab('3dscene')}
-                      className={clsx(
-                        'px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5',
-                        activeStudioTab === '3dscene'
-                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-white'
-                      )}
-                    >
-                      <Layout className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Photoreal 3D Scene (IDS)</span>
-                    </button>
-                  </div>
+                  <ImageIcon className="w-5 h-5 text-indigo-400" />
+                  <h3 className="text-sm font-extrabold">4-Wall Studio</h3>
+                  <span className="text-[10px] text-slate-400">Gemini</span>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  {activeStudioTab === '3dscene' && (
-                    <a
-                      href={aiAPI.getInteractiveViewerUrl(projectId)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] bg-white/10 hover:bg-white/20 border border-white/10 text-slate-200 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition"
-                    >
-                      <span>Open Fullscreen</span>
-                      <ChevronRight className="w-3 h-3" />
-                    </a>
-                  )}
-                  <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 px-2.5 py-0.5 rounded-full font-bold uppercase">
-                    {activeStudioTab === '3dscene' ? '🌐 WebGL Photoreal' : (renderedWallImages ? '✨ Rendered Space' : '📋 Blueprints View')}
-                  </span>
-                </div>
+                <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                  {renderedWallImages ? '✨ Rendered Space' : '📋 Blueprints View'}
+                </span>
               </div>
 
               <div className="relative flex-1 flex items-center justify-center">
-                {activeStudioTab === '3dscene' ? (
-                  <div className="w-full flex flex-col gap-3">
-                    <div className="relative w-full h-[520px] rounded-2xl overflow-hidden border border-white/10 bg-slate-950 shadow-inner">
-                      <iframe
-                        src={aiAPI.getInteractiveViewerUrl(projectId)}
-                        className="w-full h-full border-0"
-                        title="Photoreal 3D Scene Viewer"
-                      />
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-slate-400">
-                      <span>Interactive 3D Engine • Three.js PBR texturing • Synchronized 2D architectural plan</span>
-                      {idsResult && (
-                        <span className="text-emerald-400 font-semibold">
-                          Spatial solver: {idsResult.feasible ? '100% Collision-free' : 'Soft constraint layout'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : generating ? (
+                {generating ? (
                   <div className="flex flex-col items-center justify-center text-center p-6 my-auto">
                     <div className="w-16 h-16 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin mb-4" />
                     <h4 className="text-white font-bold text-sm">Controlled 4-Wall Rendering in Progress</h4>
@@ -873,9 +1060,9 @@ export default function ControlledVisualizePage() {
                 )}
               </div>
 
-              {activeStudioTab === '4wall' && !generating && !renderedWallImages && (
+              {!generating && !renderedWallImages && (
                 <div className="text-[10px] text-center text-slate-500 mt-4 leading-normal">
-                  Configure your room variant preferences on the left and click <strong>Generate Controlled Render</strong> to render all 4 walls, or switch to <strong>Photoreal 3D Scene</strong> to explore interactive 3D layout.
+                  Configure your room variant preferences on the left and click <strong>Generate Controlled Render</strong> to render all 4 walls with Gemini.
                 </div>
               )}
             </div>
@@ -899,8 +1086,20 @@ export default function ControlledVisualizePage() {
             )}
             </div>
           </div>
-        </div>
 
+          {/* Floor plan upload stays available while renders are locked (1.1);
+              premium batch (1.8) shows its own lock state. */}
+          <div className="mt-8">
+            <RenderEntitlementPanel
+              projectId={projectId}
+              floorPlanUrl={project?.floor_plan_url}
+              onPlanChanged={loadProject}
+            />
+          </div>
+        </div>
+        </aside>
+      </div>
+      )}
     </div>
   )
 }

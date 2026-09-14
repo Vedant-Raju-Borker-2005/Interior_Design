@@ -38,9 +38,23 @@ def generate_quotation_pdf(
     gst: float,
     total: float,
     valid_until: str,
+    quotation_no: str | None = None,
+    billing: dict | None = None,
+    discount: dict | None = None,
 ) -> str:
+    from xml.sax.saxutils import escape as _esc
+
+    def esc(value) -> str:
+        # Paragraph text is parsed as markup; a company name with "&" or "<"
+        # would otherwise break the whole PDF build.
+        return _esc(str(value)) if value not in (None, "") else ""
+
+    billing = billing or {}
+    reference = quotation_no or f"#{quotation_id[:8].upper()}"
+
     os.makedirs(PDF_DIR, exist_ok=True)
-    filename = f"quotation_{quotation_id[:8]}.pdf"
+    safe_ref = (quotation_no or quotation_id[:8]).replace("/", "-")
+    filename = f"quotation_{safe_ref}.pdf"
     filepath = os.path.join(PDF_DIR, filename)
 
     doc = SimpleDocTemplate(
@@ -60,7 +74,7 @@ def generate_quotation_pdf(
         [
             Paragraph("<b><font color='#4F46E5' size='18'>🏠 InteriorAI</font></b>", styles["Normal"]),
             Paragraph(
-                f"<font color='#6B7280' size='9'>QUOTATION #{quotation_id[:8].upper()}<br/>"
+                f"<font color='#6B7280' size='9'><b>QUOTATION {esc(reference)}</b><br/>"
                 f"Date: {datetime.datetime.utcnow().strftime('%d %b %Y')}<br/>"
                 f"Valid until: {valid_until}</font>",
                 ParagraphStyle("right", alignment=TA_RIGHT, fontSize=9),
@@ -82,16 +96,26 @@ def generate_quotation_pdf(
     info_data = [
         [
             Paragraph(
-                f"<b>CLIENT</b><br/>"
-                f"{user.name or 'Customer'}<br/>"
-                f"{user.phone or user.email or ''}<br/>"
-                f"{user.city or ''}",
+                "<b>BILL TO</b><br/>"
+                + "<br/>".join(line for line in [
+                    esc(billing.get("company_name")),
+                    esc(billing.get("name") or user.name or "Customer"),
+                    esc(billing.get("billing_address")),
+                    esc(", ".join(x for x in [
+                        billing.get("billing_city") or user.city,
+                        billing.get("billing_state"),
+                        billing.get("billing_pincode"),
+                    ] if x)),
+                    esc(user.phone or user.email or ""),
+                    f"<b>GSTIN:</b> {esc(billing.get('gst_number'))}" if billing.get("gst_number") else "",
+                    f"<b>PAN:</b> {esc(billing.get('pan_number'))}" if billing.get("pan_number") else "",
+                ] if line),
                 info_style,
             ),
             Paragraph(
                 f"<b>PROJECT</b><br/>"
-                f"{project.property_name}<br/>"
-                f"{project.bhk_type} | {project.city}<br/>"
+                f"{esc(project.property_name)}<br/>"
+                f"{esc(project.bhk_type)} | {esc(project.city)}<br/>"
                 f"Budget: ₹{project.budget:,.0f}",
                 info_style,
             ),
@@ -150,19 +174,31 @@ def generate_quotation_pdf(
     story.append(Spacer(1, 5 * mm))
 
     # ── Summary ────────────────────────────────────────────────────────────────
-    summary_data = [
-        ["", "", "", "", "", "Subtotal:", f"₹{subtotal:,.0f}"],
-        ["", "", "", "", "", f"GST (18%):", f"₹{gst:,.0f}"],
+    summary_data = []
+    discount = discount or {}
+    if discount.get("discount_amount"):
+        units = discount.get("units", 1)
+        summary_data.append(["", "", "", "", "", "Original price:", f"₹{discount['original_total']:,.0f}"])
+        if units > 1:
+            summary_data.append(["", "", "", "", "", f"  per unit ({units}):", f"₹{discount['original_unit_price']:,.0f}"])
+        summary_data.append(["", "", "", "", "", "Bulk discount:", f"−₹{discount['discount_amount']:,.0f}"])
+        if units > 1:
+            summary_data.append(["", "", "", "", "", "  discounted / unit:", f"₹{discount['discounted_unit_price']:,.0f}"])
+            summary_data.append(["", "", "", "", "", "  savings / unit:", f"₹{discount['savings_per_unit']:,.0f}"])
+    summary_data += [
+        ["", "", "", "", "", "Taxable value:", f"₹{subtotal:,.0f}"],
+        ["", "", "", "", "", "GST (18%):", f"₹{gst:,.0f}"],
         ["", "", "", "", "", "TOTAL:", f"₹{total:,.0f}"],
     ]
+    last = len(summary_data) - 1
     summary_table = Table(summary_data, colWidths=col_widths)
     summary_table.setStyle(TableStyle([
         ("FONTSIZE", (0, 0), (-1, -1), 9),
         ("ALIGN", (5, 0), (6, -1), "RIGHT"),
-        ("FONTNAME", (5, 2), (6, 2), "Helvetica-Bold"),
-        ("FONTSIZE", (5, 2), (6, 2), 10),
-        ("TEXTCOLOR", (5, 2), (6, 2), INDIGO),
-        ("BACKGROUND", (5, 2), (6, 2), INDIGO_LIGHT),
+        ("FONTNAME", (5, last), (6, last), "Helvetica-Bold"),
+        ("FONTSIZE", (5, last), (6, last), 10),
+        ("TEXTCOLOR", (5, last), (6, last), INDIGO),
+        ("BACKGROUND", (5, last), (6, last), INDIGO_LIGHT),
         ("PADDING", (5, 0), (6, -1), 5),
     ]))
     story.append(summary_table)
@@ -176,8 +212,8 @@ def generate_quotation_pdf(
     story.append(Spacer(1, 2 * mm))
     story.append(Paragraph(
         "1. This quotation is valid for 30 days from the date of issue.  "
-        "2. 50% advance payment required to initiate work.  "
-        "3. Balance payable on project completion.  "
+        "2. Full payment of the quoted total is required to confirm the booking.  "
+        "3. Please quote the quotation number above as the payment reference.  "
         "4. All products carry manufacturer warranty.  "
         "5. Prices are inclusive of installation & basic civil work.  "
         "6. GST @ 18% applicable on all items.",

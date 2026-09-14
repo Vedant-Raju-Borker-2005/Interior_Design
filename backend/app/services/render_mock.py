@@ -66,7 +66,8 @@ def get_render_images(style: str, room_type: str) -> list[str]:
     )
 
 
-def get_gemini_render_with_image(prompt: str, image_b64: str, mime_type: str = "image/jpeg") -> str | None:
+def get_gemini_render_with_image(prompt: str, image_b64: str, mime_type: str = "image/jpeg",
+                                 source: str = "room_photo") -> str | None:
     """
     Send room photo + style/product prompt to Gemini 2.0 Flash.
     Gemini sees the actual room and redesigns it according to the prompt.
@@ -80,14 +81,24 @@ def get_gemini_render_with_image(prompt: str, image_b64: str, mime_type: str = "
     os.makedirs(os.path.join("assets", "renders"), exist_ok=True)
 
     # Combined redesign instruction
-    redesign_instruction = (
-        f"You are an expert interior designer. "
-        f"This is a photo of an actual room. "
-        f"Redesign this exact room keeping the same wall positions, windows, and floor area. "
-        f"Apply the following style and products: {prompt} "
-        f"The room layout and proportions must remain identical — only change the style, furniture, finishes and decor. "
-        f"Output a photorealistic render that looks like a professional architectural photography shot of the redesigned room."
-    )
+    if source == "floor_plan":
+        # Feedback 1.1 — the attachment is a 2D plan, not a photo of the room.
+        redesign_instruction = (
+            "You are an expert interior designer and architectural visualiser. "
+            "The attached image is a 2D architectural floor plan. "
+            "Produce a photorealistic eye-level render of the space it describes, "
+            "respecting its wall layout, door and window positions and proportions. "
+            f"Style and products: {prompt}"
+        )
+    else:
+        redesign_instruction = (
+            f"You are an expert interior designer. "
+            f"This is a photo of an actual room. "
+            f"Redesign this exact room keeping the same wall positions, windows, and floor area. "
+            f"Apply the following style and products: {prompt} "
+            f"The room layout and proportions must remain identical — only change the style, furniture, finishes and decor. "
+            f"Output a photorealistic render that looks like a professional architectural photography shot of the redesigned room."
+        )
 
     flash_url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"

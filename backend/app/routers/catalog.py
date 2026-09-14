@@ -17,9 +17,12 @@ def list_packages(
     style: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
+    from ..services.business_rules import normalize_bhk
+
     q = db.query(Package)
     if bhk:
-        q = q.filter(Package.bhk == bhk)
+        # Accept '3 BHK' as well as '3BHK' — packages are stored as '3BHK'.
+        q = q.filter(Package.bhk == normalize_bhk(bhk))
     if tier:
         q = q.filter(Package.tier == tier)
     if budget:
@@ -222,6 +225,10 @@ def list_products(
 
     # ── Base query ─────────────────────────────────────────────────────────────
     q = db.query(Product)
+    # Feedback 4.1 — a product the supplier has marked unavailable must not
+    # appear in the customer marketplace at all. `is_available IS NULL` covers
+    # rows that predate the column.
+    q = q.filter(or_(Product.is_available.is_(True), Product.is_available.is_(None)))
     if isinstance(target_room_type, str) and target_room_type:
         q = q.filter(Product.room_type == target_room_type)
     if isinstance(category, str) and category:
@@ -485,6 +492,8 @@ def list_products(
 
 @router.get("/products/{prod_id}", summary="Get single product")
 def get_product(prod_id: str, db: Session = Depends(get_db)):
+    # A direct link to an unavailable product still resolves, but the payload
+    # carries the flag so the UI can disable selection (feedback 4.1).
     prod = db.query(Product).filter(Product.id == prod_id).first()
     if not prod:
         raise HTTPException(404, "Product not found")
@@ -544,7 +553,13 @@ def _prod_out(
         "is_color_match": is_color_match,
         "is_material_match": is_material_match,
         "is_fabric_match": is_fabric_match,
-        "is_price_match": is_price_match
+        "is_price_match": is_price_match,
+        # Feedback 4.1 — surfaced so a direct link can disable selection.
+        "is_available": True if p.is_available is None else bool(p.is_available),
+        "unavailable_reason": p.unavailable_reason,
+        # Feedback 1.6 — images list travels with the product so the client can
+        # fall back to a secondary image when the thumbnail 404s.
+        "images": p.images or [],
     }
 
 

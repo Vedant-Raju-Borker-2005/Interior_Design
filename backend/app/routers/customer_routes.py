@@ -201,49 +201,18 @@ def update_quotation_status(
         except Exception as sync_err:
             print("Failed to sync vendor assignments on approval:", sync_err)
 
-        # Trigger Vendor Assignments for quotation line items
-        from ..models import Vendor, VendorAssignment, VendorNotification, Product
-        if quotation.line_items and not already_ordered:
-            for item in quotation.line_items:
-                if item.get("sku") in ["PKG", "SVC"]: continue
-                
-                prod_id = item.get("product_id")
-                assigned_vendor_id = None
-                
-                # 1. Attempt to match the actual vendor who registered this product
-                if prod_id:
-                    product_obj = db.query(Product).filter(Product.id == prod_id).first()
-                    if product_obj and product_obj.vendor_id:
-                        assigned_vendor_id = product_obj.vendor_id
-                
-                # 2. Pincode/General vendor fallback if product is a generic catalog template
-                if not assigned_vendor_id:
-                    vendors = db.query(Vendor).filter(Vendor.active == True).all()
-                    matching_vendors = [v for v in vendors if project.pincode in (v.serviceable_pincodes or [])]
-                    if not matching_vendors and vendors:
-                        matching_vendors = vendors
-                    if matching_vendors:
-                        assigned_vendor_id = matching_vendors[0].id
-                
-                if assigned_vendor_id:
-                    # Auto-assign directly to RECEIVED_ORDER — vendor does not need to accept/decline
-                    assignment = VendorAssignment(
-                        project_id=project.id,
-                        item_id=prod_id or item.get("sku"),
-                        vendor_id=assigned_vendor_id,
-                        status="RECEIVED_ORDER",
-                        remarks=f"Auto-assigned upon customer quotation approval. Qty: {item.get('qty', 1)}. Vendor action required: update production status."
-                    )
-                    db.add(assignment)
-                    
-                    # Notify vendor
-                    notif = VendorNotification(
-                        vendor_id=assigned_vendor_id,
-                        type="NEW_ASSIGNMENT",
-                        message=f"New order received for Project '{project.property_name}': {item.get('name')}. Please update production status."
-                    )
-                    db.add(notif)
-
+        # Stakeholder feedback 4.2/4.4 — approving a quotation used to assign
+        # every line item straight to a vendor. The project now waits in the
+        # admin approval queue; suppliers get the order when an admin allocates
+        # it (approvals.allocate_project). If that has already happened, just
+        # tell the allocated supplier the customer has confirmed.
+        from ..models import VendorNotification
+        if not already_ordered and project.approval_status == "APPROVED" and project.allocated_vendor_id:
+            db.add(VendorNotification(
+                vendor_id=project.allocated_vendor_id,
+                type="QUOTATION_APPROVED",
+                message=f"Customer approved the quotation for '{project.property_name}'.",
+            ))
 
     notif = Notification(
         user_id=user.id,
@@ -1072,12 +1041,22 @@ def get_project_payments(
         ProjectDocument.type.in_(["INVOICE", "RECEIPT"])
     ).all()
     
-    milestones = [
-        {"name": "Booking Advance (10%)", "pct": 10, "amount": contract_value * 0.1},
-        {"name": "Sourcing & Production (40%)", "pct": 40, "amount": contract_value * 0.4},
-        {"name": "Delivery & Installation (40%)", "pct": 40, "amount": contract_value * 0.4},
-        {"name": "Final Handover (10%)", "pct": 10, "amount": contract_value * 0.1},
-    ]
+    # Feedback 1.11 — the B2C offer is paid in full, not in milestones. Bulk
+    # (B2B) projects keep the staged schedule, which the feedback does not
+    # change.
+    from ..services.business_rules import is_b2b_project, offline_payment_details
+    payment_model = "MILESTONE" if is_b2b_project(project, db) else "FULL"
+    if payment_model == "FULL":
+        milestones = [
+            {"name": "Full Payment", "pct": 100, "amount": contract_value},
+        ]
+    else:
+        milestones = [
+            {"name": "Booking Advance (10%)", "pct": 10, "amount": contract_value * 0.1},
+            {"name": "Sourcing & Production (40%)", "pct": 40, "amount": contract_value * 0.4},
+            {"name": "Delivery & Installation (40%)", "pct": 40, "amount": contract_value * 0.4},
+            {"name": "Final Handover (10%)", "pct": 10, "amount": contract_value * 0.1},
+        ]
     
     milestone_statuses = []
     for m in milestones:
@@ -1100,7 +1079,12 @@ def get_project_payments(
         "contractValue": contract_value,
         "totalPaid": total_paid,
         "pendingAmount": pending_amount,
-        "milestones": milestone_statuses
+        "milestones": milestone_statuses,
+        "paymentModel": payment_model,
+        "quotationNo": quotation.quotation_no if quotation else None,
+        "quotationStatus": quotation.status if quotation else None,
+        # Feedback 1.9 — most customers pay by bank transfer; tell them how.
+        "offlinePayment": offline_payment_details(),
     }
 
 

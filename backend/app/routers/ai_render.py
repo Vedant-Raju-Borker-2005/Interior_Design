@@ -8,7 +8,7 @@ import asyncio
 import uuid
 import random
 import datetime
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from sqlalchemy.orm import Session
 
 from ..db import get_db, SessionLocal
@@ -35,6 +35,19 @@ def queue_render(
     if not room:
         raise HTTPException(404, "Room not found")
 
+    # Gemini photoreal rendering is a paid feature: it unlocks once the
+    # project's quotation is paid (which grants premium render credits). The
+    # interactive 2D plan and 3D model stay free. Admins are not gated.
+    from ..models import Project as _GateProject
+    gate_project = db.query(_GateProject).filter(_GateProject.id == room.project_id).first()
+    is_admin = "admin" in [r.strip() for r in (user.role or "").split(",")]
+    if not is_admin and not (gate_project and (gate_project.premium_render_credits or 0) > 0):
+        raise HTTPException(
+            402,
+            "Photoreal Gemini renders unlock once your quotation is paid. "
+            "The 2D plan and 3D model are free to explore.",
+        )
+
     job_id = str(uuid.uuid4())
     render = Render(
         id=job_id,
@@ -56,17 +69,35 @@ def queue_render(
 
     _job_status[job_id] = {"status": "queued", "image_url": None, "thumbnail_url": None}
 
+    # Feedback 1.1 — with no room photo supplied, an uploaded floor plan makes
+    # the render plan-specific: the image model receives the plan itself.
+    base_image_data = req.base_image_data
+    base_image_mime = req.base_image_mime or "image/jpeg"
+    image_source = "room_photo"
+    if not base_image_data:
+        from ..models import Project as _Project
+        from ..services.floor_plan_context import plan_image_for, plan_prompt_suffix
+        project = db.query(_Project).filter(_Project.id == room.project_id).first()
+        plan = plan_image_for(project, room) if project else None
+        if plan:
+            base_image_data, base_image_mime = plan
+            image_source = "floor_plan"
+            render.prompt = (render.prompt or "") + plan_prompt_suffix(room.room_type)
+            db.commit()
+
     # Schedule mock processing in background
     eta = 4 if req.mode == "template" else (8 if req.mode == "sdxl" else 12)
     background_tasks.add_task(
         _process_render, job_id, req.style, req.mode, room.room_type,
-        req.base_image_data, req.base_image_mime or "image/jpeg"
+        base_image_data, base_image_mime, image_source
     )
 
     return {
         "job_id": job_id,
         "status": "queued",
         "eta_seconds": eta,
+        "tier": "free",                                   # 1.7
+        "plan_specific": image_source == "floor_plan",    # 1.1
     }
 
 
@@ -116,7 +147,8 @@ def get_room_renders(room_id: str, db: Session = Depends(get_db)):
 
 
 async def _process_render(job_id: str, style: str, mode: str, room_type: str,
-                          base_image_data: str = None, base_image_mime: str = "image/jpeg"):
+                          base_image_data: str = None, base_image_mime: str = "image/jpeg",
+                          image_source: str = "room_photo"):
     """Simulate GPU processing, calling Gemini img2img or text-only, or fallback to mock."""
     db = SessionLocal()
     prompt = ""
@@ -135,7 +167,7 @@ async def _process_render(job_id: str, style: str, mode: str, room_type: str,
             # Image-to-image: redesign the actual uploaded room
             from ..services.render_mock import get_gemini_render_with_image
             print(f"[Render] img2img mode — base image provided ({len(base_image_data)} chars b64)")
-            image_url = get_gemini_render_with_image(prompt, base_image_data, base_image_mime)
+            image_url = get_gemini_render_with_image(prompt, base_image_data, base_image_mime, source=image_source)
         else:
             # Text-to-image: generate from prompt only
             from ..services.render_mock import get_gemini_render
@@ -282,15 +314,57 @@ def get_design_options():
 
 @router.get("/interactive-viewer", response_class=HTMLResponse, summary="Serve interactive 3D scene HTML viewer")
 def get_interactive_viewer_default():
+    # No project in hand, so the standalone explorer (with its own controls) is
+    # the right thing to serve.
     html = get_viewer_html()
     return HTMLResponse(content=html, media_type="text/html")
 
 
 @router.get("/interactive-viewer/{project_id}", response_class=HTMLResponse, summary="Serve interactive 3D scene HTML viewer for specific project")
-def get_interactive_viewer_project(project_id: str, db: Session = Depends(get_db)):
+def get_interactive_viewer_project(
+    project_id: str,
+    controls: bool = Query(
+        False,
+        description="Show the viewer's own onboarding controls. Off by default: "
+                    "the project's stored answers are injected instead.",
+    ),
+    db: Session = Depends(get_db),
+):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(404, "Project not found")
-    html = get_viewer_html(project)
+    # Room style preference is part of the brief, so load the rooms too.
+    rooms = db.query(Room).filter(Room.project_id == project_id).all()
+    html = get_viewer_html(project, rooms=rooms, show_controls=controls)
     return HTMLResponse(content=html, media_type="text/html")
+
+
+@router.get("/viewer-brief/{project_id}", summary="Inputs routed into the 3D viewer")
+def get_viewer_brief(project_id: str, db: Session = Depends(get_db)):
+    """What the viewer is being told to render, and where each value came from.
+
+    Useful when a design does not look like what the customer expects: it shows
+    the mapping from their onboarding answers to the viewer's vocabulary.
+    """
+    from ..services.ids_service import build_viewer_brief
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+    rooms = db.query(Room).filter(Room.project_id == project_id).all()
+    return {
+        "project_id": project_id,
+        "brief": build_viewer_brief(project, rooms),
+        "source": {
+            "bhk": project.bhk_type,
+            "city": project.city,
+            "budget": project.budget,
+            "timeline": project.timeline,
+            "wood": project.interior_material_preference or project.material_preference,
+            "fabric": project.fabric_preference,
+            "colors": project.color_preferences or [],
+            "furnishing_type": project.furnishing_type,
+            "room_style": next((r.style_preference for r in rooms if r.style_preference), None),
+        },
+    }
 

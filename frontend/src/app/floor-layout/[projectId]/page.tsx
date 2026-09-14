@@ -36,9 +36,15 @@ function FloorLayoutContent() {
     ]
   }
 
-  const handleFakeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Stages the chosen file locally; it is uploaded to the project in handleNext.
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Floor plan must be 10 MB or smaller')
+      e.target.value = ''
+      return
+    }
 
     setUploading(true)
     setRealFile(file)
@@ -49,6 +55,13 @@ function FloorLayoutContent() {
     })
     setUploading(false)
     toast.success('Floor plan selected! 📐')
+  }
+
+  // Feedback 1.1 — the customer may carry on with interior selections and fit
+  // the design to their plan later (the visualisation screen accepts an upload).
+  const handleSkipForNow = () => {
+    toast('You can upload your floor plan any time from the 3D visualisation screen.', { icon: '📐' })
+    router.push(`/packages?projectId=${projectId}&bhk=${bhk}&budget=${budget}&style=${style}`)
   }
 
   const handleNext = async () => {
@@ -155,7 +168,7 @@ function FloorLayoutContent() {
                 <input
                   type="file"
                   accept="image/*,application/pdf"
-                  onChange={handleFakeUpload}
+                  onChange={handleFileSelected}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   disabled={uploading}
                 />
@@ -186,7 +199,15 @@ function FloorLayoutContent() {
             </div>
           )}
 
-          <div className="flex justify-end pt-4 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={handleSkipForNow}
+              disabled={submitting}
+              className="text-xs font-bold text-slate-500 hover:text-indigo-700 transition text-left"
+            >
+              Don’t have your plan handy? <span className="underline">Skip — upload it later</span>
+            </button>
             <button
               onClick={handleNext}
               disabled={submitting || (floorPlanMode === 'upload' && !realFile)}

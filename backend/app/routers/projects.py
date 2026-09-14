@@ -100,7 +100,9 @@ def create_project(
                 analytics.last_selected = datetime.datetime.utcnow()
 
     rooms_out = []
-    for rtype in BHK_ROOMS.get(req.bhk_type, []):
+    from ..services.business_rules import normalize_bhk
+
+    for rtype in BHK_ROOMS.get(normalize_bhk(req.bhk_type), []):
         defaults = ROOM_DEFAULTS.get(rtype, {})
         room = Room(
             id=str(uuid.uuid4()),
@@ -415,6 +417,15 @@ def _project_summary(p: Project) -> dict:
         "package_id": p.package_id,
         "total_area_sqft": p.total_area_sqft,
         "interior_material_preference": p.interior_material_preference,
+        # Saved onboarding answers — onboarding's "resume at the incomplete
+        # step" check and the design studio both read these.
+        "style_tags": p.style_tags or [],
+        "material_preference": p.material_preference,
+        "fabric_preference": p.fabric_preference,
+        "color_preferences": p.color_preferences or [],
+        "timeline": p.timeline,
+        "furnishing_type": p.furnishing_type,
+        "approval_status": p.approval_status,
         "floor_plan_url": p.floor_plan_url,
         "floor_plan_name": fp_name,
         "created_at": p.created_at.isoformat() if p.created_at else None,

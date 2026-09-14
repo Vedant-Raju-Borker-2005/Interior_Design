@@ -54,11 +54,27 @@ pipeline_instance: DesignPipeline | None = None
 
 
 def get_pipeline() -> DesignPipeline:
+    """Load the cached bundle, or refit from the blobs when it cannot be read.
+
+    A bundle pickled by a different scikit-learn build raises on unpickling
+    (private estimator modules move between releases). Refitting takes a few
+    seconds and reproduces the same metrics, so prefer that over serving the
+    rule-based fallback.
+    """
     global pipeline_instance
     if pipeline_instance is None:
         art_path = Path(DEF_ARTIFACTS)
         if (art_path / "bundle.joblib").exists():
-            pipeline_instance = DesignPipeline.load(art_path, blobs=DEF_BLOBS)
+            try:
+                pipeline_instance = DesignPipeline.load(art_path, blobs=DEF_BLOBS)
+            except Exception as exc:
+                print(f"[ids] cached bundle at {art_path} is unreadable ({exc}); refitting from {DEF_BLOBS}")
+                pipeline_instance = DesignPipeline.build(blobs=DEF_BLOBS)
+                try:
+                    pipeline_instance.save(art_path)
+                    print(f"[ids] refit bundle written to {art_path}")
+                except Exception as save_exc:
+                    print(f"[ids] could not cache refit bundle: {save_exc}")
         else:
             pipeline_instance = DesignPipeline.build(blobs=DEF_BLOBS)
     return pipeline_instance
