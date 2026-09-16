@@ -49,6 +49,10 @@ def queue_render(
         )
 
     job_id = str(uuid.uuid4())
+    # The room's saved picks (with every chosen option) describe the render;
+    # anything extra the client sent that isn't saved is added after them.
+    from ..services.design_selections import prompt_products
+    products = prompt_products(room.items or [], req.products)
     render = Render(
         id=job_id,
         room_id=req.room_id,
@@ -56,7 +60,7 @@ def queue_render(
         mode=req.mode,
         style=req.style,
         color_palette=req.color_palette,
-        prompt=build_prompt(req.style, req.color_palette, room.room_type, req.products, req.layout_prompt),
+        prompt=build_prompt(req.style, req.color_palette, room.room_type, products, req.layout_prompt),
         status="queued",
     )
     db.add(render)

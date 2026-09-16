@@ -138,13 +138,15 @@ def queue_premium_batch(
     style = req.style or (rooms[0].style_preference if rooms else "modern")
 
     from ..services.render_mock import build_prompt
+    from ..services.design_selections import prompt_products
     from ..services.floor_plan_context import plan_prompt_suffix, plan_url_for
 
     queued: list[dict[str, Any]] = []
     for i in range(req.count):
         room = rooms[i % len(rooms)]
         job_id = str(uuid.uuid4())
-        prompt = build_prompt(style, room.color_palette or [], room.room_type, None, req.notes)
+        prompt = build_prompt(style, room.color_palette or [], room.room_type,
+                              prompt_products(room.items or []), req.notes)
         if plan_url_for(project, room):
             prompt += plan_prompt_suffix(room.room_type)   # 1.1
         db.add(Render(

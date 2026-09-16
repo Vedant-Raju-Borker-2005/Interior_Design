@@ -913,6 +913,59 @@ export const designStudioAPI = {
     axiosInstance.get(`/api/v1/ai/scene-glb/${projectId}`, { responseType: 'blob' }),
 }
 
+// Uploaded floor plan → traced rooms → the studio's 2D plan and 3D model
+export type PlanBox = [number, number, number, number]   // x0, y0, x1, y1 as fractions of the image
+export interface PlanRoom { id?: string; label: string; room_type: string; box: PlanBox }
+export interface PlanLayout {
+  status: 'draft' | 'active' | 'inactive'
+  image_url: string
+  image_w: number
+  image_h: number
+  rooms: PlanRoom[]
+  plan_width_m: number
+  plan_depth_m?: number | null        // set when the uploaded image is stretched
+  method?: 'heuristic' | 'gemini'
+  notes?: string[]
+  summary?: { bhk: string; rooms: number; objects: number; area_sqft: number; skipped_items?: string[] }
+}
+export interface PlanLayoutPayload {
+  project_id: string
+  project_bhk: string
+  bhk_locked: string | null
+  plan: PlanLayout | null
+  plan_bhk: string | null
+  active: boolean
+  room_types: { value: string; label: string }[]
+  gemini: boolean
+}
+
+export const planLayoutAPI = {
+  get: (projectId: string) =>
+    axiosInstance.get<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}`),
+  // Room detection can take a few seconds (longer with Gemini vision).
+  detect: (projectId: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return axiosInstance.post<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}/detect`, form, { timeout: 90000 })
+  },
+  redetect: (projectId: string) =>
+    axiosInstance.post<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}/redetect`, null, { timeout: 90000 }),
+  save: (projectId: string, body: { rooms: PlanRoom[]; plan_width_m: number; plan_depth_m?: number; activate?: boolean; sync_bhk?: boolean }) =>
+    axiosInstance.put<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}`, body, { timeout: 60000 }),
+  disable: (projectId: string) =>
+    axiosInstance.delete<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}`),
+}
+
+/** A readable message from an API error, including FastAPI validation lists. */
+export const apiErrorMessage = (err: any, fallback: string): string => {
+  const detail = err?.response?.data?.detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail) && detail.length) return detail.map((d: any) => d?.msg || String(d)).join('; ')
+  if (err?.code === 'ECONNABORTED') return 'The server took too long to respond — please try again.'
+  if (err && !err.response) return 'Could not reach the server — is the backend running?'
+  return fallback
+}
+
 export default axiosInstance
 
 

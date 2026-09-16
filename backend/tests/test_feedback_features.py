@@ -781,3 +781,150 @@ def test_design_studio_glb_roundtrip(client, auth):
         sess.close()
 
     assert client.get(f"/api/v1/ai/scene-glb/{pid}", headers=auth["vendor"]).status_code == 403
+
+
+def test_uploaded_floor_plan_drives_the_2d_plan_and_3d_model(client, auth):
+    import json
+    from plan_samples import one_bhk_plan, png_bytes
+
+    cust = auth["customer"]
+    pid = make_project(client, cust, name="Traced Plan Home", with_item=False)
+
+    empty = client.get(f"/api/v1/ai/plan-layout/{pid}", headers=cust).json()
+    assert empty["plan"] is None and not empty["active"]
+    assert {t["value"] for t in empty["room_types"]} >= {"living_room", "bathroom", "balcony"}
+
+    pdf = client.post(f"/api/v1/ai/plan-layout/{pid}/detect", headers=cust,
+                      files={"file": ("plan.pdf", b"%PDF-1.4 fake", "application/pdf")})
+    assert pdf.status_code == 400
+    junk = client.post(f"/api/v1/ai/plan-layout/{pid}/detect", headers=cust,
+                       files={"file": ("plan.png", b"not an image", "image/png")})
+    assert junk.status_code == 400
+
+    im, _ = one_bhk_plan()
+    up = client.post(f"/api/v1/ai/plan-layout/{pid}/detect", headers=cust,
+                     files={"file": ("my-1bhk.png", png_bytes(im), "image/png")})
+    assert up.status_code == 200, up.text
+    draft = up.json()
+    plan = draft["plan"]
+    assert plan["status"] == "draft" and not draft["active"]
+    assert len(plan["rooms"]) >= 5 and draft["plan_bhk"] == "1 BHK"
+    assert client.get(plan["image_url"].replace("http://localhost:8000", "")).status_code == 200
+
+    # A draft does not change what the viewer shows yet.
+    html = client.get(f"/api/v1/ai/interactive-viewer/{pid}").text
+    embed = json.loads(re.search(r"window\.__EMBED__ = (\{.*?\});</script>", html).group(1))
+    assert "layout" not in embed
+
+    bad = client.put(f"/api/v1/ai/plan-layout/{pid}", headers=cust,
+                     json={"rooms": [{"room_type": "garage", "box": [0, 0, 1, 1]}], "plan_width_m": 10})
+    assert bad.status_code == 400
+
+    rooms = plan["rooms"]
+    rooms[0]["label"] = "Family Hall"
+    ok = client.put(f"/api/v1/ai/plan-layout/{pid}", headers=cust,
+                    json={"rooms": rooms, "plan_width_m": plan["plan_width_m"]})
+    assert ok.status_code == 200, ok.text
+    saved = ok.json()
+    assert saved["active"] and saved["plan"]["summary"]["objects"] > 0
+
+    # The viewer now renders the traced plan: its own scene, SVG and BHK.
+    html = client.get(f"/api/v1/ai/interactive-viewer/{pid}").text
+    script = re.search(r"window\.__EMBED__ = (\{.*?\});</script>", html).group(1)
+    assert "</svg>" not in script                      # escaped, cannot close the <script>
+    embed = json.loads(script)
+    assert embed["brief"]["bhk"] == "1 BHK"
+    labels = [r["label"] for r in embed["layout"]["scene"]["rooms"]]
+    assert "Family Hall" in labels
+    assert embed["layout"]["svg"].startswith("<svg")
+
+    studio = client.get(f"/api/v1/ai/design-brief/{pid}", headers=cust).json()
+    assert studio["plan"]["active"] and studio["plan"]["bhk"] == "1 BHK"
+
+    # Project BHK only follows the plan when asked to.
+    assert client.get(f"/api/v1/projects/{pid}", headers=cust).json()["bhk_type"] != "1BHK"
+    synced = client.put(f"/api/v1/ai/plan-layout/{pid}", headers=cust,
+                        json={"rooms": rooms, "plan_width_m": plan["plan_width_m"], "sync_bhk": True})
+    assert synced.status_code == 200 and synced.json()["project_bhk"] == "1BHK"
+
+    # Re-uploading keeps the confirmed layout live until the new one is confirmed.
+    client.post(f"/api/v1/ai/plan-layout/{pid}/detect", headers=cust,
+                files={"file": ("again.png", png_bytes(im), "image/png")})
+    embed = json.loads(re.search(r"window\.__EMBED__ = (\{.*?\});</script>",
+                                 client.get(f"/api/v1/ai/interactive-viewer/{pid}").text).group(1))
+    assert "layout" in embed
+
+    off = client.delete(f"/api/v1/ai/plan-layout/{pid}", headers=cust)
+    assert off.status_code == 200
+    client.put(f"/api/v1/ai/plan-layout/{pid}", headers=cust,
+               json={"rooms": rooms, "plan_width_m": plan["plan_width_m"], "activate": False})
+    embed = json.loads(re.search(r"window\.__EMBED__ = (\{.*?\});</script>",
+                                 client.get(f"/api/v1/ai/interactive-viewer/{pid}").text).group(1))
+    assert "layout" not in embed
+
+    assert client.get(f"/api/v1/ai/plan-layout/{pid}", headers=auth["vendor"]).status_code == 403
+
+
+def test_customize_choices_drive_the_2d_3d_viewer_and_ai_prompt(client, auth):
+    import json
+    cust, admin = auth["customer"], auth["admin"]
+    pid = make_project(client, cust, name="Picked Variants Home", with_item=False)
+    room = client.get(f"/api/v1/projects/{pid}", headers=cust).json()["rooms"][0]
+
+    products = client.get("/api/v1/catalog/products", params={"limit": 500}).json()["items"]
+    table = next(p for p in products if "coffee" in (p.get("category") or "").lower()
+                 or "coffee" in (p.get("name") or "").lower())
+
+    # Exactly what the Customize step sends: custom_attributes, including a
+    # group a vendor added beyond the built-in ones.
+    r = client.post(f"/api/v1/projects/{pid}/rooms/{room['id']}/items", headers=cust, json={
+        "product_id": table["id"], "qty": 1, "unit_price": 1,
+        "custom_attributes": {"color": "Blush Pink", "wood_finish": "Glossy", "leg_style": "Tapered"},
+    })
+    assert r.status_code == 200, r.text
+    item = client.get(f"/api/v1/projects/{pid}", headers=cust).json()["rooms"][0]["items"][0]
+    assert item["custom_attributes"] == {"color": "Blush Pink", "wood_finish": "Glossy", "leg_style": "Tapered"}
+    assert item["custom_color"] == "Blush Pink" and item["custom_wood_finish"] == "Glossy"
+
+    # The viewer is told to dress the living room's coffee table with the pick.
+    html = client.get(f"/api/v1/ai/interactive-viewer/{pid}").text
+    embed = json.loads(re.search(r"window\.__EMBED__ = (\{.*?\});</script>", html).group(1))
+    pick = next(s for s in embed["selections"] if s["product"]["id"] == table["id"])
+    assert pick["room_type"] == "living_room" and pick["categories"] == ["coffee_table"]
+    assert pick["look"]["hex"] == "#E7C4C0" and pick["look"]["roughness"] < 0.3
+    assert pick["attributes"]["leg_style"] == "Tapered"
+
+    # Re-saving with different options replaces them (no stale values linger).
+    client.post(f"/api/v1/projects/{pid}/rooms/{room['id']}/items", headers=cust, json={
+        "product_id": table["id"], "qty": 1, "custom_attributes": {"color": "Charcoal Grey"}})
+    item = client.get(f"/api/v1/projects/{pid}", headers=cust).json()["rooms"][0]["items"][0]
+    assert item["custom_attributes"] == {"color": "Charcoal Grey"} and item["custom_wood_finish"] is None
+
+    # The AI render prompt is built from the saved pick, whatever the client sends.
+    r = client.post("/api/v1/ai/render", headers=admin, json={
+        "room_id": room["id"], "style": "modern", "products": [{"id": table["id"], "name": table["name"], "color": "Neon"}]})
+    assert r.status_code == 200, r.text
+    from app.models import Render
+    sess = db_session()
+    try:
+        prompt = sess.query(Render).filter(Render.id == r.json()["job_id"]).one().prompt
+    finally:
+        sess.close()
+    assert "colour: Charcoal Grey" in prompt and "Neon" not in prompt
+
+    # A vendor adding an option group later reaches the Customize step.
+    listing = client.get("/api/v1/vendor/products", headers=auth["vendor"]).json()
+    rows = listing if isinstance(listing, list) else listing.get("products", [])
+    target = rows[0]
+    up = client.put(f"/api/v1/vendor/products/{target['id']}", headers=auth["vendor"],
+                    json={"variantOptions": {"color": ["Sand", "Teal"], "leg_style": ["Tapered", "Straight"]}})
+    assert up.status_code == 200, up.text
+    sess = db_session()
+    try:
+        from app.models import Product
+        product = sess.query(Product).filter(Product.id == target["id"]).first()
+        if product is not None:                    # synced to the customer catalogue
+            assert product.variants["leg_style"] == ["Tapered", "Straight"]
+            assert product.variants["color"] == ["Sand", "Teal"]
+    finally:
+        sess.close()

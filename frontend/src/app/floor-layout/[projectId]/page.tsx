@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { projectsAPI } from '@/lib/api'
+import { projectsAPI, planLayoutAPI, apiErrorMessage } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import { ArrowRight, CheckCircle2, Upload, FileText, Layout, Check } from 'lucide-react'
@@ -80,16 +80,25 @@ function FloorLayoutContent() {
         finalPlanName = `Uploaded Plan: ${uploadFile.name} (${uploadFile.size})`
       }
 
-      // If B2C user uploads floor plan file, send to server
+      const packagesUrl = `/packages?projectId=${projectId}&bhk=${bhk}&budget=${budget}&style=${style}`
+
       if (floorPlanMode === 'upload' && realFile && projectId) {
+        if (/\.(jpe?g|png|webp)$/i.test(realFile.name)) {
+          // Trace the plan into rooms; the customer checks them, then carries on.
+          await planLayoutAPI.detect(projectId, realFile)
+          toast.success('Plan uploaded — check the rooms we found')
+          router.push(`/plan-trace/${projectId}?next=${encodeURIComponent(packagesUrl)}`)
+          return
+        }
+        // A PDF is kept with the project but can't be traced into 2D/3D.
         await projectsAPI.uploadFloorPlan(projectId, realFile)
-        toast.success('Blueprint saved on server! 💾')
+        toast('PDF saved. Upload the plan as an image later to build your 2D plan and 3D model from it.', { icon: '📐' })
       }
 
       toast.success('Floor plan associated!')
-      router.push(`/packages?projectId=${projectId}&bhk=${bhk}&budget=${budget}&style=${style}`)
+      router.push(packagesUrl)
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || 'Failed to submit floor plan')
+      toast.error(apiErrorMessage(err, 'Failed to submit floor plan'))
     } finally {
       setSubmitting(false)
     }

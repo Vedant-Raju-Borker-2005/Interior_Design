@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, ArrowLeft, Clock, CheckCircle2, Download,
   Image as ImageIcon, RefreshCw, X, Layout, AlignLeft, Settings,
-  ChevronLeft, ChevronRight, Lock, PencilRuler, Box, Map as MapIcon, Loader2, FileText
+  ChevronLeft, ChevronRight, Lock, PencilRuler, Box, Map as MapIcon, Loader2, FileText, ScanLine
 } from 'lucide-react'
 import clsx from 'clsx'
 import { getBestColorMatch, getColorHex } from '@/lib/colorUtils'
@@ -216,6 +216,8 @@ export default function ControlledVisualizePage() {
   const [renderStudioOpen, setRenderStudioOpen] = useState(false)
   const [geminiUnlocked, setGeminiUnlocked] = useState(false)
   const [glbInfo, setGlbInfo] = useState<{ url: string | null; updated_at: string | null; stale: boolean } | null>(null)
+  // The customer's uploaded floor plan, when it drives the 2D plan and 3D model.
+  const [planBrief, setPlanBrief] = useState<{ active: boolean; status: string; bhk: string | null } | null>(null)
   const [exportingGlb, setExportingGlb] = useState<'download' | 'save' | null>(null)
   const glbRequest = useRef<{ id: string; mode: 'download' | 'save' } | null>(null)
   const [idsResult, setIdsResult] = useState<any>(null)
@@ -378,6 +380,8 @@ export default function ControlledVisualizePage() {
       const chosenView = baseViewsList.find((v) => v.id === selectedBaseView)
       const baseViewUrl = chosenView ? chosenView.url : ''
 
+      // Every option chosen on the Customize step (the server also re-reads the
+      // saved picks, so the render always matches what was chosen).
       const productsPayload = activeRoomItems.map((item: any) => ({
         id: item.product_id,
         name: item.product?.name,
@@ -387,6 +391,7 @@ export default function ControlledVisualizePage() {
         size: item.custom_size,
         texture: item.custom_texture,
         cushion_style: item.custom_cushion_style,
+        ...(item.custom_attributes || {}),
       }))
 
       // Automatically compile dynamic layout prompt
@@ -444,7 +449,10 @@ export default function ControlledVisualizePage() {
       const d = ent.value.data || {}
       setGeminiUnlocked(!!(d.gemini_rendering?.unlocked ?? d.premium_rendering?.unlocked))
     }
-    if (brief.status === 'fulfilled') setGlbInfo(brief.value.data.glb)
+    if (brief.status === 'fulfilled') {
+      setGlbInfo(brief.value.data.glb)
+      setPlanBrief(brief.value.data.plan || null)
+    }
   }, [projectId])
 
   useEffect(() => { loadStudioMeta() }, [loadStudioMeta])
@@ -572,12 +580,30 @@ export default function ControlledVisualizePage() {
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-400">
               {studioSummary ? (
                 <>
+                  {studioSummary.layout === 'uploaded-plan' && (
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">Your floor plan</span>
+                  )}
                   <span className="font-bold text-slate-200">{studioSummary.bhk}</span>
                   <span>·</span><span>{studioSummary.style}</span>
                   <span>·</span><span>{studioSummary.tier} tier</span>
                   <span>·</span><span>{studioSummary.area_sqft?.toLocaleString('en-IN')} sq ft</span>
                   <span>·</span><span>{studioSummary.rooms?.length} rooms</span>
                   <span>·</span><span>{studioSummary.objects} items</span>
+                  {Array.isArray(studioSummary.picks) && studioSummary.picks.length > 0 && (() => {
+                    const shown = studioSummary.picks.filter((p: any) => p.shown).length
+                    const hidden = studioSummary.picks.filter((p: any) => !p.shown)
+                    return (
+                      <span
+                        title={[
+                          ...studioSummary.picks.filter((p: any) => p.shown).map((p: any) => `✓ ${p.product}`),
+                          ...hidden.map((p: any) => `– ${p.product}: ${p.reason}`),
+                        ].join('\n')}
+                        className={clsx('px-1.5 py-0.5 rounded font-bold cursor-help',
+                          hidden.length ? 'bg-amber-500/15 text-amber-300' : 'bg-indigo-500/20 text-indigo-200')}>
+                        {shown}/{studioSummary.picks.length} of your picks shown
+                      </span>
+                    )
+                  })()}
                   <span className="flex items-center gap-1 ml-1">
                     {(studioSummary.colors || []).map((c: string) => (
                       <i key={c} title={c} className="w-3 h-3 rounded-full border border-white/20" style={{ background: COLOR_SWATCH[c] || '#999' }} />
@@ -605,6 +631,14 @@ export default function ControlledVisualizePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button type="button"
+              onClick={() => router.push(`/plan-trace/${projectId}?next=${encodeURIComponent(`/visualize/${projectId}`)}`)}
+              title={planBrief?.active ? 'Adjust the rooms traced from your floor plan' : 'Build the 2D plan and 3D model from your own floor plan'}
+              className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold flex items-center gap-1.5">
+              <ScanLine className={clsx('w-4 h-4', planBrief?.active ? 'text-emerald-300' : 'text-slate-300')} />
+              {planBrief?.active ? 'My floor plan' : 'Use my floor plan'}
+            </button>
+
             <button type="button" onClick={() => setEditOpen(true)}
               className="px-3.5 py-2 rounded-xl bg-white text-slate-900 hover:bg-indigo-50 text-xs font-extrabold flex items-center gap-1.5">
               <PencilRuler className="w-4 h-4 text-indigo-600" /> Edit design

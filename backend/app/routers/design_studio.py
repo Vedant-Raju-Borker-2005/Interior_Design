@@ -9,24 +9,40 @@ kept on the server, so there is always a downloadable file of the current design
 from __future__ import annotations
 
 import datetime
+import mimetypes
 import os
+import re
+import uuid
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..auth_utils import current_user
 from ..db import get_db
-from ..models import Project, Quotation, Room, User
+from ..models import FloorPlan, Project, Quotation, Room, User
 from ..services.business_rules import normalize_bhk
 from ..services.ids_service import (
     VIEWER_COLORS,
     VIEWER_FABRICS,
     VIEWER_STYLES,
     VIEWER_WOODS,
+    active_plan_layout,
     build_viewer_brief,
+)
+from ..services.plan_layout import (
+    IMAGE_EXTS,
+    MAX_PLAN_BYTES,
+    PlanError,
+    build_plan_variant,
+    clean_plan,
+    detect_rooms,
+    load_plan_image,
+    plan_bhk,
+    room_type_options,
 )
 
 router = APIRouter()
@@ -138,7 +154,29 @@ def _payload(project: Project, db: Session) -> dict[str, Any]:
             # True after an edit until the studio re-exports the new model.
             "stale": bool((project.defaults or {}).get("scene_glb_stale")) if isinstance(project.defaults, dict) else False,
         },
+        "plan": _plan_brief(project),
     }
+
+
+def _plan_brief(project: Project) -> Optional[dict[str, Any]]:
+    plan = project.plan_layout if isinstance(project.plan_layout, dict) else None
+    if not plan:
+        return None
+    return {
+        "status": plan.get("status"),
+        "image_url": plan.get("image_url"),
+        "bhk": plan_bhk(plan.get("rooms") or []) if plan.get("rooms") else None,
+        "summary": plan.get("summary"),
+        "active": active_plan_layout(project) is not None,
+    }
+
+
+def _mark_glb_stale(project: Project) -> None:
+    defaults = dict(project.defaults or {}) if isinstance(project.defaults, dict) else {}
+    if defaults.get("scene_glb_url"):
+        defaults["scene_glb_stale"] = True
+    defaults["design_edited_at"] = datetime.datetime.utcnow().isoformat()
+    project.defaults = defaults
 
 
 @router.get("/design-brief/{project_id}", summary="Design studio — current design and edit options")
@@ -284,3 +322,192 @@ def download_scene_glb(project_id: str, user: User = Depends(current_user), db: 
         raise HTTPException(404, "No 3D model has been exported for this project yet")
     safe = "".join(ch if ch.isalnum() or ch in "-_ " else "_" for ch in (project.property_name or "design")).strip()
     return FileResponse(path, media_type="model/gltf-binary", filename=f"{safe or 'design'}.glb")
+
+
+# ═══════════════════════════════════════════════════ uploaded floor plan ═════
+class PlanRoomReq(BaseModel):
+    id: Optional[str] = None
+    label: Optional[str] = None
+    room_type: str
+    box: list[float] = Field(..., description="[x0, y0, x1, y1] as fractions of the plan image")
+
+
+class PlanLayoutReq(BaseModel):
+    rooms: list[PlanRoomReq]
+    plan_width_m: float = Field(..., description="Real-world width of the whole plan image, in metres")
+    plan_depth_m: Optional[float] = Field(None, description="Real-world height of the image, when it is stretched")
+    activate: bool = True
+    sync_bhk: bool = Field(False, description="Also set the project's BHK to match the plan")
+
+
+def _plan_payload(project: Project, db: Session) -> dict[str, Any]:
+    plan = project.plan_layout if isinstance(project.plan_layout, dict) else None
+    return {
+        "project_id": project.id,
+        "project_bhk": normalize_bhk(project.bhk_type) or "2BHK",
+        "bhk_locked": _bhk_locked(project, db),
+        "plan": plan,
+        "plan_bhk": plan_bhk(plan["rooms"]) if plan and plan.get("rooms") else None,
+        "active": active_plan_layout(project) is not None,
+        "room_types": room_type_options(),
+        "gemini": bool(os.getenv("GEMINI_KEY")),
+    }
+
+
+@router.get("/plan-layout/{project_id}", summary="Floor plan — the traced rooms for this project")
+def get_plan_layout(project_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    # The customer is about to upload or re-detect: have the label reader
+    # loaded by then instead of making that request wait for it.
+    from ..services.plan_ocr import warm_up_in_background
+    warm_up_in_background()
+    return _plan_payload(_owned(project_id, user, db), db)
+
+
+@router.post("/plan-layout/{project_id}/detect", summary="Floor plan — upload an image and detect its rooms")
+async def detect_plan_layout(
+    project_id: str,
+    file: UploadFile = File(...),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    project = _owned(project_id, user, db)
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in IMAGE_EXTS:
+        raise HTTPException(400, "Upload the floor plan as a JPG, PNG or WebP image. "
+                                 "(A PDF can't be traced — take a screenshot of the plan page instead.)")
+    data = await file.read()
+    if len(data) > MAX_PLAN_BYTES:
+        raise HTTPException(413, "Floor plan must be 10 MB or smaller")
+    try:
+        img = load_plan_image(data)
+    except Exception:
+        raise HTTPException(400, "That file isn't a readable image")
+    if min(img.size) < 200:
+        raise HTTPException(400, "The image is too small to read — upload a plan at least 600 px wide")
+
+    plan_dir = os.path.join(ASSET_DIR, "floor_plans")
+    os.makedirs(plan_dir, exist_ok=True)
+    name = f"plan_{project.id[:8]}_{uuid.uuid4().hex[:8]}{ext}"
+    with open(os.path.join(plan_dir, name), "wb") as fh:
+        fh.write(data)
+    url = f"{BACKEND_URL}/static/assets/floor_plans/{name}"
+
+    digits = re.findall(r"\d", normalize_bhk(project.bhk_type) or "2")
+    hint = int(digits[0]) if digits else 2
+    mime = file.content_type or mimetypes.guess_type(name)[0] or "image/png"
+    detected = await run_in_threadpool(detect_rooms, img, bhk_hint=hint, raw=data, mime=mime)
+
+    project.floor_plan_url = url
+    db.add(FloorPlan(project_id=project.id, file_url=url, file_type=ext.lstrip("."), uploaded_by=user.id))
+    previous = project.plan_layout if isinstance(project.plan_layout, dict) else {}
+    project.plan_layout = {
+        "status": "draft",
+        "image_url": url,
+        "image_w": detected["image_w"],
+        "image_h": detected["image_h"],
+        "rooms": detected["rooms"],
+        "plan_width_m": detected["plan_width_m"],
+        "plan_depth_m": detected.get("plan_depth_m"),
+        "door_gaps": detected.get("door_gaps", []),
+        "method": detected["method"],
+        "notes": detected["notes"],
+        "uploaded_at": datetime.datetime.utcnow().isoformat(),
+        # Keep the last confirmed layout live until the new one is confirmed.
+        "previous_active": previous if previous.get("status") == "active" else previous.get("previous_active"),
+    }
+    db.commit()
+    db.refresh(project)
+    return _plan_payload(project, db)
+
+
+@router.post("/plan-layout/{project_id}/redetect", summary="Floor plan — detect the rooms again on the uploaded image")
+async def redetect_plan_layout(project_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Re-run room detection on the plan already uploaded (e.g. after the
+    detector improves), without uploading the file again."""
+    project = _owned(project_id, user, db)
+    current = project.plan_layout if isinstance(project.plan_layout, dict) else None
+    name = os.path.basename((current or {}).get("image_url") or "")
+    path = os.path.join(ASSET_DIR, "floor_plans", name)
+    if not name or not os.path.isfile(path):
+        raise HTTPException(400, "Upload the floor plan image first")
+    with open(path, "rb") as fh:
+        data = fh.read()
+    try:
+        img = load_plan_image(data)
+    except Exception:
+        raise HTTPException(400, "The uploaded plan can no longer be read — upload it again")
+
+    digits = re.findall(r"\d", normalize_bhk(project.bhk_type) or "2")
+    hint = int(digits[0]) if digits else 2
+    mime = mimetypes.guess_type(name)[0] or "image/png"
+    detected = await run_in_threadpool(detect_rooms, img, bhk_hint=hint, raw=data, mime=mime)
+
+    project.plan_layout = {
+        **{k: v for k, v in current.items() if k not in ("summary", "confirmed_at")},
+        "status": "draft",
+        "rooms": detected["rooms"],
+        "plan_width_m": detected["plan_width_m"],
+        "plan_depth_m": detected.get("plan_depth_m"),
+        "door_gaps": detected.get("door_gaps", []),
+        "method": detected["method"],
+        "notes": detected["notes"],
+        "image_w": detected["image_w"],
+        "image_h": detected["image_h"],
+        "previous_active": current if current.get("status") == "active" else current.get("previous_active"),
+    }
+    db.commit()
+    db.refresh(project)
+    return _plan_payload(project, db)
+
+
+@router.put("/plan-layout/{project_id}", summary="Floor plan — confirm the rooms and build the 2D plan + 3D model")
+def save_plan_layout(
+    project_id: str,
+    req: PlanLayoutReq,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    project = _owned(project_id, user, db)
+    current = project.plan_layout if isinstance(project.plan_layout, dict) else None
+    if not current or not current.get("image_url"):
+        raise HTTPException(400, "Upload the floor plan image first")
+    try:
+        cleaned = clean_plan([r.model_dump() for r in req.rooms], req.plan_width_m,
+                             current.get("image_w"), current.get("image_h"), req.plan_depth_m)
+        rooms = db.query(Room).filter(Room.project_id == project.id).all()
+        variant = build_plan_variant({**cleaned, "door_gaps": current.get("door_gaps") or []},
+                                     build_viewer_brief(project, rooms))
+    except PlanError as exc:
+        raise HTTPException(400, str(exc))
+
+    if req.sync_bhk:
+        target = variant["bhk"].replace(" ", "")
+        if target != normalize_bhk(project.bhk_type):
+            locked = _bhk_locked(project, db)
+            if locked:
+                raise HTTPException(400, locked)
+            project.bhk_type = target
+
+    project.plan_layout = {
+        **{k: v for k, v in current.items() if k != "previous_active"},
+        **cleaned,
+        "status": "active" if req.activate else "draft",
+        "summary": variant["summary"],
+        "confirmed_at": datetime.datetime.utcnow().isoformat(),
+    }
+    _mark_glb_stale(project)
+    db.commit()
+    db.refresh(project)
+    return _plan_payload(project, db)
+
+
+@router.delete("/plan-layout/{project_id}", summary="Floor plan — switch back to the standard layout")
+def disable_plan_layout(project_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    project = _owned(project_id, user, db)
+    plan = project.plan_layout if isinstance(project.plan_layout, dict) else None
+    if plan and plan.get("status") == "active":
+        project.plan_layout = {**plan, "status": "inactive"}
+        _mark_glb_stale(project)
+        db.commit()
+        db.refresh(project)
+    return _plan_payload(project, db)

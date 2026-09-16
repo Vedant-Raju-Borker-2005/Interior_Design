@@ -120,8 +120,12 @@ The repository includes an automated batch script that checks environment requir
    * Create and activate a Python virtual environment (`.venv`) in `backend/` and install `requirements.txt`.
    * Run `npm install` in `frontend/`.
    * Initialize and seed the SQLite database with design packages, catalog products, and reviewer demo accounts.
-   * Start the FastAPI backend server (`http://localhost:8000`) and Next.js frontend dev server (`http://localhost:3000`).
+   * Start the FastAPI backend server (`http://localhost:8000`) and the Next.js frontend (`http://localhost:3000`).
    * Automatically launch the web application in your browser at `http://localhost:3000`.
+
+**Run modes.** By default the launcher builds the frontend once (`next build`, a few minutes) and serves the
+compiled app, so every page opens instantly. It rebuilds only when the git commit changes. For editing code,
+run **`Click_Run.bat dev`** instead: live reload, but each page compiles on its first visit (slow on low-RAM machines).
 
 ---
 
@@ -203,6 +207,8 @@ PAYMENT_UPI_ID=
 |---|---|---|
 | **AI visualisation** | The 3D viewer renders straight from the customer's onboarding answers (no second control panel); opens by default | `/visualize/[id]`, `GET /api/v1/ai/interactive-viewer/{id}`, `GET /api/v1/ai/viewer-brief/{id}` |
 | 1.1 Floor plan | Upload at onboarding *or skip and upload later*; an uploaded plan is sent to the image model with every render | `/floor-layout/[id]`, `POST /api/v1/ai/floor-plan/{id}` |
+| **Plan → 2D/3D** | An uploaded plan image is traced into rooms (walls incl. coloured CAD double lines, doors, windows), room names and the scale are read from the printed labels/sizes (offline OCR), the customer confirms them, and the 2D plan + 3D model are built from that layout. Stretched images are corrected from the printed sizes | `/plan-trace/[id]`, `/api/v1/ai/plan-layout/*`, `services/plan_layout.py`, `services/plan_ocr.py` |
+| **Product options → 2D/3D/AI** | Every option chosen on Customize (colour, fabric, wood finish, size, texture, cushion style and any group a vendor adds) is saved, painted onto the matching piece in the 2D plan and 3D model, and written into the AI render prompt | `/customize/[id]`, `services/design_selections.py` |
 | 1.3 / 1.4 GST & quotation ID | GSTIN/PAN/billing profile, frozen onto each quotation; `QT-YYYY-NNNNN` numbers on screen and PDF | `/profile/billing`, `PUT /api/v1/auth/me` |
 | 1.5 / 1.9 / 1.10 | Admin quotation search → customer/project, mark paid offline, convert to project | `/admin/quotations`, `/api/v1/quotation-admin/*` |
 | 1.6 Product images | Catalog re-encoded 495 MB → 7.6 MB WebP; uploads auto-optimised; relative image paths resolved | `ProductImage`, `services/image_optimizer.py` |
@@ -225,5 +231,6 @@ cd ../backend-ai
 
 ### Notes
 
-* The interactive 3D model uses the pre-solved standard layout for the BHK. Uploaded floor plans drive the AI photoreal renders; they do not reshape the 3D geometry.
+* Without a confirmed floor plan the 3D model uses the pre-solved standard layout for the BHK. Once the customer confirms the rooms traced from their plan, the 2D plan and 3D model are built from that plan instead ("Use standard layout" switches back).
+* Plan tracing reads room labels with RapidOCR (`rapidocr-onnxruntime`, installed from `requirements.txt`, runs offline). If `GEMINI_KEY` is set, Gemini vision is tried first. Detection is a starting point: the customer can move, resize, rename and add rooms before generating.
 * Projects that existed before the approval queue were marked approved on migration, so live work is not frozen. New projects enter the queue.

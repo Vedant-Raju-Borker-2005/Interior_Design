@@ -9,6 +9,8 @@ from ..schemas import CreateProjectReq, UpdateRoomReq, AddRoomItemReq, AddRoomRe
 from ..auth_utils import current_user
 import uuid
 
+from ..services.design_selections import LEGACY_COLUMNS, apply_attributes, clean_attributes, item_attributes
+
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
@@ -205,39 +207,35 @@ def add_room_item(
     if not product:
         raise HTTPException(404, "Product not found")
 
+    # The Customize step sends custom_attributes; older callers send custom_* fields.
+    attributes = clean_attributes({
+        **{key: getattr(req, column) for key, column in LEGACY_COLUMNS.items()},
+        **(req.custom_attributes or {}),
+    })
+
     # Check if already added
     existing = db.query(RoomItem).filter(RoomItem.room_id == room_id, RoomItem.product_id == req.product_id).first()
     if existing:
         existing.qty = req.qty
-        existing.custom_color = req.custom_color
-        existing.custom_material = req.custom_material
-        existing.custom_size = req.custom_size
-        existing.custom_fabric = req.custom_fabric
-        existing.custom_wood_finish = req.custom_wood_finish
-        existing.custom_texture = req.custom_texture
-        existing.custom_cushion_style = req.custom_cushion_style
+        apply_attributes(existing, attributes)
         existing.unit_price = product.price
+        _design_changed(project)
         db.commit()
-        return {"message": "item updated", "item_id": existing.id}
+        return {"message": "item updated", "item_id": existing.id, "custom_attributes": attributes}
 
     item = RoomItem(
         id=str(uuid.uuid4()),
         room_id=room_id,
         product_id=req.product_id,
         qty=req.qty,
-        custom_color=req.custom_color,
-        custom_material=req.custom_material,
-        custom_size=req.custom_size,
-        custom_fabric=req.custom_fabric,
-        custom_wood_finish=req.custom_wood_finish,
-        custom_texture=req.custom_texture,
-        custom_cushion_style=req.custom_cushion_style,
         unit_price=product.price,
     )
+    apply_attributes(item, attributes)
     db.add(item)
+    _design_changed(project)
     db.commit()
 
-    return {"message": "item added", "item_id": item.id}
+    return {"message": "item added", "item_id": item.id, "custom_attributes": attributes}
 
 
 @router.delete("/{project_id}/rooms/{room_id}/items/{item_id}", summary="Remove product from room")
@@ -255,6 +253,7 @@ def remove_room_item(
     db.query(VendorAssignment).filter(VendorAssignment.item_id == item.id).delete(synchronize_session=False)
 
     db.delete(item)
+    _design_changed(project)
     db.commit()
     return {"message": "item removed"}
 
@@ -372,6 +371,7 @@ def download_floor_plan_pdf(
                     "custom_color": it.custom_color,
                     "custom_material": it.custom_material,
                     "custom_size": it.custom_size,
+                    "custom_attributes": item_attributes(it),
                 })
         rooms_data.append({
             "room_name": room.room_type.replace("_", " ").title(),
@@ -392,6 +392,14 @@ def download_floor_plan_pdf(
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+def _design_changed(project: Project) -> None:
+    """Picks changed what the 3D model shows: the saved GLB is out of date."""
+    defaults = dict(project.defaults or {}) if isinstance(project.defaults, dict) else {}
+    if defaults.get("scene_glb_url"):
+        defaults["scene_glb_stale"] = True
+        project.defaults = defaults
+
+
 def _get_project_or_404(project_id: str, user_id: str, db: Session) -> Project:
     project = db.query(Project).filter(Project.id == project_id, Project.user_id == user_id).first()
     if not project:
@@ -461,6 +469,7 @@ def _room_detail(r: Room, db: Session) -> dict:
                 "custom_wood_finish": it.custom_wood_finish,
                 "custom_texture": it.custom_texture,
                 "custom_cushion_style": it.custom_cushion_style,
+                "custom_attributes": item_attributes(it),
                 "unit_price": it.unit_price,
                 "product": {
                     "id": it.product.id,
