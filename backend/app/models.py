@@ -107,6 +107,10 @@ class Project(Base):
     # Feedback 1.8 — premium render entitlement granted after payment
     premium_render_credits = Column(Integer, default=0)
 
+    # Customer's uploaded floor plan, traced into rooms (see services/plan_layout.py).
+    # {status: draft|active|inactive, image_url, image_w, image_h, rooms, plan_width_m, ...}
+    plan_layout = Column(JSON, nullable=True)
+
     user = relationship("User", back_populates="projects")
     rooms = relationship("Room", back_populates="project", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="project", cascade="all, delete-orphan")
@@ -223,6 +227,9 @@ class RoomItem(Base):
     custom_wood_finish = Column(String, nullable=True)
     custom_texture = Column(String, nullable=True)
     custom_cushion_style = Column(String, nullable=True)
+    # Every option chosen on the Customize step, including vendor-defined ones
+    # beyond the columns above: {"color": "Blush Pink", "wood_finish": "Matte", ...}
+    custom_attributes = Column(JSON, nullable=True)
     unit_price = Column(Float)
 
     room = relationship("Room", back_populates="items")

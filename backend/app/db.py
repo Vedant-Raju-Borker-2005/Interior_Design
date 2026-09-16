@@ -164,6 +164,7 @@ def init_db():
                     "discount_note": "VARCHAR",
                     "premium_render_credits": "INTEGER DEFAULT 0",
                     "style_tags": "TEXT DEFAULT '[]'",
+                    "plan_layout": "TEXT",
                 })
                 add_cols("quotations", {      # 1.3, 1.4, 1.9, 1.10, 2.2
                     "quotation_no": "VARCHAR",
@@ -195,6 +196,9 @@ def init_db():
                         "unavailable_reason": "VARCHAR",
                         "availability_updated_at": "DATETIME",
                     })
+                add_cols("room_items", {      # every variant option the customer picked
+                    "custom_attributes": "TEXT",
+                })
                 add_cols("item_trackings", {  # 3.1-3.5 split statuses
                     "vendor_status": "VARCHAR DEFAULT 'ORDERED'",
                     "technician_status": "VARCHAR DEFAULT 'NOT_RECEIVED'",

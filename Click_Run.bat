@@ -13,6 +13,14 @@ echo.
 
 :: ---- Resolve absolute paths from this bat file's location ----
 set "ROOT=%~dp0"
+
+:: Run mode. Default "fast": the frontend is compiled once (next build) and
+:: served ready-made, so every page opens instantly. "dev" keeps live reload
+:: for editing code, but each page compiles on first visit (can take 30s+).
+::   Click_Run.bat        -> fast
+::   Click_Run.bat dev    -> development (live reload)
+set "MODE=fast"
+if /i "%~1"=="dev" set "MODE=dev"
 set "BACKEND=%ROOT%backend"
 set "FRONTEND=%ROOT%frontend"
 
@@ -169,14 +177,39 @@ echo   Two new windows will open (Backend and Frontend).
 echo   Close those windows to stop the servers.
 echo.
 
-:: Launch Backend
-start "InteriorAI - Backend (port 8000)" /d "%BACKEND%" cmd /k "chcp 65001 >nul && set PYTHONIOENCODING=utf-8 && call .venv\Scripts\activate.bat && echo Backend starting... && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+:: Launch Backend (auto-reload only in dev mode: it runs a second process)
+set "RELOAD="
+if /i "%MODE%"=="dev" set "RELOAD=--reload"
+start "InteriorAI - Backend (port 8000)" /d "%BACKEND%" cmd /k "chcp 65001 >nul && set PYTHONIOENCODING=utf-8 && call .venv\Scripts\activate.bat && echo Backend starting... && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 %RELOAD%"
 
 :: Wait for backend to initialize
 timeout /t 4 /nobreak >nul 2>&1
 
 :: Launch Frontend
-start "InteriorAI - Frontend (port 3000)" /d "%FRONTEND%" cmd /k "chcp 65001 >nul && echo Frontend starting... && npm run dev"
+if /i "%MODE%"=="dev" (
+    start "InteriorAI - Frontend (port 3000)" /d "%FRONTEND%" cmd /k "chcp 65001 >nul && echo Frontend starting in dev mode... && npm run dev"
+) else (
+    rem Rebuild only when the code changed since the last build (or never built).
+    set "HEAD=nobuild"
+    for /f %%i in ('git -C "%ROOT%." rev-parse HEAD 2^>nul') do set "HEAD=%%i"
+    set "BUILT="
+    if exist "%FRONTEND%\.next\BUILD_ID" if exist "%FRONTEND%\.next\BUILT_FROM" set /p BUILT=<"%FRONTEND%\.next\BUILT_FROM"
+    if not "!BUILT!"=="!HEAD!" (
+        echo   Building the frontend once for fast page loads. This takes a few minutes...
+        pushd "%FRONTEND%"
+        call npm run build
+        if errorlevel 1 (
+            echo   Build failed - starting in dev mode instead.
+            popd
+            start "InteriorAI - Frontend (port 3000)" /d "%FRONTEND%" cmd /k "chcp 65001 >nul && npm run dev"
+            goto :frontend_started
+        )
+        >"%FRONTEND%\.next\BUILT_FROM" echo !HEAD!
+        popd
+    )
+    start "InteriorAI - Frontend (port 3000)" /d "%FRONTEND%" cmd /k "chcp 65001 >nul && echo Frontend starting... && npm run start"
+)
+:frontend_started
 
 :: Wait for frontend
 timeout /t 6 /nobreak >nul 2>&1

@@ -144,25 +144,24 @@ def build_prompt(style: str, color_palette: list, room_type: str = "living_room"
     style_desc = STYLE_PROMPTS.get(style, style)
     room_label = room_type.replace("_", " ")
 
-    # Build product descriptions
-    product_parts = []
-    if products:
-        for p in products:
-            name = p.get("name", "")
-            color = p.get("color") or p.get("custom_color", "")
-            fabric = p.get("fabric") or p.get("custom_fabric", "")
-            size = p.get("size") or p.get("custom_size", "")
-            texture = p.get("texture") or p.get("custom_texture", "")
+    # Build product descriptions: every option the customer chose (colour,
+    # fabric, wood finish, size, texture, cushion style, vendor extras), named,
+    # so the image model reproduces the exact variant rather than a lookalike.
+    from .design_selections import clean_attributes, describe_product
 
-            desc = name
-            attrs = [a for a in [color, fabric, size, texture] if a]
-            if attrs:
-                desc += f" ({', '.join(attrs)})"
-            product_parts.append(desc)
+    product_parts = []
+    for p in products or []:
+        if not isinstance(p, dict) or not p.get("name"):
+            continue
+        attrs = clean_attributes({k: v for k, v in p.items() if k not in ("id", "name", "product_id")})
+        product_parts.append(describe_product({"name": p["name"], **attrs}))
 
     product_sentence = ""
     if product_parts:
-        product_sentence = f"The room contains: {'; '.join(product_parts)}. "
+        product_sentence = (
+            f"The room contains exactly these products, each in the chosen variant: "
+            f"{'; '.join(product_parts)}. "
+        )
 
     placement_sentence = layout_prompt.strip() if layout_prompt else ""
 

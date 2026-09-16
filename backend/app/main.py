@@ -45,6 +45,17 @@ async def lifespan(app: FastAPI):
         sync_demo_data(db)
     finally:
         db.close()
+
+    # Load the IDS design engine in the background: its first use otherwise
+    # makes whichever request triggers it wait several seconds.
+    def _warm_ids():
+        try:
+            from .services.ids_service import get_ids_pipeline_instance
+            get_ids_pipeline_instance()
+        except Exception:
+            pass
+    import threading
+    threading.Thread(target=_warm_ids, name="ids-warmup", daemon=True).start()
     yield
 
 
@@ -54,6 +65,21 @@ app = FastAPI(
     description="AI-Based Modular Interior Design & Visualization Platform - Reloaded",
     lifespan=lifespan,
 )
+
+@app.middleware("http")
+async def json_errors(request, call_next):
+    """Turn an unexpected crash into a JSON 500. Registered before CORS so the
+    response still carries CORS headers — otherwise the browser reports a
+    network failure and the real error is lost."""
+    try:
+        return await call_next(request)
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        from fastapi.responses import JSONResponse
+        logging.getLogger("app").exception("Unhandled error on %s %s", request.method, request.url.path)
+        return JSONResponse(status_code=500, content={
+            "detail": f"Something went wrong on the server ({type(exc).__name__}). Please try again."})
+
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,7 +1,7 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { projectsAPI, catalogAPI } from '@/lib/api'
+import { projectsAPI, catalogAPI, planLayoutAPI, apiErrorMessage, type PlanLayoutPayload } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 import ProductImage from '@/components/ProductImage'
 import toast from 'react-hot-toast'
@@ -68,6 +68,34 @@ const MANDATORY_CATEGORIES: Record<string, { id: string; label: string; desc: st
   ],
 }
 
+// Option groups a vendor can define for a product. Known groups keep a fixed
+// order and wording; any new group a vendor adds is shown after them.
+const VARIANT_LABELS: Record<string, string> = {
+  color: 'Color', fabric: 'Fabric Choice', wood_finish: 'Wood Finish', material: 'Material',
+  texture: 'Texture', size: 'Size Option', cushion_style: 'Cushion Style',
+}
+const NON_OPTION_KEYS = new Set(['images', 'image', 'thumbnail', 'gallery'])
+
+const variantGroups = (product: any): { key: string; label: string; values: string[] }[] => {
+  const variants = product?.variants
+  if (!variants || typeof variants !== 'object' || Array.isArray(variants)) return []
+  const known = Object.keys(VARIANT_LABELS)
+  const keys = Object.keys(variants)
+    .filter((k) => !NON_OPTION_KEYS.has(k))
+    .sort((a, b) => {
+      const ia = known.indexOf(a), ib = known.indexOf(b)
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b)
+    })
+  return keys
+    .map((key) => {
+      const raw = Array.isArray(variants[key]) ? variants[key] : typeof variants[key] === 'string' ? [variants[key]] : []
+      const values = Array.from(new Set(raw.map((v: any) => String(v ?? '').trim()).filter(Boolean))) as string[]
+      const label = VARIANT_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      return { key, label, values }
+    })
+    .filter((g) => g.values.length > 0)          // no empty headings
+}
+
 export default function GuidedCustomizePage() {
   const params = useParams()
   const router = useRouter()
@@ -88,14 +116,14 @@ export default function GuidedCustomizePage() {
   useEffect(() => {
     setActiveImageIdx(0)
   }, [customizingProduct?.id])
-  const [customColor, setCustomColor] = useState('')
-  const [customFabric, setCustomFabric] = useState('')
-  const [customWoodFinish, setCustomWoodFinish] = useState('')
-  const [customSize, setCustomSize] = useState('')
-  const [customTexture, setCustomTexture] = useState('')
-  const [customCushionStyle, setCustomCushionStyle] = useState('')
+  // One value per option group the vendor defined for the product (colour,
+  // fabric, wood finish, size, texture, cushion style, or anything they add).
+  const [customAttrs, setCustomAttrs] = useState<Record<string, string>>({})
+  const setAttr = (key: string, value: string) => setCustomAttrs((prev) => ({ ...prev, [key]: value }))
   const [savingItem, setSavingItem] = useState(false)
   const [uploadingPlan, setUploadingPlan] = useState(false)
+  const [planInfo, setPlanInfo] = useState<PlanLayoutPayload | null>(null)
+  const planInputRef = useRef<HTMLInputElement>(null)
 
   const [loading, setLoading] = useState(true)
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
@@ -308,41 +336,36 @@ export default function GuidedCustomizePage() {
     setCustomizingProduct(product)
     const existingInRoom = activeRoomItems.find((it: any) => it.product_id === product.id)
     
+    const groups = variantGroups(product)
     let defaultColor = product.variants?.color?.[0] || ''
     if (project?.color_preferences?.length > 0 && product.variants?.color?.length > 0) {
       const bestMatch = getBestColorMatch(product.variants.color, project.color_preferences)
       defaultColor = bestMatch.color
     }
 
-    if (existingInRoom?.custom_attributes) {
-      const ca = existingInRoom.custom_attributes
-      setCustomColor(ca.color || defaultColor)
-      setCustomFabric(ca.fabric || product.variants?.fabric?.[0] || '')
-      setCustomWoodFinish(ca.wood_finish || product.variants?.wood_finish?.[0] || '')
-      setCustomSize(ca.size || product.variants?.size?.[0] || '')
-      setCustomTexture(ca.texture || product.variants?.texture?.[0] || '')
-      setCustomCushionStyle(ca.cushion_style || product.variants?.cushion_style?.[0] || '')
-    } else {
-      setCustomColor(defaultColor)
-      setCustomFabric(product.variants?.fabric?.[0] || '')
-      setCustomWoodFinish(product.variants?.wood_finish?.[0] || '')
-      setCustomSize(product.variants?.size?.[0] || '')
-      setCustomTexture(product.variants?.texture?.[0] || '')
-      setCustomCushionStyle(product.variants?.cushion_style?.[0] || '')
+    // Start from what was saved for this product (if anything), else the
+    // palette's best colour match and each group's first option.
+    const saved: Record<string, string> = existingInRoom?.custom_attributes || {}
+    const next: Record<string, string> = {}
+    for (const { key, values } of groups) {
+      const previous = saved[key]
+      next[key] = previous && values.includes(previous)
+        ? previous
+        : key === 'color' && defaultColor ? defaultColor : values[0]
     }
+    setCustomAttrs(next)
   }
 
   const handleSaveSelection = async () => {
     if (!customizingProduct || !activeRoomId) return
     setSavingItem(true)
     try {
+      // Only options this product actually offers are saved.
       const customAttributes: Record<string, string> = {}
-      if (customColor) customAttributes.color = customColor
-      if (customFabric) customAttributes.fabric = customFabric
-      if (customWoodFinish) customAttributes.wood_finish = customWoodFinish
-      if (customSize) customAttributes.size = customSize
-      if (customTexture) customAttributes.texture = customTexture
-      if (customCushionStyle) customAttributes.cushion_style = customCushionStyle
+      for (const { key, values } of variantGroups(customizingProduct)) {
+        const value = customAttrs[key]
+        if (value && values.includes(value)) customAttributes[key] = value
+      }
 
       // Delete any previously saved item in the SAME category for this room to enforce 1 item per category
       const existingInCat = activeRoomItems.find((it: any) => matchCategory(selectedCategory, it.product))
@@ -404,22 +427,39 @@ export default function GuidedCustomizePage() {
     }
   }
 
+  // The uploaded plan is traced into rooms and drives the studio's 2D plan and
+  // 3D model: upload → check the detected rooms → see the design.
   const handleFloorPlanUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !activeRoomId) return
+    const input = e.target
+    const file = input.files?.[0]
+    input.value = ''                      // picking the same file again still fires
+    if (!file) return
+    if (!/\.(jpe?g|png|webp)$/i.test(file.name)) {
+      toast.error('Upload the plan as a JPG, PNG or WebP image (for a PDF, take a screenshot of the plan page).')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Floor plan must be 10 MB or smaller')
+      return
+    }
     setUploadingPlan(true)
+    const toastId = toast.loading('Reading your floor plan…')
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await projectsAPI.uploadFloorPlan(projectId, activeRoomId, formData)
-      await loadProject()
-      toast.success('Room floor plan blueprint uploaded successfully!')
+      const res = await planLayoutAPI.detect(projectId, file)
+      setPlanInfo(res.data)
+      const n = res.data.plan?.rooms.length || 0
+      toast.success(n ? `Found ${n} spaces — check them against your plan` : 'Plan uploaded — mark the rooms on it', { id: toastId })
+      router.push(`/plan-trace/${projectId}?next=${encodeURIComponent(`/visualize/${projectId}`)}`)
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Failed to upload floor plan blueprint')
+      toast.error(apiErrorMessage(err, 'Could not upload the floor plan'), { id: toastId })
     } finally {
       setUploadingPlan(false)
     }
   }
+
+  useEffect(() => {
+    planLayoutAPI.get(projectId).then((r) => setPlanInfo(r.data)).catch(() => setPlanInfo(null))
+  }, [projectId])
 
   if (loading) {
     return (
@@ -649,11 +689,40 @@ export default function GuidedCustomizePage() {
                 <div className="flex items-center gap-2 text-[#172554] pb-2 border-b border-[#E5E7F2]">
                   <Layout className="w-4 h-4 text-[#4F46E5]" />
                   <h3 className="font-extrabold text-xs tracking-wider uppercase text-[#64748B]">
-                    {getRoomLabelAndIcon(activeRoom.room_type, project?.bhk_type).label} Floor Plan
+                    Home Floor Plan
                   </h3>
                 </div>
 
-                {activeRoom.custom_config?.floor_plan_url ? (
+                {planInfo?.plan ? (
+                  <div className="space-y-3 bg-[#F7F8FF] p-3.5 rounded-2xl border border-[#E5E7F2]">
+                    <div className={clsx('flex items-center gap-2 text-xs font-semibold',
+                      planInfo.active ? 'text-[#10B981]' : 'text-[#F59E0B]')}>
+                      {planInfo.active ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                      <span>
+                        {planInfo.active
+                          ? `Your plan drives the 2D & 3D design${planInfo.plan_bhk ? ` · ${planInfo.plan_bhk}` : ''}`
+                          : planInfo.plan.status === 'inactive'
+                            ? 'Standard layout in use — your plan is saved'
+                            : 'Rooms not confirmed yet'}
+                      </span>
+                    </div>
+                    <div className="aspect-[4/3] rounded-xl overflow-hidden border border-[#E5E7F2] bg-white">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={planInfo.plan.image_url} alt="Your floor plan" className="w-full h-full object-contain" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button"
+                        onClick={() => router.push(`/plan-trace/${projectId}?next=${encodeURIComponent(`/visualize/${projectId}`)}`)}
+                        className="py-2 rounded-xl text-[11px] font-bold border border-[#E5E7F2] bg-white hover:bg-slate-50 text-[#172554]">
+                        {planInfo.active ? 'Adjust rooms' : 'Check rooms'}
+                      </button>
+                      <button type="button" onClick={() => router.push(`/visualize/${projectId}`)}
+                        className="py-2 rounded-xl text-[11px] font-bold bg-[#172554] hover:bg-[#0f1a3d] text-white">
+                        View 2D & 3D
+                      </button>
+                    </div>
+                  </div>
+                ) : activeRoom.custom_config?.floor_plan_url ? (
                   <div className="space-y-3 bg-[#F7F8FF] p-3.5 rounded-2xl border border-[#E5E7F2]">
                     <div className="flex items-center gap-2 text-xs font-semibold text-[#10B981]">
                       <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
@@ -682,44 +751,48 @@ export default function GuidedCustomizePage() {
                   <div className="p-5 bg-[#F7F8FF] rounded-2xl border border-dashed border-[#E5E7F2] text-center">
                     <FileText className="w-8 h-8 text-[#64748B] mx-auto mb-2" />
                     <div className="text-xs font-bold text-[#172554]">Using Default Rooms Layout</div>
-                    <p className="text-[10px] text-[#64748B] mt-1 max-w-[200px] mx-auto leading-normal">
-                      Vector blueprints will fall back to standard room structures.
+                    <p className="text-[10px] text-[#64748B] mt-1 max-w-[220px] mx-auto leading-normal">
+                      Upload your plan and your 2D plan and 3D model will be built from its rooms.
                     </p>
                   </div>
                 )}
 
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={handleFloorPlanUpload}
-                    id="sidebar-floorplan-file"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    disabled={uploadingPlan}
-                  />
-                  <button
-                    type="button"
-                    className={clsx(
-                      "w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border shadow-sm duration-200",
-                      uploadingPlan
-                        ? "bg-slate-100 text-[#64748B] border-[#E5E7F2] cursor-not-allowed"
-                        : "bg-[#4F46E5] hover:bg-[#4338CA] text-white border-[#4F46E5]"
-                    )}
-                    disabled={uploadingPlan}
-                  >
-                    {uploadingPlan ? (
-                      <>
-                        <div className="w-3.5 h-3.5 border-2 border-[#64748B] border-t-white rounded-full animate-spin" />
-                        <span>Uploading...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>Upload Custom Blueprint</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                {/* A real button driving a hidden input: the whole button is clickable,
+                    keyboard-accessible, and the busy state blocks double uploads. */}
+                <input
+                  ref={planInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleFloorPlanUpload}
+                  id="sidebar-floorplan-file"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => planInputRef.current?.click()}
+                  className={clsx(
+                    "w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border shadow-sm duration-200",
+                    uploadingPlan
+                      ? "bg-slate-100 text-[#64748B] border-[#E5E7F2] cursor-not-allowed"
+                      : "bg-[#4F46E5] hover:bg-[#4338CA] text-white border-[#4F46E5]"
+                  )}
+                  disabled={uploadingPlan}
+                >
+                  {uploadingPlan ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-[#64748B] border-t-white rounded-full animate-spin" />
+                      <span>Reading your plan…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{planInfo?.plan ? 'Upload a Different Plan' : 'Upload Your Floor Plan'}</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-[10px] text-[#64748B] text-center leading-normal">
+                  JPG, PNG or WebP up to 10 MB. For a PDF, upload a screenshot of the plan page.
+                </p>
               </div>
             )}
           </div>
@@ -1037,112 +1110,59 @@ export default function GuidedCustomizePage() {
                       <span>Available Variants</span>
                     </h3>
 
-                    {/* Color Options */}
-                    {customizingProduct.variants?.color && (
-                      <div className="space-y-2">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                          <span className="text-[10px] font-bold text-[#64748B] uppercase block">Color</span>
-                          {project?.color_preferences?.length > 0 && (
-                            <span className="text-[9px] text-[#64748B]">
-                              🎨 Selected Palette: <strong className="text-[#4F46E5]">{project.color_preferences.join(', ')}</strong>
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-1.5">
-                          {customizingProduct.variants.color.map((val: string) => {
-                            const matchResult = getBestColorMatch(customizingProduct.variants.color, project?.color_preferences || []);
-                            const isSelected = customColor === val;
-                            const isBestMatch = matchResult.color === val;
-                            return (
-                              <button
-                                key={val}
-                                type="button"
-                                onClick={() => setCustomColor(val)}
-                                className={clsx(
-                                  'px-3 py-1.5 rounded-xl text-xs transition border font-semibold flex items-center gap-1',
-                                  isSelected
-                                    ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
-                                    : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
-                                )}
-                              >
-                                {isBestMatch && <span>⭐</span>}
-                                {val}
-                                {isBestMatch && <span className="text-[9px] opacity-75 font-normal ml-0.5">(Best Match)</span>}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                    {variantGroups(customizingProduct).length === 0 && (
+                      <p className="text-xs text-[#64748B]">This product comes in a single variant.</p>
                     )}
 
-                    {/* Fabric Options */}
-                    {customizingProduct.variants?.fabric && (
-                      <div>
-                        <label className="text-[10px] font-bold text-[#64748B] uppercase block mb-1">Fabric Choice</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {customizingProduct.variants.fabric.map((val: string) => (
-                            <button
-                              key={val}
-                              onClick={() => setCustomFabric(val)}
-                              className={clsx(
-                                'px-3 py-1.5 rounded-xl text-xs transition border font-semibold',
-                                customFabric === val
-                                  ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
-                                  : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
-                              )}
-                            >
-                              {val}
-                            </button>
-                          ))}
+                    {/* Every option group the vendor defined, in a stable order */}
+                    {variantGroups(customizingProduct).map(({ key, label, values }) => {
+                      const bestColour = key === 'color'
+                        ? getBestColorMatch(values, project?.color_preferences || []).color
+                        : ''
+                      return (
+                        <div key={key} className="space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase block">{label}</span>
+                            {key === 'color' && project?.color_preferences?.length > 0 && (
+                              <span className="text-[9px] text-[#64748B]">
+                                🎨 Selected Palette: <strong className="text-[#4F46E5]">{project.color_preferences.join(', ')}</strong>
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {values.map((val) => {
+                              const isSelected = customAttrs[key] === val
+                              const isBestMatch = key === 'color' && bestColour === val && (project?.color_preferences?.length || 0) > 0
+                              return (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => setAttr(key, val)}
+                                  className={clsx(
+                                    'px-3 py-1.5 rounded-xl text-xs transition border font-semibold flex items-center gap-1.5',
+                                    isSelected
+                                      ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
+                                      : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
+                                  )}
+                                >
+                                  {key === 'color' && (
+                                    <i className="w-3 h-3 rounded-full border border-black/10" style={{ background: getColorHex(val) }} />
+                                  )}
+                                  {isBestMatch && <span>⭐</span>}
+                                  {val}
+                                  {isBestMatch && <span className="text-[9px] opacity-75 font-normal ml-0.5">(Best Match)</span>}
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    })}
 
-                    {/* Wood Finish Options */}
-                    {customizingProduct.variants?.wood_finish && (
-                      <div>
-                        <label className="text-[10px] font-bold text-[#64748B] uppercase block mb-1">Wood Finish</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {customizingProduct.variants.wood_finish.map((val: string) => (
-                            <button
-                              key={val}
-                              onClick={() => setCustomWoodFinish(val)}
-                              className={clsx(
-                                'px-3 py-1.5 rounded-xl text-xs transition border font-semibold',
-                                customWoodFinish === val
-                                  ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
-                                  : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
-                              )}
-                            >
-                              {val}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Size Options */}
-                    {customizingProduct.variants?.size && (
-                      <div>
-                        <label className="text-[10px] font-bold text-[#64748B] uppercase block mb-1">Size Option</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {customizingProduct.variants.size.map((val: string) => (
-                            <button
-                              key={val}
-                              onClick={() => setCustomSize(val)}
-                              className={clsx(
-                                'px-3 py-1.5 rounded-xl text-xs transition border font-semibold',
-                                customSize === val
-                                  ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
-                                  : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
-                              )}
-                            >
-                              {val}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                    {variantGroups(customizingProduct).length > 0 && (
+                      <p className="text-[10px] text-[#64748B] leading-relaxed">
+                        Your choices are shown on this piece in the 2D plan and 3D model, and used for AI renders.
+                      </p>
                     )}
 
                     <button

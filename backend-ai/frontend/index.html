@@ -1205,9 +1205,43 @@ function fitToDimensions(node, dims) {
   node.position.sub(new THREE.Vector3(c.x, bb2.min.y, c.z));
   node.traverse(o => { if (o.isMesh) { o.castShadow = LAYERS.shadows; o.receiveShadow = true; } });
 }
+/* The look of a product the customer picked on the Customize step. The server
+   has already resolved the option names (colour, fabric, wood finish, texture)
+   into a colour, fabric family, wood species and sheen. Returns the base colour
+   and a maker for its surface, or null to keep the design palette. */
+function pickSurface(obj, look) {
+  const k = obj.pick && obj.pick.look;
+  if (!k) return null;
+  const role = obj.role || '';
+  const r = typeof k.roughness === 'number' ? k.roughness : null;
+  if (role === 'textile_accent') return k.hex ? { base: k.hex, make: hex => SURF.rug(hex) } : null;
+  if (role.startsWith('fabric')) {
+    if (!k.hex && !k.fabric_family) return null;
+    const fam = k.fabric_family || SURF.fabricFamily;
+    const rough = k.fabric_family ? k.fabric_roughness
+      : ({ velvet: 0.94, linen: 0.9, woven: 0.92, leather: 0.42 }[fam] || 0.9);
+    return { base: k.hex || look.hex,
+      make: hex => surface(fam, { color: hex, roughness: rough, env: fam === 'leather' ? 0.95 : 0.55 }) };
+  }
+  if (role === 'wood') {
+    // A named species (teak, walnut…) shows as that wood; otherwise a chosen
+    // colour is a painted / lacquered finish with the chosen sheen.
+    if (k.wood_hex) return { base: k.wood_hex, make: hex => surface('wood', { color: hex, roughness: r ?? 0.52, env: 0.8 }) };
+    if (k.hex) return { base: k.hex, make: hex => surface(null, { color: hex, roughness: r ?? 0.45, env: 0.9 }) };
+    if (r !== null) return { base: look.hex, make: hex => surface('wood', { color: hex, roughness: r, env: 0.8 }) };
+    return null;
+  }
+  if (!k.hex || role === 'glass' || role === 'greenery') return null;
+  if (role === 'metal') return { base: k.hex, make: hex => surface('metal', { color: hex, roughness: r ?? 0.3, metalness: 0.85, env: 1.5 }) };
+  if (role === 'stone') return { base: k.hex, make: hex => surface('marble', { color: hex, roughness: r ?? 0.2, env: 1.2 }) };
+  if (role === 'ceramic') return { base: k.hex, make: hex => surface(null, { color: hex, roughness: r ?? 0.12, env: 1.4 }) };
+  return { base: k.hex, make: hex => surface(null, { color: hex, roughness: r ?? look.roughness, env: 0.9 }) };
+}
+
 function materialsFor(obj, palette, tier) {
   const look = appearanceFor(obj.role, palette, tier);
-  const c = look.hex;
+  const pick = pickSurface(obj, look);
+  const c = pick ? pick.base : look.hex;
   const isFabric = obj.role.startsWith('fabric') || obj.role === 'textile_accent';
   const primary = obj.role === 'textile_accent' ? SURF.rug(c)
     : isFabric ? SURF.fabric(c)
@@ -1220,7 +1254,7 @@ function materialsFor(obj, palette, tier) {
                   : surface(null, { color: c, roughness: look.roughness, metalness: look.metalness });
   const lighter = isFabric ? SURF.fabric(shade(c, 0.06)) : surface(null, { color: shade(c, 0.06), roughness: look.roughness });
   const darker = isFabric ? SURF.fabric(shade(c, -0.07)) : surface(null, { color: shade(c, -0.07), roughness: look.roughness });
-  return {
+  const mats = {
     look, primary,
     primaryLight: obj.role === 'wood' ? SURF.wood(shade(c, 0.05)) : lighter,
     primaryDark: obj.role === 'wood' ? SURF.woodDark() : darker,
@@ -1232,6 +1266,20 @@ function materialsFor(obj, palette, tier) {
     paper: SURF.paper(), greenery: SURF.greenery(), leaf: SURF.leaf(),
     accentSoft: SURF.fabric(H[palette.accent]),
   };
+  if (pick) {
+    Object.assign(mats, {
+      look: Object.assign({}, look, { hex: c }),
+      primary: pick.make(c),
+      primaryLight: pick.make(shade(c, 0.06)),
+      primaryDark: pick.make(shade(c, obj.role === 'wood' ? -0.14 : -0.07)),
+    });
+  }
+  const pickedWood = obj.pick && obj.pick.look && obj.pick.look.wood_hex;
+  if (pickedWood && obj.role !== 'wood') {        // e.g. a sofa's frame and legs
+    mats.wood = surface('wood', { color: pickedWood, roughness: 0.52, env: 0.8 });
+    mats.woodDark = surface('wood', { color: shade(pickedWood, -0.14), roughness: 0.54, env: 0.7 });
+  }
+  return mats;
 }
 async function buildAsset(obj, palette, tier) {
   const mats = materialsFor(obj, palette, tier);
@@ -1615,7 +1663,8 @@ function buildWorld(data) {
       node.scale.multiply(new THREE.Vector3(obj.scale.x, obj.scale.y, obj.scale.z));
       node.userData = { objectId: obj.object_id, roomId: obj.room_id, label: obj.label,
         material: obj.material, dims: obj.dimensions, asset: obj.asset_reference,
-        role: obj.role, category: obj.category };
+        role: obj.role, category: obj.category,
+        pick: obj.pick ? { product: obj.pick.product.name, options: obj.pick.attributes } : null };
       node.traverse(o => { if (o.isMesh) { o.userData.owner = node; pickables.push(o); } });
       (roomGroups.get(obj.room_id) || world).add(node);
       placed += 1;
@@ -1801,11 +1850,72 @@ function renderModelPanel() {
     + ` Price model MAPE ${(MODEL.meta.price_mape * 100).toFixed(1)}% on ${MODEL.meta.orders.toLocaleString()} historical bundles.</div>`;
 }
 
+/* ═════════════ customer's product picks (Customize step) ════════════════ */
+/* Each pick names a product, the room it was chosen for, the scene room that
+   corresponds to it and the scene categories it dresses (a coffee-table pick
+   dresses the coffee table). Matching objects carry the pick, so the 3D model,
+   the 2D plan and the exported GLB all show the chosen variant. */
+const PICKS = EMBED && Array.isArray(EMBED.selections) ? EMBED.selections : [];
+let pickReport = [];
+const escHtml = t => String(t == null ? '' : t).replace(/[&<>"']/g,
+  ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const pickOptions = attrs => Object.entries(attrs || {})
+  .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(' · ');
+
+function applyPicks(data) {
+  const byType = {};
+  for (const r of data.rooms) (byType[r.room_type] = byType[r.room_type] || []).push(r);
+  for (const o of data.objects) delete o.pick;
+  return PICKS.map(p => {
+    const room = p.room_type ? (byType[p.room_type] || [])[p.room_index || 0] : null;
+    const targets = room
+      ? data.objects.filter(o => o.room_id === room.room_id && (p.categories || []).includes(o.category))
+      : [];
+    targets.forEach(o => { o.pick = p; });
+    return {
+      product: p.product && p.product.name, room: p.room, options: p.attributes || {},
+      shown: targets.length > 0,
+      reason: targets.length ? null
+        : !p.room_type ? 'that room is not part of the 2D/3D layout'
+          : !room ? 'this layout has no such room'
+            : !(p.categories || []).length ? 'no 3D piece for this product type yet'
+              : 'the layout has no matching piece in that room',
+    };
+  });
+}
+
+function paintPicksOnPlan() {
+  for (const o of sceneData.objects) {
+    if (!o.pick) continue;
+    const g = document.querySelector(`#plan [data-object="${CSS.escape(o.object_id)}"]`);
+    if (!g) continue;
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    const opts = pickOptions(o.pick.attributes);
+    title.textContent = o.pick.product.name + (opts ? ` — ${opts}` : '');
+    g.insertBefore(title, g.firstChild);
+    const k = o.pick.look || {};
+    const hex = o.role === 'wood' ? (k.wood_hex || k.hex) : (k.hex || k.wood_hex);
+    if (!hex) continue;
+    // Inline styles beat the palette re-tint rules, at the same plan shades.
+    g.querySelectorAll('[class]').forEach(el => {
+      for (const cls of el.classList) {
+        const f = cls.match(/^fx-.+-([bdlso])$/);
+        if (f) el.style.fill = tint(hex, SHADES[f[1]]);
+        const st = cls.match(/^fxs-.+-([bdlso])$/);
+        if (st) el.style.stroke = tint(hex, SHADES[st[1]]);
+      }
+    });
+  }
+}
+
 /* ══════════════════════════ apply a configuration ═══════════════════════ */
 function applyConfig() {
   tier = resolveTier(cfg.budget, cfg.quality);
   palette = assignPalette(cfg.colors, cfg.style);
-  let variant = VARIANTS[`${cfg.bhk}|${tier}`];
+  // A floor plan the customer uploaded and confirmed replaces the baked layout.
+  // The server already furnished it for this tier, so it is used as-is.
+  const traced = EMBED && EMBED.layout && EMBED.layout.scene ? EMBED.layout : null;
+  let variant = traced || VARIANTS[`${cfg.bhk}|${tier}`];
   if (!variant) {
     // A brief can name a BHK/tier combination that was never baked. Fall back
     // along the tier first, then the BHK, rather than throwing.
@@ -1815,11 +1925,13 @@ function applyConfig() {
     tier = key.split('|')[1];
   }
   sceneData = variant.scene;
+  pickReport = applyPicks(sceneData);
 
   document.getElementById('plan').innerHTML = variant.svg;
   planView.attach(document.querySelector('#plan svg'));
   buildSurfaces();
   retintPlan();
+  paintPicksOnPlan();
   document.querySelectorAll('#plan [data-room]').forEach(g =>
     g.addEventListener('click', () => {
       const id = g.getAttribute('data-room');
@@ -1851,6 +1963,8 @@ function notifyHost() {
       width_m: B0.width, depth_m: B0.depth,
       rooms: sceneData.rooms.map(r => ({ id: r.room_id, label: r.label })),
       objects: sceneData.objects.length,
+      layout: EMBED && EMBED.layout ? 'uploaded-plan' : 'standard',
+      picks: pickReport,
     },
   }, '*');
 }
@@ -1969,8 +2083,14 @@ renderer.domElement.addEventListener('pointermove', e => {
     const vec = MODEL.item_vectors[u.category];
     const sv = MODEL.style_vectors[cfg.style];
     const fit = vec && sv ? ((dot(vec, sv) + 1) / 2 * 100).toFixed(0) + '%' : '—';
-    tip.innerHTML = `<b>${u.label}</b><br>${u.dims.width.toFixed(2)} × ${u.dims.depth.toFixed(2)} × ${u.dims.height.toFixed(2)} m`
-      + `<br>${u.material} · <i style="display:inline-block;width:9px;height:9px;background:${look.hex}"></i>`
+    const sceneObj = sceneData.objects.find(o => o.object_id === u.objectId);
+    const k = sceneObj && sceneObj.pick && sceneObj.pick.look;
+    const swatch = (k && (u.role === 'wood' ? (k.wood_hex || k.hex) : (k.hex || k.wood_hex))) || look.hex;
+    tip.innerHTML = (u.pick
+      ? `<b>${escHtml(u.pick.product)}</b><br>${escHtml(pickOptions(u.pick.options))}<br>`
+      : `<b>${u.label}</b><br>`)
+      + `${u.dims.width.toFixed(2)} × ${u.dims.depth.toFixed(2)} × ${u.dims.height.toFixed(2)} m`
+      + `<br>${u.pick ? 'your pick' : u.material} · <i style="display:inline-block;width:9px;height:9px;background:${swatch}"></i>`
       + `<br>style fit ${fit} · ${SURF.fabricFamily} weave`
       + `<br><span class="mono">${u.asset}</span>`;
     tip.style.display = 'block';

@@ -92,6 +92,9 @@ class AddRoomItemReq(BaseModel):
     custom_wood_finish: Optional[str] = None
     custom_texture: Optional[str] = None
     custom_cushion_style: Optional[str] = None
+    # The Customize step sends every chosen option here, keyed by option group.
+    custom_attributes: Optional[dict] = None
+    unit_price: Optional[float] = None       # ignored: the catalogue price is authoritative
 
 
 class AddRoomReq(BaseModel):

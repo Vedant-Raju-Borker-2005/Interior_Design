@@ -17,6 +17,7 @@ from ..models import (
 )
 from ..auth_utils import current_user
 from ..schemas import UpdateShipmentReq, UpdateVendorMilestoneReq
+from ..services.design_selections import catalog_variant_options
 
 router = APIRouter()
 
@@ -650,14 +651,8 @@ def create_vendor_product(
         thumbnail_url=product.images[0] if product.images else "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=85&fit=crop",
         materials=variant_opts.get("fabric", []),
         color_variants=color_list,
-        variants={
-            "color": variant_opts.get("color", []),
-            "fabric": variant_opts.get("fabric", []),
-            "size": variant_opts.get("size", []),
-            "texture": variant_opts.get("texture", []),
-            "wood_finish": variant_opts.get("wood_finish", []),
-            "cushion_style": variant_opts.get("cushion_style", []),
-        },
+        # Every option group the vendor defines reaches the Customize step.
+        variants=catalog_variant_options(variant_opts),
         style_tags=["modern"],
         primary_material=payload.primaryMaterial,
         width=payload.width,
@@ -721,6 +716,12 @@ def update_vendor_product(
             cust_product.price = payload.basePrice
         if payload.images is not None:
             cust_product.thumbnail_url = payload.images[0] if payload.images else "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=85&fit=crop"
+        if payload.variantOptions is not None:
+            # Options a vendor adds or removes later must reach customers too.
+            opts = catalog_variant_options(payload.variantOptions, cust_product.variants)
+            cust_product.variants = opts
+            cust_product.color_variants = opts.get("color", [])
+            cust_product.materials = opts.get("fabric", [])
 
     # Update specifications on both models
     spec_fields = {

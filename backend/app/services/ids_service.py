@@ -370,6 +370,25 @@ def build_viewer_brief(project: Any, rooms: Optional[list] = None) -> dict:
     return brief
 
 
+def active_plan_layout(project: Any) -> Optional[dict]:
+    """The project's confirmed floor-plan layout, if the customer switched it on."""
+    plan = getattr(project, "plan_layout", None)
+    if isinstance(plan, str):
+        try:
+            plan = json.loads(plan)
+        except ValueError:
+            return None
+    if not isinstance(plan, dict):
+        return None
+    if plan.get("status") == "active" and plan.get("rooms"):
+        return plan
+    # A newly uploaded plan is still a draft: keep showing the last confirmed one.
+    previous = plan.get("previous_active") if plan.get("status") == "draft" else None
+    if isinstance(previous, dict) and previous.get("status") == "active" and previous.get("rooms"):
+        return previous
+    return None
+
+
 # The viewer file is ~3.5 MB; read it once rather than on every request.
 _VIEWER_CACHE: dict = {"path": None, "mtime": None, "html": None}
 
@@ -437,15 +456,33 @@ def get_viewer_html(project: Optional[Any] = None, rooms: Optional[list] = None,
         "AI Interior Visualisation — synchronized 2D plan + photoreal 3D",
         f"{name} — synchronized 2D plan + photoreal 3D")
 
+    brief = build_viewer_brief(project, rooms)
     payload = {
-        "brief": build_viewer_brief(project, rooms),
+        "brief": brief,
         "chrome": bool(show_controls),
         "projectId": getattr(project, "id", None),
     }
-    inject = (
-        "<script>window.__EMBED__ = "
-        + json.dumps(payload, ensure_ascii=False)
-        + ";</script>\n</head>"
-    )
+    # Products picked on the Customize step, with their chosen options: the
+    # viewer paints the matching objects in the 2D plan and 3D model with them.
+    try:
+        from .design_selections import viewer_selections
+        payload["selections"] = viewer_selections(rooms or [])
+    except Exception as exc:  # a bad pick must never cost the viewer
+        payload["selectionsError"] = f"{type(exc).__name__}: {exc}"
+    plan = active_plan_layout(project)
+    if plan:
+        # The customer's own floor plan replaces the baked layout for this BHK.
+        try:
+            from .plan_layout import build_plan_variant
+            variant = build_plan_variant(plan, brief)
+            brief["bhk"] = variant["bhk"]
+            payload["layout"] = {"scene": variant["scene"], "svg": variant["svg"],
+                                 "summary": variant["summary"]}
+        except Exception as exc:  # never lose the viewer over a bad plan
+            payload["layoutError"] = f"{type(exc).__name__}: {exc}"
+    blob = json.dumps(payload, ensure_ascii=False)
+    # The plan SVG contains "</…>"; keep it from closing the <script> early.
+    blob = blob.replace("</", "<\\/").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+    inject = "<script>window.__EMBED__ = " + blob + ";</script>\n</head>"
     # Must land before the module script that reads window.__EMBED__.
     return content.replace("</head>", inject, 1)
