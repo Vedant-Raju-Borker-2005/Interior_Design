@@ -655,14 +655,18 @@ def _draw_room_blueprint(room_name: str, products: list):
 def generate_floor_plan_pdf(project_id: str, project, user, rooms_data: list) -> str:
     """
     Generates a professional Design Presentation PDF.
-    Each room page shows a vector blueprint with ONLY the user-selected
-    products placed on a clean room shell, plus a specifications table.
+    Each room page shows the 3D room visual render image / floor plan layout,
+    plus a side-by-side labeled specifications table with item indices.
     """
     from reportlab.platypus import PageBreak
 
     os.makedirs(PDF_DIR, exist_ok=True)
+    fp_asset_dir = os.path.join("assets", "floor_plans")
+    os.makedirs(fp_asset_dir, exist_ok=True)
+
     filename = f"floorplan_{project_id[:8]}.pdf"
     filepath = os.path.join(PDF_DIR, filename)
+    fp_filepath = os.path.join(fp_asset_dir, filename)
 
     doc = SimpleDocTemplate(
         filepath,
@@ -727,7 +731,7 @@ def generate_floor_plan_pdf(project_id: str, project, user, rooms_data: list) ->
         count = len(products)
         note = (
             f"<i><font size='9' color='#6B7280'>"
-            f"{count} item{'s' if count != 1 else ''} selected — shown on floor plan below"
+            f"{count} item{'s' if count != 1 else ''} selected — 3D room visualization &amp; labelled catalog items below"
             f"</font></i>"
             if count else
             "<i><font size='9' color='#9CA3AF'>No products selected for this room yet.</font></i>"
@@ -735,58 +739,86 @@ def generate_floor_plan_pdf(project_id: str, project, user, rooms_data: list) ->
         story.append(Paragraph(note, styles["Normal"]))
         story.append(Spacer(1, 3 * mm))
 
-        # Custom floor plan blueprint or fallback vector layout
+        # 3D Render Image, Custom floor plan blueprint, or fallback vector layout
+        render_img_url = r.get("render_image_url")
         custom_fp_url = r.get("custom_floor_plan_url")
-        if custom_fp_url:
+        target_img_url = render_img_url or custom_fp_url
+
+        if target_img_url:
             from reportlab.platypus import Image as RLImage
             import urllib.request
             import tempfile
             try:
-                if custom_fp_url.startswith("/static/"):
-                    local_path = custom_fp_url.replace("/static/", "")
+                if target_img_url.startswith("/static/"):
+                    local_path = target_img_url.replace("/static/", "")
                     if os.path.exists(local_path):
-                        story.append(RLImage(local_path, width=170*mm, height=113*mm))
+                        story.append(RLImage(local_path, width=170*mm, height=105*mm))
                     else:
                         story.append(_draw_room_blueprint(room_name, products))
-                else:
+                elif target_img_url.startswith("http"):
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tf:
-                        urllib.request.urlretrieve(custom_fp_url, tf.name)
-                        story.append(RLImage(tf.name, width=170*mm, height=113*mm))
+                        urllib.request.urlretrieve(target_img_url, tf.name)
+                        story.append(RLImage(tf.name, width=170*mm, height=105*mm))
+                else:
+                    story.append(_draw_room_blueprint(room_name, products))
             except Exception as e:
-                print(f"[PDF] Could not load custom floor plan image {custom_fp_url}: {e}")
+                print(f"[PDF] Could not load room visual image {target_img_url}: {e}")
                 story.append(_draw_room_blueprint(room_name, products))
         else:
             story.append(_draw_room_blueprint(room_name, products))
         story.append(Spacer(1, 4 * mm))
 
-        # Specifications table
+        # Product side labeling & specifications table (per-room item details)
         if products:
-            story.append(Paragraph("<b>Selected Items — Specifications</b>", styles["Heading4"]))
+            story.append(Paragraph(f"<b>{room_name} Selected Products &amp; Item Details</b>", styles["Heading4"]))
             story.append(Spacer(1, 1.5 * mm))
 
-            tdata = [["Item Name", "Category", "Style", "Custom Details"]]
-            for p in products:
+            tdata = [["Ref #", "Item Name", "Category", "Qty", "Price", "Custom Specs"]]
+            room_total = 0.0
+            for idx, p in enumerate(products, 1):
                 customs = []
                 if p.get("custom_color"):    customs.append(f"Color: {p['custom_color']}")
                 if p.get("custom_material"): customs.append(f"Material: {p['custom_material']}")
                 if p.get("custom_size"):     customs.append(f"Size: {p['custom_size']}")
+                ref_label = f"[{p.get('idx', idx)}]"
+                
+                qty = p.get("quantity", 1) or 1
+                price = p.get("price", 0.0) or 0.0
+                item_tot = qty * price
+                room_total += item_tot
+
+                price_str = f"₹{price:,.0f}" if price > 0 else "Included"
+
                 tdata.append([
+                    Paragraph(f"<b><font color='#4F46E5'>{ref_label}</font></b>", styles["Normal"]),
                     Paragraph(p.get("name", "Custom Item"), styles["Normal"]),
                     p.get("category", "Furniture").replace("_", " ").title(),
-                    p.get("style", "Modern").title(),
-                    Paragraph(", ".join(customs) if customs else "Standard", styles["Normal"]),
+                    str(qty),
+                    price_str,
+                    Paragraph(", ".join(customs) if customs else "Standard Finish", styles["Normal"]),
                 ])
 
-            t_spec = Table(tdata, colWidths=[55*mm, 38*mm, 28*mm, 49*mm])
+            if room_total > 0:
+                tdata.append([
+                    Paragraph("<b>Total</b>", styles["Normal"]),
+                    Paragraph(f"<b>{len(products)} Items</b>", styles["Normal"]),
+                    "", "",
+                    Paragraph(f"<b>₹{room_total:,.0f}</b>", styles["Normal"]),
+                    ""
+                ])
+
+            t_spec = Table(tdata, colWidths=[14*mm, 48*mm, 30*mm, 12*mm, 24*mm, 42*mm])
             t_spec.setStyle(TableStyle([
                 ("BACKGROUND",    (0, 0), (-1, 0), INDIGO_LIGHT),
                 ("TEXTCOLOR",     (0, 0), (-1, 0), DARK),
                 ("FONTNAME",      (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE",      (0, 0), (-1, -1), 8.5),
                 ("GRID",          (0, 0), (-1, -1), 0.5, colors.HexColor("#E5E7EB")),
-                ("PADDING",       (0, 0), (-1, -1), 5),
-                ("ROWBACKGROUNDS",(0, 1), (-1, -1),
+                ("PADDING",       (0, 0), (-1, -1), 4.5),
+                ("ROWBACKGROUNDS",(0, 1), (-1, -2 if room_total > 0 else -1),
                  [colors.white, colors.HexColor("#F8F9FF")]),
+                ("LINEABOVE", (0, -1), (-1, -1), 1.2, INDIGO) if room_total > 0 else ("PADDING", (0,0), (-1,-1), 4.5),
+                ("BACKGROUND", (0, -1), (-1, -1), INDIGO_LIGHT) if room_total > 0 else ("PADDING", (0,0), (-1,-1), 4.5),
             ]))
             story.append(KeepTogether([t_spec]))
 
@@ -794,5 +826,13 @@ def generate_floor_plan_pdf(project_id: str, project, user, rooms_data: list) ->
         story.append(PageBreak())
 
     doc.build(story)
+
+    # Save copy to assets/floor_plans directory
+    try:
+        import shutil
+        shutil.copyfile(filepath, fp_filepath)
+    except Exception as copy_err:
+        print(f"[PDF] Copy to floor_plans folder warning: {copy_err}")
+
     return filepath
 

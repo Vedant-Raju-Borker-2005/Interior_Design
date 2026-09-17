@@ -117,9 +117,9 @@ export default function BillingDetailsPage() {
 
               <Field label="Company / billing name" hint="As registered for GST">
                 <div className="relative">
-                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                   <input value={form.company_name || ''} onChange={(e) => set('company_name', e.target.value)}
-                    placeholder="Leave blank to bill in your own name" className="input pl-9" />
+                    placeholder="Leave blank to bill in your own name" className="input !pl-10" />
                 </div>
               </Field>
 

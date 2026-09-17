@@ -401,7 +401,7 @@ async def detect_plan_layout(
     db.add(FloorPlan(project_id=project.id, file_url=url, file_type=ext.lstrip("."), uploaded_by=user.id))
     previous = project.plan_layout if isinstance(project.plan_layout, dict) else {}
     project.plan_layout = {
-        "status": "draft",
+        "status": "active",
         "image_url": url,
         "image_w": detected["image_w"],
         "image_h": detected["image_h"],

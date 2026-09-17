@@ -7,7 +7,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./interior_ai.db")
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
+    connect_args={"check_same_thread": False, "timeout": 30} if "sqlite" in DATABASE_URL else {},
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -19,8 +19,11 @@ def init_db():
         db_path = DATABASE_URL.replace("sqlite:///", "")
         if os.path.exists(db_path):
             try:
-                conn = sqlite3.connect(db_path)
+                conn = sqlite3.connect(db_path, timeout=30)
                 cursor = conn.cursor()
+                # Enable WAL mode: readers never block writers and vice-versa.
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA busy_timeout=30000")
                 cursor.execute("PRAGMA table_info(vendors)")
                 columns = [row[1] for row in cursor.fetchall()]
                 new_cols = {
@@ -258,9 +261,13 @@ def init_db():
                         )
 
                 conn.commit()
-                conn.close()
             except Exception as e:
                 print(f"Database auto-migration failed: {e}")
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
 
 def _migrate_catalog_image_urls(cursor):
@@ -412,6 +419,7 @@ def sync_demo_data(db):
         # Check if project has quotation
         existing_quote = db.query(Quotation).filter(Quotation.project_id == proj.id).first()
         if not existing_quote:
+            from .services.business_rules import next_quotation_no
             subtotal = 650000.0
             gst = subtotal * 0.18
             demo_quote = Quotation(
@@ -421,6 +429,7 @@ def sync_demo_data(db):
                 gst=gst,
                 total=subtotal + gst,
                 status="APPROVED",
+                quotation_no=next_quotation_no(db),
                 created_at=datetime.datetime.utcnow()
             )
             db.add(demo_quote)
