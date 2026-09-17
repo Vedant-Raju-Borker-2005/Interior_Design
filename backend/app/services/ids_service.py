@@ -380,11 +380,11 @@ def active_plan_layout(project: Any) -> Optional[dict]:
             return None
     if not isinstance(plan, dict):
         return None
-    if plan.get("status") == "active" and plan.get("rooms"):
+    if plan.get("status") in ("active", "draft") and plan.get("rooms"):
         return plan
-    # A newly uploaded plan is still a draft: keep showing the last confirmed one.
-    previous = plan.get("previous_active") if plan.get("status") == "draft" else None
-    if isinstance(previous, dict) and previous.get("status") == "active" and previous.get("rooms"):
+    # Fallback to previous layout if exists
+    previous = plan.get("previous_active") if isinstance(plan.get("previous_active"), dict) else None
+    if isinstance(previous, dict) and previous.get("rooms"):
         return previous
     return None
 

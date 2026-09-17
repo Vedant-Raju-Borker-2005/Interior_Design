@@ -272,6 +272,33 @@ async def upload_plan_for_visualisation(
     url = f"{BACKEND_URL}/static/assets/floor_plans/{name}"
     project.floor_plan_url = url
 
+    # Auto-detect layout and mark active if image file
+    if ext in {".jpg", ".jpeg", ".png", ".webp"}:
+        try:
+            from .design_studio import load_plan_image, detect_rooms, normalize_bhk
+            from starlette.concurrency import run_in_threadpool
+            with open(path, "rb") as fh:
+                img_data = fh.read()
+            img = load_plan_image(img_data)
+            digits = re.findall(r"\d", normalize_bhk(project.bhk_type) or "2")
+            hint = int(digits[0]) if digits else 2
+            detected = await run_in_threadpool(detect_rooms, img, bhk_hint=hint, raw=img_data, mime=f"image/{ext.lstrip('.')}")
+            project.plan_layout = {
+                "status": "active",
+                "image_url": url,
+                "image_w": detected["image_w"],
+                "image_h": detected["image_h"],
+                "rooms": detected["rooms"],
+                "plan_width_m": detected["plan_width_m"],
+                "plan_depth_m": detected.get("plan_depth_m"),
+                "door_gaps": detected.get("door_gaps", []),
+                "method": detected["method"],
+                "notes": detected["notes"],
+                "uploaded_at": datetime.datetime.utcnow().isoformat(),
+            }
+        except Exception as err:
+            print("Auto-detect plan_layout failed:", err)
+
     db.add(FloorPlan(
         project_id=project_id,
         file_url=url,
@@ -287,7 +314,7 @@ async def upload_plan_for_visualisation(
         "file_name": file.filename,
         # 1.1 — renders raised after this point are conditioned on the plan.
         "plan_specific_rendering": True,
-        "message": "Floor plan attached. New renders will be generated against this plan.",
+        "message": "Floor plan attached and active for 2D/3D model generation.",
     }
 
 
