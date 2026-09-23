@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProjectStore } from '@/stores/projectStore'
 import { useAuthStore } from '@/stores/authStore'
-import { projectsAPI, catalogAPI, enterpriseAPI } from '@/lib/api'
+import { projectsAPI, catalogAPI, enterpriseAPI, premiumRenderAPI } from '@/lib/api'
 
 import BhkSelector from '@/components/BhkSelector'
 import Navbar from '@/components/Navbar'
@@ -88,6 +88,10 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false)
   const [availableColors, setAvailableColors] = useState<any>(null)
   const [availableMaterials, setAvailableMaterials] = useState<string[]>([])
+  
+  // Optional Floor Plan Blueprint at Step 1 (Home Configuration & BHK)
+  const [floorPlanFile, setFloorPlanFile] = useState<File | null>(null)
+  const [floorPlanPreview, setFloorPlanPreview] = useState<string | null>(null)
   
   // B2B2C states
   const [inviteToken, setInviteToken] = useState<string | null>(null)
@@ -293,7 +297,16 @@ export default function OnboardingPage() {
           pincode: local.pincode || undefined,
           status: 'onboarding'
         })
-        setChildProjectId(res.data.project_id)
+        const newPid = res.data.project_id
+        setChildProjectId(newPid)
+        if (floorPlanFile && newPid) {
+          try {
+            await premiumRenderAPI.uploadFloorPlan(newPid, floorPlanFile)
+            toast.success("Floor plan blueprint attached to your project! 📐")
+          } catch (planErr) {
+            console.error("Failed to upload floor plan blueprint:", planErr)
+          }
+        }
       } catch (err) {
         console.error("Failed to auto-create draft project at Step 1:", err)
       }
@@ -313,6 +326,13 @@ export default function OnboardingPage() {
           style_tags: local.style_tags,
           color_preferences: local.color_preferences
         })
+        if (floorPlanFile && childProjectId) {
+          try {
+            await premiumRenderAPI.uploadFloorPlan(childProjectId, floorPlanFile)
+          } catch (planErr) {
+            console.error("Failed to upload floor plan blueprint:", planErr)
+          }
+        }
       } catch (err) {
         console.error("Failed to update draft project step:", err)
       }
@@ -494,23 +514,85 @@ export default function OnboardingPage() {
 
           {/* Step 1: Preferences + Home Configuration */}
           {step === 1 && (
-            <motion.div key="bhk" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-8">
+            <motion.div key="bhk" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-6">
               <div>
                 <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Scope & Home Configuration</h2>
-                <p className="text-slate-500 mb-6">Select your BHK structure and project type. We'll automatically set up rooms for rendering.</p>
+                <p className="text-slate-500 mb-4">Select your BHK structure and project type. We'll automatically set up rooms for rendering.</p>
                 <BhkSelector selected={local.bhk} onSelect={(bhk) => setLocal((s) => ({ ...s, bhk }))} />
               </div>
 
+              {/* Optional Floor Plan Blueprint Upload (Requirement 1.1) */}
               <div>
-                <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3.5">Scope of Furnishing</div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <Layout className="w-4 h-4 text-indigo-600" />
+                    Floor Plan Blueprint <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                  </div>
+                  <span className="text-[11px] text-indigo-600 font-semibold bg-indigo-50 px-2.5 py-1 rounded-md">
+                    Custom layout rendering
+                  </span>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-card">
+                  {!floorPlanPreview ? (
+                    <label className="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all bg-slate-50/50 hover:bg-indigo-50/20 group text-center">
+                      <Upload className="w-7 h-7 text-slate-400 group-hover:text-indigo-600 transition-colors mb-1.5" />
+                      <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-700">Click or drag layout blueprint image</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">Supports PNG, JPG, WEBP, or PDF (Max 10MB)</span>
+                      <span className="text-[10px] text-indigo-600 font-medium mt-0.5">If uploaded, AI renders follow this plan; if skipped, default room dimensions are used.</span>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            if (file.size > 10 * 1024 * 1024) {
+                              toast.error("File size must be 10MB or smaller")
+                              return
+                            }
+                            setFloorPlanFile(file)
+                            setFloorPlanPreview(URL.createObjectURL(file))
+                            toast.success("Floor plan selected! Will be attached to your project.")
+                          }
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <div className="flex items-center justify-between bg-indigo-50/60 border border-indigo-200 rounded-xl p-3.5">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-6 h-6 text-indigo-600 shrink-0" />
+                        <div className="overflow-hidden">
+                          <div className="text-xs font-bold text-indigo-900 truncate">{floorPlanFile?.name || 'Attached Blueprint'}</div>
+                          <div className="text-[10px] text-indigo-600">Custom layout attached — renders will follow your floor plan</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFloorPlanFile(null)
+                          setFloorPlanPreview(null)
+                          toast.success("Floor plan removed")
+                        }}
+                        className="text-xs font-bold text-rose-600 hover:text-rose-800 bg-white px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 transition-all shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Scope of Furnishing</div>
                 <div className="grid grid-cols-2 gap-4">
                   {FURNISHING_OPTIONS.map((f) => (
                     <button key={f.id} onClick={() => setLocal((s) => ({ ...s, furnishing_type: f.id }))}
-                      className={clsx('p-5 rounded-2xl border-2 text-left transition-all flex items-center gap-4 bg-white card-hover',
+                      className={clsx('p-4 rounded-2xl border-2 text-left transition-all flex items-center gap-4 bg-white card-hover',
                         local.furnishing_type === f.id ? 'border-indigo-500 bg-indigo-50/40' : 'border-slate-200 hover:border-indigo-300')}>
-                      <div className={clsx('w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0',
+                      <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
                         local.furnishing_type === f.id ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-500')}>
-                        <f.icon className="w-6 h-6" />
+                        <f.icon className="w-5 h-5" />
                       </div>
                       <div>
                         <div className="font-bold text-slate-800 text-sm">{f.label}</div>

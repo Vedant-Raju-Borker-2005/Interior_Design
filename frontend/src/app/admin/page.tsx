@@ -8,7 +8,7 @@ import Link from 'next/link';
 import {
   Users, Home, FileText, MessageCircle, TrendingUp,
   BarChart3, CheckCircle2, Clock, AlertCircle, Building2, Building,
-  ArrowRight, ShieldCheck, Database, Settings, Activity, Bot
+  ArrowRight, ShieldCheck, Database, Settings, Activity, Bot, Handshake
 } from 'lucide-react';
 
 const MODULES = [
@@ -51,6 +51,14 @@ const MODULES = [
     icon: FileText,
     color: 'bg-orange-50 text-orange-700',
     borderColor: 'border-orange-100'
+  },
+  {
+    title: 'Special Services',
+    desc: 'Manage 3D layout consultant requests, custom floor plan designs and special layout changes.',
+    href: '/admin/special-services',
+    icon: Handshake,
+    color: 'bg-amber-50 text-amber-700',
+    borderColor: 'border-amber-100'
   },
   {
     title: 'IT Box / Settings',

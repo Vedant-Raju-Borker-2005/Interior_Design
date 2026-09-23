@@ -416,6 +416,8 @@ async def detect_plan_layout(
     db.add(FloorPlan(project_id=project.id, file_url=url, file_type=ext.lstrip("."), uploaded_by=user.id))
     previous = project.plan_layout if isinstance(project.plan_layout, dict) else {}
     project.plan_layout = {
+        # A fresh upload is a draft: the customer checks the tracing, and picks
+        # which flat is theirs on a multi-flat sheet, before it goes live.
         "status": "draft",
         "image_url": url,
         "image_w": detected["image_w"],

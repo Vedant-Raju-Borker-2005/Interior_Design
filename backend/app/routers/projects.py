@@ -363,25 +363,31 @@ def download_floor_plan_pdf(
     
     # Compile rooms & items data
     rooms_data = []
+    from ..models import Render
     for room in project.rooms:
         items = db.query(RoomItem).filter(RoomItem.room_id == room.id).all()
         products = []
-        for it in items:
+        for idx, it in enumerate(items, 1):
             prod = it.product
             if prod:
                 products.append({
+                    "idx": idx,
                     "name": prod.name,
                     "category": prod.category,
                     "style": prod.style or "Modern",
+                    "price": float(prod.price or 0.0),
+                    "quantity": getattr(it, "quantity", 1) or 1,
                     "custom_color": it.custom_color,
                     "custom_material": it.custom_material,
                     "custom_size": it.custom_size,
                     "custom_attributes": item_attributes(it),
                 })
+        latest_render = db.query(Render).filter(Render.room_id == room.id, Render.status == "completed").order_by(Render.created_at.desc()).first()
         rooms_data.append({
             "room_name": room.room_type.replace("_", " ").title(),
             "products": products,
-            "custom_floor_plan_url": (room.custom_config or {}).get("floor_plan_url")
+            "custom_floor_plan_url": (room.custom_config or {}).get("floor_plan_url") or project.floor_plan_url,
+            "render_image_url": latest_render.image_url if latest_render else None,
         })
 
     pdf_filepath = generate_floor_plan_pdf(project.id, project, user, rooms_data)

@@ -215,14 +215,13 @@ export default function LoginPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
                     Access Portal As
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-6 gap-2">
                     {([
-                      { id: 'client', label: 'Client', icon: User, bg: 'from-blue-500 to-indigo-600' },
-                      { id: 'vendor', label: 'Vendor', icon: Compass, bg: 'from-emerald-500 to-teal-600' },
-                      { id: 'team', label: 'Project Team', icon: Check, bg: 'from-amber-500 to-orange-600' },
-                      // Feedback 5.4 — partner consultants sign in to work their leads
-                      { id: 'consultant', label: 'Consultant', icon: Briefcase, bg: 'from-cyan-500 to-sky-600' },
-                      { id: 'admin', label: 'Admin', icon: Sparkles, bg: 'from-purple-500 to-pink-600' }
+                      { id: 'client', label: 'Client', icon: User, bg: 'from-blue-500 to-indigo-600', colClass: 'col-span-2' },
+                      { id: 'vendor', label: 'Vendor', icon: Compass, bg: 'from-emerald-500 to-teal-600', colClass: 'col-span-2' },
+                      { id: 'team', label: 'Project Team', icon: Check, bg: 'from-amber-500 to-orange-600', colClass: 'col-span-2' },
+                      { id: 'consultant', label: 'Consultant', icon: Briefcase, bg: 'from-cyan-500 to-sky-600', colClass: 'col-span-2 col-start-2' },
+                      { id: 'admin', label: 'Admin', icon: Sparkles, bg: 'from-purple-500 to-pink-600', colClass: 'col-span-2 col-start-4' }
                     ] as const).map((item) => {
                       const Icon = item.icon
                       const isSelected = portalGroup === item.id
@@ -242,19 +241,20 @@ export default function LoginPage() {
                             }
                           }}
                           className={clsx(
-                            'relative overflow-hidden p-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 transform',
+                            item.colClass,
+                            'relative overflow-hidden px-2 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 transform min-w-0',
                             isSelected
-                              ? `bg-gradient-to-r ${item.bg} text-white shadow-lg scale-[1.02]`
+                              ? `bg-gradient-to-r ${item.bg} text-white shadow-md scale-[1.02]`
                               : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
                           )}
                         >
                           <div className={clsx(
-                            'p-1.5 rounded-lg',
-                            isSelected ? 'bg-white/20' : 'bg-white shadow-sm'
+                            'p-1 rounded-lg shrink-0',
+                            isSelected ? 'bg-white/20' : 'bg-white shadow-xs'
                           )}>
-                            <Icon className={clsx("w-4 h-4", isSelected ? 'text-white' : 'text-slate-500')} />
+                            <Icon className={clsx("w-3.5 h-3.5", isSelected ? 'text-white' : 'text-slate-500')} />
                           </div>
-                          <span className="font-bold text-xs tracking-tight">{item.label}</span>
+                          <span className="font-bold text-xs tracking-tight truncate">{item.label}</span>
                         </button>
                       )
                     })}
