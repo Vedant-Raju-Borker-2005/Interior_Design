@@ -202,17 +202,30 @@ def test_b2c_quotation_lifecycle(client, auth):
     assert status["total"] == 2
 
     # 1.10 — conversion creates a project that enters the approval queue (4.2)
+    from app.models import Project, Room, RoomItem, VendorAssignment
+    plan = {"status": "active", "rooms": [], "plan_width_m": 9.0}
+    s = db_session()
+    try:
+        s.query(Project).filter(Project.id == pid).one().plan_layout = plan
+        item = s.query(RoomItem).join(Room).filter(Room.project_id == pid).first()
+        item.custom_attributes = {"Leg Style": "Tapered"}
+        s.commit()
+    finally:
+        s.close()
     conv = client.post(f"/api/v1/quotation-admin/{q['id']}/convert-to-project", headers=admin, json={})
     assert conv.status_code == 200, conv.text
     new_pid = conv.json()["project_id"]
     assert conv.json()["approval_status"] == "PENDING"
-    from app.models import Project, VendorAssignment
     s = db_session()
     try:
         delivery = s.query(Project).filter(Project.id == new_pid).one()
         # Not mistaken for an enterprise flat, but still traceable to its source.
         assert delivery.parent_project_id is None and delivery.flat_id is None
         assert delivery.defaults["converted_from_project_id"] == pid
+        # The traced plan and the chosen product options carry over.
+        assert delivery.plan_layout == plan
+        carried = s.query(RoomItem).join(Room).filter(Room.project_id == new_pid).first()
+        assert carried.custom_attributes == {"Leg Style": "Tapered"}
         # 4.2 — no supplier has been handed the work yet.
         assert s.query(VendorAssignment).filter(VendorAssignment.project_id.in_([pid, new_pid])).count() == 0
     finally:
@@ -928,3 +941,38 @@ def test_customize_choices_drive_the_2d_3d_viewer_and_ai_prompt(client, auth):
             assert product.variants["color"] == ["Sand", "Teal"]
     finally:
         sess.close()
+
+
+def test_a_sheet_of_several_flats_is_split_and_one_flat_is_read(client, auth):
+    """A brochure sheet showing two flats: the upload reads one flat, keeps the
+    sheet, and lets the customer switch to the other."""
+    from PIL import Image
+    from plan_samples import one_bhk_plan, png_bytes
+
+    cust = auth["customer"]
+    pid = make_project(client, cust, name="Two Flat Sheet Home", with_item=False)
+
+    flat, _ = one_bhk_plan()
+    sheet = Image.new("RGB", (flat.width * 2 + 120, flat.height + 40), "white")
+    sheet.paste(flat, (20, 20))
+    sheet.paste(flat, (flat.width + 100, 20))          # the same flat printed twice
+
+    up = client.post(f"/api/v1/ai/plan-layout/{pid}/detect", headers=cust,
+                     files={"file": ("two-flats.png", png_bytes(sheet), "image/png")})
+    assert up.status_code == 200, up.text
+    plan = up.json()["plan"]
+    assert len(plan["panels"]) == 2, plan["panels"]
+    assert plan["panel"] in (0, 1)
+    assert plan["sheet_url"] and plan["sheet_url"] != plan["image_url"]
+    # The picture the customer checks is the flat, not the whole sheet.
+    assert plan["image_w"] < sheet.width
+    assert any("2 flats" in n for n in plan["notes"]), plan["notes"]
+    assert client.get(plan["image_url"].replace("http://localhost:8000", "")).status_code == 200
+
+    other = 1 - plan["panel"]
+    again = client.post(f"/api/v1/ai/plan-layout/{pid}/redetect?panel={other}", headers=cust)
+    assert again.status_code == 200, again.text
+    switched = again.json()["plan"]
+    assert switched["panel"] == other
+    assert switched["sheet_url"] == plan["sheet_url"]
+    assert switched["image_url"] != plan["image_url"]

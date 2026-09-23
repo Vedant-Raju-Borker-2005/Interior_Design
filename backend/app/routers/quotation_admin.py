@@ -50,9 +50,24 @@ class ConvertReq(BaseModel):
     note: Optional[str] = None
 
 
-def _quotation_row(q: Quotation, db: Session) -> dict[str, Any]:
-    project = db.query(Project).filter(Project.id == q.project_id).first()
-    owner = db.query(User).filter(User.id == project.user_id).first() if project else None
+def _quotation_row(
+    q: Quotation,
+    db: Session,
+    projects: Optional[dict] = None,
+    users: Optional[dict] = None,
+) -> dict[str, Any]:
+    # A caller listing many quotations passes the projects and customers it has
+    # already loaded, so a list costs two queries instead of two per row.
+    if projects is None:
+        project = db.query(Project).filter(Project.id == q.project_id).first()
+    else:
+        project = projects.get(q.project_id)
+    if project is None:
+        owner = None
+    elif users is None:
+        owner = db.query(User).filter(User.id == project.user_id).first()
+    else:
+        owner = users.get(project.user_id)
     return {
         "id": q.id,
         "quotation_no": q.quotation_no,
@@ -103,10 +118,14 @@ def search_quotations(
         query = query.filter(Quotation.status == status)
     rows = query.order_by(Quotation.created_at.desc()).all()
 
+    projects: dict = {}
+    users: dict = {}
+    loaded = False
     if q:
         needle = q.strip().lower()
         projects = {p.id: p for p in db.query(Project).all()}
         users = {u.id: u for u in db.query(User).all()}
+        loaded = True
 
         def matches(quotation: Quotation) -> bool:
             project = projects.get(quotation.project_id)
@@ -125,7 +144,14 @@ def search_quotations(
         rows = [r for r in rows if matches(r)]
 
     rows = rows[:limit]
-    return {"count": len(rows), "quotations": [_quotation_row(r, db) for r in rows]}
+    if not loaded:
+        project_ids = {r.project_id for r in rows if r.project_id}
+        if project_ids:
+            projects = {p.id: p for p in db.query(Project).filter(Project.id.in_(project_ids)).all()}
+        user_ids = {p.user_id for p in projects.values() if p.user_id}
+        if user_ids:
+            users = {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()}
+    return {"count": len(rows), "quotations": [_quotation_row(r, db, projects, users) for r in rows]}
 
 
 @router.post("/{quotation_id}/mark-paid", summary="1.9 — record an offline payment")
@@ -211,6 +237,10 @@ def convert_quotation_to_project(
         fabric_preference=source.fabric_preference,
         furnishing_type=source.furnishing_type,
         color_preferences=source.color_preferences,
+        style_tags=source.style_tags,
+        # The uploaded plan and its traced rooms keep driving the 2D/3D design.
+        floor_plan_url=source.floor_plan_url,
+        plan_layout=source.plan_layout,
         # Linked through `defaults`, not parent_project_id: the frontend treats
         # any project with a parent as an enterprise flat and locks onboarding.
         defaults={
@@ -251,6 +281,7 @@ def convert_quotation_to_project(
                 custom_size=item.custom_size,
                 custom_fabric=item.custom_fabric,
                 custom_wood_finish=item.custom_wood_finish,
+                custom_attributes=item.custom_attributes,
                 custom_texture=item.custom_texture,
                 custom_cushion_style=item.custom_cushion_style,
                 unit_price=item.unit_price,

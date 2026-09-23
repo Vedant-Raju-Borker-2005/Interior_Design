@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     try:
         seed_database(db)
         from .db import sync_demo_data
-        sync_demo_data(db)
+        sync_demo_data(db, force=True)
     finally:
         db.close()
 

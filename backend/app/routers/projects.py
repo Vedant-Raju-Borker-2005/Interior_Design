@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 import os, shutil
 
@@ -131,9 +131,14 @@ def list_projects(user: User = Depends(current_user), db: Session = Depends(get_
 def get_project(project_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
     project = _get_project_or_404(project_id, user.id, db)
     rooms = db.query(Room).filter(Room.project_id == project_id).all()
+    by_room: dict[str, list] = {r.id: [] for r in rooms}
+    if rooms:
+        for item in db.query(RoomItem).options(joinedload(RoomItem.product)).filter(
+                RoomItem.room_id.in_(list(by_room))).all():
+            by_room.setdefault(item.room_id, []).append(item)
     return {
         **_project_summary(project),
-        "rooms": [_room_detail(r, db) for r in rooms],
+        "rooms": [_room_detail(r, db, by_room.get(r.id, [])) for r in rooms],
     }
 
 
@@ -446,8 +451,12 @@ def _project_summary(p: Project) -> dict:
     }
 
 
-def _room_detail(r: Room, db: Session) -> dict:
-    items = db.query(RoomItem).filter(RoomItem.room_id == r.id).all()
+def _room_detail(r: Room, db: Session, items: list | None = None) -> dict:
+    # A caller rendering every room passes the items it has already loaded, so a
+    # project costs one item query instead of one per room.
+    if items is None:
+        items = db.query(RoomItem).options(
+            joinedload(RoomItem.product)).filter(RoomItem.room_id == r.id).all()
     return {
         "id": r.id,
         "room_type": r.room_type,

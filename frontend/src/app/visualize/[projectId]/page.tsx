@@ -558,9 +558,10 @@ export default function ControlledVisualizePage() {
     'Mustard Yellow': '#D9A521', 'Teal': '#1F7A78', 'Coral': '#E4735B', 'Sage Green': '#A7B79C', 'Burnt Orange': '#C25A2B',
   }
 
+  // Back steps through the design journey: dashboard → customise → visualise.
+  // Customise has its own back to the dashboard.
   const goBack = () => {
-    if (fromParam === 'dashboard') router.push('/dashboard')
-    else if (fromParam === 'track') router.push(`/track/${projectId}`)
+    if (fromParam === 'track') router.push(`/track/${projectId}`)
     else router.push(`/customize/${projectId}`)
   }
 

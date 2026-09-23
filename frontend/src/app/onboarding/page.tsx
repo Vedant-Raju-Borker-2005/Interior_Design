@@ -374,9 +374,9 @@ export default function OnboardingPage() {
           city: local.city,
         })
 
-        toast.success("Welcome details saved! Let's choose your pricing package. 📦")
-        // B2C Customer goes straight to packages selection page
-        router.push(`/packages?projectId=${childProjectId}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
+        toast.success("Welcome details saved! Upload your floor plan or skip to packages. 📐")
+        // Feedback 1.1 — B2C customers can upload their plan up front (or skip to packages)
+        router.push(`/floor-layout/${childProjectId}?bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
       } else {
         // Standard B2C onboarding creation fallback
         const res = await projectsAPI.create({
@@ -405,9 +405,9 @@ export default function OnboardingPage() {
           city: local.city,
         })
 
-        toast.success("Welcome details saved! Let's choose your pricing package. 📦")
-        // B2C Customer goes straight to packages selection page
-        router.push(`/packages?projectId=${createdProjId}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
+        toast.success("Welcome details saved! Upload your floor plan or skip to packages. 📐")
+        // Feedback 1.1 — B2C customers can upload their plan up front (or skip to packages)
+        router.push(`/floor-layout/${createdProjId}?bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Failed to submit onboarding details')

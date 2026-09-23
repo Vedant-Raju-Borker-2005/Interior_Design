@@ -1,0 +1,214 @@
+{
+ "start": {
+  "dark_lum": 115.0,
+  "dark_sat": 70.0,
+  "blob_span": 0.08,
+  "blob_mass": 0.002,
+  "door_m": 1.6,
+  "wide_m": 2.8,
+  "min_room_m2": 0.8,
+  "sliver_walls": 1.5
+ },
+ "best": {
+  "dark_lum": 106.375,
+  "dark_sat": 75.25,
+  "blob_span": 0.06290000000000001,
+  "blob_mass": 0.002,
+  "door_m": 1.72,
+  "wide_m": 2.8,
+  "min_room_m2": 0.851,
+  "sliver_walls": 1.5
+ },
+ "score_start": 0.68658333945062,
+ "score_best": 0.709950832360343,
+ "trained_on": {
+  "synthetic": [
+   "syn_0346",
+   "syn_0133",
+   "syn_0446",
+   "syn_0166",
+   "syn_0465",
+   "syn_0421",
+   "syn_0568",
+   "syn_0448",
+   "syn_0323",
+   "syn_0002",
+   "syn_0287",
+   "syn_0127",
+   "syn_0584",
+   "syn_0040",
+   "syn_0202",
+   "syn_0111",
+   "syn_0380",
+   "syn_0449",
+   "syn_0512",
+   "syn_0167",
+   "syn_0265",
+   "syn_0360",
+   "syn_0071",
+   "syn_0381",
+   "syn_0309",
+   "syn_0010",
+   "syn_0268",
+   "syn_0486",
+   "syn_0170",
+   "syn_0110",
+   "syn_0371",
+   "syn_0168",
+   "syn_0073",
+   "syn_0526",
+   "syn_0252",
+   "syn_0472",
+   "syn_0411",
+   "syn_0108",
+   "syn_0583",
+   "syn_0031",
+   "syn_0545",
+   "syn_0149",
+   "syn_0250",
+   "syn_0227",
+   "syn_0570",
+   "syn_0307",
+   "syn_0341",
+   "syn_0571"
+  ],
+  "real": [
+   "plan_00",
+   "plan_01",
+   "plan_02",
+   "plan_04",
+   "plan_05",
+   "plan_07",
+   "plan_08",
+   "plan_10",
+   "plan_11",
+   "plan_12",
+   "plan_15",
+   "plan_17",
+   "plan_18",
+   "plan_20"
+  ]
+ },
+ "history": [
+  {
+   "params": {
+    "dark_lum": 115.0,
+    "dark_sat": 70.0,
+    "blob_span": 0.08,
+    "blob_mass": 0.002,
+    "door_m": 1.6,
+    "wide_m": 2.8,
+    "min_room_m2": 0.8,
+    "sliver_walls": 1.5
+   },
+   "score": 0.68658333945062,
+   "synthetic": 0.7983,
+   "real": 0.5749
+  },
+  {
+   "params": {
+    "dark_lum": 115.0,
+    "dark_sat": 70.0,
+    "blob_span": 0.068,
+    "blob_mass": 0.002,
+    "door_m": 1.6,
+    "wide_m": 2.8,
+    "min_room_m2": 0.8,
+    "sliver_walls": 1.5
+   },
+   "score": 0.6923688475841514,
+   "synthetic": 0.7981,
+   "real": 0.5866
+  },
+  {
+   "params": {
+    "dark_lum": 115.0,
+    "dark_sat": 70.0,
+    "blob_span": 0.068,
+    "blob_mass": 0.002,
+    "door_m": 1.6,
+    "wide_m": 2.8,
+    "min_room_m2": 0.9199999999999999,
+    "sliver_walls": 1.5
+   },
+   "score": 0.6948616388224251,
+   "synthetic": 0.7987,
+   "real": 0.591
+  },
+  {
+   "params": {
+    "dark_lum": 106.375,
+    "dark_sat": 70.0,
+    "blob_span": 0.068,
+    "blob_mass": 0.002,
+    "door_m": 1.6,
+    "wide_m": 2.8,
+    "min_room_m2": 0.9199999999999999,
+    "sliver_walls": 1.5
+   },
+   "score": 0.7000801965852896,
+   "synthetic": 0.7996,
+   "real": 0.6006
+  },
+  {
+   "params": {
+    "dark_lum": 106.375,
+    "dark_sat": 75.25,
+    "blob_span": 0.068,
+    "blob_mass": 0.002,
+    "door_m": 1.6,
+    "wide_m": 2.8,
+    "min_room_m2": 0.9199999999999999,
+    "sliver_walls": 1.5
+   },
+   "score": 0.7007392148033806,
+   "synthetic": 0.8009,
+   "real": 0.6006
+  },
+  {
+   "params": {
+    "dark_lum": 106.375,
+    "dark_sat": 75.25,
+    "blob_span": 0.06290000000000001,
+    "blob_mass": 0.002,
+    "door_m": 1.6,
+    "wide_m": 2.8,
+    "min_room_m2": 0.9199999999999999,
+    "sliver_walls": 1.5
+   },
+   "score": 0.7051208569708429,
+   "synthetic": 0.8026,
+   "real": 0.6076
+  },
+  {
+   "params": {
+    "dark_lum": 106.375,
+    "dark_sat": 75.25,
+    "blob_span": 0.06290000000000001,
+    "blob_mass": 0.002,
+    "door_m": 1.72,
+    "wide_m": 2.8,
+    "min_room_m2": 0.9199999999999999,
+    "sliver_walls": 1.5
+   },
+   "score": 0.7070149597760975,
+   "synthetic": 0.8019,
+   "real": 0.6122
+  },
+  {
+   "params": {
+    "dark_lum": 106.375,
+    "dark_sat": 75.25,
+    "blob_span": 0.06290000000000001,
+    "blob_mass": 0.002,
+    "door_m": 1.72,
+    "wide_m": 2.8,
+    "min_room_m2": 0.851,
+    "sliver_walls": 1.5
+   },
+   "score": 0.709950832360343,
+   "synthetic": 0.8006,
+   "real": 0.6193
+  }
+ ]
+}

@@ -229,6 +229,36 @@ cd ../backend-ai
 ..\backend\.venv\Scripts\python -m pytest tests -q   # IDS solver / pricing engine
 ```
 
+### Floor-plan reader: data, scoring and tuning
+
+The plan reader (`services/plan_layout.py`, `plan_ocr.py`, `plan_sheet.py`) is rules plus OCR, not a
+neural network. Its thresholds live in `plan_layout.TUNING` and are fitted on labelled plans.
+
+| Data | Where | Labels |
+|---|---|---|
+| 21 real brochure plans (WhatsApp) | `backend/plan_dataset/images/` | `ground_truth.json`, `annotations.json`; 14 train / 7 test |
+| 70 damaged copies of the real *train* plans | `backend/plan_dataset/augmented/` (generated, git-ignored) | inherited from the originals |
+| 600 synthetic plans, 7,844 rooms | `backend/plan_dataset/synthetic/` (generated, git-ignored) | exact room boxes, types, areas; 420 train / 90 val / 90 test |
+
+The synthetic plans reproduce what real brochures do: 8 drawing styles (colour-coded area-only,
+line drawings, single- and double-line CAD, grey fills, numbered rooms with a key, furnished
+renders), 7 label formats (metres, mm, feet-inches, m², dual units…), multi-flat sheets (side by side,
+2×2 grid, mirrored floor plates, stacked) and WhatsApp damage (JPEG, blur, stretch, crop, mirror
+flips, screenshot icons). They regenerate exactly from a seed, so they are not committed.
+
+```bash
+cd backend
+.venv\Scripts\python scripts\synth_plans.py --count 600 --seed 7    # synthetic plans
+.venv\Scripts\python scripts\augment_real.py --copies 5             # damaged copies of real train plans
+.venv\Scripts\python scripts\plan_eval.py --split test              # score on the real plans
+.venv\Scripts\python scripts\plan_eval_synth.py --split val         # score on synthetic plans, room by room
+.venv\Scripts\python scripts\tune_plan_reader.py --per-style 6      # fit TUNING on train plans only
+```
+
+Validation and test plans — synthetic and real — are never used for tuning. OCR results are cached
+in `plan_dataset/ocr_cache/`, so repeated scoring only redoes the geometry. Scoring the full synthetic
+set takes about an hour on a 4 GB laptop; close other programs first.
+
 ### Notes
 
 * Without a confirmed floor plan the 3D model uses the pre-solved standard layout for the BHK. Once the customer confirms the rooms traced from their plan, the 2D plan and 3D model are built from that plan instead ("Use standard layout" switches back).

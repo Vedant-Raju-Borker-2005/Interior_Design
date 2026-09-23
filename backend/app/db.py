@@ -1,14 +1,47 @@
 import os
-from sqlalchemy import create_engine
+import time
+from sqlalchemy import create_engine, event, exc
 from sqlalchemy.orm import sessionmaker, Session
 from .models import Base
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./interior_ai.db")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
-)
+# Supabase sits far enough away that one round trip costs well over a tenth of a
+# second, so a connection is only tested when it has actually been sitting idle.
+PING_AFTER_IDLE_SECONDS = 60.0
+
+if "sqlite" in DATABASE_URL:
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # A hosted Postgres (Supabase) drops idle connections: replace each one every
+    # few minutes, and keep the TCP link alive in between.
+    engine = create_engine(
+        DATABASE_URL,
+        pool_recycle=280,
+        connect_args={"keepalives": 1, "keepalives_idle": 30, "keepalives_interval": 10,
+                      "keepalives_count": 5, "connect_timeout": 15},
+    )
+
+    @event.listens_for(engine, "checkin")
+    def _note_idle_since(dbapi_connection, connection_record):
+        connection_record.info["idle_since"] = time.monotonic()
+
+    @event.listens_for(engine, "checkout")
+    def _ping_if_idle(dbapi_connection, connection_record, connection_proxy):
+        """Pre-ping, but only for a connection that has been idle long enough to
+        have been dropped. A busy request reuses a warm connection untested and
+        saves itself a round trip."""
+        idle_since = connection_record.info.get("idle_since")
+        if idle_since is not None and time.monotonic() - idle_since < PING_AFTER_IDLE_SECONDS:
+            return
+        try:
+            cursor = dbapi_connection.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
+        except Exception:
+            # Tells the pool to throw this connection away and hand out a fresh one.
+            raise exc.DisconnectionError()
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -224,7 +257,10 @@ def init_db():
                     "SELECT id FROM quotations WHERE quotation_no IS NULL OR quotation_no=''"
                 )
                 legacy = [r[0] for r in cursor.fetchall()]
-                for i, qid in enumerate(legacy, start=1):
+                # Continue after numbers handed out on earlier starts, so they never repeat.
+                cursor.execute("SELECT quotation_no FROM quotations WHERE quotation_no LIKE 'QT-LEGACY-%'")
+                used = [int(n.rsplit("-", 1)[1]) for (n,) in cursor.fetchall() if n.rsplit("-", 1)[1].isdigit()]
+                for i, qid in enumerate(legacy, start=max(used, default=0) + 1):
                     cursor.execute(
                         "UPDATE quotations SET quotation_no=? WHERE id=?",
                         (f"QT-LEGACY-{i:05d}", qid),
@@ -301,7 +337,21 @@ def _migrate_catalog_image_urls(cursor):
                 cursor.execute(f"UPDATE {table} SET {column}=? WHERE id=?", (updated, row_id))
 
 
-def sync_demo_data(db):
+# Keeping the demo accounts in step costs ~57 queries. That is nothing against a
+# local file, but on a hosted database it is seconds, and it used to run on every
+# dashboard load. It now runs at startup and at most every few minutes after.
+_DEMO_SYNC = {"at": 0.0}
+DEMO_SYNC_EVERY_SECONDS = 300.0
+
+
+def sync_demo_data(db, force: bool = False):
+    import time
+
+    now = time.monotonic()
+    if not force and _DEMO_SYNC["at"] and now - _DEMO_SYNC["at"] < DEMO_SYNC_EVERY_SECONDS:
+        return
+    _DEMO_SYNC["at"] = now
+
     from .models import User, Project, Vendor, ProjectTeamMember, ProjectAssignment, VendorAssignment, Room, Product, RoomItem, Quotation, Flat
     import uuid
     import datetime
@@ -414,8 +464,10 @@ def sync_demo_data(db):
         if not existing_quote:
             subtotal = 650000.0
             gst = subtotal * 0.18
+            from .services.business_rules import next_quotation_no
             demo_quote = Quotation(
                 id=f"quote-{proj.id[:6]}",
+                quotation_no=next_quotation_no(db),
                 project_id=proj.id,
                 subtotal=subtotal,
                 gst=gst,
