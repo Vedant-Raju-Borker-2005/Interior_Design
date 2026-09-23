@@ -42,25 +42,27 @@ class Rule:
     gap: float = 0.35             # preferred distance to those categories
     priority: int = 50            # lower places first (anchors before fillers)
     stackable: bool = False       # may sit under other items (rugs, planters)
+    keeps_window_clear: bool = False   # a bed across a window reads as a mistake
+    flanks: bool = False          # a pair sits either side of its partner
 
 
 RULES: dict[str, Rule] = {
-    "bed":            Rule("wall", 0.65, True, ("nightstand",), 0.12, 5),
-    "wardrobe":       Rule("wall", 0.75, True, (), 0.35, 10),
+    "bed":            Rule("wall", 0.65, True, ("nightstand",), 0.12, 5, keeps_window_clear=True),
+    "wardrobe":       Rule("wall", 0.75, True, (), 0.35, 10, keeps_window_clear=True),
     "sofa":           Rule("wall", 0.80, True, ("coffee_table",), 0.55, 5),
     "counter_run":    Rule("counter", 0.95, True, (), 0.35, 5),
     "island":         Rule("centre", 0.85, True, ("counter_run",), 1.10, 12),
     "dining_set":     Rule("centre", 0.85, True, (), 0.35, 8),
-    "media_console":  Rule("wall", 0.70, True, ("sofa",), 2.40, 15),
-    "bookshelf":      Rule("wall", 0.55, True, (), 0.35, 20),
+    "media_console":  Rule("wall", 0.70, True, ("sofa",), 2.40, 15, keeps_window_clear=True),
+    "bookshelf":      Rule("wall", 0.55, True, (), 0.35, 20, keeps_window_clear=True),
     "wall_cabinets":  Rule("wall", 0.00, True, ("counter_run",), 0.00, 18),
-    "tall_storage":   Rule("corner", 0.65, True, (), 0.35, 18),
+    "tall_storage":   Rule("corner", 0.65, True, (), 0.35, 18, keeps_window_clear=True),
     "vanity":         Rule("wall", 0.70, True, (), 0.35, 8),
     "wc":             Rule("wall", 0.60, True, (), 0.35, 9),
     "shower":         Rule("corner", 0.60, True, (), 0.35, 7),
     "desk":           Rule("wall", 0.75, True, ("chair",), 0.10, 12),
     "chair":          Rule("free", 0.35, True, ("desk",), 0.10, 60),
-    "nightstand":     Rule("wall", 0.35, True, ("bed",), 0.12, 30),
+    "nightstand":     Rule("wall", 0.35, True, ("bed",), 0.12, 30, flanks=True),
     "dresser":        Rule("wall", 0.65, True, (), 0.35, 22),
     "sideboard":      Rule("wall", 0.65, True, ("dining_set",), 0.60, 22),
     "bar_unit":       Rule("corner", 0.60, True, (), 0.35, 24),
@@ -167,6 +169,22 @@ class RoomContext:
                                   max(cy, self.inner.cy) + 0.35))
         self.window_zones = [Box.centred(*o.centre, max(o.width, 0.4), 0.30)
                              for o in self.windows]
+        # The step-in space at each door: walking in should not mean squeezing
+        # past a chair. Deeper than the swing box, and soft rather than hard.
+        self.landings: list[Box] = []
+        for d in self.doors:
+            cx, cy = d.centre
+            span = max(d.width, 0.75) + 0.30
+            towards_x = self.inner.cx - cx
+            towards_y = self.inner.cy - cy
+            if abs(towards_x) > abs(towards_y):        # door on a side wall
+                depth = 0.75 * (1 if towards_x > 0 else -1)
+                self.landings.append(Box(min(cx, cx + depth), cy - span / 2,
+                                         max(cx, cx + depth), cy + span / 2))
+            else:
+                depth = 0.75 * (1 if towards_y > 0 else -1)
+                self.landings.append(Box(cx - span / 2, min(cy, cy + depth),
+                                         cx + span / 2, max(cy, cy + depth)))
 
     def wall_distance(self, b: Box) -> float:
         return min(b.x0 - self.inner.x0, self.inner.x1 - b.x1,
@@ -179,6 +197,13 @@ class RoomContext:
 
 
 HARD_PENALTY = 1000.0
+
+# How strongly each aesthetic rule pulls, relative to the other soft costs.
+W_FLANK = 2.0          # a nightstand beside its bed, level with the headboard
+W_FLANK_MIRROR = 1.8   # the pair balanced either side
+W_ANCHOR_CENTRE = 0.9  # the bed centred on its wall so both fit
+W_WINDOW_CLEAR = 2.5   # a bed or wardrobe across a window
+W_LANDING = 2.5        # the space you step into from a door
 
 
 def hard_violations(items: dict[str, Item], place: dict[str, Placement],
@@ -234,10 +259,12 @@ def soft_cost(items: dict[str, Item], place: dict[str, Placement],
                 cost += 3.0 * cb.overlap(b2)
             cost += 1.5 * max(0.0, cb.area - ctx.inner.overlap(cb))
 
-        # walking path from every door
+        # walking path from every door, and the space you step into
         if not r.stackable:
             for path in ctx.paths:
                 cost += 1.2 * path.overlap(b)
+            for landing in ctx.landings:
+                cost += W_LANDING * landing.overlap(b)
 
     # functional adjacency
     by_cat: dict[str, list[str]] = {}
@@ -248,9 +275,53 @@ def soft_cost(items: dict[str, Item], place: dict[str, Placement],
             partners = by_cat.get(want, [])
             if not partners:
                 continue
+            if it.rule.flanks:
+                # Beside, in the partner's own frame: level with its head and
+                # clear of its side. Plain distance would accept a diagonal.
+                p = min(partners, key=lambda q: math.hypot(boxes[k].cx - boxes[q].cx,
+                                                           boxes[k].cy - boxes[q].cy))
+                pb, pit, yaw = boxes[p], items[p], place[p].yaw
+                fx, fy = _facing(yaw)
+                lx, ly = -fy, fx
+                dx, dy = boxes[k].cx - pb.cx, boxes[k].cy - pb.cy
+                sideways = dx * lx + dy * ly
+                along = dx * fx + dy * fy
+                want_side = (pit.width + it.width) / 2 + it.rule.gap
+                want_along = -(pit.depth - it.depth) / 2          # at the head end
+                cost += W_FLANK * (abs(abs(sideways) - want_side) + abs(along - want_along))
+                continue
             best = min(math.hypot(boxes[k].cx - boxes[p].cx,
                                   boxes[k].cy - boxes[p].cy) for p in partners)
             cost += 1.6 * abs(best - _target_gap(it, items, want))
+
+        # A bed or a wardrobe standing across a window looks like a mistake.
+        if it.rule.keeps_window_clear:
+            for wz in ctx.window_zones:
+                cost += W_WINDOW_CLEAR * wz.overlap(boxes[k])
+
+    # A pair — two nightstands — belongs either side of its partner, level with
+    # each other. Cost is least when their offsets from the bed cancel out.
+    for cat, keys in by_cat.items():
+        rule = rule_for(cat)
+        if not rule.flanks or len(keys) != 2:
+            continue
+        for want in rule.against:
+            partners = by_cat.get(want, [])
+            if not partners:
+                continue
+            # The bed centres on its wall, or the second nightstand has nowhere
+            # to stand: sideways room must be left on both sides.
+            for q in partners:
+                fx, fy = _facing(place[q].yaw)
+                if abs(fx) > abs(fy):
+                    cost += W_ANCHOR_CENTRE * abs(boxes[q].cy - ctx.inner.cy)
+                else:
+                    cost += W_ANCHOR_CENTRE * abs(boxes[q].cx - ctx.inner.cx)
+            a, b = (boxes[k] for k in keys)
+            p = min(partners, key=lambda q: abs(boxes[q].cx - a.cx) + abs(boxes[q].cy - a.cy))
+            pb = boxes[p]
+            cost += W_FLANK_MIRROR * abs((a.cx - pb.cx) + (b.cx - pb.cx))   # mirrored left/right
+            cost += W_FLANK_MIRROR * abs((a.cy - pb.cy) + (b.cy - pb.cy))   # and level with each other
 
     # visual balance — keep the room's mass roughly centred
     tot = sum(b.area for b in boxes.values()) or 1.0
@@ -260,8 +331,70 @@ def soft_cost(items: dict[str, Item], place: dict[str, Placement],
     return cost
 
 
+def _tidy_pairs(items: dict[str, Item], place: dict[str, Placement], ctx: RoomContext,
+                score: float, settle=None) -> tuple[dict[str, Placement], float]:
+    """Centre an anchor on its wall and set its pair either side of the head.
+
+    A bed with two bedside tables is the case that matters: annealing settles
+    for one table beside the bed and the other wherever it fits. `settle`, when
+    given, re-places the room's other items around the moved group.
+    """
+    by_cat: dict[str, list[str]] = {}
+    for key, item in items.items():
+        by_cat.setdefault(item.category, []).append(key)
+
+    for cat, keys in by_cat.items():
+        if not rule_for(cat).flanks or len(keys) != 2:
+            continue
+        for want in rule_for(cat).against:
+            anchors = by_cat.get(want) or []
+            if len(anchors) != 1:
+                continue
+            anchor = anchors[0]
+            ap, aitem = place[anchor], items[anchor]
+            fx, fy = _facing(ap.yaw)
+            lx, ly = -fy, fx
+            trial = dict(place)
+            # keep how far the anchor stands from its wall, centre it along the wall
+            centre_x = ctx.inner.cx if abs(lx) > abs(ly) else ap.x
+            centre_y = ctx.inner.cy if abs(ly) > abs(lx) else ap.y
+            trial[anchor] = Placement(anchor, centre_x, centre_y, ap.yaw)
+            partner = items[keys[0]]
+            side = (aitem.width + partner.width) / 2 + partner.rule.gap
+            along = -(aitem.depth - partner.depth) / 2
+            # Both tables have to land inside the room, or the pair is not on.
+            span = ctx.inner.d if abs(ly) > abs(lx) else ctx.inner.w
+            half = yaw_footprint(partner.width, partner.depth, ap.yaw)[1 if abs(ly) > abs(lx) else 0] / 2
+            room_for_pair = span / 2 - half
+            if room_for_pair < (aitem.width + partner.width) / 2:
+                continue                       # too narrow: leave the solver's answer
+            side = min(side, room_for_pair)
+            for sign, key in zip((1.0, -1.0), keys):
+                trial[key] = Placement(
+                    key,
+                    centre_x + lx * side * sign + fx * along,
+                    centre_y + ly * side * sign + fy * along,
+                    ap.yaw)
+            # The group has moved; let everything else settle around it before
+            # judging, or one stray chair in the way sinks a better room.
+            if settle is not None:
+                trial = settle(trial, set(keys) | {anchor})
+            trial_score = (hard_violations(items, trial, ctx) * HARD_PENALTY
+                           + soft_cost(items, trial, ctx))
+            if trial_score < score:
+                place, score = trial, trial_score
+    return place, score
+
+
+def _facing(yaw: float) -> tuple[float, float]:
+    """Unit vector an item faces. Yaw 0 faces +y, matching the renderer."""
+    return {0.0: (0.0, 1.0), 90.0: (1.0, 0.0), 180.0: (0.0, -1.0), 270.0: (-1.0, 0.0)}.get(yaw % 360, (0.0, 1.0))
+
+
 def _target_gap(item: Item, items: dict[str, Item], partner_cat: str) -> float:
     """Preferred centre-to-centre distance to a partner category."""
+    if item.rule.stackable:
+        return 0.0                # a rug lies under its sofa or bed, not beside it
     partner = next((i for i in items.values() if i.category == partner_cat), None)
     span = (item.depth + (partner.depth if partner else 0.6)) / 2
     return span + item.rule.gap
@@ -473,6 +606,30 @@ class SpatialSolver:
                 accepted += 1
                 if score < best_score:
                     best, best_score = dict(trial), score
+
+        # Annealing moves one piece at a time, so it cannot discover an
+        # arrangement that needs the bed and both tables to move together.
+        # That grouping is proposed here and kept only if it scores better.
+        def settle(start: dict[str, Placement], fixed: set[str]) -> dict[str, Placement]:
+            """Nudge everything except `fixed` into the space that is left."""
+            movable = [k for k in items if k not in fixed]
+            if not movable:
+                return start
+            state = dict(start)
+            state_score = (hard_violations(items, state, ctx) * HARD_PENALTY
+                           + soft_cost(items, state, ctx))
+            local = random.Random(self.seed_value ^ 0x5EED)
+            for step in range(max(200, self.iterations // 2)):
+                k = local.choice(movable)
+                trial = dict(state)
+                trial[k] = self._perturb(state[k], items[k], ctx, local)
+                trial_score = (hard_violations(items, trial, ctx) * HARD_PENALTY
+                               + soft_cost(items, trial, ctx))
+                if trial_score < state_score:
+                    state, state_score = trial, trial_score
+            return state
+
+        best, best_score = _tidy_pairs(items, best, ctx, best_score, settle)
 
         final_hard = hard_violations(items, best, ctx)
         if final_hard > seed_hard + 1e-9:          # never ship a worse layout

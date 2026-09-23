@@ -1,0 +1,136 @@
+{
+ "_comment": "Hand annotations per image: read off the drawing itself. style = how the plan is labelled; sub_plans = how many separate flats are printed on the sheet; mirrored = the sheet shows the same flat twice as a mirror image.",
+ "plan_00": {
+  "style": "names+area_m2",
+  "bhk": "2 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_01": {
+  "style": "furnished+sizes",
+  "bhk": "2 BHK",
+  "sub_plans": 2,
+  "mirrored": false,
+  "notes": "UG 101 and UG 102 on one sheet, 90 sq.mt each"
+ },
+ "plan_02": {
+  "style": "area_only",
+  "bhk": "2 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_03": {
+  "style": "area_only",
+  "bhk": "1 BHK",
+  "sub_plans": 1,
+  "mirrored": false,
+  "notes": "single bedroom; sheet is cropped, a neighbouring unit shows at the top right"
+ },
+ "plan_04": {
+  "style": "area_only",
+  "bhk": "3 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_05": {
+  "style": "names+sizes",
+  "bhk": "3 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_06": {
+  "style": "names+feet",
+  "bhk": "2 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_07": {
+  "style": "names+metric+feet",
+  "bhk": "3 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_08": {
+  "style": "area_only",
+  "bhk": "3 BHK",
+  "sub_plans": 2,
+  "mirrored": true
+ },
+ "plan_09": {
+  "style": "names+metric+feet",
+  "bhk": "2 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_10": {
+  "style": "names+feet",
+  "bhk": "2 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_11": {
+  "style": "names+feet",
+  "bhk": "2 BHK",
+  "sub_plans": 1,
+  "mirrored": false,
+  "notes": "two bedrooms plus a study"
+ },
+ "plan_12": {
+  "style": "names+metric",
+  "bhk": "1 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_13": {
+  "style": "names+feet",
+  "bhk": "1 BHK",
+  "sub_plans": 4,
+  "mirrored": false,
+  "notes": "four 1BHK variants on one sheet"
+ },
+ "plan_14": {
+  "style": "names+mm+feet",
+  "bhk": "3 BHK",
+  "sub_plans": 1,
+  "mirrored": false,
+  "notes": "printed total 1580 sq.ft"
+ },
+ "plan_15": {
+  "style": "names+metric",
+  "bhk": "2 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_16": {
+  "style": "names+feet",
+  "bhk": "3 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_17": {
+  "style": "names+feet_rotated",
+  "bhk": "3 BHK",
+  "sub_plans": 1,
+  "mirrored": false,
+  "notes": "whole image is mirror-flipped: the text reads backwards, so OCR reads almost nothing"
+ },
+ "plan_18": {
+  "style": "names+metric",
+  "bhk": "2 BHK",
+  "sub_plans": 1,
+  "mirrored": false
+ },
+ "plan_19": {
+  "style": "numbered+legend",
+  "bhk": "2 BHK",
+  "sub_plans": 1,
+  "mirrored": false,
+  "notes": "rooms marked 1-7, legend lists the names"
+ },
+ "plan_20": {
+  "style": "area_only",
+  "bhk": "2 BHK",
+  "sub_plans": 2,
+  "mirrored": true
+ }
+}

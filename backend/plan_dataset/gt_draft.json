@@ -1,0 +1,1378 @@
+{
+ "plan_00": {
+  "file": "plan_00.jpg",
+  "rooms": [
+   {
+    "type": "bathroom",
+    "label_text": "W.C/BATH",
+    "area_m2": 4.2,
+    "dim_text": "4.20m2"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "W.C.",
+    "area_m2": 3.57,
+    "dim_text": "3.57m2"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 11.37,
+    "dim_text": "11.37m2"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "/BATH"
+   },
+   {
+    "type": "balcony",
+    "label_text": "UT.BAL"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 11.37,
+    "dim_text": "11.37m2"
+   },
+   {
+    "type": "dining_area",
+    "label_text": "DINING",
+    "area_m2": 9.66,
+    "dim_text": "9.66m2"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 7.5,
+    "dim_text": "7.50m2"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "living_room",
+    "label_text": "LIVINGROOM",
+    "area_m2": 16.57,
+    "dim_text": "16.57m2"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_01": {
+  "file": "plan_01.jpg",
+  "rooms": [
+   {
+    "type": "bathroom",
+    "label_text": "W.C.",
+    "area_m2": 3.11,
+    "dim_text": "3.11m2"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "/BATH"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "W.C./BATH"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 13.4,
+    "size_m": [
+     3.35,
+     4.0
+    ],
+    "dim_text": "3.35X4.00"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 8.89,
+    "size_m": [
+     2.34,
+     3.8
+    ],
+    "dim_text": "2.34X3.80"
+   },
+   {
+    "type": "foyer",
+    "label_text": "ENTERANCEFOYER",
+    "area_m2": 5.76,
+    "size_m": [
+     2.4,
+     2.4
+    ],
+    "dim_text": "2.40x2.40"
+   },
+   {
+    "type": "living_room",
+    "label_text": "LIVINGROOM",
+    "area_m2": 17.67,
+    "size_m": [
+     5.7,
+     3.1
+    ],
+    "dim_text": "5.70X3.10"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 13.12,
+    "size_m": [
+     4.0,
+     3.28
+    ],
+    "dim_text": "4.00X3.28"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "W.C.BATH",
+    "area_m2": 3.24,
+    "dim_text": "3.24m2"
+   },
+   {
+    "type": "passage",
+    "label_text": "PASSAGE",
+    "area_m2": 1.49,
+    "size_m": [
+     1.1,
+     1.35
+    ],
+    "dim_text": "1.10X1.35"
+   },
+   {
+    "type": "passage",
+    "label_text": "PASSAGE",
+    "area_m2": 2.38,
+    "size_m": [
+     1.9,
+     1.25
+    ],
+    "dim_text": "1.90X1.25"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "W.C./BATH",
+    "area_m2": 3.0,
+    "dim_text": "3.00m2"
+   },
+   {
+    "type": "living_room",
+    "label_text": "LIVINGROOM/DINNING",
+    "area_m2": 18.74,
+    "size_m": [
+     3.27,
+     5.73
+    ],
+    "dim_text": "3.27\u00d75.73"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 13.52,
+    "size_m": [
+     4.0,
+     3.38
+    ],
+    "dim_text": "4.00X3.38"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 10.4,
+    "size_m": [
+     2.58,
+     4.03
+    ],
+    "dim_text": "2.58X4.03"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_02": {
+  "file": "plan_02.jpg",
+  "rooms": [],
+  "unmatched_areas_m2": [
+   11.1
+  ],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_03": {
+  "file": "plan_03.jpg",
+  "rooms": [],
+  "unmatched_areas_m2": [
+   11.1,
+   5.0,
+   11.07,
+   1.86
+  ],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_04": {
+  "file": "plan_04.jpg",
+  "rooms": [],
+  "unmatched_areas_m2": [
+   4.76,
+   9.56,
+   2.25,
+   16.61,
+   2.52,
+   6.46,
+   2.88
+  ],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_05": {
+  "file": "plan_05.jpg",
+  "rooms": [
+   {
+    "type": "utility",
+    "label_text": "WASH",
+    "area_m2": 3.21,
+    "size_m": [
+     2.1,
+     1.53
+    ],
+    "dim_text": "2.10x1.53"
+   },
+   {
+    "type": "dining_area",
+    "label_text": "KITOHENDINING"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROO",
+    "area_m2": 8.66,
+    "size_m": [
+     9.47,
+     0.91
+    ],
+    "dim_text": "311x30"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_06": {
+  "file": "plan_06.jpg",
+  "rooms": [
+   {
+    "type": "balcony",
+    "label_text": "SITOUT",
+    "area_m2": 3.78,
+    "size_m": [
+     2.44,
+     1.55
+    ],
+    "dim_text": "80X51"
+   },
+   {
+    "type": "living_room",
+    "label_text": "LIVING/",
+    "area_m2": 18.48,
+    "size_m": [
+     3.35,
+     5.51
+    ],
+    "dim_text": "110X181"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 9.92,
+    "size_m": [
+     3.2,
+     3.1
+    ],
+    "dim_text": "106*X102"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 12.08,
+    "size_m": [
+     3.96,
+     3.05
+    ],
+    "dim_text": "130X100"
+   },
+   {
+    "type": "balcony",
+    "label_text": "DRY BALC",
+    "area_m2": 2.23,
+    "size_m": [
+     2.31,
+     0.97
+    ],
+    "dim_text": "77X32"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_07": {
+  "file": "plan_07.jpg",
+  "rooms": [
+   {
+    "type": "balcony",
+    "label_text": "BALCONY",
+    "area_m2": 5.04,
+    "size_m": [
+     4.85,
+     1.04
+    ],
+    "dim_text": "4.85Mx1.04M"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM-2",
+    "area_m2": 9.3,
+    "size_m": [
+     3.05,
+     3.05
+    ],
+    "dim_text": "3.05Mx3.05M"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM-1",
+    "area_m2": 9.29,
+    "size_m": [
+     3.05,
+     3.05
+    ],
+    "dim_text": "100x100\""
+   },
+   {
+    "type": "dining_area",
+    "label_text": "UMING/DINING"
+   },
+   {
+    "type": "passage",
+    "label_text": "CORRIDOR"
+   },
+   {
+    "type": "master_bedroom",
+    "label_text": "MASTERBEDROOM",
+    "area_m2": 12.25,
+    "size_m": [
+     3.5,
+     3.5
+    ],
+    "dim_text": "3.50Mx3.50M"
+   },
+   {
+    "type": "foyer",
+    "label_text": "FOYER",
+    "area_m2": 1.26,
+    "size_m": [
+     1.66,
+     0.76
+    ],
+    "dim_text": "1.66Mx0.76M"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "TOILET-1",
+    "area_m2": 3.17,
+    "size_m": [
+     1.38,
+     2.3
+    ],
+    "dim_text": "1.38Mx2.30M"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "M.TOILET",
+    "area_m2": 3.14,
+    "size_m": [
+     1.37,
+     2.29
+    ],
+    "dim_text": "46x76\""
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_08": {
+  "file": "plan_08.jpg",
+  "rooms": [],
+  "unmatched_areas_m2": [
+   5.6,
+   11.31,
+   11.31,
+   26.91,
+   18.32,
+   4.8,
+   4.64,
+   4.64,
+   4.2,
+   4.2,
+   4.64,
+   4.64,
+   4.8,
+   26.91,
+   9.18,
+   18.32,
+   11.31,
+   11.31,
+   5.6
+  ],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_09": {
+  "file": "plan_09.jpg",
+  "rooms": [
+   {
+    "type": "balcony",
+    "label_text": "BALCONY",
+    "area_m2": 4.75,
+    "size_m": [
+     4.57,
+     1.04
+    ],
+    "dim_text": "4.57Mx1.04M"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM-1",
+    "area_m2": 9.3,
+    "size_m": [
+     3.05,
+     3.05
+    ],
+    "dim_text": "3.05Mx3.05M"
+   },
+   {
+    "type": "living_room",
+    "label_text": "LIVING/DINING",
+    "area_m2": 13.94,
+    "size_m": [
+     4.57,
+     3.05
+    ],
+    "dim_text": "4.57Mx3.05M"
+   },
+   {
+    "type": "master_bedroom",
+    "label_text": "MASTERBEDROOM",
+    "area_m2": 9.3,
+    "size_m": [
+     3.05,
+     3.05
+    ],
+    "dim_text": "3.05Mx3.05M/3.65M"
+   },
+   {
+    "type": "passage",
+    "label_text": "CORRIDOR"
+   },
+   {
+    "type": "storage",
+    "label_text": "WARDROBE",
+    "area_m2": 0.91,
+    "size_m": [
+     1.51,
+     0.6
+    ],
+    "dim_text": "1.51MX0.60M"
+   },
+   {
+    "type": "foyer",
+    "label_text": "FOYER",
+    "area_m2": 1.27,
+    "size_m": [
+     1.67,
+     0.76
+    ],
+    "dim_text": "1.67Mx0.76N"
+   },
+   {
+    "type": "utility",
+    "label_text": "UTILITY",
+    "area_m2": 2.3,
+    "size_m": [
+     1.51,
+     1.52
+    ],
+    "dim_text": "1.51Mx1.52M"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 6.3,
+    "size_m": [
+     2.74,
+     2.3
+    ],
+    "dim_text": "2.74Mx2.30M"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "M.TOILET",
+    "area_m2": 3.14,
+    "size_m": [
+     1.37,
+     2.29
+    ],
+    "dim_text": "46x76"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "TOILET-1",
+    "area_m2": 3.17,
+    "size_m": [
+     1.38,
+     2.3
+    ],
+    "dim_text": "1.38Mx2.30M"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_10": {
+  "file": "plan_10.jpg",
+  "rooms": [
+   {
+    "type": "dining_area",
+    "label_text": "CRAWINGDINING",
+    "area_m2": 17.25,
+    "size_m": [
+     3.43,
+     5.03
+    ],
+    "dim_text": "11'-3x166"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 11.15,
+    "size_m": [
+     3.66,
+     3.05
+    ],
+    "dim_text": "12-0x10-0"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY",
+    "area_m2": 23.58,
+    "size_m": [
+     4.72,
+     5.0
+    ],
+    "dim_text": "4.7155x5-1"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "TOILET"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 6.06,
+    "size_m": [
+     2.21,
+     2.74
+    ],
+    "dim_text": "7-3x9-0"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROCM",
+    "area_m2": 11.15,
+    "size_m": [
+     3.66,
+     3.05
+    ],
+    "dim_text": "12-0x10-0"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_11": {
+  "file": "plan_11.jpg",
+  "rooms": [
+   {
+    "type": "balcony",
+    "label_text": "DECK",
+    "area_m2": 5.19,
+    "size_m": [
+     3.4,
+     1.52
+    ],
+    "dim_text": "112'x50"
+   },
+   {
+    "type": "master_bedroom",
+    "label_text": "M.BEDROOM"
+   },
+   {
+    "type": "passage",
+    "label_text": "JE'WIOECORRIDOR"
+   },
+   {
+    "type": "foyer",
+    "label_text": "FOYER"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_12": {
+  "file": "plan_12.jpg",
+  "rooms": [
+   {
+    "type": "living_room",
+    "label_text": "LIVING",
+    "area_m2": 10.85,
+    "size_m": [
+     3.96,
+     2.74
+    ],
+    "dim_text": "3.96X2.74"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 3.24,
+    "size_m": [
+     1.52,
+     2.13
+    ],
+    "dim_text": "1.52X2.13"
+   },
+   {
+    "type": "balcony",
+    "label_text": "YARD",
+    "area_m2": 0.73,
+    "size_m": [
+     1.21,
+     0.6
+    ],
+    "dim_text": "1.21X0.6"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "M.TOI",
+    "area_m2": 3.24,
+    "size_m": [
+     2.13,
+     1.52
+    ],
+    "dim_text": "2.13X1.52"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 10.18,
+    "size_m": [
+     3.35,
+     3.04
+    ],
+    "dim_text": "3.35X3.04"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_13": {
+  "file": "plan_13.jpg",
+  "rooms": [
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 10.22,
+    "size_m": [
+     3.05,
+     3.35
+    ],
+    "dim_text": "10'-0'X11-0\u00b0"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "living_room",
+    "label_text": "DINING/LIVING",
+    "area_m2": 15.68,
+    "size_m": [
+     5.14,
+     3.05
+    ],
+    "dim_text": "16-101/2X10-0\""
+   },
+   {
+    "type": "living_room",
+    "label_text": "DINING/LIVING"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 3.9,
+    "size_m": [
+     1.83,
+     2.13
+    ],
+    "dim_text": "6-0\"X7-0\""
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 10.22,
+    "size_m": [
+     3.35,
+     3.05
+    ],
+    "dim_text": "11-0'X10-0\""
+   },
+   {
+    "type": "bathroom",
+    "label_text": "TOILET",
+    "area_m2": 3.07,
+    "size_m": [
+     1.68,
+     1.83
+    ],
+    "dim_text": "5-6\"X6-0\""
+   },
+   {
+    "type": "bathroom",
+    "label_text": "TOILET",
+    "area_m2": 3.07,
+    "size_m": [
+     1.83,
+     1.68
+    ],
+    "dim_text": "6-0X5-6"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 3.9,
+    "size_m": [
+     2.13,
+     1.83
+    ],
+    "dim_text": "7-0'X6'-0\""
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 10.22,
+    "size_m": [
+     3.05,
+     3.35
+    ],
+    "dim_text": "10-0'X11-0\u00b0"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 10.22,
+    "size_m": [
+     3.05,
+     3.35
+    ],
+    "dim_text": "10-0'X11'-0\u00b0"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "TOILET"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN"
+   },
+   {
+    "type": "living_room",
+    "label_text": "DINING/LIVING"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "living_room",
+    "label_text": "DINING/LIVING",
+    "area_m2": 14.75,
+    "size_m": [
+     4.84,
+     3.05
+    ],
+    "dim_text": "15-101/2X10-0\u00b0"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "TOILET",
+    "area_m2": 3.48,
+    "size_m": [
+     1.52,
+     2.29
+    ],
+    "dim_text": "5-0'X7-6"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_14": {
+  "file": "plan_14.jpg",
+  "rooms": [
+   {
+    "type": "bedroom",
+    "label_text": "3-Bedroom+2Toilets"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 13.49,
+    "size_m": [
+     3.8,
+     3.55
+    ],
+    "dim_text": "3800X3550"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 16.91,
+    "size_m": [
+     4.45,
+     3.8
+    ],
+    "dim_text": "4450X3800"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "TOILET",
+    "area_m2": 3.92,
+    "size_m": [
+     2.48,
+     1.58
+    ],
+    "dim_text": "2480X1580"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "TOILET",
+    "area_m2": 3.92,
+    "size_m": [
+     2.48,
+     1.58
+    ],
+    "dim_text": "2480X1580"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 12.73,
+    "size_m": [
+     3.8,
+     3.35
+    ],
+    "dim_text": "3800X3350"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 9.05,
+    "size_m": [
+     2.32,
+     3.9
+    ],
+    "dim_text": "2320X3900"
+   },
+   {
+    "type": "dining_area",
+    "label_text": "DINING",
+    "area_m2": 12.95,
+    "size_m": [
+     2.58,
+     5.02
+    ],
+    "dim_text": "2580X5020"
+   },
+   {
+    "type": "balcony",
+    "label_text": "DECK",
+    "area_m2": 5.86,
+    "size_m": [
+     1.65,
+     3.55
+    ],
+    "dim_text": "1650X3550"
+   },
+   {
+    "type": "foyer",
+    "label_text": "FOYER",
+    "area_m2": 3.83,
+    "size_m": [
+     2.52,
+     1.52
+    ],
+    "dim_text": "2520X1520"
+   },
+   {
+    "type": "living_room",
+    "label_text": "LIVING",
+    "area_m2": 11.05,
+    "size_m": [
+     3.3,
+     3.35
+    ],
+    "dim_text": "3300X3350"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": 146.8,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_15": {
+  "file": "plan_15.jpg",
+  "rooms": [
+   {
+    "type": "foyer",
+    "label_text": "FOYER,"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "living_room",
+    "label_text": "LIVING",
+    "area_m2": 7.46,
+    "size_m": [
+     2.6,
+     2.87
+    ],
+    "dim_text": "2.60X2.87"
+   },
+   {
+    "type": "dining_area",
+    "label_text": "DINING",
+    "area_m2": 10.84,
+    "size_m": [
+     2.6,
+     4.17
+    ],
+    "dim_text": "2.60X4.17"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 6.62,
+    "size_m": [
+     3.15,
+     2.1
+    ],
+    "dim_text": "3.15X2.10"
+   },
+   {
+    "type": "balcony",
+    "label_text": "YARD"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM2",
+    "area_m2": 10.01,
+    "size_m": [
+     3.45,
+     2.9
+    ],
+    "dim_text": "3.45X2.90"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "C.TOI.",
+    "area_m2": 2.45,
+    "size_m": [
+     1.6,
+     1.53
+    ],
+    "dim_text": "1.60X1.53"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "M.TOILET",
+    "area_m2": 0.84,
+    "size_m": [
+     1.1,
+     0.76
+    ],
+    "dim_text": "1.10x0.76"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 11.25,
+    "size_m": [
+     3.75,
+     3.0
+    ],
+    "dim_text": "3.75X3.00"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_16": {
+  "file": "plan_16.jpg",
+  "rooms": [
+   {
+    "type": "balcony",
+    "label_text": "Balcony"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "Toilet",
+    "area_m2": 3.72,
+    "size_m": [
+     2.44,
+     1.52
+    ],
+    "dim_text": "8-0X5-0"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "Bedroom",
+    "area_m2": 10.22,
+    "size_m": [
+     3.35,
+     3.05
+    ],
+    "dim_text": "11-0\"X10-0\""
+   },
+   {
+    "type": "bedroom",
+    "label_text": "Bedroom",
+    "area_m2": 15.61,
+    "size_m": [
+     3.66,
+     4.27
+    ],
+    "dim_text": "12'-0\"X14-0\""
+   },
+   {
+    "type": "passage",
+    "label_text": "Passage"
+   },
+   {
+    "type": "utility",
+    "label_text": "Utility"
+   },
+   {
+    "type": "balcony",
+    "label_text": "Balcony"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "Toilet",
+    "area_m2": 3.48,
+    "size_m": [
+     2.29,
+     1.52
+    ],
+    "dim_text": "7-6\"X5-0\""
+   },
+   {
+    "type": "bedroom",
+    "label_text": "Bedroom",
+    "area_m2": 11.15,
+    "size_m": [
+     3.66,
+     3.05
+    ],
+    "dim_text": "12'-0\"X10'-0\""
+   },
+   {
+    "type": "kitchen",
+    "label_text": "Kitchen",
+    "area_m2": 6.69,
+    "size_m": [
+     2.44,
+     2.74
+    ],
+    "dim_text": "8'-0\"X9'-0\""
+   },
+   {
+    "type": "dining_area",
+    "label_text": "Dining",
+    "area_m2": 8.78,
+    "size_m": [
+     3.2,
+     2.74
+    ],
+    "dim_text": "10'-6\"X9'-0"
+   },
+   {
+    "type": "balcony",
+    "label_text": "Balcony"
+   },
+   {
+    "type": "living_room",
+    "label_text": "Living",
+    "area_m2": 15.33,
+    "size_m": [
+     4.57,
+     3.35
+    ],
+    "dim_text": "15'-0\"X11'-0\u201d"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_17": {
+  "file": "plan_17.jpg",
+  "rooms": [],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_18": {
+  "file": "plan_18.jpg",
+  "rooms": [
+   {
+    "type": "bathroom",
+    "label_text": "M.TOI",
+    "area_m2": 3.45,
+    "size_m": [
+     2.3,
+     1.5
+    ],
+    "dim_text": "2.30X1.50"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 11.25,
+    "size_m": [
+     3.0,
+     3.75
+    ],
+    "dim_text": "3.00X3.75"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "C.TOI.",
+    "area_m2": 3.22,
+    "size_m": [
+     1.5,
+     2.15
+    ],
+    "dim_text": "1.50X2.15"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "BEDROOM",
+    "area_m2": 12.66,
+    "size_m": [
+     3.78,
+     3.35
+    ],
+    "dim_text": "3.78X3.35"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "utility",
+    "label_text": "UTILITYAREA"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "KITCHEN",
+    "area_m2": 6.67,
+    "size_m": [
+     2.3,
+     2.9
+    ],
+    "dim_text": "2.3X2.9"
+   },
+   {
+    "type": "living_room",
+    "label_text": "LIVING",
+    "area_m2": 13.27,
+    "size_m": [
+     3.96,
+     3.35
+    ],
+    "dim_text": "3.96X3.35"
+   },
+   {
+    "type": "balcony",
+    "label_text": "BALCONY"
+   },
+   {
+    "type": "dining_area",
+    "label_text": "DINING",
+    "area_m2": 13.93,
+    "size_m": [
+     3.13,
+     4.45
+    ],
+    "dim_text": "3.13X4.45"
+   },
+   {
+    "type": "foyer",
+    "label_text": "FOYER"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_19": {
+  "file": "plan_19.jpg",
+  "rooms": [
+   {
+    "type": "living_room",
+    "label_text": "1-LIVINGROOM"
+   },
+   {
+    "type": "dining_area",
+    "label_text": "2-DINING"
+   },
+   {
+    "type": "kitchen",
+    "label_text": "3-KITCHEN"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "4-COMMONBATHROOM"
+   },
+   {
+    "type": "bedroom",
+    "label_text": "5-DAUGHTER'SBEDROOM"
+   },
+   {
+    "type": "master_bedroom",
+    "label_text": "6-MASTERBEDROOM"
+   },
+   {
+    "type": "bathroom",
+    "label_text": "7-MASTERBATHROOM"
+   }
+  ],
+  "unmatched_areas_m2": [],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ },
+ "plan_20": {
+  "file": "plan_20.jpg",
+  "rooms": [],
+  "unmatched_areas_m2": [
+   5.61,
+   8.16,
+   2.7,
+   21.76,
+   11.56,
+   3.22,
+   6.96,
+   3.5,
+   23.7,
+   3.22,
+   3.5,
+   11.56,
+   21.76,
+   2.7,
+   8.16,
+   8.16,
+   5.61
+  ],
+  "printed_total_area_m2": null,
+  "sub_plans": 1,
+  "notes": ""
+ }
+}

@@ -1,0 +1,175 @@
+{
+ "summary": {
+  "plans": 7,
+  "failed": 0,
+  "bhk_correct": "6/7",
+  "type_recall_mean": 0.576,
+  "area_err_median": 0.27,
+  "size_err_median": 0.229,
+  "seconds_mean": 5.9
+ },
+ "rows": [
+  {
+   "id": "plan_03",
+   "split": "test",
+   "style": "area_only",
+   "seconds": 4.8,
+   "bhk_want": "1 BHK",
+   "bhk_got": "1 BHK",
+   "bhk_ok": true,
+   "rooms_want": 0,
+   "rooms_got": 6,
+   "one_of_many_flats": false,
+   "type_recall": null,
+   "size_err": 0.229,
+   "areas_matched": "-",
+   "area_err": null,
+   "scale_err": null,
+   "plan_width_m": 7.79,
+   "scale_source": "printed areas",
+   "method": "heuristic",
+   "notes": [
+    "Read 3 room areas printed on your plan and set the scale from them."
+   ]
+  },
+  {
+   "id": "plan_06",
+   "split": "test",
+   "style": "names+feet",
+   "seconds": 6.0,
+   "bhk_want": "2 BHK",
+   "bhk_got": "2 BHK",
+   "bhk_ok": true,
+   "rooms_want": 6,
+   "rooms_got": 8,
+   "one_of_many_flats": false,
+   "type_recall": 0.833,
+   "size_err": null,
+   "areas_matched": "4/5",
+   "area_err": 0.204,
+   "scale_err": null,
+   "plan_width_m": 11.77,
+   "scale_source": "printed sizes",
+   "method": "heuristic",
+   "notes": [
+    "Read 5 room names from your plan and set the scale from the printed sizes."
+   ]
+  },
+  {
+   "id": "plan_09",
+   "split": "test",
+   "style": "names+metric+feet",
+   "seconds": 4.5,
+   "bhk_want": "2 BHK",
+   "bhk_got": "2 BHK",
+   "bhk_ok": true,
+   "rooms_want": 11,
+   "rooms_got": 8,
+   "one_of_many_flats": false,
+   "type_recall": 0.636,
+   "size_err": null,
+   "areas_matched": "6/10",
+   "area_err": 0.366,
+   "scale_err": null,
+   "plan_width_m": 26.33,
+   "scale_source": "printed sizes",
+   "method": "heuristic",
+   "notes": [
+    "Read 6 room names from your plan and set the scale from the printed sizes."
+   ]
+  },
+  {
+   "id": "plan_13",
+   "split": "test",
+   "style": "names+feet",
+   "seconds": 3.6,
+   "bhk_want": "1 BHK",
+   "bhk_got": "1 BHK",
+   "bhk_ok": true,
+   "rooms_want": 20,
+   "rooms_got": 8,
+   "one_of_many_flats": true,
+   "type_recall": null,
+   "size_err": null,
+   "areas_matched": "5/11",
+   "area_err": 0.478,
+   "scale_err": null,
+   "plan_width_m": 7.28,
+   "scale_source": "printed sizes",
+   "method": "heuristic",
+   "notes": [
+    "This sheet shows 4 flats; reading flat 1. Pick another below if that is not yours.",
+    "Read 5 room names from your plan and set the scale from the printed sizes."
+   ]
+  },
+  {
+   "id": "plan_14",
+   "split": "test",
+   "style": "names+mm+feet",
+   "seconds": 5.8,
+   "bhk_want": "3 BHK",
+   "bhk_got": "3 BHK",
+   "bhk_ok": true,
+   "rooms_want": 11,
+   "rooms_got": 9,
+   "one_of_many_flats": false,
+   "type_recall": 0.818,
+   "size_err": null,
+   "areas_matched": "9/10",
+   "area_err": 0.27,
+   "scale_err": 0.276,
+   "plan_width_m": 14.77,
+   "scale_source": "printed sizes",
+   "method": "heuristic",
+   "notes": [
+    "Read 9 room names from your plan and set the scale from the printed sizes."
+   ]
+  },
+  {
+   "id": "plan_16",
+   "split": "test",
+   "style": "names+feet",
+   "seconds": 5.4,
+   "bhk_want": "3 BHK",
+   "bhk_got": "3 BHK",
+   "bhk_ok": true,
+   "rooms_want": 13,
+   "rooms_got": 4,
+   "one_of_many_flats": false,
+   "type_recall": 0.308,
+   "size_err": null,
+   "areas_matched": "3/8",
+   "area_err": 0.195,
+   "scale_err": null,
+   "plan_width_m": 13.4,
+   "scale_source": "printed sizes",
+   "method": "heuristic",
+   "notes": [
+    "Read 4 room names from your plan and set the scale from the printed sizes."
+   ]
+  },
+  {
+   "id": "plan_19",
+   "split": "test",
+   "style": "numbered+legend",
+   "seconds": 11.0,
+   "bhk_want": "2 BHK",
+   "bhk_got": "1 BHK",
+   "bhk_ok": false,
+   "rooms_want": 7,
+   "rooms_got": 4,
+   "one_of_many_flats": false,
+   "type_recall": 0.286,
+   "size_err": null,
+   "areas_matched": "-",
+   "area_err": null,
+   "scale_err": null,
+   "plan_width_m": 9.21,
+   "scale_source": null,
+   "method": "heuristic",
+   "notes": [
+    "Read the plan's key and named 2 numbered rooms."
+   ]
+  }
+ ]
+}

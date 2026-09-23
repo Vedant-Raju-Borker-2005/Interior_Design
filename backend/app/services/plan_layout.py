@@ -22,6 +22,8 @@ import html
 import io
 import json
 import math
+import statistics
+from functools import lru_cache
 import os
 import re
 from collections import OrderedDict
@@ -52,6 +54,20 @@ BEDROOM_TYPES = {"master_bedroom", "bedroom"}
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_PLAN_BYTES = 10 * 1024 * 1024
 
+# The thresholds that decide what counts as a wall and a room, fitted on the
+# training plans (48 synthetic + 14 real) by scripts/tune_plan_reader.py on
+# 2026-09-22: combined score 0.687 -> 0.710. Re-run the tuner to change them.
+TUNING: dict[str, float] = {
+    "dark_lum": 106.4,        # wall ink is darker than this...
+    "dark_sat": 75.25,         # ...and greyer than this
+    "blob_span": 0.063,        # a piece of wall spans at least this share of the plan...
+    "blob_mass": 0.002,       # ...or covers at least this share of it
+    "door_m": 1.72,            # the widest gap closed as a doorway, in metres
+    "wide_m": 2.8,            # the widest opening still treated as one space
+    "min_room_m2": 0.85,       # the smallest space kept as a room
+    "sliver_walls": 1.5,      # a sliver thinner than this many walls joins its neighbour
+}
+
 # Typical carpet area (m²) of the rooms themselves, and the plan envelope
 # including walls, per bedroom count. Only used to guess a starting scale.
 _CARPET_M2 = {0: 28, 1: 38, 2: 58, 3: 85, 4: 112, 5: 140}
@@ -77,11 +93,32 @@ def load_plan_image(data: bytes) -> Image.Image:
 
 
 def detect_rooms(img: Image.Image, *, bhk_hint: int = 2, raw: Optional[bytes] = None,
-                 mime: str = "image/png") -> dict[str, Any]:
-    """Best-effort room detection. Always returns a usable (maybe empty) draft."""
+                 mime: str = "image/png", panel: Optional[int] = None) -> dict[str, Any]:
+    """Best-effort room detection. Always returns a usable (maybe empty) draft.
+
+    A brochure sheet showing several flats is cut up first and one flat is read:
+    the one asked for, or the largest. The others come back under "panels" so
+    the customer can say which flat is theirs.
+    """
+    notes: list[str] = []
+    panels = []
+    try:
+        from .plan_sheet import split_sheet
+        panels = split_sheet(img)
+    except Exception:                       # splitting is an extra, never a gate
+        panels = []
+    chosen = None
+    if len(panels) > 1:
+        area = lambda p: (p.box[2] - p.box[0]) * (p.box[3] - p.box[1])   # noqa: E731
+        chosen = panel if panel is not None and 0 <= panel < len(panels) else \
+            max(range(len(panels)), key=lambda i: area(panels[i]))
+        img = panels[chosen].crop(img)
+        raw, mime = None, mime            # the crop is what gets read from here on
+        notes.append(f"This sheet shows {len(panels)} flats; reading flat {chosen + 1}."
+                     " Pick another below if that is not yours.")
+
     w, h = img.size
     result: Optional[dict[str, Any]] = None
-    notes: list[str] = []
     if os.getenv("GEMINI_KEY") and raw is not None:
         try:
             result = _detect_with_gemini(raw, mime, w, h, bhk_hint)
@@ -97,12 +134,16 @@ def detect_rooms(img: Image.Image, *, bhk_hint: int = 2, raw: Optional[bytes] = 
         # Reading labels is an improvement, never a requirement: if it fails
         # for any reason the upload still gets the shape-only detection.
         try:
-            from .plan_ocr import apply_labels, build_labels, read_texts
+            from .plan_ocr import apply_area_numbers, apply_labels, apply_legend, build_labels, read_texts
             texts = read_texts(img)
             labels = build_labels(texts, w, h)
             result = _detect_with_heuristic(img, bhk_hint, text_boxes=[(t.x0, t.y0, t.x1, t.y1) for t in texts],
                                             labels=labels)
             result = apply_labels(result, img, texts=texts, labels=result.pop("_labels", labels))
+            # Architects' plans number the rooms and list the names in a key.
+            result = apply_legend(result, img, texts=texts)
+            # Colour plans name nothing and print each room's area instead.
+            result = apply_area_numbers(result, img, texts=texts)
         except Exception as exc:
             import logging
             logging.getLogger(__name__).exception("plan label reading failed; using shapes only")
@@ -111,6 +152,9 @@ def detect_rooms(img: Image.Image, *, bhk_hint: int = 2, raw: Optional[bytes] = 
             notes.append(f"Couldn't read the room names on this plan ({type(exc).__name__}); check them below.")
     result["notes"] = notes + result.get("notes", [])
     result["image_w"], result["image_h"] = w, h
+    if len(panels) > 1:
+        result["panels"] = [{"box": [round(v, 4) for v in p.box], "source": p.source} for p in panels]
+        result["panel"] = chosen
     return result
 
 
@@ -150,8 +194,8 @@ def _detect_with_heuristic(img: Image.Image, bhk_hint: int,
     run = max(3, int(round(1.6 * wall_px)))
     horiz = ndi.binary_opening(wp, structure=np.ones((1, run), bool))
     vert = ndi.binary_opening(wp, structure=np.ones((run, 1), bool))
-    door = int(np.clip(1.6 * ppm0, 0.03 * max(W, H), 0.15 * max(W, H)))
-    wide = int(np.clip(2.8 * ppm0, door + 2, 0.3 * max(W, H)))
+    door = int(np.clip(TUNING["door_m"] * ppm0, 0.03 * max(W, H), 0.15 * max(W, H)))
+    wide = int(np.clip(TUNING["wide_m"] * ppm0, door + 2, 0.3 * max(W, H)))
 
     gap_samples: list[int] = []
     gap_fills: list[tuple[np.ndarray, str]] = []
@@ -163,7 +207,7 @@ def _detect_with_heuristic(img: Image.Image, bhk_hint: int,
     labels = _drop_repeated_labels(labels or [], free, W, H, pad)
     seeds = [(lb.cx, lb.cy) for lb in labels]
     lab, _n = ndi.label(free)
-    min_px = max(0.8 * ppm0 * ppm0, 0.0012 * H * W)
+    min_px = max(TUNING["min_room_m2"] * ppm0 * ppm0, 0.0012 * H * W)
     found: list[dict[str, Any]] = []
     for idx, sl in enumerate(ndi.find_objects(lab), start=1):
         if sl is None:
@@ -204,7 +248,7 @@ def _detect_with_heuristic(img: Image.Image, bhk_hint: int,
     for f, r in zip(found, snapped):
         if r is not None and r[2] - r[0] > 2 and r[3] - r[1] > 2:
             items.append({**f, "rect": r})
-    items = _merge_slivers(items, tol=max(wall_px * 1.5, 4.0))
+    items = _merge_slivers(items, tol=max(wall_px * TUNING["sliver_walls"], 4.0))
 
     typed = _guess_types(items, ppm0)
     n_bed = sum(1 for t in typed if t["room_type"] in BEDROOM_TYPES)
@@ -271,7 +315,7 @@ def _structural_walls(rgb: np.ndarray, with_thin: bool = False):
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     lum = (299 * r + 587 * g + 114 * b) / 1000
     sat = rgb.max(axis=-1) - rgb.min(axis=-1)
-    dark = (lum < 115) & (sat < 70)
+    dark = (lum < TUNING["dark_lum"]) & (sat < TUNING["dark_sat"])
     opened = ndi.binary_opening(dark, structure=np.ones((3, 3), bool))
     walls = _keep_long_blobs(opened)
     if walls.sum() < 0.004 * dark.size:
@@ -290,7 +334,37 @@ def _structural_walls(rgb: np.ndarray, with_thin: bool = False):
     ink = ((lum < 175) & (sat < 45)) | ((paper >= 225) & (paper - minc >= 30))
     anchors = ndi.binary_opening(dark, structure=np.ones((3, 3), bool))
     thin = _double_line_walls(ink, walls, anchors)
+    if (walls | thin).sum() < 0.004 * dark.size:
+        # Nothing solid and no double lines: an architect's export where every
+        # wall is a single stroke. The line work itself is the wall network.
+        thin = thin | _single_line_walls(ink)
     return (walls | thin, thin) if with_thin else walls | thin
+
+
+def _single_line_walls(ink: np.ndarray) -> np.ndarray:
+    """Walls drawn as one thin stroke each (CAD exports, blue-line brochures).
+
+    Only the long straight runs are kept, and only if together they enclose the
+    drawing — a page of furniture outlines or text rules does not.
+    """
+    H, W = ink.shape
+    length = max(14, int(0.09 * max(H, W)))
+    h = ndi.binary_opening(ndi.binary_dilation(ink, structure=np.ones((3, 1), bool)),
+                           structure=np.ones((1, length), bool))
+    v = ndi.binary_opening(ndi.binary_dilation(ink, structure=np.ones((1, 3), bool)),
+                           structure=np.ones((length, 1), bool))
+    lines = ndi.binary_dilation(h | v, structure=np.ones((3, 3), bool))
+    if not lines.any():
+        return np.zeros_like(ink)
+    # Door openings break each wall into pieces, so the runs are judged together:
+    # they must cover the drawing the way a plan's walls do.
+    rows = np.where(lines.any(axis=1))[0]
+    cols = np.where(lines.any(axis=0))[0]
+    spans_x = (cols[-1] - cols[0]) / W
+    spans_y = (rows[-1] - rows[0]) / H
+    if spans_x < 0.6 or spans_y < 0.6 or lines.mean() < 0.004:
+        return np.zeros_like(ink)          # a table, a legend or a title block
+    return lines
 
 
 def _double_line_walls(ink: np.ndarray, walls: np.ndarray, anchors: Optional[np.ndarray] = None) -> np.ndarray:
@@ -393,7 +467,7 @@ def _keep_long_blobs(mask: np.ndarray) -> np.ndarray:
         if sl is None:
             continue
         span = max(sl[0].stop - sl[0].start, sl[1].stop - sl[1].start)
-        if span >= 0.08 * max(H, W) or sizes[i - 1] >= 0.002 * H * W:
+        if span >= TUNING["blob_span"] * max(H, W) or sizes[i - 1] >= TUNING["blob_mass"] * H * W:
             keep[i] = True
     return keep[lab]
 
@@ -854,10 +928,174 @@ def _guess_types(items: list[dict[str, Any]], ppm: float) -> list[dict[str, Any]
     beds = sorted((it for it in items if "room_type" not in it), key=lambda it: -it["area"])
     for k, it in enumerate(beds):
         it["room_type"] = "master_bedroom" if k == 0 else "bedroom"
+    by_hue = False
+    if colour_coded:
+        by_hue = _retype_by_hue(items)
+        if not by_hue:
+            _retype_by_floor_colour(items, living)
     return [{"box": list(it["rect"]), "room_type": it["room_type"],
              # Floor drawn in a different colour from the living room (tiles).
-             "tiled": bool(colour_coded and colour_gap(it["fill"]) > 28 and it is not living)}
+             "tiled": bool(colour_coded and colour_gap(it["fill"]) > 28 and it is not living),
+             # Typed from a colour code: later size rules must not overrule it.
+             "by_colour": by_hue and it.get("hue_role") is not None}
             for it in items]
+
+
+def _hue(f: dict[str, float]) -> float:
+    import colorsys
+    h, _l, _s = colorsys.rgb_to_hls(f["r"] / 255, f["g"] / 255, f["b"] / 255)
+    return h * 360
+
+
+def _retype_by_hue(items: list[dict[str, Any]]) -> bool:
+    """Saturated colour-coded plans follow a convention across Indian brochures:
+    yellow for living, orange / salmon / pink for bedrooms, cyan and blue for
+    kitchen and toilets, grey for balconies. Reading the code beats assuming
+    the living room is the biggest room — a master bedroom often is bigger.
+
+    Returns False (and changes nothing) when the fills are not a colour code.
+    """
+    def role(f):
+        if f["lum"] >= 242 and f["sat"] <= 14:
+            return None                                  # white floor: circulation
+        if f["sat"] < 28:
+            return "grey"
+        h = _hue(f)
+        if 165 <= h <= 255:
+            return "wet"
+        if 38 <= h < 75:
+            return "living"
+        if h < 38 or h >= 300:
+            return "sleeping"
+        return None
+
+    saturated = [it for it in items if not it["secondary"] and it["fill"]["sat"] >= 60]
+    roles = {role(it["fill"]) for it in saturated}
+    if len(saturated) < 3 or not {"living", "sleeping"} <= roles:
+        return False
+
+    for it in items:
+        it["hue_role"] = role(it["fill"]) if not it["secondary"] else None
+
+    living = [it for it in items if it["hue_role"] == "living"]
+    sleeping = [it for it in items if it["hue_role"] == "sleeping"]
+    wet = [it for it in items if it["hue_role"] == "wet"]
+    grey = [it for it in items if it["hue_role"] == "grey"]
+
+    # Living: the biggest yellow room; smaller yellow spaces are dining or passage.
+    living.sort(key=lambda it: -it["area"])
+    for k, it in enumerate(living):
+        narrow = it["long"] >= 2.4 * it["short"]
+        if k == 0:
+            it["room_type"] = "living_room"
+        elif narrow or it["area"] < 0.3 * living[0]["area"]:
+            it["room_type"] = "passage"
+        else:
+            it["room_type"] = "dining_area"
+
+    # Bedrooms: every warm room big enough to sleep in; the biggest is the master.
+    sleeping.sort(key=lambda it: -it["area"])
+    biggest_bed = sleeping[0]["area"] if sleeping else 0.0
+    for k, it in enumerate(sleeping):
+        if k and it["area"] < 0.35 * biggest_bed:
+            it["room_type"] = "passage"                  # a warm-coloured nook, not a bedroom
+        else:
+            it["room_type"] = "master_bedroom" if k == 0 else "bedroom"
+
+    # Wet rooms: two blues mean kitchen (lighter, cyan) and toilets (deeper blue);
+    # one blue is split by size — the kitchen is the one clearly bigger.
+    if wet:
+        groups: list[list[dict[str, Any]]] = []
+        for it in sorted(wet, key=lambda it: _hue(it["fill"])):
+            if groups and abs(_hue(it["fill"]) - _hue(groups[-1][0]["fill"])) <= 14:
+                groups[-1].append(it)
+            else:
+                groups.append([it])
+        if len(groups) >= 2:
+            kitchen_group = min(groups, key=lambda g: _hue(g[0]["fill"]))      # cyan sits below blue
+            for g in groups:
+                for it in g:
+                    it["room_type"] = "kitchen" if g is kitchen_group else "bathroom"
+            kitchens = [it for it in kitchen_group]
+            if len(kitchens) > 1:                         # a cyan utility beside the kitchen
+                kitchens.sort(key=lambda it: -it["area"])
+                for it in kitchens[1:]:
+                    it["room_type"] = "passage"
+        else:
+            # One shade of blue for all wet rooms: the kitchen is the biggest of them.
+            ordered = sorted(wet, key=lambda it: -it["area"])
+            lone_is_small = len(ordered) == 1 and biggest_bed and ordered[0]["area"] < 0.25 * biggest_bed
+            for k, it in enumerate(ordered):
+                it["room_type"] = "kitchen" if k == 0 and not lone_is_small else "bathroom"
+
+    # Grey: balconies when they face out or are long and thin, else passage.
+    for it in grey:
+        aspect = it["long"] / max(it["short"], 1e-6)
+        outside = max(it["outside_edges"].values()) > 0.5
+        it["room_type"] = "balcony" if outside or aspect >= 1.8 else "passage"
+
+    if not wet and not any(it["room_type"] == "kitchen" for it in items):
+        # No wet colour at all: the smallest bedroom-sized room is the kitchen.
+        spare = [it for it in items if it["room_type"] in ("bedroom",) and it["area"] < 0.6 * biggest_bed]
+        if spare:
+            min(spare, key=lambda it: it["area"])["room_type"] = "kitchen"
+    return True
+
+
+def _retype_by_floor_colour(items: list[dict[str, Any]], living: dict[str, Any]) -> None:
+    """On a brochure that colour-codes its floors, rooms sharing a colour are
+    the same kind of room: the bedrooms are one colour, the wet rooms another.
+
+    Grouping by colour beats judging each room on its own size, which is what
+    turns a compact flat's 4 m² bedroom into a bathroom.
+    """
+    def gap(a, b):
+        return math.dist((a["r"], a["g"], a["b"]), (b["r"], b["g"], b["b"]))
+
+    groups: list[dict[str, Any]] = []
+    for it in items:
+        if it["secondary"] or it["fill"]["lum"] >= 242 and it["fill"]["sat"] <= 14:
+            continue                                   # circulation, not a coloured room
+        for g in groups:
+            if gap(it["fill"], g["fill"]) <= 30:
+                g["members"].append(it)
+                break
+        else:
+            groups.append({"fill": it["fill"], "members": [it]})
+    if len(groups) < 3:
+        return                                          # not enough colours to mean anything
+
+    def outdoorish(it):
+        aspect = it["long"] / max(it["short"], 1e-6)
+        return aspect >= 2.0 and (max(it["outside_edges"].values()) > 0.5
+                                  or max(it.get("railing_edges", {}).values() or [0.0]) > 0.5)
+
+    home = next(g for g in groups if living in g["members"])
+    rest = [g for g in groups if g is not home]
+    for g in rest:
+        g["area"] = statistics.median(m["area"] for m in g["members"])
+    outdoor = [g for g in rest if all(outdoorish(m) for m in g["members"])]
+    indoor = sorted((g for g in rest if g not in outdoor), key=lambda g: g["area"])
+    if not indoor:
+        return
+
+    for g in outdoor:
+        for m in g["members"]:
+            m["room_type"] = "balcony"
+    wet, kitchen_group = indoor[0], indoor[1] if len(indoor) > 1 else None
+    for m in wet["members"]:
+        m["room_type"] = "bathroom"
+    if kitchen_group is not None and len(kitchen_group["members"]) <= 2 and len(indoor) > 2:
+        for m in kitchen_group["members"]:
+            m["room_type"] = "kitchen"
+        bedroom_groups = indoor[2:]
+    else:
+        bedroom_groups = indoor[1:]
+    sleeping = [m for g in bedroom_groups for m in g["members"]]
+    for m in sorted(sleeping, key=lambda m: -m["area"]):
+        m["room_type"] = "bedroom"
+    if sleeping:
+        max(sleeping, key=lambda m: m["area"])["room_type"] = "master_bedroom"
 
 
 def _label_rooms(rooms: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1632,6 +1870,44 @@ def _template_pools(variants, bhk, tier):
     return pools
 
 
+_FACING = {0.0: (0.0, 1.0), 90.0: (1.0, 0.0), 180.0: (0.0, -1.0), 270.0: (-1.0, 0.0)}
+
+
+def _stray_of_a_pair(kept: list[dict[str, Any]]):
+    """A flanking pair (two nightstands) that the room could not seat properly.
+
+    Returns the one to drop: the partner sits either side of the bed, level with
+    the headboard, or it does not belong in the room at all.
+    """
+    from ids.solver import rule_for
+
+    by_cat: dict[str, list[dict[str, Any]]] = {}
+    for o in kept:
+        by_cat.setdefault(o["category"], []).append(o)
+    for cat, items in by_cat.items():
+        rule = rule_for(cat)
+        if not rule.flanks or len(items) != 2:
+            continue
+        for anchor_cat in rule.against:
+            anchors = by_cat.get(anchor_cat) or []
+            if not anchors:
+                continue
+            anchor = anchors[0]
+            fx, fy = _FACING.get(float(anchor["rotation"]["yaw"]) % 360, (0.0, 1.0))
+            lx, ly = -fy, fx
+            placed = []
+            for item in items:
+                dx = item["position"]["x"] - anchor["position"]["x"]
+                dy = item["position"]["z"] - anchor["position"]["z"]
+                placed.append((dx * lx + dy * ly, abs(dx * fx + dy * fy), item))
+            (side_a, along_a, first), (side_b, along_b, second) = placed
+            level = (anchor["dimensions"]["depth"] + 0.6) / 2
+            same_side = side_a * side_b >= 0
+            if same_side or max(along_a, along_b) > level:
+                return second if along_b >= along_a else first
+    return None
+
+
 def _furnish(space: _Space, pools, used, openings):
     from ids.scene import Opening as SOpening, Room as SRoom, Scene as SScene, SceneObject as SObj, validate
     from ids.solver import SpatialSolver, SweepBackend, rule_for
@@ -1656,12 +1932,29 @@ def _furnish(space: _Space, pools, used, openings):
             dropped.append(f"{space.label}: {o['label']}")
             continue
         candidates.append(o)
+
+    # Some templates leave out the very thing that makes the room readable — a
+    # kitchen with wall cabinets but no counter. Borrow that piece from another
+    # template so it keeps its real model, colour and finish.
+    must_have = (_ESSENTIAL.get(space.room_type) or ("",))[0]
+    if must_have and not any(o["category"] == must_have for o in candidates):
+        spare = _example_object(must_have)
+        if spare is not None:
+            spare = copy.deepcopy(spare)
+            dims = spare["dimensions"]
+            fit = min(long_side / max(dims["width"], 1e-6), short_side / max(dims["depth"], 1e-6), 1.0)
+            if fit < 1.0:
+                dims["width"] = round(dims["width"] * fit, 3)
+                dims["depth"] = round(dims["depth"] * fit, 3)
+            candidates.append(spare)
+
     candidates.sort(key=lambda o: rule_for(o["category"]).priority)
     budget, used_area, kept = 0.5 * space.w * space.d, 0.0, []
     for o in candidates:
         fp = o["dimensions"]["width"] * o["dimensions"]["depth"]
         stack = rule_for(o["category"]).stackable
-        if kept and not stack and used_area + fp > budget:
+        essential = o["category"] == must_have and not any(k["category"] == must_have for k in kept)
+        if kept and not stack and not essential and used_area + fp > budget:
             dropped.append(f"{space.label}: {o['label']}")
             continue
         if not stack:
@@ -1719,6 +2012,13 @@ def _furnish(space: _Space, pools, used, openings):
                                      o["rotation"], o["dimensions"]) for o in kept])
         bad = {part for v in validate(scene) for part in v.object_id.split("&")}
         if not bad:
+            stray = _stray_of_a_pair(kept)
+            if stray is not None:
+                # A bedside table with nowhere to stand looks like a leftover.
+                # One nightstand beside the bed reads as a decision.
+                dropped.append(f"{space.label}: {stray['label']}")
+                kept = [o for o in kept if o is not stray]
+                continue
             break
         worst = max((o for o in kept if o["object_id"] in bad),
                     key=lambda o: rule_for(o["category"]).priority)
@@ -1726,7 +2026,64 @@ def _furnish(space: _Space, pools, used, openings):
         kept = [o for o in kept if o is not worst]
         if not kept:
             break
+    if not kept:
+        # A WC barely wider than its door still has a pan in it. Rather than
+        # show the customer an empty tiled box, fit the room's essential piece.
+        essential = _essential_fitting(space, candidates, openings)
+        if essential is not None:
+            essential["object_id"] = f"{space.sid}__{essential['category']}"
+            essential["room_id"] = space.sid
+            kept = [essential]
+            dropped = [d for d in dropped if not d.endswith(essential["label"])]
     return kept, dropped
+
+
+@lru_cache(maxsize=1)
+def _examples_by_category() -> dict[str, dict[str, Any]]:
+    """One real object of each category, taken from the baked room templates."""
+    variants, _ = _baked()
+    out: dict[str, dict[str, Any]] = {}
+    for variant in variants.values():
+        for o in (variant.get("scene") or {}).get("objects", []):
+            out.setdefault(o["category"], o)
+    return out
+
+
+def _example_object(category: str) -> Optional[dict[str, Any]]:
+    return _examples_by_category().get(category)
+
+
+_ESSENTIAL = {"bathroom": ("wc", "vanity", "shower"), "kitchen": ("counter_run", "wall_cabinets"),
+              "master_bedroom": ("bed",), "bedroom": ("bed",), "living_room": ("sofa",),
+              "dining_area": ("dining_set",), "study": ("desk",), "pooja_room": ("mandir",)}
+
+
+def _essential_fitting(space: _Space, candidates: list[dict[str, Any]], openings) -> Optional[dict[str, Any]]:
+    """The one piece that makes a room read as that room, shrunk to fit and put
+    in the corner furthest from the door."""
+    wanted = _ESSENTIAL.get(space.room_type, ())
+    pick = next((o for cat in wanted for o in candidates if o["category"] == cat), None)
+    if pick is None:
+        return None
+    item = copy.deepcopy(pick)
+    dims = item["dimensions"]
+    inner_w, inner_d = max(space.w - 0.24, 0.35), max(space.d - 0.24, 0.35)
+    if dims["width"] > inner_w or dims["depth"] > inner_d:
+        shrink = min(inner_w / dims["width"], inner_d / dims["depth"], 1.0)
+        dims["width"] = round(dims["width"] * shrink, 3)
+        dims["depth"] = round(dims["depth"] * shrink, 3)
+    doors = [o for o in openings if o["room_id"] == space.sid and o["kind"] != "window"]
+    door = doors[0] if doors else None
+    dx = space.x0 + dims["width"] / 2 + 0.12
+    dz = space.y0 + dims["depth"] / 2 + 0.12
+    if door is not None:                       # sit away from the doorway
+        cx = (door["p0"][0] + door["p1"][0]) / 2
+        cy = (door["p0"][1] + door["p1"][1]) / 2
+        dx = (space.x0 + dims["width"] / 2 + 0.12) if cx > space.cx             else (space.x1 - dims["width"] / 2 - 0.12)
+        dz = (space.y0 + dims["depth"] / 2 + 0.12) if cy > space.cy             else (space.y1 - dims["depth"] / 2 - 0.12)
+    item["position"] = {"x": round(dx, 3), "y": 0.0, "z": round(dz, 3)}
+    item["rotation"] = {"yaw": 0.0}
+    return item
 
 
 # ═════════════════════════════════════════════════════════════ SVG plan ══════

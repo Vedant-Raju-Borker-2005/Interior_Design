@@ -924,6 +924,10 @@ export interface PlanLayout {
   rooms: PlanRoom[]
   plan_width_m: number
   plan_depth_m?: number | null        // set when the uploaded image is stretched
+  // A brochure sheet showing several flats: the one being read, and the rest.
+  panels?: { box: [number, number, number, number]; source: string }[] | null
+  panel?: number | null
+  sheet_url?: string | null
   method?: 'heuristic' | 'gemini'
   notes?: string[]
   summary?: { bhk: string; rooms: number; objects: number; area_sqft: number; skipped_items?: string[] }
@@ -948,8 +952,11 @@ export const planLayoutAPI = {
     form.append('file', file)
     return axiosInstance.post<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}/detect`, form, { timeout: 90000 })
   },
-  redetect: (projectId: string) =>
-    axiosInstance.post<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}/redetect`, null, { timeout: 90000 }),
+  // `panel` picks another flat when the upload was a sheet of several.
+  redetect: (projectId: string, panel?: number) =>
+    axiosInstance.post<PlanLayoutPayload>(
+      `/api/v1/ai/plan-layout/${projectId}/redetect${panel === undefined ? '' : `?panel=${panel}`}`,
+      null, { timeout: 90000 }),
   save: (projectId: string, body: { rooms: PlanRoom[]; plan_width_m: number; plan_depth_m?: number; activate?: boolean; sync_bhk?: boolean }) =>
     axiosInstance.put<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}`, body, { timeout: 60000 }),
   disable: (projectId: string) =>

@@ -198,3 +198,26 @@ def test_a_stretched_plan_keeps_true_room_sizes():
     assert scene["bounds"]["depth"] == pytest.approx(6.0, abs=0.06)
     with pytest.raises(PL.PlanError):
         PL.clean_plan(rooms, 8.0, 800, 400, plan_depth_m=40.0)
+
+
+def test_every_room_gets_the_piece_that_makes_it_that_room():
+    """A 1.3 m2 WC is still a WC: it shows a pan, not an empty tiled box."""
+    rooms = [
+        {"room_type": "living_room", "box": [0.30, 0.0, 1.0, 1.0]},
+        {"room_type": "bathroom", "label": "Bath", "box": [0.0, 0.0, 0.16, 0.18]},
+        {"room_type": "kitchen", "box": [0.0, 0.18, 0.30, 0.45]},
+        {"room_type": "master_bedroom", "box": [0.0, 0.45, 0.30, 1.0]},
+    ]
+    scene = PL.build_plan_variant(PL.clean_plan(rooms, 7.5, 1000, 1000), BRIEF)["scene"]
+    by_room: dict[str, list[str]] = {}
+    for o in scene["objects"]:
+        by_room.setdefault(o["room_id"], []).append(o["category"])
+    for room in scene["rooms"]:
+        got = by_room.get(room["room_id"], [])
+        assert got, f"{room['label']} came out empty"
+        if room["room_type"] == "bathroom":
+            assert {"wc", "vanity", "shower"} & set(got), got
+        if room["room_type"] == "kitchen":
+            assert {"counter_run", "wall_cabinets"} & set(got), got
+        if room["room_type"] in ("bedroom", "master_bedroom"):
+            assert "bed" in got, got

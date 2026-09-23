@@ -340,6 +340,16 @@ class PlanLayoutReq(BaseModel):
     sync_bhk: bool = Field(False, description="Also set the project's BHK to match the plan")
 
 
+def _save_panel(img, detected: dict[str, Any], project_id: str, plan_dir: str, ext: str) -> str:
+    """Save the flat that was read out of a multi-flat sheet, and return its URL."""
+    box = detected["panels"][detected["panel"]]["box"]
+    w, h = img.size
+    crop = img.crop((round(box[0] * w), round(box[1] * h), round(box[2] * w), round(box[3] * h)))
+    name = f"plan_{project_id[:8]}_{uuid.uuid4().hex[:8]}_flat{detected['panel'] + 1}{ext}"
+    crop.convert("RGB").save(os.path.join(plan_dir, name), quality=92)
+    return f"{BACKEND_URL}/static/assets/floor_plans/{name}"
+
+
 def _plan_payload(project: Project, db: Session) -> dict[str, Any]:
     plan = project.plan_layout if isinstance(project.plan_layout, dict) else None
     return {
@@ -396,6 +406,11 @@ async def detect_plan_layout(
     hint = int(digits[0]) if digits else 2
     mime = file.content_type or mimetypes.guess_type(name)[0] or "image/png"
     detected = await run_in_threadpool(detect_rooms, img, bhk_hint=hint, raw=data, mime=mime)
+    # A sheet of several flats is read one flat at a time, so the picture the
+    # customer checks has to be that flat, not the whole sheet.
+    sheet_url = None
+    if detected.get("panels"):
+        sheet_url, url = url, _save_panel(img, detected, project.id, plan_dir, ext)
 
     project.floor_plan_url = url
     db.add(FloorPlan(project_id=project.id, file_url=url, file_type=ext.lstrip("."), uploaded_by=user.id))
@@ -412,6 +427,9 @@ async def detect_plan_layout(
         "method": detected["method"],
         "notes": detected["notes"],
         "uploaded_at": datetime.datetime.utcnow().isoformat(),
+        "sheet_url": sheet_url,
+        "panels": detected.get("panels"),
+        "panel": detected.get("panel"),
         # Keep the last confirmed layout live until the new one is confirmed.
         "previous_active": previous if previous.get("status") == "active" else previous.get("previous_active"),
     }
@@ -421,12 +439,18 @@ async def detect_plan_layout(
 
 
 @router.post("/plan-layout/{project_id}/redetect", summary="Floor plan — detect the rooms again on the uploaded image")
-async def redetect_plan_layout(project_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+async def redetect_plan_layout(project_id: str, panel: Optional[int] = None,
+                               user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Re-run room detection on the plan already uploaded (e.g. after the
-    detector improves), without uploading the file again."""
+    detector improves), without uploading the file again.
+
+    `panel` picks a different flat when the upload was a sheet of several.
+    """
     project = _owned(project_id, user, db)
     current = project.plan_layout if isinstance(project.plan_layout, dict) else None
-    name = os.path.basename((current or {}).get("image_url") or "")
+    # Re-read the whole sheet when one is kept, so another flat can be chosen.
+    source = (current or {}).get("sheet_url") or (current or {}).get("image_url") or ""
+    name = os.path.basename(source)
     path = os.path.join(ASSET_DIR, "floor_plans", name)
     if not name or not os.path.isfile(path):
         raise HTTPException(400, "Upload the floor plan image first")
@@ -440,11 +464,23 @@ async def redetect_plan_layout(project_id: str, user: User = Depends(current_use
     digits = re.findall(r"\d", normalize_bhk(project.bhk_type) or "2")
     hint = int(digits[0]) if digits else 2
     mime = mimetypes.guess_type(name)[0] or "image/png"
-    detected = await run_in_threadpool(detect_rooms, img, bhk_hint=hint, raw=data, mime=mime)
+    detected = await run_in_threadpool(detect_rooms, img, bhk_hint=hint, raw=data, mime=mime, panel=panel)
+    plan_dir = os.path.join(ASSET_DIR, "floor_plans")
+    ext = os.path.splitext(name)[1] or ".png"
+    image_url = current.get("image_url")
+    sheet_url = current.get("sheet_url")
+    if detected.get("panels"):
+        sheet_url = sheet_url or current.get("image_url")
+        image_url = _save_panel(img, detected, project.id, plan_dir, ext)
+        project.floor_plan_url = image_url
 
     project.plan_layout = {
         **{k: v for k, v in current.items() if k not in ("summary", "confirmed_at")},
         "status": "draft",
+        "image_url": image_url,
+        "sheet_url": sheet_url,
+        "panels": detected.get("panels"),
+        "panel": detected.get("panel"),
         "rooms": detected["rooms"],
         "plan_width_m": detected["plan_width_m"],
         "plan_depth_m": detected.get("plan_depth_m"),

@@ -99,3 +99,31 @@ def test_label_reading_failure_still_returns_rooms(monkeypatch):
     det = PL.detect_rooms(im, bhk_hint=2)
     assert len(det["rooms"]) >= 5
     assert any("Couldn't read the room names" in n for n in det["notes"])
+
+
+def test_a_numbered_plan_is_named_from_its_key():
+    """Architects print 1, 2, 3 in the rooms and explain them in a key."""
+    from PIL import Image
+    from app.services.plan_ocr import Text, apply_legend
+
+    W, H = 1000, 800
+    key = [Text("1 - LIVING ROOM", 820, 60, 980, 80, 0.9), Text("2 - KITCHEN", 820, 90, 960, 110, 0.9),
+           Text("3-MASTER BEDROOM", 820, 120, 990, 140, 0.9), Text("4 - TOILET", 820, 150, 950, 170, 0.9)]
+    marks = [Text("1", 190, 190, 210, 210, 0.9), Text("2", 590, 190, 610, 210, 0.9),
+             Text("3", 190, 590, 210, 610, 0.9), Text("4", 590, 590, 610, 610, 0.9)]
+    rooms = [{"box": [0.0, 0.0, 0.4, 0.5], "room_type": "bedroom", "label": "Bedroom"},
+             {"box": [0.4, 0.0, 0.8, 0.5], "room_type": "bedroom", "label": "Bedroom 2"},
+             {"box": [0.0, 0.5, 0.4, 1.0], "room_type": "kitchen", "label": "Kitchen"},
+             {"box": [0.4, 0.5, 0.8, 1.0], "room_type": "living_room", "label": "Living Room"}]
+    out = apply_legend({"rooms": rooms, "notes": []}, Image.new("RGB", (W, H), "white"), texts=key + marks)
+    assert [r["room_type"] for r in out["rooms"]] == ["living_room", "kitchen", "master_bedroom", "bathroom"]
+    assert all(r.get("from_label") for r in out["rooms"])
+    assert "key" in out["notes"][0]
+
+
+def test_key_lines_are_not_room_labels():
+    from app.services.plan_ocr import Text
+
+    labels = build_labels([Text("3 - KITCHEN", 820, 60, 960, 80, 0.9),
+                           Text("BEDROOM", 200, 200, 300, 220, 0.9)], 1000, 800)
+    assert [l.room_type for l in labels] == ["bedroom"]

@@ -7,7 +7,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, Query, HTTPException, UploadFile, File, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_
+from sqlalchemy import func, or_, and_, extract, select
 from pydantic import BaseModel
 
 from ..db import get_db
@@ -132,59 +132,75 @@ def get_stats(
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user(["SUPER_ADMIN", "OPERATIONS_ADMIN", "SALES_ADMIN", "FINANCE_ADMIN"]))
 ):
-    total_users = db.query(User).count()
-    total_projects = db.query(Project).count()
-    total_quotations = db.query(Quotation).count()
-    total_inquiries = db.query(Inquiry).count()
-    total_vendors = db.query(Vendor).count()
+    # Every query here is a round trip to a hosted database, so the counters are
+    # grouped into seven aggregate queries rather than one query per number.
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    current_year = datetime.datetime.utcnow().year
 
-    budgets = db.query(Project.budget).all()
-    revenue_pipeline = sum(b[0] for b in budgets if b[0])
+    # 1. Users, split by role.
+    user_rows = db.query(User.role, func.count(User.id)).group_by(User.role).all()
+    total_users = sum(c for _, c in user_rows)
+    total_clients = sum(c for r, c in user_rows if r == "customer")
+    total_enterprises = sum(c for r, c in user_rows if r and "enterprise" in r)
 
-    status_rows = db.query(Project.status, func.count(Project.id)).group_by(Project.status).all()
-    projects_by_status = {s: c for s, c in status_rows}
+    # 2. Customer sign-ups per month.
+    growth_rows = db.query(
+        extract("year", User.created_at), extract("month", User.created_at), func.count(User.id)
+    ).filter(User.role == "customer").group_by(
+        extract("year", User.created_at), extract("month", User.created_at)
+    ).all()
+    customer_growth = [{"month": m, "count": 0} for m in months]
+    for year, month, count in growth_rows:
+        if year and month and int(year) == current_year:
+            customer_growth[int(month) - 1]["count"] = count
 
+    # 3. Projects, split by status, with their budgets.
+    proj_rows = db.query(
+        Project.status, func.count(Project.id), func.coalesce(func.sum(Project.budget), 0.0)
+    ).group_by(Project.status).all()
+    total_projects = sum(c for _, c, _ in proj_rows)
+    revenue_pipeline = sum(float(b or 0) for _, _, b in proj_rows)
+    projects_by_status = {s: c for s, c, _ in proj_rows}
+    closed = {"done", "cancelled", "closed"}
+    active_projects = sum(c for s, c, _ in proj_rows if s and s not in closed)
+    delayed_projects = sum(c for s, c, _ in proj_rows if s == "delayed")
+
+    # 4. Projects started per month.
+    ptrend_rows = db.query(
+        extract("year", Project.created_at), extract("month", Project.created_at), func.count(Project.id)
+    ).group_by(extract("year", Project.created_at), extract("month", Project.created_at)).all()
+    project_trend = [{"month": m, "count": 0} for m in months]
+    for year, month, count in ptrend_rows:
+        if year and month and int(year) == current_year:
+            project_trend[int(month) - 1]["count"] = count
+
+    # 5. Inquiries, split by status.
     inq_rows = db.query(Inquiry.status, func.count(Inquiry.id)).group_by(Inquiry.status).all()
+    total_inquiries = sum(c for _, c in inq_rows)
     inquiries_by_status = {s: c for s, c in inq_rows}
 
-    # PRD metrics
-    total_clients = db.query(User).filter(User.role == "customer").count()
-    active_projects = db.query(Project).filter(Project.status.notin_(["done", "cancelled", "closed"])).count()
-    total_revenue = db.query(func.sum(Payment.amount)).filter(Payment.status == "completed").scalar() or 0.0
-    pending_payments = db.query(Payment).filter(Payment.status == "pending").count()
-    delayed_projects = db.query(Project).filter(Project.status == "delayed").count()
-    active_vendors = db.query(Vendor).filter(Vendor.status == "APPROVED").count()
-    open_issues = db.query(Issue).filter(Issue.status.notin_(["resolved", "closed"])).count()
-    total_enterprises = db.query(User).filter(User.role.like("%enterprise%")).count()
-
-    # Trends
-    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    # 6. Payments, split by status and month.
+    pay_rows = db.query(
+        Payment.status, extract("year", Payment.payment_date), extract("month", Payment.payment_date),
+        func.count(Payment.id), func.coalesce(func.sum(Payment.amount), 0.0)
+    ).group_by(
+        Payment.status, extract("year", Payment.payment_date), extract("month", Payment.payment_date)
+    ).all()
+    total_revenue = sum(float(a or 0) for s, _, _, _, a in pay_rows if s == "completed")
+    pending_payments = sum(c for s, _, _, c, _ in pay_rows if s == "pending")
     revenue_trend = [{"month": m, "amount": 0.0} for m in months]
-    project_trend = [{"month": m, "count": 0} for m in months]
-    customer_growth = [{"month": m, "count": 0} for m in months]
+    for status, year, month, _, amount in pay_rows:
+        if status == "completed" and year and month and int(year) == current_year:
+            revenue_trend[int(month) - 1]["amount"] += float(amount or 0)
 
-    # Populate monthly mock trends
-    current_year = datetime.datetime.utcnow().year
-    payments = db.query(Payment).filter(Payment.status == "completed").all()
-    for p in payments:
-        if p.payment_date and p.payment_date.year == current_year:
-            m_idx = p.payment_date.month - 1
-            if 0 <= m_idx < 12:
-                revenue_trend[m_idx]["amount"] += p.amount
-
-    all_projs = db.query(Project).all()
-    for p in all_projs:
-        if p.created_at and p.created_at.year == current_year:
-            m_idx = p.created_at.month - 1
-            if 0 <= m_idx < 12:
-                project_trend[m_idx]["count"] += 1
-
-    all_custs = db.query(User).filter(User.role == "customer").all()
-    for c in all_custs:
-        if c.created_at and c.created_at.year == current_year:
-            m_idx = c.created_at.month - 1
-            if 0 <= m_idx < 12:
-                customer_growth[m_idx]["count"] += 1
+    # 7. The remaining standalone counters, as subqueries of one statement.
+    total_quotations, total_vendors, active_vendors, open_issues = db.execute(select(
+        select(func.count()).select_from(Quotation).scalar_subquery(),
+        select(func.count()).select_from(Vendor).scalar_subquery(),
+        select(func.count()).select_from(Vendor).where(Vendor.status == "APPROVED").scalar_subquery(),
+        select(func.count()).select_from(Issue).where(
+            Issue.status.notin_(["resolved", "closed"])).scalar_subquery(),
+    )).one()
 
     return {
         "total_users": total_users,
@@ -195,7 +211,7 @@ def get_stats(
         "revenue_pipeline": revenue_pipeline,
         "projects_by_status": projects_by_status,
         "inquiries_by_status": inquiries_by_status,
-        
+
         "total_clients": total_clients,
         "total_enterprises": total_enterprises,
         "active_projects": active_projects,
@@ -204,7 +220,7 @@ def get_stats(
         "delayed_projects": delayed_projects,
         "active_vendors": active_vendors,
         "open_issues": open_issues,
-        
+
         "revenue_trend": revenue_trend,
         "project_trend": project_trend,
         "customer_growth": customer_growth

@@ -142,6 +142,7 @@ body.layout-3d #view-pane { width: 100%; }
                font-size: 15px; line-height: 1; color: #2C2822; }
 #zoom button:hover { background: #fff; border-color: #B9B0A2; }
 #zoom .sep { height: 6px; }
+#zoom button.on { background: #2C2822; color: #FFD58A; border-color: #2C2822; }
 #viewport canvas { touch-action: none; outline: none; cursor: grab; }
 #viewport canvas:active { cursor: grabbing; }
 </style>
@@ -179,6 +180,8 @@ body.layout-3d #view-pane { width: 100%; }
       <button id="rot-left" title="Rotate left (Q)">&#x27F2;</button>
       <button id="rot-right" title="Rotate right (E)">&#x27F3;</button>
       <button id="view-reset" title="Reset view (R)">&#x2302;</button>
+      <div class="sep"></div>
+      <button id="light-mode" title="Evening lighting: dim daylight to see the lamps (L)" aria-pressed="false">&#x263E;</button>
     </div>
     <div id="hint">Drag to turn · right-drag to pan · scroll or pinch to zoom · double-click to zoom in · hover an item for specs</div>
     <div id="status">loading…</div>
@@ -469,6 +472,7 @@ function lightPool(r, colour, strength) {
     map: T('contact'), color: new THREE.Color(colour), transparent: true,
     blending: THREE.AdditiveBlending, depthWrite: false, opacity: strength,
   }));
+  poolMats.get(k).userData.pool = strength;
   const m = new THREE.Mesh(decalGeo, poolMats.get(k));
   m.scale.set(r * 2, r * 2, 1);
   m.rotation.x = -Math.PI / 2;
@@ -710,8 +714,9 @@ const AssetProviders = {
     return g;
   },
 
-  nightstand(d, m) {
+  nightstand(d, m, obj) {
     const g = new THREE.Group(), h = d.height, w = d.width, dp = d.depth;
+    if (obj && obj.lampPick) g.add(at(tableLamp(lampLook(obj.lampPick), Math.min(w, dp)), 0, h, -dp * 0.12));
     g.add(at(B(w, h - 0.10, dp, m.wood, 0.012), 0, 0.10 + (h - 0.10) / 2, 0));
     for (const dy of [0.30, 0.66]) {
       g.add(at(B(w - 0.045, (h - 0.14) * 0.40, 0.012, m.woodDark, 0.004),
@@ -1161,23 +1166,33 @@ const AssetProviders = {
     return g;
   },
 
-  floor_lamp(d, m) {
+  floor_lamp(d, m, obj) {
     const g = new THREE.Group(), h = Math.max(1.35, d.height);
-    g.add(at(cyl(0.15, 0.17, 0.025, m.metalDark, 22), 0, 0.012, 0));
-    g.add(at(cyl(0.016, 0.018, h - 0.30, m.metal, 12), 0, (h - 0.30) / 2, 0));
-    const shadeMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color('#FBF1DC'), roughness: 0.92, side: THREE.DoubleSide,
-      emissive: new THREE.Color('#FFDCA0'), emissiveIntensity: 0.55,
-    });
-    shadeMat.userData.uv = 0;
-    const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.22, 0.27, HI() ? 26 : 14, 1, true), shadeMat);
-    g.add(at(sh, 0, h - 0.16, 0));
+    // A lamp the customer picked shows its colour (or wood) on the stand and shade.
+    const lk = obj && obj.pick ? lampLook(obj.pick) : null;
+    const baseMat = lk ? (lk.wood ? m.woodDark : m.primaryDark) : m.metalDark;
+    const poleMat = lk ? (lk.wood ? m.wood : m.primary) : m.metal;
+    g.add(at(cyl(0.15, 0.17, 0.025, baseMat, 22), 0, 0.012, 0));
+    g.add(at(cyl(0.016, 0.018, h - 0.30, poleMat, 12), 0, (h - 0.30) / 2, 0));
+    if (lk && lk.hex) {
+      g.add(at(lampShade(0.17, 0.22, 0.27, lk), 0, h - 0.16, 0));
+    } else {
+      const shadeMat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#FBF1DC'), roughness: 0.92, side: THREE.DoubleSide,
+        emissive: new THREE.Color('#FFDCA0'), emissiveIntensity: 0.55,
+      });
+      shadeMat.userData.uv = 0;
+      shadeMat.userData.glow = 0.55;
+      const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.22, 0.27, HI() ? 26 : 14, 1, true), shadeMat);
+      g.add(at(sh, 0, h - 0.16, 0));
+    }
     const disc = new THREE.Mesh(new THREE.CircleGeometry(0.215, 18),
-      new THREE.MeshBasicMaterial({ color: 0xFFE6B8 }));
+      new THREE.MeshBasicMaterial({ color: lk ? lk.glow : 0xFFE6B8 }));
     disc.rotation.x = Math.PI / 2;
     g.add(at(disc, 0, h - 0.295, 0));
-    const pl = new THREE.PointLight(0xFFE0B0, 5.5, 4.6, 2);
+    const pl = new THREE.PointLight(lk ? lk.glow : 0xFFE0B0, 5.5, 4.6, 2);
     pl.castShadow = false;
+    pl.userData.lamp = { intensity: 5.5, distance: 4.6 };
     g.add(at(pl, 0, h - 0.22, 0));
     if (LAYERS.decor) g.add(at(lightPool(0.95, '#FFCE86', 0.32), 0, 0, 0));
     const cs = contactShadow(0.55, 0.55, 0.30); if (cs) g.add(cs);
@@ -1205,6 +1220,50 @@ function fitToDimensions(node, dims) {
   node.position.sub(new THREE.Vector3(c.x, bb2.min.y, c.z));
   node.traverse(o => { if (o.isMesh) { o.castShadow = LAYERS.shadows; o.receiveShadow = true; } });
 }
+/* A lighting product the customer picked: its colour and wood for the lamp
+   body and shade, and the bulb tone when the vendor offers that option. */
+function lampLook(pick) {
+  const k = (pick && pick.look) || {};
+  let glow = 0xFFE0B0;
+  for (const [key, val] of Object.entries((pick && pick.attributes) || {})) {
+    if (!/light|bulb|glow|temperature|tone/i.test(key)) continue;
+    const v = String(val).toLowerCase();
+    if (/warm|yellow|amber/.test(v)) glow = 0xFFD497;
+    else if (/cool|day/.test(v)) glow = 0xDCE6FF;
+    else if (/neutral|natural|white/.test(v)) glow = 0xFFF0DC;
+  }
+  return { hex: k.hex || k.wood_hex || null, wood: k.wood_hex || null,
+    roughness: typeof k.roughness === 'number' ? k.roughness : 0.6, glow };
+}
+// Open shade: the chosen colour outside, a warm glow inside.
+function lampShade(rTop, rBot, h, lk) {
+  const geo = new THREE.CylinderGeometry(rTop, rBot, h, HI() ? 26 : 14, 1, true);
+  const outer = new THREE.MeshStandardMaterial({ color: new THREE.Color(lk.hex), roughness: 0.9,
+    side: THREE.FrontSide, emissive: new THREE.Color(lk.glow), emissiveIntensity: 0.05 });
+  const inner = new THREE.MeshStandardMaterial({ color: new THREE.Color('#FFF6E6'), roughness: 0.9,
+    side: THREE.BackSide, emissive: new THREE.Color(lk.glow), emissiveIntensity: 0.6 });
+  outer.userData.glow = 0.05; inner.userData.glow = 0.6;
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(geo, outer), new THREE.Mesh(geo, inner));
+  return g;
+}
+// Bedside lamp, stood on a nightstand when the room has no floor lamp.
+function tableLamp(lk, top) {
+  const g = new THREE.Group();
+  const hex = lk.hex || '#FBF1DC';
+  const body = lk.wood ? surface('wood', { color: lk.wood, roughness: 0.52, env: 0.8 })
+    : surface(null, { color: hex, roughness: lk.roughness, env: 0.9 });
+  g.add(at(cyl(0.065, 0.075, 0.022, body, 18), 0, 0.011, 0));
+  g.add(at(cyl(0.022, 0.034, 0.24, body, 14), 0, 0.142, 0));
+  g.add(at(lampShade(0.085, 0.12, 0.15, Object.assign({}, lk, { hex })), 0, 0.33, 0));
+  const pl = new THREE.PointLight(lk.glow, 2.2, 2.6, 2);
+  pl.castShadow = false;
+  pl.userData.lamp = { intensity: 2.2, distance: 2.6 };
+  g.add(at(pl, 0, 0.32, 0));
+  if (LAYERS.decor) g.add(at(lightPool(top * 0.42, '#FFCE86', 0.22), 0, 0.004, 0));
+  return g;
+}
+
 /* The look of a product the customer picked on the Customize step. The server
    has already resolved the option names (colour, fabric, wood finish, texture)
    into a colour, fabric family, wood species and sheen. Returns the base colour
@@ -1315,8 +1374,9 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 pmrem.compileEquirectangularShader();
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
-scene.add(new THREE.HemisphereLight(0xD8E8FA, 0x6E6152, 0.30));
-scene.add(new THREE.AmbientLight(0xFFFFFF, 0.05));
+const hemi = new THREE.HemisphereLight(0xD8E8FA, 0x6E6152, 0.30);
+const amb = new THREE.AmbientLight(0xFFFFFF, 0.05);
+scene.add(hemi); scene.add(amb);
 const sun = new THREE.DirectionalLight(0xFFEBC8, 3.5);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -1329,6 +1389,52 @@ scene.add(sun); scene.add(sun.target);
 const bounce = new THREE.DirectionalLight(0xAEC6DE, 0.28);
 bounce.position.set(-18, 12, -16);
 scene.add(bounce);
+
+/* Day / evening. Evening dims the sun, sky and reflections so the lamps read
+   as lit; every lamp, room light and glow keeps its own base value. */
+const LIGHT_MODES = {
+  day: { sun: 3.5, hemi: 0.30, amb: 0.05, bounce: 0.28, env: 1, lamp: 1, reach: 1,
+    room: 1, glow: 1, pool: 1, exposure: 1.28, bg: '#AFC6D6' },
+  evening: { sun: 0.12, hemi: 0.05, amb: 0.02, bounce: 0.03, env: 0.22, lamp: 3.4, reach: 1.35,
+    room: 0.8, glow: 2.6, pool: 2.2, exposure: 1.45, bg: '#1F2731' },
+};
+let lightMode = 'day';
+function lightObject(root) {
+  const L = LIGHT_MODES[lightMode];
+  root.traverse(o => {
+    const u = o.userData;
+    if (o.isLight) {
+      if (u.lamp) { o.intensity = u.lamp.intensity * L.lamp; o.distance = u.lamp.distance * L.reach; }
+      else if (u.roomLight) o.intensity = u.roomLight * L.room;
+      return;
+    }
+    if (!o.isMesh) return;
+    for (const mat of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!mat) continue;
+      const d = mat.userData;
+      if (mat.isMeshStandardMaterial) {
+        if (d.env0 === undefined) d.env0 = mat.envMapIntensity;
+        mat.envMapIntensity = d.env0 * L.env;
+      }
+      if (d.glow !== undefined) mat.emissiveIntensity = d.glow * L.glow;
+      if (d.pool !== undefined) mat.opacity = Math.min(0.9, d.pool * L.pool);
+    }
+  });
+}
+function setLightMode(mode) {
+  lightMode = mode;
+  const L = LIGHT_MODES[mode];
+  sun.intensity = L.sun; hemi.intensity = L.hemi; amb.intensity = L.amb; bounce.intensity = L.bounce;
+  renderer.toneMappingExposure = L.exposure;
+  scene.background.set(L.bg);
+  lightObject(scene);
+  const evening = mode === 'evening';
+  const btn = document.getElementById('light-mode');
+  btn.classList.toggle('on', evening);
+  btn.setAttribute('aria-pressed', String(evening));
+  btn.innerHTML = evening ? '&#x2600;' : '&#x263E;';
+  btn.title = evening ? 'Back to daylight (L)' : 'Evening lighting: dim daylight to see the lamps (L)';
+}
 
 const DIR = new THREE.Vector3(1, 0.95, 1).normalize();   // fixed architectural angle
 const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 900);
@@ -1344,7 +1450,7 @@ controls.rotateSpeed = 0.75;
 controls.screenSpacePanning = true;
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
-controls.zoomSpeed = 1.1;
+controls.zoomSpeed = 3.0;                      // ~14% per wheel notch, proportional on trackpads
 controls.panSpeed = 0.9;
 controls.zoomToCursor = true;
 controls.minZoom = 0.3; controls.maxZoom = 18.0;
@@ -1526,6 +1632,7 @@ function buildWorld(data) {
     }
 
     const li = new THREE.PointLight(0xFFEEDA, room.light.intensity * 4.2, Math.max(rw, rd) * 2.4, 2);
+    li.userData.roomLight = room.light.intensity * 4.2;
     g.add(at(li, rx + rw / 2, room.light.height, -(ry + rd / 2)));
     if (LAYERS.decor)
       g.add(at(lightPool(Math.min(rw, rd) * 0.62, '#FFD49A', 0.22),
@@ -1642,6 +1749,7 @@ function buildWorld(data) {
 
   const token = ++buildToken;
   sun.shadow.needsUpdate = true;
+  if (lightMode !== 'day') lightObject(world);
   const statusEl = document.getElementById('status');
   let placed = 0;
   for (const obj of data.objects) {
@@ -1664,9 +1772,12 @@ function buildWorld(data) {
       node.userData = { objectId: obj.object_id, roomId: obj.room_id, label: obj.label,
         material: obj.material, dims: obj.dimensions, asset: obj.asset_reference,
         role: obj.role, category: obj.category,
-        pick: obj.pick ? { product: obj.pick.product.name, options: obj.pick.attributes } : null };
+        pick: obj.pick ? { product: obj.pick.product.name, options: obj.pick.attributes }
+          : obj.lampPick ? { product: `${obj.lampPick.product.name} (on the ${obj.label})`,
+            options: obj.lampPick.attributes } : null };
       node.traverse(o => { if (o.isMesh) { o.userData.owner = node; pickables.push(o); } });
       (roomGroups.get(obj.room_id) || world).add(node);
+      if (lightMode !== 'day') lightObject(node);
       placed += 1;
       sun.shadow.needsUpdate = true;
       statusEl.textContent = `${placed} / ${data.objects.length} objects`;
@@ -1865,17 +1976,23 @@ const pickOptions = attrs => Object.entries(attrs || {})
 function applyPicks(data) {
   const byType = {};
   for (const r of data.rooms) (byType[r.room_type] = byType[r.room_type] || []).push(r);
-  for (const o of data.objects) delete o.pick;
+  for (const o of data.objects) { delete o.pick; delete o.lampPick; }
   return PICKS.map(p => {
     const room = p.room_type ? (byType[p.room_type] || [])[p.room_index || 0] : null;
     const targets = room
       ? data.objects.filter(o => o.room_id === room.room_id && (p.categories || []).includes(o.category))
       : [];
     targets.forEach(o => { o.pick = p; });
+    // A lamp for a room without a floor lamp (bedside lighting) stands on its nightstands.
+    const lamps = room && !targets.length && (p.categories || []).includes('floor_lamp')
+      ? data.objects.filter(o => o.room_id === room.room_id && o.category === 'nightstand')
+      : [];
+    lamps.forEach(o => { o.lampPick = p; });
+    const shown = targets.length + lamps.length > 0;
     return {
       product: p.product && p.product.name, room: p.room, options: p.attributes || {},
-      shown: targets.length > 0,
-      reason: targets.length ? null
+      shown,
+      reason: shown ? null
         : !p.room_type ? 'that room is not part of the 2D/3D layout'
           : !room ? 'this layout has no such room'
             : !(p.categories || []).length ? 'no 3D piece for this product type yet'
@@ -2084,7 +2201,8 @@ renderer.domElement.addEventListener('pointermove', e => {
     const sv = MODEL.style_vectors[cfg.style];
     const fit = vec && sv ? ((dot(vec, sv) + 1) / 2 * 100).toFixed(0) + '%' : '—';
     const sceneObj = sceneData.objects.find(o => o.object_id === u.objectId);
-    const k = sceneObj && sceneObj.pick && sceneObj.pick.look;
+    const shownPick = sceneObj && (sceneObj.pick || sceneObj.lampPick);
+    const k = shownPick && shownPick.look;
     const swatch = (k && (u.role === 'wood' ? (k.wood_hex || k.hex) : (k.hex || k.wood_hex))) || look.hex;
     tip.innerHTML = (u.pick
       ? `<b>${escHtml(u.pick.product)}</b><br>${escHtml(pickOptions(u.pick.options))}<br>`
@@ -2104,8 +2222,10 @@ const stepZoom = f => {
   const to = THREE.MathUtils.clamp(from * f, controls.minZoom, controls.maxZoom);
   zoomTween = { t0: performance.now(), from: camera.zoom, to };
 };
-document.getElementById('zoom-in').addEventListener('click', () => stepZoom(1.3));
-document.getElementById('zoom-out').addEventListener('click', () => stepZoom(1 / 1.3));
+document.getElementById('zoom-in').addEventListener('click', () => stepZoom(1.6));
+document.getElementById('zoom-out').addEventListener('click', () => stepZoom(1 / 1.6));
+document.getElementById('light-mode').addEventListener('click',
+  () => setLightMode(lightMode === 'day' ? 'evening' : 'day'));
 document.getElementById('rot-left').addEventListener('click', () => orbitBy(-Math.PI / 4));
 document.getElementById('rot-right').addEventListener('click', () => orbitBy(Math.PI / 4));
 document.getElementById('view-reset').addEventListener('click', resetView);
@@ -2133,9 +2253,10 @@ addEventListener('keydown', e => {
   }
   if (k === 'q') orbitBy(-Math.PI / 8);
   else if (k === 'e') orbitBy(Math.PI / 8);
-  else if (k === '+' || k === '=') stepZoom(1.25);
-  else if (k === '-' || k === '_') stepZoom(1 / 1.25);
+  else if (k === '+' || k === '=') stepZoom(1.45);
+  else if (k === '-' || k === '_') stepZoom(1 / 1.45);
   else if (k === 'r') resetView();
+  else if (k === 'l') setLightMode(lightMode === 'day' ? 'evening' : 'day');
 });
 addEventListener('resize', () => {
   if (!container.clientWidth || !container.clientHeight) return;

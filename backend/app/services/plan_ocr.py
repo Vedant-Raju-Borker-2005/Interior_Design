@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import math
 import re
+import statistics
 import threading
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -82,6 +83,51 @@ class Label:
 
 
 def read_texts(img: Image.Image) -> list[Text]:
+    """Read the printed text. A plan photographed or exported mirror-flipped
+    reads as almost nothing, so that is retried on the flipped image and the
+    boxes are mapped back onto the original."""
+    texts = _read_one(img)
+    if _useful(texts) >= 4:
+        return texts
+    # Colour brochures print room areas as large digits on saturated fills, which
+    # read better enlarged. The reader works at up to 1800 px, so enlarge only
+    # that far — a bigger copy would just be shrunk again, at a cost in memory.
+    grow = min(2.0, 1800 / max(img.size))
+    if grow > 1.15:
+        bigger = _read_one(img.resize((round(img.width * grow), round(img.height * grow)), Image.LANCZOS))
+        if _useful(bigger) > _useful(texts):
+            texts = [Text(t.text, t.x0 / grow, t.y0 / grow, t.x1 / grow, t.y1 / grow, t.score) for t in bigger]
+    if _useful(texts) >= 4:
+        return texts
+    flipped = _read_one(img.transpose(Image.FLIP_LEFT_RIGHT))
+    if _useful(flipped) > _useful(texts):
+        w = img.size[0]
+        return [Text(t.text, w - t.x1, t.y0, w - t.x0, t.y1, t.score) for t in flipped]
+    return texts
+
+
+def _useful(texts: list[Text]) -> int:
+    """Texts that mean something on a plan: a room word, a size, or an area."""
+    return sum(1 for t in texts if room_word(t.text) or parse_dimensions(t.text)
+               or area_number(t.text) is not None)
+
+
+_AREA_ONLY = re.compile(r"^(\d{1,2}[.,]\d{1,2})\s*(?:m2|m²|sq\.?m\.?)?$", re.I)
+
+
+def area_number(text: str) -> Optional[float]:
+    """Colour brochures print nothing in a room but its area: "11.10", "4.00".
+
+    Returns the area in m², or None when the text is something else.
+    """
+    m = _AREA_ONLY.match(text.strip())
+    if not m:
+        return None
+    value = float(m.group(1).replace(",", "."))
+    return value if 0.8 <= value <= 60.0 else None
+
+
+def _read_one(img: Image.Image) -> list[Text]:
     engine = _engine()
     if engine is None:
         return []
@@ -169,13 +215,48 @@ def _sane(dims: list[float]) -> list[float]:
     return dims if all(0.5 <= d <= 15 for d in dims) else []
 
 
+def _digits_as_feet(token: str) -> Optional[float]:
+    """"130" -> 13'0", "106" -> 10'6", "80" -> 8'0". The last digit is inches."""
+    digits = re.sub(r"\D", "", token)
+    if not 2 <= len(digits) <= 3:
+        return None
+    ft, inch = int(digits[:-1]), int(digits[-1])
+    if inch > 11 or not 2 <= ft <= 40:
+        return None
+    return (ft + inch / 12) * 0.3048
+
+
+def _bare_feet(text: str) -> list[float]:
+    """Both sides of an X written as bare digits, the foot marks lost in the scan."""
+    sides = text.split("X")
+    if len(sides) != 2:
+        return []
+    out = []
+    for side in sides:
+        side = side.strip(" .,-*'\"°%`~")
+        if not re.fullmatch(r"\d{2,3}", side):     # a unit, a decimal or junk: not this case
+            return []
+        value = _digits_as_feet(side)
+        if value is None:
+            return []
+        out.append(value)
+    return _sane(out)
+
+
 def parse_dimensions(text: str) -> list[float]:
     """Room size in metres from a label: [a, b] for "3.1*1.9", [w] for "1.2M WIDE"."""
     t = text.upper().replace("×", "X").replace("’", "'").replace("”", '"').replace("″", '"').replace("′", "'")
     t = t.replace(" ", "")
+    # Half and quarter inches: 16'-10 1/2" and 16'-10½" both mean 10.5 inches.
+    t = t.replace("½", ".5").replace("¼", ".25").replace("¾", ".75")
+    t = re.sub(r"(?<=\d)1/2", ".5", t)
+    t = re.sub(r"(?<=\d)1/4", ".25", t)
+    t = re.sub(r"(?<=\d)3/4", ".75", t)
 
     # Feet and inches: 11'0"X9'2", 12'-6"X10', 10'X15'9"
-    feet = re.search(r"(\d+(?:\.\d+)?)'-?(\d+(?:\.\d+)?)?['\"]?X(\d+(?:\.\d+)?)'-?(\d+(?:\.\d+)?)?['\"]?", t)
+    # The mark between feet and inches may be ' or - or both, and may be missing
+    # on the second side: 12'-0"X14-0", 7-0'X6-0.
+    feet = re.search(r"(\d+(?:\.\d+)?)['\-]+(\d+(?:\.\d+)?)?[\"']?X(\d+(?:\.\d+)?)['\-]*(\d+(?:\.\d+)?)?[\"']?", t)
     if feet:
         return _sane([_feet(feet.group(1), feet.group(2)), _feet(feet.group(3), feet.group(4))])
     # OCR'd without foot marks but with inch marks: 110"X9'2"  or 10"X15.9"
@@ -196,12 +277,24 @@ def parse_dimensions(text: str) -> list[float]:
         a, b = float(metric.group(1)), float(metric.group(2))
         if a >= 500 and b >= 500:
             a, b = a / 1000, b / 1000
-        return [a, b] if 0.5 <= a <= 15 and 0.5 <= b <= 15 else []
+        if 0.5 <= a <= 15 and 0.5 <= b <= 15:
+            return [a, b]
+    # Builder plans print feet and inches; scans lose the marks, leaving bare
+    # digits: 130X100 is 13'0"X10'0", 106*X102 is 10'6"X10'2", 80X51 is 8'0"X5'1".
+    bare = _bare_feet(t)
+    if bare:
+        return bare
     # OCR ate the multiply sign: "3.11.9" is 3.1*1.9
     fused = re.fullmatch(r"(\d+\.\d)(\d+\.\d+)M?", t)
     if fused:
         return [float(fused.group(1)), float(fused.group(2))]
 
+    # One dimension in feet: "5'-0" WIDE", "3-3" wide"
+    wide_ft = re.search(r"(\d+)['\-]+(\d+(?:\.\d+)?)?[\"']?WIDE", t)
+    if wide_ft:
+        metres = _feet(wide_ft.group(1), wide_ft.group(2))
+        if 0.5 <= metres <= 6:
+            return [metres]
     # One dimension: "1.2M WIDE", "4' WIDE", "4WIDE"
     wide = re.search(r"(\d+(?:\.\d+)?)(M|'|FT)?WIDE", t)
     if wide:
@@ -216,6 +309,8 @@ def build_labels(texts: list[Text], img_w: int, img_h: int) -> list[Label]:
     """Group each room name with the dimension text printed next to it."""
     names, dims = [], []
     for t in texts:
+        if _LEGEND_LINE.match(t.text):
+            continue                  # "3 - KITCHEN" sits in the key, not in the kitchen
         rw = room_word(t.text)
         d = parse_dimensions(t.text)
         if rw:
@@ -435,3 +530,172 @@ def _label_fit(box, lab: Label, W: int, H: int) -> float:
     w, h = (box[2] - box[0]) * W, (box[3] - box[1]) * H
     a, b = lab.dims_m
     return min(abs(math.log((w / h) / (a / b))), abs(math.log((w / h) / (b / a))))
+
+
+# ══════════════════════════════════════════════════ areas printed in rooms ═════
+def apply_area_numbers(detection: dict[str, Any], img: Image.Image,
+                       texts: Optional[list[Text]] = None) -> dict[str, Any]:
+    """Read a colour plan that prints each room's area instead of its name.
+
+    The number inside a room gives that room's area in m², which sets both the
+    drawing's scale and the room's own size, and corrects the guessed type where
+    the area makes it impossible (no 2 m² bedroom, and the biggest room is the
+    living room). Rooms already named from the plan are left alone.
+    """
+    rooms = detection.get("rooms") or []
+    if not rooms:
+        return detection
+    if texts is None:
+        if not ocr_available():
+            return detection
+        texts = read_texts(img)
+    W, H = img.size
+
+    found: list[tuple[int, float]] = []
+    for t in texts:
+        value = area_number(t.text)
+        if value is None:
+            continue
+        cx, cy = t.cx / W, t.cy / H
+        inside = [i for i, r in enumerate(rooms)
+                  if r["box"][0] <= cx <= r["box"][2] and r["box"][1] <= cy <= r["box"][3]]
+        if not inside:
+            continue
+        i = min(inside, key=lambda k: (rooms[k]["box"][2] - rooms[k]["box"][0])
+                * (rooms[k]["box"][3] - rooms[k]["box"][1]))
+        if rooms[i].get("from_label") or any(j == i for j, _ in found):
+            continue
+        found.append((i, value))
+    if len(found) < 3:
+        return detection
+
+    # Scale: each matched room gives pixels² per m². The median ignores a number
+    # that landed in the wrong room.
+    per_m2 = []
+    for i, value in found:
+        x0, y0, x1, y1 = rooms[i]["box"]
+        px = (x1 - x0) * W * (y1 - y0) * H
+        if px > 0:
+            per_m2.append(px / value)
+    ppm = math.sqrt(statistics.median(per_m2))
+    if not 5.0 <= W / ppm <= 80.0:
+        return detection
+    detection["plan_width_m"] = round(W / ppm, 2)
+    detection["plan_depth_m"] = round(H / ppm, 2)
+    detection["scale_source"] = "printed areas"
+
+    for i, value in found:
+        rooms[i]["printed_area_m2"] = value
+
+    # The areas also say what a room cannot be — unless the plan's colour code
+    # already said what it is (a master bedroom is often bigger than the living room).
+    colour_coded = any(r.get("by_colour") for r in rooms)
+    biggest = max(found, key=lambda f: f[1])
+    for i, value in found:
+        room = rooms[i]
+        if colour_coded and room.get("by_colour"):
+            continue
+        if i == biggest[0] and not colour_coded and room["room_type"] not in ("living_room", "dining_area"):
+            room["room_type"], room["label"] = "living_room", "Living Room"
+        elif value < 3.5 and room["room_type"] in ("living_room", "dining_area", "bedroom",
+                                                   "master_bedroom", "kitchen"):
+            tiled = bool(room.get("tiled"))
+            room["room_type"] = "bathroom" if tiled else "passage"
+            room["label"] = "Bathroom" if tiled else "Passage"
+
+    beds = [r for r in rooms if r["room_type"] in ("bedroom", "master_bedroom")]
+    if beds and not any(r["room_type"] == "master_bedroom" for r in beds):
+        largest = max(beds, key=lambda r: r.get("printed_area_m2")
+                      or (r["box"][2] - r["box"][0]) * (r["box"][3] - r["box"][1]))
+        largest["room_type"], largest["label"] = "master_bedroom", "Master Bedroom"
+
+    seen: dict[str, int] = {}
+    for r in rooms:
+        name = r.get("label") or ""
+        seen[name] = seen.get(name, 0) + 1
+        if seen[name] > 1:
+            r["label"] = f"{name} {seen[name]}"
+
+    notes = [n for n in detection.get("notes", []) if "estimate" not in n]
+    notes.insert(0, f"Read {len(found)} room areas printed on your plan and set the scale from them.")
+    detection["notes"] = notes
+    return detection
+
+
+# ══════════════════════════════════════════════════ numbered rooms + legend ═════
+_LEGEND_LINE = re.compile(r"^\s*(\d{1,2})\s*[-–—.:)]\s*([A-Za-z].{2,})$")
+
+
+def legend_entries(texts: list[Text]) -> dict[int, tuple[str, str]]:
+    """A plan key: "1 - LIVING ROOM", "4-COMMON BATHROOM" → {1: (living_room, …)}."""
+    out: dict[int, tuple[str, str]] = {}
+    for t in texts:
+        m = _LEGEND_LINE.match(t.text)
+        if not m:
+            continue
+        word = room_word(m.group(2))
+        if word:
+            out[int(m.group(1))] = word
+    return out
+
+
+def apply_legend(detection: dict[str, Any], img: Image.Image,
+                 texts: Optional[list[Text]] = None) -> dict[str, Any]:
+    """Name rooms marked only with a number, from the plan's key.
+
+    Architects' plans often print "1", "2", "3" in the rooms and list what each
+    number means beside the drawing. The small numbers inside circles are
+    easily missed, so they are read again enlarged when too few were found.
+    """
+    rooms = detection.get("rooms") or []
+    if not rooms:
+        return detection
+    if texts is None:
+        texts = read_texts(img)
+    legend = legend_entries(texts)
+    if len(legend) < 3:
+        return detection
+    W, H = img.size
+
+    def numbers_in(found: list[Text], scale: float) -> list[tuple[int, float, float]]:
+        return [(int(t.text.strip()), t.cx / scale / W, t.cy / scale / H) for t in found
+                if t.text.strip().isdigit() and int(t.text.strip()) in legend]
+
+    marks = numbers_in(texts, 1.0)
+    if len({n for n, _, _ in marks}) < max(2, len(legend) // 2):
+        grow = min(2.0, 1800 / max(W, H))
+        if grow > 1.15:
+            marks += numbers_in(_read_one(img.resize((round(W * grow), round(H * grow)), Image.LANCZOS)), grow)
+
+    named = 0
+    taken: set[int] = set()
+    for n, cx, cy in marks:
+        inside = [i for i, r in enumerate(rooms)
+                  if r["box"][0] <= cx <= r["box"][2] and r["box"][1] <= cy <= r["box"][3]]
+        if not inside:
+            continue
+        i = min(inside, key=lambda k: (rooms[k]["box"][2] - rooms[k]["box"][0])
+                * (rooms[k]["box"][3] - rooms[k]["box"][1]))
+        if i in taken:
+            continue
+        taken.add(i)
+        rooms[i]["room_type"], rooms[i]["label"] = legend[n]
+        rooms[i]["from_label"] = True
+        named += 1
+    if not named:
+        return detection
+
+    beds = [r for r in rooms if r["room_type"] in ("bedroom", "master_bedroom")]
+    if beds and not any(r["room_type"] == "master_bedroom" for r in beds):
+        max(beds, key=lambda r: (r["box"][2] - r["box"][0]) * (r["box"][3] - r["box"][1]))["room_type"] = \
+            "master_bedroom"
+    seen: dict[str, int] = {}
+    for r in rooms:
+        name = r.get("label") or ""
+        seen[name] = seen.get(name, 0) + 1
+        if seen[name] > 1:
+            r["label"] = f"{name} {seen[name]}"
+    notes = [n for n in detection.get("notes", []) if "estimate" not in n]
+    notes.insert(0, f"Read the plan's key and named {named} numbered room{'s' if named != 1 else ''}.")
+    detection["notes"] = notes
+    return detection
