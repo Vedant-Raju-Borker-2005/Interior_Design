@@ -11,7 +11,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./interior_ai.db")
 PING_AFTER_IDLE_SECONDS = 60.0
 
 if "sqlite" in DATABASE_URL:
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+    engine = create_engine(
+        DATABASE_URL, connect_args={"check_same_thread": False, "timeout": 30})
 else:
     # A hosted Postgres (Supabase) drops idle connections: replace each one every
     # few minutes, and keep the TCP link alive in between.
@@ -52,8 +53,11 @@ def init_db():
         db_path = DATABASE_URL.replace("sqlite:///", "")
         if os.path.exists(db_path):
             try:
-                conn = sqlite3.connect(db_path)
+                conn = sqlite3.connect(db_path, timeout=30)
                 cursor = conn.cursor()
+                # Enable WAL mode: readers never block writers and vice-versa.
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA busy_timeout=30000")
                 cursor.execute("PRAGMA table_info(vendors)")
                 columns = [row[1] for row in cursor.fetchall()]
                 new_cols = {
@@ -294,9 +298,13 @@ def init_db():
                         )
 
                 conn.commit()
-                conn.close()
             except Exception as e:
                 print(f"Database auto-migration failed: {e}")
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
 
 def _migrate_catalog_image_urls(cursor):
@@ -462,9 +470,9 @@ def sync_demo_data(db, force: bool = False):
         # Check if project has quotation
         existing_quote = db.query(Quotation).filter(Quotation.project_id == proj.id).first()
         if not existing_quote:
+            from .services.business_rules import next_quotation_no
             subtotal = 650000.0
             gst = subtotal * 0.18
-            from .services.business_rules import next_quotation_no
             demo_quote = Quotation(
                 id=f"quote-{proj.id[:6]}",
                 quotation_no=next_quotation_no(db),
