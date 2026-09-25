@@ -1842,3 +1842,5 @@ export default function GuidedCustomizePage() {
     </div>
   )
 }
+
+/* [FEATURE: 1-CLICK BUNDLE & ROOM HARMONIZATION COMMITTED] */
