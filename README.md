@@ -264,3 +264,25 @@ set takes about an hour on a 4 GB laptop; close other programs first.
 * Without a confirmed floor plan the 3D model uses the pre-solved standard layout for the BHK. Once the customer confirms the rooms traced from their plan, the 2D plan and 3D model are built from that plan instead ("Use standard layout" switches back).
 * Plan tracing reads room labels with RapidOCR (`rapidocr-onnxruntime`, installed from `requirements.txt`, runs offline). If `GEMINI_KEY` is set, Gemini vision is tried first. Detection is a starting point: the customer can move, resize, rename and add rooms before generating.
 * Projects that existed before the approval queue were marked approved on migration, so live work is not frozen. New projects enter the queue.
+---
+
+## 🧠 AI Companion Recommendation Engine
+
+The InteriorAI recommendation engine (`backend/app/routers/recommendations.py`) provides intelligent real-time pairing suggestions as users customize each room. Instead of static upsells, it utilizes dynamic room anchors, color palette harmony matrices, and category budget caps.
+
+### 1. Anchor-Driven Pairing Graph
+Recommendations are keyed off the dominant functional anchor of each room type:
+* **Living Room:** `Sofa` is the primary anchor. Recommends Coffee Tables, Accent Rugs, Media Units, and Floor Lamps.
+* **Bedroom / Master Bedroom:** `Bed` is the anchor. Recommends Bedside Nightstands, Wardrobes, and Accent Chairs.
+* **Dining Room:** `Dining Table` is the anchor. Recommends Dining Chairs, Bar Cabinets, and Pendant Lights.
+* **Kitchen & Balcony:** Countertops and Planter stands anchor functional accessory pairings.
+
+### 2. Multi-Dimensional Scoring Function
+Pairs are evaluated across a 100-point normalized scoring rubric:
+$$\text{Score} = w_{\text{style}} \cdot S_{\text{style}} + w_{\text{palette}} \cdot S_{\text{palette}} + w_{\text{material}} \cdot S_{\text{material}} + w_{\text{budget}} \cdot S_{\text{budget}} + w_{\text{spatial}} \cdot S_{\text{spatial}}$$
+
+* **Style Compatibility ($w=0.25$):** Matches stylistic vibe (Modern, Scandinavian, Minimalist, Boho, Industrial, Luxury).
+* **Color Harmony ($w=0.25$):** Evaluated against the 60-30-10 interior rule via `COLOR_HARMONY_MAP` (e.g., Warm Beige anchors pair with Terracotta, Forest Green, or Cream).
+* **Material & Texture Cohesion ($w=0.20$):** Aligns secondary finishes (e.g., Walnut veneer with Matte Black metal; Teak with Brass accents).
+* **Budget Proportionality ($w=0.15$):** Caps item cost dynamically within the allocated category tier to prevent budget exhaustion.
+* **Spatial Feasibility ($w=0.15$):** Validates physical dimensions against room footprint and circulation envelopes.
