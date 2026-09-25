@@ -906,3 +906,5 @@ def _prod_dict(p: Product) -> dict:
         "description": p.description
     }
 
+
+# --- Spatial Feasibility & Clearance Envelope Solver ---
