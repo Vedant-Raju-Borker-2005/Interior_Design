@@ -379,7 +379,7 @@ export default function ProjectExecutionPage() {
 
   // Access Control check
   const projectMember = members.find((m) => m.user.id === authUser?.id && m.status === 'ACTIVE');
-  const userRole = projectMember?.role || (authUser?.role?.toUpperCase() === 'ADMIN' ? 'MANAGER' : 'COORDINATOR');
+  const userRole = projectMember?.role || (authUser?.role?.toUpperCase() === 'ADMIN' ? 'MANAGER' : (authUser?.role?.toLowerCase().includes('technician') ? 'TECHNICIAN' : 'COORDINATOR'));
   const isManager = userRole === 'MANAGER';
   const isCoordinator = userRole === 'COORDINATOR';
   const isTechnician = userRole === 'TECHNICIAN';
