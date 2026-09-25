@@ -322,3 +322,18 @@ Homeowners can toggle their curation mood dynamically with immediate visual feed
 ### 3. Gamified Room Harmonization Score
 * A live **Room Harmonization Progress Bar** (0% to 100%) tracks room design cohesion based on completeness, color coordination, and material compatibility.
 * Instant visual cues (🟡 Material, 🔵 Color, 🔴 Budget Cap) guide users toward balanced design selections.
+---
+
+## 📐 Floor Plan Reader & Blueprint Vectorization
+
+The floor plan processing pipeline (`/plan-trace/[id]`, `services/plan_layout.py`, `services/plan_ocr.py`) converts arbitrary builder floor plan images into clean geometric 2D vectors and 3D room volumes.
+
+### 1. Vision & OCR Recognition Pipeline
+1. **Gemini Vision Primary Pass:** If `GEMINI_KEY` is present, Gemini extracts structured spatial boundaries, door/window openings, and room annotations.
+2. **Offline RapidOCR Fallback:** Uses local ONNX runtime (`rapidocr-onnxruntime`) to extract text boxes, room labels, and dimensional annotations without external network requests.
+3. **Multi-Sheet Flat Segmentation:** Detects sheet layouts (side-by-side, 2×2 grid, mirrored floor plates) and isolates the target unit boundary automatically.
+
+### 2. Vectorization & Geometry Normalization
+* Straightens skew, removes distortion, and maps CAD double lines to clean single-plane interior and exterior wall coordinates.
+* Normalizes scale factors using printed dimensions (supporting meters, millimeters, feet-inches, and square footage).
+* Interactive customer confirmation tool allows moving, resizing, and relabeling rooms before generating 3D models.
