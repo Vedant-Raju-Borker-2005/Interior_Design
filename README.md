@@ -352,3 +352,17 @@ InteriorAI integrates the Interior Design Solver (IDS) 3D engine to render inter
 * Translates confirmed 2D room layouts and customized 3D product models into standard `.glb` / `.gltf` binary scenes.
 * Supports seamless download of the 3D model for external rendering in Blender, Unreal Engine, or architectural CAD suites.
 * Acts as the geometric wireframe guide for photorealistic Gemini 3 and Imagen ControlNet render generation.
+---
+
+## 🤝 Special Services & Partner Consultant Portal
+
+For turnkey project execution beyond standard modular carpentry, the platform provides an integrated Special Services & Consultant ecosystem (`/admin/special-services`, `/consultant`, `services/special_services.py`).
+
+### 1. Service Catalog & Lead Routing
+* Offers add-on home services: False Ceiling, Electrical Rewiring, Plumbing & Sanitary, Deep Cleaning, Painting & Wallpapering, and Home Automation.
+* Customers select required special services during checkout (`/checkout/[id]`); leads are automatically dispatched to verified partner consultants based on pincode and specialization.
+
+### 2. Dedicated Consultant Workspace
+* **Consultant Portal (`/consultant`):** Allows certified interior consultants and trade contractors to review assigned customer briefs, accept jobs, schedule site evaluations, and log on-site progress notes.
+* **Commission & Payout Ledger:** Real-time visibility into project milestones, approved fee schedules, and completed service disbursements.
+* **Admin Governance (`/admin/special-services`):** Admins review consultant credentialing, set regional pricing baselines, and audit customer satisfaction ratings.
