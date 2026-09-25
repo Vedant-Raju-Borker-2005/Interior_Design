@@ -286,3 +286,21 @@ $$\text{Score} = w_{\text{style}} \cdot S_{\text{style}} + w_{\text{palette}} \c
 * **Material & Texture Cohesion ($w=0.20$):** Aligns secondary finishes (e.g., Walnut veneer with Matte Black metal; Teak with Brass accents).
 * **Budget Proportionality ($w=0.15$):** Caps item cost dynamically within the allocated category tier to prevent budget exhaustion.
 * **Spatial Feasibility ($w=0.15$):** Validates physical dimensions against room footprint and circulation envelopes.
+---
+
+## 📐 Spatial Feasibility & Clearance Constraints Engine
+
+To prevent users from selecting furniture that physically over-allocates the floor plate or blocks walking paths, the recommendation engine includes an automated spatial feasibility solver.
+
+### 1. Walkway Circulation Envelope
+* **850 mm Primary Clearance:** Enforces a minimum unimpeded circulation buffer around large anchor pieces (e.g., bed perimeter to wall/wardrobe, sofa to TV console).
+* **450 mm Secondary Clearance:** Enforces ergonomic clearance between intimate pairings, such as coffee table to sofa edge.
+
+### 2. Room Floor Plate Ratio & Area Caps
+* Total furniture footprint is capped at **40% of net carpet area** in living rooms and bedrooms to prevent visual clutter and maintain comfortable airflow.
+* In compact rooms ($< 120\text{ sq.ft}$), items exceeding proportional depth ($> 650\text{ mm}$ for desks or $> 900\text{ mm}$ for accent tables) are flagged with spatial warnings.
+
+### 3. Automated Alternative Swaps
+When an item is flagged for spatial or budget constraints:
+* The engine queries the catalog for alternative SKUs within the same style cluster that have compact footprints (e.g., swapping a 6-seater rectangular dining table with a 4-seater round pedestal table).
+* Returns candidate swaps with explicit delta attributes: footprint savings in $\text{sq.ft}$ and price difference in INR.
