@@ -337,3 +337,18 @@ The floor plan processing pipeline (`/plan-trace/[id]`, `services/plan_layout.py
 * Straightens skew, removes distortion, and maps CAD double lines to clean single-plane interior and exterior wall coordinates.
 * Normalizes scale factors using printed dimensions (supporting meters, millimeters, feet-inches, and square footage).
 * Interactive customer confirmation tool allows moving, resizing, and relabeling rooms before generating 3D models.
+---
+
+## 🏙️ IDS Spatial Solver & 3D WebGL Scene Engine
+
+InteriorAI integrates the Interior Design Solver (IDS) 3D engine to render interactive real-time room previews directly in the browser.
+
+### 1. WebGL Three.js Viewport
+* Powered by Three.js and `@react-three/fiber` in `frontend/src/components/RoomCanvas3D.tsx`.
+* Provides smooth orbit, pan, zoom, and perspective switching (Top-down architectural orthographic vs. eye-level perspective).
+* Real-time procedural lighting, soft shadows, and physically based rendering (PBR) materials applied according to selected laminates and fabrics.
+
+### 2. Procedural GLB Scene Export
+* Translates confirmed 2D room layouts and customized 3D product models into standard `.glb` / `.gltf` binary scenes.
+* Supports seamless download of the 3D model for external rendering in Blender, Unreal Engine, or architectural CAD suites.
+* Acts as the geometric wireframe guide for photorealistic Gemini 3 and Imagen ControlNet render generation.
