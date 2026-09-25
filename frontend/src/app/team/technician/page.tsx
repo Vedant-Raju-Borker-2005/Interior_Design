@@ -12,16 +12,22 @@ import {
   LayoutDashboard,
   FolderKanban
 } from 'lucide-react';
+import ItemTrackingBoard from '@/components/ItemTrackingBoard';
 import clsx from 'clsx';
 
 export default function TechnicianDashboardPage() {
   const router = useRouter();
   const { dashboard, projects, fetchDashboard, fetchProjects, isLoading, error } = useProjectTeamStore();
-  const [activeTab, setActiveTab] = useState<'kpi' | 'projects'>('kpi');
+  const [activeTab, setActiveTab] = useState<'kpi' | 'projects' | 'installations'>('kpi');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
 
   useEffect(() => {
     fetchDashboard().catch(() => {});
-    fetchProjects().catch(() => {});
+    fetchProjects().then((projs: any) => {
+      if (projs && projs.length > 0) {
+        setSelectedProjectId(projs[0].id);
+      }
+    }).catch(() => {});
   }, [fetchDashboard, fetchProjects]);
 
   if (isLoading && !dashboard) {
@@ -77,6 +83,15 @@ export default function TechnicianDashboardPage() {
               )}
             >
               <FolderKanban className="w-5 h-5" /> My Assignments
+            </button>
+            <button
+              onClick={() => setActiveTab('installations')}
+              className={clsx(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
+                activeTab === 'installations' ? "bg-amber-500 text-white shadow-md shadow-amber-200" : "text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              <Wrench className="w-5 h-5" /> Installation Items
             </button>
           </nav>
         </aside>
@@ -174,6 +189,44 @@ export default function TechnicianDashboardPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* TAB CONTENT: Installation Items (Feedback 3.1-3.5) */}
+          {activeTab === 'installations' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900 tracking-tight">Installation Tracking Board</h2>
+                  <p className="text-slate-500 font-medium mt-1">Directly update installation statuses and upload proof photos per product.</p>
+                </div>
+                {projects && projects.length > 0 && (
+                  <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Project:</span>
+                    <select
+                      value={selectedProjectId}
+                      onChange={(e) => setSelectedProjectId(e.target.value)}
+                      className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
+                    >
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.propertyName || p.id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {selectedProjectId ? (
+                <ItemTrackingBoard projectId={selectedProjectId} viewAs="technician" />
+              ) : (
+                <div className="text-center py-16 bg-white rounded-3xl border border-slate-100">
+                  <Wrench className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <h3 className="text-lg font-bold text-slate-600">No Active Project Selected</h3>
+                  <p className="text-sm text-slate-400 font-medium">Select an assigned project above to track items.</p>
+                </div>
+              )}
             </div>
           )}
         </main>

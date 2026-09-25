@@ -226,10 +226,6 @@ def list_items(
     if project_role == "TECHNICIAN" and not _has_any(user, "admin"):
         role = "technician"
 
-    if role == "technician":
-        # 3.2/3.3 — a technician has no business seeing vendor-stage items.
-        items = [i for i in items if not i["awaiting_handover"]]
-
     return {
         "project_id": project_id,
         "items": items,
