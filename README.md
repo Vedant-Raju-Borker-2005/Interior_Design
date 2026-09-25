@@ -304,3 +304,21 @@ To prevent users from selecting furniture that physically over-allocates the flo
 When an item is flagged for spatial or budget constraints:
 * The engine queries the catalog for alternative SKUs within the same style cluster that have compact footprints (e.g., swapping a 6-seater rectangular dining table with a 4-seater round pedestal table).
 * Returns candidate swaps with explicit delta attributes: footprint savings in $\text{sq.ft}$ and price difference in INR.
+---
+
+## 🎨 Smart Customizer UI & Dynamic Style Moods
+
+The customer customizer workspace (`frontend/src/app/customize/[projectId]/page.tsx`) offers an intuitive, reactive design laboratory with real-time pairing previews.
+
+### 1. Interactive Style Mood Toggle
+Homeowners can toggle their curation mood dynamically with immediate visual feedback:
+* **🎨 Match Tone (Harmonious):** Prioritizes analogous color palettes, matching wood grains, and tone-on-tone fabric textures for a serene, cohesive atmosphere.
+* **✨ Designer Accent (Contrasting):** Injects bold complementary hues, high-contrast textures (e.g., Emerald Velvet against Sandstone linen), and metallic highlights for an eclectic designer feel.
+
+### 2. 1-Click "Add Full Set" Bundling
+* Displays an AI-curated pairing strip directly beneath selected products.
+* Users can add all recommended complementary pieces in a single click via `Add Full Set`, automatically populating remaining category slots with zero style friction.
+
+### 3. Gamified Room Harmonization Score
+* A live **Room Harmonization Progress Bar** (0% to 100%) tracks room design cohesion based on completeness, color coordination, and material compatibility.
+* Instant visual cues (🟡 Material, 🔵 Color, 🔴 Budget Cap) guide users toward balanced design selections.
