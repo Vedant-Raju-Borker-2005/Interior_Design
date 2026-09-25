@@ -137,6 +137,14 @@ export const projectsAPI = {
   removeRoomItem: (projectId: string, roomId: string, itemId: string) =>
     axiosInstance.delete(`/api/v1/projects/${projectId}/rooms/${roomId}/items/${itemId}`),
 
+  addRoomItemBundle: (projectId: string, roomId: string, items: Array<{
+    product_id: string;
+    qty?: number;
+    custom_attributes?: any;
+    unit_price?: number;
+  }>) =>
+    axiosInstance.post(`/api/v1/projects/${projectId}/rooms/${roomId}/items/bundle`, { items }),
+
   addRoom: (projectId: string, data: { room_type: string; length_ft?: number; width_ft?: number; height_ft?: number }) =>
     axiosInstance.post(`/api/v1/projects/${projectId}/rooms`, data),
 
@@ -256,6 +264,11 @@ export const recommendationsAPI = {
   getProducts: (roomType: string, style?: string, budget?: number) =>
     axiosInstance.get('/api/v1/recommendations/products', {
       params: { room_type: roomType, style_tags: style, budget },
+    }),
+
+  getComplementaryBundle: (productId: string, projectId: string, roomId?: string, mood?: string) =>
+    axiosInstance.get('/api/v1/recommendations/complementary-bundle', {
+      params: { product_id: productId, project_id: projectId, room_id: roomId, mood },
     }),
 }
 
