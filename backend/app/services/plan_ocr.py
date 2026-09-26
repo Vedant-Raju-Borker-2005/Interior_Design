@@ -485,6 +485,9 @@ def apply_labels(detection: dict[str, Any], img: Image.Image, texts: Optional[li
     return detection
 
 
+MAX_STRETCH = 1.8
+
+
 def solve_scales(sizes: list[tuple[float, float, float, float]]) -> Optional[tuple[float, float]]:
     """Pixels per metre across and down the image, from rooms whose printed
     size is known: (w_px, h_px, a_m, b_m) each, orientation unknown.
@@ -515,6 +518,16 @@ def solve_scales(sizes: list[tuple[float, float, float, float]]) -> Optional[tup
         if not xs:
             break
         sx, sy, used = float(np.median(xs)), float(np.median(ys)), len(xs)
+    if used >= 2 and not (1 / MAX_STRETCH <= sx / sy <= MAX_STRETCH):
+        # A plan is drawn at one scale, so a difference between the two
+        # directions is the image having been resized unevenly. Squashing a 16:9
+        # screenshot to 4:3 is about 1.33x and a 3:2 resized square is 1.5x,
+        # so real ones stay under MAX_STRETCH. Past that the two numbers are
+        # not a stretch at all, they mean a printed size was matched to the
+        # wrong room. The two directions still agree on the area between
+        # them, so keep that and give it the image's own proportions.
+        s = math.sqrt(sx * sy)
+        return s, s
     if used < 2 or abs(math.log(sx / sy)) <= 0.08:
         s = math.sqrt(sx * sy)
         # One room only, or no real stretch: keep the image's own proportions.
