@@ -1152,6 +1152,8 @@ export default function GuidedCustomizePage() {
                     <div className="grid md:grid-cols-2 gap-4">
                       {(Array.isArray(products) ? products : []).map((p) => {
                         const isChosen = activeRoomItems.some((it: any) => it.product_id === p.id)
+                        const isOutOfStock = p.is_available === false || p.is_in_stock === false || (p.available_qty !== undefined && p.available_qty <= 0)
+                        const isLowStock = !isOutOfStock && p.available_qty !== undefined && p.available_qty > 0 && p.available_qty < 5
                         const hasMaterialMismatch = p.is_material_match === false || p.is_fabric_match === false
                         const hasColorMismatch = p.is_color_match === false
                         const hasPriceMismatch = p.is_price_match === false
@@ -1163,6 +1165,10 @@ export default function GuidedCustomizePage() {
                             {/* Product Card */}
                             <div
                               onClick={() => {
+                                if (isOutOfStock) {
+                                  toast.error(`"${p.name}" is currently out of stock.`)
+                                  return
+                                }
                                 // Toggle inline preview
                                 if (inlinePreviewProductId === p.id) {
                                   setInlinePreviewProductId(null)
@@ -1189,23 +1195,51 @@ export default function GuidedCustomizePage() {
                                   ? 'bg-[#F5F3FF] border-[#6366F1] shadow-sm'
                                   : isExpanded
                                   ? 'bg-white border-[#6366F1] shadow-sm'
+                                  : isOutOfStock
+                                  ? 'bg-slate-50/70 border-slate-200 opacity-80'
                                   : 'bg-white border-[#E5E7F2] hover:border-[#6366F1] hover:shadow-sm'
                               )}
                             >
                               <div className="flex items-center justify-between gap-4 w-full">
                                 <div className="flex items-center gap-3.5 min-w-0">
-                                  <ProductImage
-                                    src={p.thumbnail_url}
-                                    fallbacks={p.images}
-                                    alt={p.name}
-                                    className="w-14 h-14 object-cover rounded-xl flex-shrink-0 border border-[#E5E7F2]"
-                                  />
+                                  <div className="relative shrink-0">
+                                    <ProductImage
+                                      src={p.thumbnail_url}
+                                      fallbacks={p.images}
+                                      alt={p.name}
+                                      className={clsx(
+                                        "w-14 h-14 object-cover rounded-xl border border-[#E5E7F2]",
+                                        isOutOfStock && "grayscale opacity-50"
+                                      )}
+                                    />
+                                    {isOutOfStock && (
+                                      <span className="absolute inset-x-0 bottom-0 bg-rose-600/90 text-white text-[7px] font-black text-center py-0.5 rounded-b-xl uppercase tracking-wider">
+                                        Out of Stock
+                                      </span>
+                                    )}
+                                  </div>
                                   <div className="min-w-0">
-                                    <h4 className="text-xs font-extrabold text-[#172554] group-hover:text-[#4F46E5] transition-colors truncate">
+                                    <h4 className={clsx(
+                                      "text-xs font-extrabold truncate transition-colors",
+                                      isOutOfStock ? "text-slate-400" : "text-[#172554] group-hover:text-[#4F46E5]"
+                                    )}>
                                       {p.name}
                                     </h4>
-                                    <div className="text-xs font-extrabold text-[#4F46E5] mt-0.5">
-                                      ₹{p.price.toLocaleString('en-IN')}
+                                    <div className={clsx(
+                                      "text-xs font-extrabold mt-0.5 flex flex-wrap items-center gap-1.5",
+                                      isOutOfStock ? "text-slate-400" : "text-[#4F46E5]"
+                                    )}>
+                                      <span>₹{p.price.toLocaleString('en-IN')}</span>
+                                      {isOutOfStock && (
+                                        <span className="text-[9px] font-bold px-1.5 py-0.2 text-rose-600 bg-rose-50 border border-rose-200 rounded-md">
+                                          {p.unavailable_reason || 'Out of Stock'}
+                                        </span>
+                                      )}
+                                      {isLowStock && (
+                                        <span className="text-[9px] font-bold px-1.5 py-0.2 text-amber-600 bg-amber-50 border border-amber-200 rounded-md">
+                                          Only {p.available_qty} left!
+                                        </span>
+                                      )}
                                     </div>
                                     <span className={clsx(
                                       'inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full',
@@ -1222,20 +1256,32 @@ export default function GuidedCustomizePage() {
                                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                                   {/* Customize button — opens detail panel */}
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); handleSelectProduct(p) }}
+                                    disabled={isOutOfStock}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      if (isOutOfStock) {
+                                        toast.error(`"${p.name}" is currently out of stock.`)
+                                        return
+                                      }
+                                      handleSelectProduct(p)
+                                    }}
                                     className={clsx(
                                       'py-1.5 px-3 text-[10px] font-bold rounded-xl transition shrink-0',
                                       isChosen
                                         ? 'bg-[#10B981] text-white'
+                                        : isOutOfStock
+                                        ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
                                         : 'bg-white border border-[#4F46E5] text-[#4F46E5] hover:bg-[#4F46E5] hover:text-white'
                                     )}
                                   >
-                                    {isChosen ? 'Configured ✓' : 'Choose'}
+                                    {isChosen ? 'Configured ✓' : isOutOfStock ? 'Out of Stock' : 'Choose'}
                                   </button>
                                   {/* Toggle inline pairing preview */}
-                                  <span className="text-[9px] text-[#64748B] font-semibold">
-                                    {isExpanded ? '▲ hide pairs' : '✨ see pairs'}
-                                  </span>
+                                  {!isOutOfStock && (
+                                    <span className="text-[9px] text-[#64748B] font-semibold">
+                                      {isExpanded ? '▲ hide pairs' : '✨ see pairs'}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
 
