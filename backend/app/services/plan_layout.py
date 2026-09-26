@@ -1997,7 +1997,8 @@ def _furnish(space: _Space, pools, used, openings):
         o["object_id"] = f"{space.sid}__{o['category']}{suffix}"
         o["room_id"] = space.sid
 
-    for _attempt in range(4):
+    shrunk = 0
+    for _attempt in range(6):
         s_objs = [SObj(o["object_id"], space.sid, o["category"],
                        {"x": space.cx, "y": 0.0, "z": space.cy}, {"yaw": 0.0}, dict(o["dimensions"]))
                   for o in kept]
@@ -2020,8 +2021,22 @@ def _furnish(space: _Space, pools, used, openings):
                 kept = [o for o in kept if o is not stray]
                 continue
             break
-        worst = max((o for o in kept if o["object_id"] in bad),
-                    key=lambda o: rule_for(o["category"]).priority)
+        bad_objects = [o for o in kept if o["object_id"] in bad]
+        removable = [o for o in bad_objects if o["category"] != must_have]
+        if not removable:
+            # A bedroom without its bed is not a bedroom. If the piece that
+            # makes the room readable is the only thing that will not fit, give
+            # it a smaller model rather than either dropping it or stripping
+            # out the furniture around it, which is not in its way.
+            essential = next((o for o in bad_objects if o["category"] == must_have), None)
+            if essential is not None and shrunk < 2:
+                shrunk += 1
+                dims = essential["dimensions"]
+                dims["width"] = round(dims["width"] * 0.88, 3)
+                dims["depth"] = round(dims["depth"] * 0.88, 3)
+                continue
+            removable = bad_objects
+        worst = max(removable, key=lambda o: rule_for(o["category"]).priority)
         dropped.append(f"{space.label}: {worst['label']}")
         kept = [o for o in kept if o is not worst]
         if not kept:
