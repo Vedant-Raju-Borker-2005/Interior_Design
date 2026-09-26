@@ -110,11 +110,12 @@ def compute_discount(
 
     if discount_type and discount_value:
         value = float(discount_value)
-        if discount_type == "PERCENT":
+        dtype = str(discount_type).upper().strip()
+        if dtype in ("PERCENT", "PERCENTAGE"):
             discount = subtotal * (value / 100.0)
-        elif discount_type == "FLAT_PER_UNIT":
+        elif dtype in ("FLAT_PER_UNIT", "FLAT_UNIT"):
             discount = value * units
-        elif discount_type == "FLAT_TOTAL":
+        elif dtype in ("FLAT_TOTAL", "LUMP_SUM"):
             discount = value
 
     discount = max(0.0, min(discount, subtotal))
@@ -130,6 +131,9 @@ def compute_discount(
         "savings_per_unit": round(discount / units, 2),
         "savings_percent": round((discount / subtotal * 100) if subtotal else 0.0, 2),
     }
+
+
+calculate_bulk_discount = compute_discount
 
 
 def unit_projects(project, db: Session) -> list:
