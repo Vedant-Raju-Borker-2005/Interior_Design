@@ -32,8 +32,12 @@ import {
   Wrench,
   Package,
   Truck,
-  Check,
   History,
+  Upload,
+  Trash2,
+  Image as ImageIcon,
+  Calendar,
+  Info,
 } from 'lucide-react'
 import clsx from 'clsx'
 import Link from 'next/link'
@@ -81,6 +85,15 @@ export default function TrackPage() {
   const [selectedComp, setSelectedComp] = useState<any>(null)
   const [compHistory, setCompHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+
+  // Snag Reporting State
+  const [snagCategory, setSnagCategory] = useState('DEFECT')
+  const [snagPriority, setSnagPriority] = useState('HIGH')
+  const [snagDate, setSnagDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [snagDescription, setSnagDescription] = useState('')
+  const [snagPhotos, setSnagPhotos] = useState<File[]>([])
+  const [snagPhotoPreviews, setSnagPhotoPreviews] = useState<string[]>([])
+  const [isSubmittingSnag, setIsSubmittingSnag] = useState(false)
 
   // Page States
   const [project, setProject] = useState<any>(null)
@@ -299,8 +312,107 @@ export default function TrackPage() {
   // Switch to snag report
   const handleOpenSnag = (comp: any) => {
     setSelectedComp(comp)
+    resetSnagForm()
     setView('issue')
   }
+
+  // Snag form upload handlers
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return
+    const filesArray = Array.from(e.target.files)
+    const newPreviews = filesArray.map((f) => URL.createObjectURL(f))
+    setSnagPhotos((prev) => [...prev, ...filesArray])
+    setSnagPhotoPreviews((prev) => [...prev, ...newPreviews])
+  }
+
+  const handleRemoveSnagPhoto = (idx: number) => {
+    setSnagPhotos((prev) => prev.filter((_, i) => i !== idx))
+    setSnagPhotoPreviews((prev) => {
+      URL.revokeObjectURL(prev[idx])
+      return prev.filter((_, i) => i !== idx)
+    })
+  }
+
+  const resetSnagForm = () => {
+    setSnagCategory('DEFECT')
+    setSnagPriority('HIGH')
+    setSnagDate(new Date().toISOString().split('T')[0])
+    setSnagDescription('')
+    snagPhotoPreviews.forEach((url) => URL.revokeObjectURL(url))
+    setSnagPhotos([])
+    setSnagPhotoPreviews([])
+  }
+
+  const handleSubmitSnag = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedComp) return
+    if (!snagDescription.trim()) {
+      toast.error('Please describe the issue in detail')
+      return
+    }
+
+    setIsSubmittingSnag(true)
+    try {
+      await createIssue(projectId, {
+        type: snagCategory,
+        priority: snagPriority,
+        description: snagDescription,
+        itemId: selectedComp.id,
+        dateEncountered: snagDate,
+        files: snagPhotos,
+      })
+      toast.success('Snag ticket submitted successfully! Our site team has been notified.')
+      resetSnagForm()
+      setView('overview')
+      await fetchIssues(projectId)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit snag ticket')
+    } finally {
+      setIsSubmittingSnag(false)
+    }
+  }
+
+  // Dual-Track Progress Determination
+  const dualTrackStatus = useMemo(() => {
+    if (!selectedComp) return { sourcingStep: 1, installStep: 0 }
+    const s = (selectedComp.status || 'ordered').toLowerCase()
+
+    let sourcingStep = 1 // 1: PO Approved, 2: In Production, 3: Quality Check, 4: Dispatched
+    if (s.includes('prod')) sourcingStep = 2
+    else if (s.includes('qual') || s.includes('ready')) sourcingStep = 3
+    else if (
+      s.includes('disp') ||
+      s.includes('deliv') ||
+      s.includes('instal') ||
+      s.includes('done') ||
+      s.includes('complete')
+    ) {
+      sourcingStep = 4
+    }
+
+    let installStep = 0 // 0: Pending Transit, 1: Arrived at Site, 2: Installed, 3: Completed & Handover
+    if (s.includes('deliv')) installStep = 1
+    else if (s.includes('instal')) installStep = 2
+    else if (s.includes('done') || s.includes('complete')) installStep = 3
+
+    return { sourcingStep, installStep }
+  }, [selectedComp])
+
+  // Component-specific or room-specific proof photos
+  const compProofPhotos = useMemo(() => {
+    if (!selectedComp) return []
+    return photos.filter((p) => {
+      if (p.item_id && p.item_id === selectedComp.id) return true
+      if (
+        p.room_name &&
+        selectedComp.room_name &&
+        p.room_name.toLowerCase() === selectedComp.room_name.toLowerCase()
+      ) {
+        return true
+      }
+      return false
+    })
+  }, [photos, selectedComp])
 
   if (loading) {
     return (
@@ -461,53 +573,302 @@ export default function TrackPage() {
             {view === 'component' && selectedComp ? (
               /* Component Tracking Details View */
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+                {/* Header breadcrumb & quick actions */}
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                   <button
                     onClick={() => setView('overview')}
-                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-indigo-650 hover:text-indigo-800"
+                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-indigo-650 hover:text-indigo-800 transition"
                   >
                     <ArrowLeft className="w-4 h-4" /> Back to Components List
                   </button>
-                  <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700">
-                    {selectedComp.component_id || 'CMP-SPEC'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-black uppercase tracking-wider bg-indigo-50 text-indigo-700">
+                      {selectedComp.component_id || 'CMP-SPEC'}
+                    </span>
+                    <button
+                      onClick={() => handleOpenSnag(selectedComp)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 transition border border-rose-100"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" /> Report Snag
+                    </button>
+                  </div>
                 </div>
 
+                {/* Hero / Component Summary Banner */}
                 <div className="flex flex-col sm:flex-row gap-6 items-start">
-                  <img
-                    src={selectedComp.image_url || 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace'}
-                    alt={selectedComp.item_name}
-                    className="w-full sm:w-44 h-44 object-cover rounded-2xl border border-slate-100 shadow-2xs"
-                  />
-                  <div className="space-y-3 flex-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      {selectedComp.room_name} Category
-                    </span>
-                    <h2 className="text-xl font-black text-slate-900">{selectedComp.item_name}</h2>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-700">
-                        Status: {selectedComp.status}
+                  <div
+                    className="relative group cursor-pointer w-full sm:w-44 h-44 flex-shrink-0"
+                    onClick={() =>
+                      setLightboxPhoto({
+                        image_url:
+                          selectedComp.image_url ||
+                          'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace',
+                        caption: selectedComp.item_name,
+                      })
+                    }
+                  >
+                    <img
+                      src={
+                        selectedComp.image_url ||
+                        'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace'
+                      }
+                      alt={selectedComp.item_name}
+                      className="w-full h-full object-cover rounded-2xl border border-slate-100 shadow-2xs group-hover:brightness-95 transition"
+                    />
+                    <div className="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
+                      <Eye className="w-4 h-4" /> Click to Zoom
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-500 bg-slate-100 uppercase tracking-wider">
+                        {selectedComp.room_name?.replace('_', ' ') || 'General'}
+                      </span>
+                      {selectedComp.category && (
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          • {selectedComp.category}
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                      {selectedComp.item_name}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span
+                        className={clsx(
+                          'px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border',
+                          (selectedComp.status || '').toLowerCase().includes('instal') ||
+                            (selectedComp.status || '').toLowerCase().includes('done')
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : (selectedComp.status || '').toLowerCase().includes('disp') ||
+                              (selectedComp.status || '').toLowerCase().includes('deliv')
+                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        )}
+                      >
+                        Status: {selectedComp.status || 'Ordered'}
                       </span>
                       {selectedComp.vendor_name && (
-                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700">
-                          Vendor: {selectedComp.vendor_name}
+                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          Supplier: {selectedComp.vendor_name}
+                        </span>
+                      )}
+                      {selectedComp.assigned_technician && (
+                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                          Technician: {selectedComp.assigned_technician}
                         </span>
                       )}
                     </div>
                     {selectedComp.remarks && (
-                      <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <strong className="font-bold text-slate-800">Technician Remarks:</strong> {selectedComp.remarks}
-                      </p>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-600">
+                        <strong className="font-bold text-slate-800">Technician Remarks:</strong>{' '}
+                        {selectedComp.remarks}
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Specifications Grid */}
-                {selectedComp.about_details && Object.keys(selectedComp.about_details).length > 0 && (
-                  <div className="space-y-3 pt-4 border-t border-slate-100">
-                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Component Specifications</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                      {Object.entries(selectedComp.about_details).map(([k, v]: [string, any]) => (
+                {/* ── DUAL-TRACK STATUS PROGRESSION BARS ── */}
+                <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/70 space-y-5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-indigo-600" /> Dual-Track Sourcing & Site Execution Bar
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-bold">Synchronized with supplier & site ops</span>
+                  </div>
+
+                  {/* Track 1: Sourcing / Factory Fulfillment */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                      <span>1. Supplier & Factory Track</span>
+                      <span className="text-indigo-600">
+                        {dualTrackStatus.sourcingStep === 4
+                          ? 'Dispatched from Factory'
+                          : `Step ${dualTrackStatus.sourcingStep} of 4`}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { label: 'PO Confirmed', desc: 'Order placed' },
+                        { label: 'In Production', desc: 'CNC cutting & joinery' },
+                        { label: 'Quality Check', desc: 'Factory QA passed' },
+                        { label: 'Dispatched', desc: 'In-transit to site hub' },
+                      ].map((st, i) => {
+                        const stepNum = i + 1
+                        const isDone =
+                          dualTrackStatus.sourcingStep > stepNum ||
+                          (dualTrackStatus.sourcingStep === stepNum && dualTrackStatus.sourcingStep === 4)
+                        const isCurrent =
+                          dualTrackStatus.sourcingStep === stepNum && dualTrackStatus.sourcingStep !== 4
+                        return (
+                          <div
+                            key={st.label}
+                            className={clsx(
+                              'p-2.5 rounded-xl border text-left transition',
+                              isDone
+                                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                                : isCurrent
+                                ? 'bg-indigo-50/80 border-indigo-200 text-indigo-950 shadow-2xs'
+                                : 'bg-white border-slate-200/60 text-slate-400'
+                            )}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[9px] font-black uppercase">0{stepNum}</span>
+                              {isDone ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : isCurrent ? (
+                                <Clock className="w-3.5 h-3.5 text-indigo-600 animate-spin-slow" />
+                              ) : (
+                                <div className="w-2.5 h-2.5 rounded-full border border-slate-300" />
+                              )}
+                            </div>
+                            <div className="text-[11px] font-black leading-tight">{st.label}</div>
+                            <div className="text-[9px] opacity-75 mt-0.5 truncate">{st.desc}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Track 2: Site Installation & Customer Verification */}
+                  <div className="space-y-2 pt-2 border-t border-slate-200/50">
+                    <div className="flex items-center justify-between text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                      <span>2. Site Installation & Handover Track</span>
+                      <span className="text-emerald-600">
+                        {dualTrackStatus.installStep === 3
+                          ? 'Completed & Handed Over'
+                          : dualTrackStatus.installStep === 0
+                          ? 'Awaiting Dispatch to Site'
+                          : `Step ${dualTrackStatus.installStep} of 3`}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {[
+                        { label: 'Arrived at Site', desc: 'Inspected at flat' },
+                        { label: 'Site Fitting', desc: 'Technician assembled' },
+                        { label: 'Customer Handover', desc: 'Ready & accepted' },
+                      ].map((st, i) => {
+                        const stepNum = i + 1
+                        const isDone = dualTrackStatus.installStep >= stepNum
+                        const isCurrent =
+                          dualTrackStatus.installStep === stepNum - 1 && dualTrackStatus.sourcingStep >= 4
+                        return (
+                          <div
+                            key={st.label}
+                            className={clsx(
+                              'p-2.5 rounded-xl border text-left transition',
+                              isDone
+                                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                                : isCurrent
+                                ? 'bg-amber-50/80 border-amber-200 text-amber-950 shadow-2xs'
+                                : 'bg-white border-slate-200/60 text-slate-400'
+                            )}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[9px] font-black uppercase">0{stepNum}</span>
+                              {isDone ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : isCurrent ? (
+                                <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin-slow" />
+                              ) : (
+                                <div className="w-2.5 h-2.5 rounded-full border border-slate-300" />
+                              )}
+                            </div>
+                            <div className="text-[11px] font-black leading-tight">{st.label}</div>
+                            <div className="text-[9px] opacity-75 mt-0.5 truncate">{st.desc}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── COMPONENT PROOF PHOTOS GALLERY ── */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-indigo-500" /> Component Proof & Inspection Photos
+                    </h3>
+                    <span className="text-[10px] font-bold text-slate-400">
+                      {compProofPhotos.length} Site Photo{compProofPhotos.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  {compProofPhotos.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {compProofPhotos.map((photo, pIdx) => (
+                        <div
+                          key={photo.id || pIdx}
+                          onClick={() => setLightboxPhoto(photo)}
+                          className="relative aspect-video rounded-xl overflow-hidden cursor-pointer group border border-slate-100 bg-slate-100 shadow-2xs"
+                        >
+                          <img
+                            src={photo.image_url}
+                            alt={photo.caption || 'Proof Photo'}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <Eye className="w-4 h-4" />
+                          </div>
+                          {photo.caption && (
+                            <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] font-semibold px-1.5 py-0.5 truncate">
+                              {photo.caption}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-400 flex items-center gap-2">
+                      <Info className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span>
+                        Technician proof photos and factory packaging snapshots will appear here once uploaded by field supervisors.
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── TECHNICAL SPECIFICATIONS & DETAILS ── */}
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+                    Component Specifications
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Room Location
+                      </span>
+                      <span className="font-extrabold text-slate-800 mt-0.5 block truncate capitalize">
+                        {selectedComp.room_name?.replace('_', ' ') || 'Living Room'}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Material / Finish
+                      </span>
+                      <span className="font-extrabold text-slate-800 mt-0.5 block truncate">
+                        {selectedComp.material_finish || selectedComp.finish || 'Factory Engineered Wood'}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Dimensions
+                      </span>
+                      <span className="font-extrabold text-slate-800 mt-0.5 block truncate">
+                        {selectedComp.dimensions || selectedComp.size || 'Custom Modular Spec'}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Color Family
+                      </span>
+                      <span className="font-extrabold text-slate-800 mt-0.5 block truncate">
+                        {selectedComp.color || 'Standard Palette'}
+                      </span>
+                    </div>
+                    {selectedComp.about_details &&
+                      Object.entries(selectedComp.about_details).map(([k, v]: [string, any]) => (
                         <div key={k} className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
                           <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
                             {k.replace('_', ' ')}
@@ -517,13 +878,46 @@ export default function TrackPage() {
                           </span>
                         </div>
                       ))}
+                  </div>
+                </div>
+
+                {/* ── LOGISTICS & SHIPMENT TRACKING ── */}
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-indigo-500" /> Logistics & Transit Details
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Carrier / Fleet
+                      </span>
+                      <span className="font-extrabold text-slate-800 mt-0.5 block truncate">
+                        {selectedComp.carrier || 'Dedicated Surface Freight'}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Waybill / Tracking No
+                      </span>
+                      <span className="font-mono font-extrabold text-indigo-650 mt-0.5 block truncate">
+                        {selectedComp.tracking_number ||
+                          `WB-${(selectedComp.id || 'TRK').slice(0, 8).toUpperCase()}`}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Warranty Protection
+                      </span>
+                      <span className="font-extrabold text-slate-800 mt-0.5 block truncate">
+                        {selectedComp.warranty || '10-Year Modular Warranty'}
+                      </span>
                     </div>
                   </div>
-                )}
+                </div>
 
-                {/* Status Audit History Log */}
+                {/* ── STATUS AUDIT HISTORY LOG ── */}
                 <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                     <History className="w-3.5 h-3.5 text-indigo-500" /> Milestone Audit Trail
                   </h3>
                   {loadingHistory ? (
@@ -535,10 +929,15 @@ export default function TrackPage() {
                   ) : (
                     <div className="space-y-2">
                       {compHistory.map((h: any, i: number) => (
-                        <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs font-medium">
+                        <div
+                          key={i}
+                          className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs font-medium"
+                        >
                           <div>
                             <span className="font-bold text-slate-800 uppercase text-[10px]">{h.status}</span>
-                            <p className="text-[11px] text-slate-500 mt-0.5">{h.remarks || 'Status logged by site team'}</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              {h.remarks || 'Status logged by site team'}
+                            </p>
                           </div>
                           <span className="text-[10px] text-slate-400">{h.updated_by || 'Coordinator'}</span>
                         </div>
@@ -547,18 +946,19 @@ export default function TrackPage() {
                   )}
                 </div>
 
+                {/* Actions Footer */}
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                   <button
                     onClick={() => handleOpenSnag(selectedComp)}
-                    className="py-2 px-4 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 transition flex items-center gap-1.5"
+                    className="py-2.5 px-4 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 transition flex items-center gap-1.5 border border-rose-100"
                   >
                     <AlertTriangle className="w-3.5 h-3.5" /> Report Issue on this Component
                   </button>
                   <button
                     onClick={() => setView('overview')}
-                    className="py-2 px-4 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm"
+                    className="py-2.5 px-5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm"
                   >
-                    Done
+                    Done & Return
                   </button>
                 </div>
               </div>
@@ -567,76 +967,95 @@ export default function TrackPage() {
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                   <button
-                    onClick={() => setView('overview')}
-                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-indigo-650 hover:text-indigo-800"
+                    onClick={() => {
+                      resetSnagForm()
+                      setView('overview')
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-indigo-650 hover:text-indigo-800 transition"
                   >
                     <ArrowLeft className="w-4 h-4" /> Cancel & Return
                   </button>
-                  <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700">
+                  <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-100">
                     Defect / Snag Filing
                   </span>
                 </div>
 
-                <div>
-                  <h2 className="text-xl font-black text-slate-900">Report an Issue or Snag</h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Flag any discrepancy, damage, or finish defect directly on <strong className="text-slate-800">{selectedComp.item_name}</strong>.
-                  </p>
+                {/* Context Target Banner */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center gap-4">
+                  <img
+                    src={
+                      selectedComp.image_url ||
+                      'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace'
+                    }
+                    alt={selectedComp.item_name}
+                    className="w-16 h-16 object-cover rounded-xl border border-slate-200 flex-shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      Reporting Issue on {selectedComp.room_name?.replace('_', ' ') || 'Room Item'}
+                    </span>
+                    <h3 className="text-sm font-black text-slate-800 truncate mt-0.5">
+                      {selectedComp.item_name}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-mono text-slate-500 font-bold">
+                        {selectedComp.component_id || 'CMP-SPEC'}
+                      </span>
+                      <span className="text-[10px] text-slate-400">•</span>
+                      <span className="text-[10px] font-bold text-slate-600">
+                        Status: {selectedComp.status || 'Ordered'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault()
-                    const form = e.currentTarget as HTMLFormElement
-                    const type = (form.elements.namedItem('issueType') as HTMLSelectElement).value
-                    const priority = (form.elements.namedItem('issuePriority') as HTMLSelectElement).value
-                    const desc = (form.elements.namedItem('issueDescription') as HTMLTextAreaElement).value
-                    try {
-                      await createIssue(projectId, {
-                        type,
-                        priority,
-                        description: desc,
-                        itemId: selectedComp.id,
-                      })
-                      toast.success('Snag reported successfully! Our team will inspect it.')
-                      setView('overview')
-                    } catch (err: any) {
-                      toast.error(err.message || 'Failed to submit issue')
-                    }
-                  }}
-                  className="space-y-4"
-                >
+                <form onSubmit={handleSubmitSnag} className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
                         Issue Category
                       </label>
                       <select
-                        name="issueType"
-                        className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none focus:ring-1 focus:ring-indigo-500"
+                        value={snagCategory}
+                        onChange={(e) => setSnagCategory(e.target.value)}
+                        className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
                       >
-                        <option value="DEFECT">Defect / Finish Damage</option>
-                        <option value="INCORRECT_SPEC">Incorrect Color / Fabric</option>
-                        <option value="MISSING_PARTS">Missing Parts / Hardware</option>
-                        <option value="DELAY">Installation Delay</option>
-                        <option value="FUNCTIONAL">Functional Failure</option>
+                        <option value="DEFECT">Defect / Finish Damage (Scratch, Dent, Chip)</option>
+                        <option value="INCORRECT_SPEC">Incorrect Color / Fabric / Material Mismatch</option>
+                        <option value="MISSING_PARTS">Missing Parts / Hardware / Handles</option>
+                        <option value="ALIGNMENT">Alignment / Fitment / Door Misalignment</option>
+                        <option value="DELAY">Installation or Delivery Delay</option>
+                        <option value="FUNCTIONAL">Functional Failure / Sticking Drawer</option>
                       </select>
                     </div>
+
                     <div>
                       <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
                         Severity / Priority
                       </label>
                       <select
-                        name="issuePriority"
-                        defaultValue="HIGH"
-                        className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none focus:ring-1 focus:ring-indigo-500"
+                        value={snagPriority}
+                        onChange={(e) => setSnagPriority(e.target.value)}
+                        className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
                       >
-                        <option value="LOW">Low (Cosmetic)</option>
-                        <option value="MEDIUM">Medium (Requires Touchup)</option>
-                        <option value="HIGH">High (Blocks Acceptance)</option>
-                        <option value="CRITICAL">Critical (Immediate Replacement)</option>
+                        <option value="LOW">Low (Minor cosmetic touchup)</option>
+                        <option value="MEDIUM">Medium (Noticeable flaw, needs adjustment)</option>
+                        <option value="HIGH">High (Blocks room acceptance)</option>
+                        <option value="CRITICAL">Critical (Immediate replacement required)</option>
                       </select>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Date Discovered / Encountered
+                    </label>
+                    <input
+                      type="date"
+                      value={snagDate}
+                      onChange={(e) => setSnagDate(e.target.value)}
+                      className="w-full sm:w-64 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
+                    />
                   </div>
 
                   <div>
@@ -644,27 +1063,92 @@ export default function TrackPage() {
                       Detailed Snag Description
                     </label>
                     <textarea
-                      name="issueDescription"
+                      value={snagDescription}
+                      onChange={(e) => setSnagDescription(e.target.value)}
                       required
                       rows={4}
-                      placeholder="Describe the issue, defect location, or specification mismatch..."
-                      className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+                      placeholder="Describe what is damaged or mismatched, where the defect is located, and any specific resolution requested..."
+                      className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-1 focus:ring-indigo-500 resize-none text-slate-800"
                     />
                   </div>
 
-                  <div className="flex items-center justify-end gap-3 pt-2">
+                  {/* Multi-photo upload section */}
+                  <div className="space-y-3">
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                      Proof Photos / Defect Images ({snagPhotos.length} attached)
+                    </label>
+
+                    <div className="border-2 border-dashed border-slate-200 hover:border-indigo-300 rounded-2xl p-5 text-center transition bg-slate-50/50">
+                      <input
+                        type="file"
+                        id="snag-photo-upload"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePhotoSelect}
+                        className="hidden"
+                      />
+                      <label htmlFor="snag-photo-upload" className="cursor-pointer block space-y-2">
+                        <Upload className="w-6 h-6 text-indigo-500 mx-auto" />
+                        <div className="text-xs font-extrabold text-indigo-650 hover:text-indigo-800">
+                          Click to upload defect proof photos
+                        </div>
+                        <p className="text-[10px] text-slate-400">
+                          Attach clear photos of the defect, overall component, or finish issue (JPG, PNG, WebP)
+                        </p>
+                      </label>
+                    </div>
+
+                    {/* Image Previews Grid with Remove Button */}
+                    {snagPhotoPreviews.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        {snagPhotoPreviews.map((previewUrl, pIdx) => (
+                          <div
+                            key={pIdx}
+                            className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 group bg-slate-100 shadow-2xs"
+                          >
+                            <img src={previewUrl} alt="Snag upload preview" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSnagPhoto(pIdx)}
+                              className="absolute top-1.5 right-1.5 p-1 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                            <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] font-bold px-2 py-0.5 truncate">
+                              {snagPhotos[pIdx]?.name || `Photo ${pIdx + 1}`}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                     <button
                       type="button"
-                      onClick={() => setView('overview')}
+                      onClick={() => {
+                        resetSnagForm()
+                        setView('overview')
+                      }}
                       className="py-2.5 px-4 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="py-2.5 px-5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm"
+                      disabled={isSubmittingSnag}
+                      className="py-2.5 px-5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white transition shadow-sm flex items-center gap-1.5"
                     >
-                      Submit Snag Ticket
+                      {isSubmittingSnag ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Submitting Ticket...
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5" /> Submit Snag Ticket
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>
