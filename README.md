@@ -380,3 +380,33 @@ The Project Team Operations Center bridges digital designs with physical jobsite
 ### 2. Multi-Part Photo Verification & Milestone Approvals
 * Technicians capture and upload on-site progress and completion photos directly through mobile multipart forms.
 * Photo submissions attach directly to the respective SKU item tracking record (`/api/v1/item-tracking/*`), creating an immutable verification trail before customer sign-off.
+---
+
+## 🧪 System API Directory & Automated Testing Suite
+
+InteriorAI features comprehensive unit, integration, and end-to-end test coverage across both FastAPI backend services and Next.js frontend clients.
+
+### 1. Key API Endpoints Reference
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/v1/recommendations/pairings` | `POST` | Fetches AI pairing recommendations with style mood & spatial filtering |
+| `/api/v1/recommendations/spatial-check` | `POST` | Validates room walkability clearance and carpet area ratios |
+| `/api/v1/ai/interactive-viewer/{id}` | `GET` | Fetches 3D scene parameters and geometry briefs for WebGL rendering |
+| `/api/v1/ai/plan-layout/detect` | `POST` | Executes OCR and room polygon segmentation on floor plan images |
+| `/api/v1/item-tracking/{projectId}` | `GET` | Returns dual vendor-sourcing and technician-installation tracking bars |
+| `/api/v1/special-services/inquiries` | `POST` | Creates turnkey service inquiries and routes to regional consultants |
+
+### 2. Executing Automated Test Suites
+Run all backend feedback modules and recommendation engine tests:
+```bash
+# Recommendation engine scoring & spatial solver tests
+cd backend
+.venv\Scripts\python -m pytest tests/test_recommendations.py -v
+
+# Full backend test suite with throwaway SQLite database
+.venv\Scripts\python -m pytest tests -q
+
+# IDS 3D engine & solver unit tests
+cd ../backend-ai
+..\backend\.venv\Scripts\python -m pytest tests -q
+```
