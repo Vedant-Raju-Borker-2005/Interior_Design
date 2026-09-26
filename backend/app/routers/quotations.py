@@ -20,7 +20,10 @@ from ..services.business_rules import (
 router = APIRouter()
 
 GST_RATE = 0.18
-PDF_DIR = os.getenv("PDF_OUTPUT_DIR", "./pdfs")
+# Read at call time, not import time: the output directory is set by the
+# environment, and a caller (or a test) may set it after this module loads.
+def _pdf_dir() -> str:
+    return os.getenv("PDF_OUTPUT_DIR", "./pdfs")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
@@ -215,7 +218,7 @@ def download_quotation(project_id_or_quotation_id: str, db: Session = Depends(ge
         raise HTTPException(404, "Quotation not found")
         
     pdf_filename = f"quotation_{q.id[:8]}.pdf"
-    filepath = os.path.join(PDF_DIR, pdf_filename)
+    filepath = os.path.join(_pdf_dir(), pdf_filename)
     if not os.path.exists(filepath):
         raise HTTPException(404, f"Quotation PDF file not found on disk: {pdf_filename}")
         

@@ -551,6 +551,12 @@ def apply_area_numbers(detection: dict[str, Any], img: Image.Image,
         texts = read_texts(img)
     W, H = img.size
 
+    # A printed area is used for two different things, and they have different
+    # rules. Measuring the drawing works off every area that lands in a room,
+    # even one the plan already names — a plan that prints "BEDROOM 11.37m2" is
+    # stating its scale as plainly as one that prints the number alone. Only
+    # re-typing a room has to leave a named room alone.
+    measured: list[tuple[int, float]] = []
     found: list[tuple[int, float]] = []
     for t in texts:
         value = area_number(t.text)
@@ -563,29 +569,31 @@ def apply_area_numbers(detection: dict[str, Any], img: Image.Image,
             continue
         i = min(inside, key=lambda k: (rooms[k]["box"][2] - rooms[k]["box"][0])
                 * (rooms[k]["box"][3] - rooms[k]["box"][1]))
+        if not any(j == i for j, _ in measured):
+            measured.append((i, value))
         if rooms[i].get("from_label") or any(j == i for j, _ in found):
             continue
         found.append((i, value))
-    if len(found) < 3:
-        return detection
 
     # Scale: each matched room gives pixels² per m². The median ignores a number
     # that landed in the wrong room.
     per_m2 = []
-    for i, value in found:
+    for i, value in measured:
         x0, y0, x1, y1 = rooms[i]["box"]
         px = (x1 - x0) * W * (y1 - y0) * H
         if px > 0:
             per_m2.append(px / value)
-    ppm = math.sqrt(statistics.median(per_m2))
-    if not 5.0 <= W / ppm <= 80.0:
-        return detection
-    detection["plan_width_m"] = round(W / ppm, 2)
-    detection["plan_depth_m"] = round(H / ppm, 2)
-    detection["scale_source"] = "printed areas"
+    if len(per_m2) >= 3:
+        ppm = math.sqrt(statistics.median(per_m2))
+        if 5.0 <= W / ppm <= 80.0:
+            detection["plan_width_m"] = round(W / ppm, 2)
+            detection["plan_depth_m"] = round(H / ppm, 2)
+            detection["scale_source"] = "printed areas"
 
-    for i, value in found:
+    for i, value in measured:
         rooms[i]["printed_area_m2"] = value
+    if len(found) < 3:
+        return detection
 
     # The areas also say what a room cannot be — unless the plan's colour code
     # already said what it is (a master bedroom is often bigger than the living room).
