@@ -19,6 +19,8 @@ from sqlalchemy.orm import Session
 from ..auth_utils import current_user
 from ..db import get_db
 from ..models import (
+    Flat,
+    Package,
     Product,
     Project,
     ProjectApprovalEvent,
@@ -32,9 +34,30 @@ from ..services.business_rules import (
     DISCOUNT_TYPES,
     compute_discount,
     effective_discount,
+    normalize_bhk,
     quote_totals,
     unit_projects,
 )
+
+BHK_DEFAULT_BASE_PRICES = {
+    "1BHK": 295000.0,
+    "2BHK": 480000.0,
+    "3BHK": 680000.0,
+    "4BHK": 950000.0,
+    "5BHK": 1400000.0,
+}
+
+
+def _get_bhk_base_price(bhk_type: Optional[str], package_id: Optional[str], db: Session) -> float:
+    norm_bhk = normalize_bhk(bhk_type) or "2BHK"
+    if package_id:
+        pkg = db.query(Package).filter(Package.id == package_id).first()
+        if pkg and normalize_bhk(pkg.bhk) == norm_bhk and pkg.base_price:
+            return float(pkg.base_price)
+    pkg = db.query(Package).filter(Package.bhk == norm_bhk, Package.tier == "basic").first()
+    if pkg and pkg.base_price:
+        return float(pkg.base_price)
+    return BHK_DEFAULT_BASE_PRICES.get(norm_bhk, 480000.0)
 
 router = APIRouter()
 
@@ -328,23 +351,75 @@ def project_pricing(
         raise HTTPException(403, "Not your project")
 
     discount_type, discount_value = effective_discount(p, db)
-    children = unit_projects(p, db)
+    flats = db.query(Flat).filter(Flat.project_id == p.id).order_by(Flat.flat_number).all()
 
-    if children:
+    if flats:
+        # 2.3/2.4 — enterprise development priced flat-by-flat with customization deltas
+        lines = []
+        customisations = []
+        for flat in flats:
+            base_price = _get_bhk_base_price(flat.bhk_type, p.package_id, db)
+            child = db.query(Project).filter(Project.id == flat.customer_project_id).first() if flat.customer_project_id else None
+            child_subtotal = _project_subtotal(child, db) if child else 0.0
+            child_custs = _customisations(child, db) if child else []
+            customisations.extend(child_custs)
+
+            customized_cost = child_subtotal if child_subtotal > 0 else base_price
+            customization_delta = round(customized_cost - base_price, 2)
+
+            lines.append({
+                "flat_id": flat.id,
+                "project_id": flat.customer_project_id or flat.id,
+                "unit": f"Flat {flat.flat_number}",
+                "flat_number": flat.flat_number,
+                "bhk_type": flat.bhk_type,
+                "typology_name": flat.typology.name if flat.typology else None,
+                "customer_name": flat.customer.name if flat.customer else None,
+                "status": flat.status,
+                "base_price": base_price,
+                "customization_delta": customization_delta,
+                "original_price": customized_cost,
+                "discount": 0.0,
+                "discounted_price": customized_cost,
+                "customisation_count": len(child_custs),
+            })
+
+        gross = sum(l["original_price"] for l in lines)
+        units = len(lines)
+        totals = quote_totals(subtotal=gross, discount_type=discount_type,
+                              discount_value=discount_value, units=units)
+
+        for l in lines:
+            if discount_type in ("PERCENT", "PERCENTAGE"):
+                l["discount"] = round(l["original_price"] * (discount_value / 100.0), 2)
+            elif discount_type in ("FLAT_PER_UNIT", "FLAT_UNIT"):
+                l["discount"] = round(min(discount_value, l["original_price"]), 2)
+            elif discount_type in ("FLAT_TOTAL", "LUMP_SUM") and gross > 0:
+                ratio = totals["discount_amount"] / gross
+                l["discount"] = round(l["original_price"] * ratio, 2)
+            else:
+                l["discount"] = 0.0
+            l["discounted_price"] = round(l["original_price"] - l["discount"], 2)
+
+    elif unit_projects(p, db):
         # 2.3 — a bulk project is priced unit by unit: each flat carries its
         # own BHK and customisations (2.4), so units can differ in value.
+        children = unit_projects(p, db)
         lines = []
         for child in children:
             gross_unit = _project_subtotal(child, db)
             one = compute_discount(gross_unit, *(
-                ("FLAT_PER_UNIT", discount_value) if discount_type == "FLAT_PER_UNIT"
-                else ("PERCENT", discount_value) if discount_type == "PERCENT"
+                ("FLAT_PER_UNIT", discount_value) if discount_type in ("FLAT_PER_UNIT", "FLAT_UNIT")
+                else ("PERCENT", discount_value) if discount_type in ("PERCENT", "PERCENTAGE")
                 else (None, 0.0)
             ), units=1)
             lines.append({
                 "project_id": child.id,
                 "unit": child.property_name,
+                "flat_number": getattr(child.flat, "flat_number", None) if getattr(child, "flat", None) else None,
                 "bhk_type": child.bhk_type,
+                "base_price": gross_unit,
+                "customization_delta": 0.0,
                 "original_price": one["original_total"],
                 "discount": one["discount_amount"],
                 "discounted_price": one["discounted_total"],
@@ -354,7 +429,7 @@ def project_pricing(
         units = len(lines)
         totals = quote_totals(subtotal=gross, discount_type=discount_type,
                               discount_value=discount_value, units=units)
-        if discount_type == "FLAT_TOTAL" and gross:
+        if discount_type in ("FLAT_TOTAL", "LUMP_SUM") and gross:
             ratio = totals["discounted_total"] / gross
             for l in lines:
                 l["discount"] = round(l["original_price"] * (1 - ratio), 2)
@@ -394,23 +469,44 @@ def set_discount(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    _require_admin(user)
     p = db.query(Project).filter(Project.id == project_id).first()
     if not p:
         raise HTTPException(404, "Project not found")
-    if req.discount_type not in DISCOUNT_TYPES:
-        raise HTTPException(400, f"discount_type must be one of {DISCOUNT_TYPES}")
+    roles = _roles(user)
+    if "admin" not in roles and p.user_id != user.id:
+        raise HTTPException(403, "Not authorized to discount this project")
+
+    dtype = str(req.discount_type).upper().strip()
+    if dtype in ("PERCENTAGE", "PERCENT"):
+        req.discount_type = "PERCENT"
+    elif dtype in ("FLAT_PER_UNIT", "FLAT_UNIT"):
+        req.discount_type = "FLAT_PER_UNIT"
+    elif dtype in ("FLAT_TOTAL", "LUMP_SUM"):
+        req.discount_type = "FLAT_TOTAL"
+    else:
+        raise HTTPException(400, f"discount_type must be one of {DISCOUNT_TYPES} or aliases")
+
     if req.discount_value < 0:
         raise HTTPException(400, "Discount cannot be negative")
     if req.discount_type == "PERCENT" and req.discount_value > 100:
         raise HTTPException(400, "Percentage discount cannot exceed 100")
 
+    flats = db.query(Flat).filter(Flat.project_id == p.id).all()
     children = unit_projects(p, db)
-    if children:
+    if flats:
+        values = []
+        for flat in flats:
+            base_p = _get_bhk_base_price(flat.bhk_type, p.package_id, db)
+            child = db.query(Project).filter(Project.id == flat.customer_project_id).first() if flat.customer_project_id else None
+            child_sub = _project_subtotal(child, db) if child else 0.0
+            values.append(child_sub if child_sub > 0 else base_p)
+        per_unit_subtotal = round(sum(values) / len(values), 2) if values else 0.0
+    elif children:
         values = [_project_subtotal(c, db) for c in children]
         per_unit_subtotal = round(sum(values) / len(values), 2) if values else 0.0
     else:
         per_unit_subtotal = _project_subtotal(p, db)
+
     p.discount_type = req.discount_type
     p.discount_value = req.discount_value
     p.discount_note = req.note
@@ -427,10 +523,12 @@ def clear_discount(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    _require_admin(user)
     p = db.query(Project).filter(Project.id == project_id).first()
     if not p:
         raise HTTPException(404, "Project not found")
+    roles = _roles(user)
+    if "admin" not in roles and p.user_id != user.id:
+        raise HTTPException(403, "Not authorized to manage discount on this project")
     p.discount_type = None
     p.discount_value = 0.0
     p.discount_note = None
