@@ -16,7 +16,10 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-PDF_DIR = os.getenv("PDF_OUTPUT_DIR", "./pdfs")
+# Read at call time, not import time: the output directory is set by the
+# environment, and a caller (or a test) may set it after this module loads.
+def _pdf_dir() -> str:
+    return os.getenv("PDF_OUTPUT_DIR", "./pdfs")
 
 # Color palette
 INDIGO = colors.HexColor("#4F46E5")
@@ -52,10 +55,10 @@ def generate_quotation_pdf(
     billing = billing or {}
     reference = quotation_no or f"#{quotation_id[:8].upper()}"
 
-    os.makedirs(PDF_DIR, exist_ok=True)
+    os.makedirs(_pdf_dir(), exist_ok=True)
     safe_ref = (quotation_no or quotation_id[:8]).replace("/", "-")
     filename = f"quotation_{safe_ref}.pdf"
-    filepath = os.path.join(PDF_DIR, filename)
+    filepath = os.path.join(_pdf_dir(), filename)
 
     doc = SimpleDocTemplate(
         filepath,
@@ -240,9 +243,9 @@ def generate_renders_pdf(project_id: str, project_name: str, renders_data: list)
     import urllib.request
     import tempfile
 
-    os.makedirs(PDF_DIR, exist_ok=True)
+    os.makedirs(_pdf_dir(), exist_ok=True)
     filename = f"renders_{project_id[:8]}.pdf"
-    filepath = os.path.join(PDF_DIR, filename)
+    filepath = os.path.join(_pdf_dir(), filename)
 
     doc = SimpleDocTemplate(
         filepath, pagesize=A4, rightMargin=15*mm, leftMargin=15*mm,
@@ -660,12 +663,12 @@ def generate_floor_plan_pdf(project_id: str, project, user, rooms_data: list) ->
     """
     from reportlab.platypus import PageBreak
 
-    os.makedirs(PDF_DIR, exist_ok=True)
+    os.makedirs(_pdf_dir(), exist_ok=True)
     fp_asset_dir = os.path.join("assets", "floor_plans")
     os.makedirs(fp_asset_dir, exist_ok=True)
 
     filename = f"floorplan_{project_id[:8]}.pdf"
-    filepath = os.path.join(PDF_DIR, filename)
+    filepath = os.path.join(_pdf_dir(), filename)
     fp_filepath = os.path.join(fp_asset_dir, filename)
 
     doc = SimpleDocTemplate(
