@@ -322,6 +322,17 @@ class UpdateFlatReq(BaseModel):
     flat_number: Optional[str] = None
     bhk_type: Optional[str] = None
     floor_plan_id: Optional[str] = None
+    typology_id: Optional[str] = None
+
+
+class CreateTypologyReq(BaseModel):
+    name: str
+    carpet_area_sqft: Optional[float] = None
+    floor_plan_id: Optional[str] = None
+
+
+class AssignFlatsTypologyReq(BaseModel):
+    flat_ids: List[str]
 
 
 class AssignCustomerReq(BaseModel):

@@ -753,6 +753,22 @@ export const enterpriseAPI = {
   updateOnboarding: (projectId: string, data: any) =>
     axiosInstance.put(`/api/v1/enterprise/projects/${projectId}/onboarding`, data),
   getActivity: () => axiosInstance.get('/api/v1/enterprise/activity'),
+  listTypologies: (projectId: string) => axiosInstance.get(`/api/v1/enterprise/projects/${projectId}/typologies`),
+  createTypology: (projectId: string, data: { name: string; carpet_area_sqft?: number; floor_plan_id?: string }) =>
+    axiosInstance.post(`/api/v1/enterprise/projects/${projectId}/typologies`, data),
+  uploadAndCreateTypology: (projectId: string, name: string, carpetAreaSqft: number | undefined, file: File) => {
+    const fd = new FormData()
+    fd.append('name', name)
+    if (carpetAreaSqft) fd.append('carpet_area_sqft', String(carpetAreaSqft))
+    fd.append('file', file)
+    return axiosInstance.post(`/api/v1/enterprise/projects/${projectId}/typologies/upload-and-create`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  deleteTypology: (projectId: string, typologyId: string) =>
+    axiosInstance.delete(`/api/v1/enterprise/projects/${projectId}/typologies/${typologyId}`),
+  assignFlatsToTypology: (projectId: string, typologyId: string, flatIds: string[]) =>
+    axiosInstance.post(`/api/v1/enterprise/projects/${projectId}/typologies/${typologyId}/assign-flats`, { flat_ids: flatIds }),
 }
 
 // Customer extras
