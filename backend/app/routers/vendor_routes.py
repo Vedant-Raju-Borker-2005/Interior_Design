@@ -1028,8 +1028,38 @@ def adjust_inventory(
         )
         db.add(notif)
 
+    # Real-Time Amazon-style Catalog Suppression & Recovery
+    if inv.available_qty <= 0:
+        product.is_available = False
+        product.unavailable_reason = "Out of Stock"
+        product.availability_updated_at = datetime.datetime.utcnow()
+        twin = db.query(Product).filter(or_(Product.sku == product.sku, Product.id == product.id)).first()
+        if twin:
+            twin.is_available = False
+            twin.unavailable_reason = "Out of Stock"
+            twin.availability_updated_at = datetime.datetime.utcnow()
+    elif inv.available_qty > 0 and product.unavailable_reason == "Out of Stock":
+        product.is_available = True
+        product.unavailable_reason = None
+        product.availability_updated_at = datetime.datetime.utcnow()
+        twin = db.query(Product).filter(or_(Product.sku == product.sku, Product.id == product.id)).first()
+        if twin:
+            twin.is_available = True
+            twin.unavailable_reason = None
+            twin.availability_updated_at = datetime.datetime.utcnow()
+
     db.commit()
     return {"success": True, "availableQty": inv.available_qty, "reservedQty": inv.reserved_qty}
+
+
+@router.get("/products/{product_id}/stock", summary="Get real-time stock details for product")
+def get_product_stock_status(
+    product_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db)
+):
+    from ..services.inventory_service import get_stock_status
+    return get_stock_status(db, product_id)
 
 
 # --- ASSIGNMENT WORKFLOW ENDPOINTS ---

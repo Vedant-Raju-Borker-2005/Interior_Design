@@ -472,18 +472,38 @@ def list_products(
     exact_color_match_found = any(item["is_color_match"] for item in products_with_flags)
 
     paginated = products_with_flags[skip: skip + limit]
-    return {
-        "items": [
+    from ..models import VendorProduct, Inventory
+    skus = [item["product"].sku for item in paginated if item["product"].sku]
+    vps = db.query(VendorProduct).filter(VendorProduct.sku.in_(skus)).all() if skus else []
+    vp_by_sku = {v.sku: v for v in vps}
+    vp_ids = [v.id for v in vps]
+    invs = db.query(Inventory).filter(Inventory.product_id.in_(vp_ids)).all() if vp_ids else []
+    inv_by_vp_id = {i.product_id: i for i in invs}
+
+    items_out = []
+    for item in paginated:
+        p = item["product"]
+        vp = vp_by_sku.get(p.sku)
+        inv = inv_by_vp_id.get(vp.id) if vp else None
+        avail_qty = inv.available_qty if inv else (15 if p.is_available is not False else 0)
+        res_qty = inv.reserved_qty if inv else 0
+        in_stock = (p.is_available is not False) and (avail_qty > 0)
+        items_out.append(
             _prod_out(
-                item["product"], 
-                tier_label(item["product"]),
+                p, 
+                tier_label(p),
                 is_color_match=item["is_color_match"],
                 is_material_match=item["is_material_match"],
                 is_fabric_match=item["is_fabric_match"],
-                is_price_match=item["is_price_match"]
+                is_price_match=item["is_price_match"],
+                available_qty=avail_qty,
+                reserved_qty=res_qty,
+                is_in_stock=in_stock,
             )
-            for item in paginated
-        ],
+        )
+
+    return {
+        "items": items_out,
         "total": len(products_with_flags),
         "exact_color_match_found": exact_color_match_found
     }
@@ -497,7 +517,14 @@ def get_product(prod_id: str, db: Session = Depends(get_db)):
     prod = db.query(Product).filter(Product.id == prod_id).first()
     if not prod:
         raise HTTPException(404, "Product not found")
-    return _prod_out(prod)
+    from ..services.inventory_service import get_stock_status
+    stock = get_stock_status(db, prod.id)
+    return _prod_out(
+        prod,
+        available_qty=stock["available_qty"],
+        reserved_qty=stock["reserved_qty"],
+        is_in_stock=stock["is_in_stock"],
+    )
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -522,8 +549,16 @@ def _prod_out(
     is_color_match: bool = True,
     is_material_match: bool = True,
     is_fabric_match: bool = True,
-    is_price_match: bool = True
+    is_price_match: bool = True,
+    available_qty: int = 15,
+    reserved_qty: int = 0,
+    is_in_stock: bool = True,
 ) -> dict:
+    effective_available = is_in_stock and (True if p.is_available is None else bool(p.is_available))
+    reason = p.unavailable_reason
+    if not effective_available and not reason:
+        reason = "Out of Stock" if not is_in_stock else "Unavailable"
+
     return {
         "id": p.id,
         "sku": p.sku,
@@ -554,9 +589,12 @@ def _prod_out(
         "is_material_match": is_material_match,
         "is_fabric_match": is_fabric_match,
         "is_price_match": is_price_match,
-        # Feedback 4.1 — surfaced so a direct link can disable selection.
-        "is_available": True if p.is_available is None else bool(p.is_available),
-        "unavailable_reason": p.unavailable_reason,
+        # Real-time stock status & Amazon-style availability
+        "is_available": effective_available,
+        "is_in_stock": is_in_stock,
+        "available_qty": available_qty,
+        "reserved_qty": reserved_qty,
+        "unavailable_reason": reason,
         # Feedback 1.6 — images list travels with the product so the client can
         # fall back to a secondary image when the thumbnail 404s.
         "images": p.images or [],
