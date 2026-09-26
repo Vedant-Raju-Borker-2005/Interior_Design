@@ -146,6 +146,10 @@ def generate_quotation(
     db.add(quotation)
     db.commit()
 
+    # Feedback 3.x — Atomically reserve stock for quoted components
+    from ..services.inventory_service import reserve_quotation_inventory
+    reserve_quotation_inventory(db, quotation.id)
+
     # Sync assignments per RoomItem to vendor side automatically
     from ..db import sync_project_vendor_assignments
     sync_project_vendor_assignments(project.id, db)

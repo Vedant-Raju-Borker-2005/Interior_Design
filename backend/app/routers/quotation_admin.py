@@ -312,6 +312,25 @@ def convert_quotation_to_project(
     }
 
 
+@router.post("/{quotation_id}/cancel", summary="Cancel a quotation and release reserved stock")
+def cancel_quotation(
+    quotation_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    _require_admin(user)
+    quotation = db.query(Quotation).filter(Quotation.id == quotation_id).first()
+    if not quotation:
+        raise HTTPException(404, "Quotation not found")
+    if quotation.status in ("converted", "cancelled"):
+        raise HTTPException(400, f"Quotation is already {quotation.status}")
+    quotation.status = "cancelled"
+    from ..services.inventory_service import release_quotation_inventory
+    release_quotation_inventory(db, quotation.id)
+    db.commit()
+    return {"success": True, "message": "Quotation cancelled and inventory released"}
+
+
 @router.get("/payment-modes", summary="1.9 — accepted offline payment modes")
 def payment_modes():
     return {"payment_modes": PAYMENT_MODES}
