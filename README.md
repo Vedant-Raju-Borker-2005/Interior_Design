@@ -12,18 +12,35 @@ InteriorAI is an end-to-end web application that simplifies the interior design 
 * **6-Step Interactive Onboarding Wizard**: Guided flow capturing project type (New Home vs. Renovation), BHK scope (1BHK to 5BHK), budget limit, completion timeline, single-select design vibe, wood laminate finish, fabric preference, and color explorer. Auto-saves draft project at Step 1 to track progress on the dashboard and resume exact steps without duplicate projects.
 * **Dynamic Package Pricing**: Packages automatically compute tier prices based on onboarding budget limit (`Basic` = budget, `Premium` = budget + ₹2L, `Luxury` = budget + ₹5L).
 * **Interactive 3D Room Canvas & 4-Wall AI Studio**: Powered by Three.js, `@react-three/fiber`, and Gemini / Imagen 3 AI. View Wall A, B, C, D perspectives, test blueprint templates, upload photo layouts, and input room dimensions with automatic pillar clearance.
-* **Smart Customizer & Preference Indicator Legend**: Features a Preference Legend Card on section header and compact indicator dots on product cards (🟡 Material/Fabric, 🔵 Color, 🔴 Budget Cap). Customizes room items with live cost updates, dual budget tracking sub-boxes (*Remaining Budget* and *Variation Spent*), auto tab progression, balcony auto-complete, and all-complete panel.
-* **ReportLab PDF Quotation Generator**: Generates professional, bank-compliant PDF quotes with detailed room line items, GST breakdown, terms, and bank details. Automatically regenerates quotes if revised after customer review.
-* **Dual Customer Tracking System**: Read-only **Vendor Status Bar** visualizes item sourcing progress (Ordered to Dispatched) in real time; interactive **Customer Verification Bar** permits homeowners to confirm deliveries and installations.
+* **Smart Customizer & Real-Time Stock Status**: Features a Preference Legend Card on section header and compact indicator dots on product cards (🟡 Material/Fabric, 🔵 Color, 🔴 Budget Cap). Displays real-time stock availability badges (In Stock, Low Stock ≤ 5, Out of Stock) with automatic disabling of depleted SKUs. Live price tracking with dual centered sub-boxes (*Remaining Budget* and *Variation Spent*), auto tab progression, and balcony auto-complete.
+* **ReportLab PDF Quotation Generator**: Generates professional, bank-compliant PDF quotes with detailed room line items, GST breakdown, terms, and bank details. Automatically reserves inventory upon quote creation and regenerates quotes if revised after customer review.
+* **Unified Customer Project Progress & Snag Cockpit (`/track/[projectId]`)**:
+  * **Hero Execution Banner**: Milestone-driven overall progress gauge (0–100%) and expandable 6-stage core timeline (Design Finalized $\rightarrow$ Procurement $\rightarrow$ Production $\rightarrow$ Logistics $\rightarrow$ Installation $\rightarrow$ Handover) with strictly all dates removed.
+  * **Sourcing & Room Filter Bar**: 7 interactive status counter chips (All Items, Ordered, In Production, Quality Check, Dispatched, Delivered, Installation, Completed) with room filter tabs and instant component search.
+  * **In-Page Component Tracking Details**: Deep-dive component view featuring **Dual-Track Status Bars** (Vendor Sourcing vs Field Installation), component proof photo gallery with high-res lightbox, full technical specifications, carrier/waybill logistics metadata, and immutable milestone audit history.
+  * **Customer Snag & Defect Filing Flow**: Direct defect reporting with target component context banner, category & severity selectors, date encountered input, detailed description, and drag-and-drop multi-photo upload with thumbnail preview removal.
+  * **2x2 Project Utilities Grid**: 1-click modal access to Quotation & Invoice PDFs, AI 3D Visualizer Studio, Architectural Floor Plans, and Milestone Payments.
 
 ### 2. Enterprise / Builder (B2B2C) Portal
-* **4-Step Parent Project Creation Wizard**: Configure multi-unit parent projects with unit mix distributions (1BHK to 5BHK) and default design package assignments.
-* **Flat Allocation & Token Invitations**: Assign customer details (Name, Email, Phone) to specific flat units and generate secure invitation tokens (`/invite`).
+* **4-Step Parent Project Creation Wizard & Typology Setup**: Configure multi-unit parent projects with unit mix distributions (1BHK to 5BHK), default design package assignments, and dynamic architectural typologies (Typology Count, Typology Cards A/B/C/D, carpet area sq.ft, and per-typology floor plan blueprints).
+* **Project Typologies Shelf & Interactive Flat Allocation (`/enterprise/projects/[id]/units`)**:
+  * Visual typology cards displaying blueprint thumbnails, square footage, assigned flat counts, and quick-filter unit views.
+  * **Assign to Flats Multi-Column Modal**: Interactive allocation grid grouped dynamically by BHK columns (e.g. 2BHK, 3BHK, 4BHK), displaying flat numbers, current typology assignments (or Empty), and instant toggle assignments with green/neutral visual indicators. Enterprise-locked to prevent buyer override.
+* **B2B Bulk Project Discounts & Unit-Wise Pricing Engine**:
+  * Automated volume discount tiering engine (5–10 units: 5%, 11–25 units: 8%, 26–50 units: 12%, 50+ units: 15%).
+  * Transparent project summary cards displaying Total Units, Gross Portfolio Value, Total Bulk Savings (₹ / %), and Net Portfolio Cost.
+  * Itemized unit customization breakdown tables tracking base package costs, customization upgrades, volume discount deductions, and final net flat prices.
+* **Flat Allocation & Token Invitations**: Assign buyer details (Name, Email, Phone) to specific flat units and generate secure invitation tokens (`/invite`).
 * **Portfolio Dashboard**: High-level portfolio completion metrics, flat allocation grids, and recent project activity timestamps.
 
 ### 3. Vendor (B2B) Portal
+* **Real-Time Inventory Locking & Atomic Stock Reservation (`/vendor/inventory`)**:
+  * Live stock ledger displaying total physical stock, active quotation reservations, and net available stock.
+  * Atomic stock reservation lifecycle: Quote creation automatically reserves items; quote cancellation or expiry releases reservations back to stock; quote payment / project conversion commits reservations into permanent orders.
+  * Real-time out-of-stock catalog suppression: Depleted SKUs are automatically hidden or marked unavailable in the customer customizer.
+  * Quick stock adjustments and instant live/hidden visibility toggle per SKU.
 * **Vendor Onboarding & Document Verification**: Submit business details, GST/PAN numbers, and upload verification certificates for admin approval.
-* **Vendor Management**: Vendor registration, document verification, multi-view catalog image uploads (Front/Side/Perspective), dynamic pincode order distribution, and milestone-based payout tracking.
+* **Multi-View Catalog Management**: Manage product inventory with multi-view perspective images (Front/Side/Perspective) and dynamic pincode order distribution.
 * **Order Fulfillment & Logistics Tracking**: Accept/reject item assignments, update 6-stage milestone progress (PO Approved $\rightarrow$ Production $\rightarrow$ Ready $\rightarrow$ Dispatched), upload verification proof photos, and enter courier/vehicle tracking details.
 * **Issues Tracking & Milestone Payouts**: Review customer-reported product issues (`/vendor/issues`) and track milestone-based payout releases.
 
@@ -214,9 +231,9 @@ PAYMENT_UPI_ID=
 | 1.6 Product images | Catalog re-encoded 495 MB → 7.6 MB WebP; uploads auto-optimised; relative image paths resolved | `ProductImage`, `services/image_optimizer.py` |
 | 1.7 / 1.8 Rendering | Free AI visualisation; up to 20 premium renders unlocked by payment | `RenderEntitlementPanel`, `/api/v1/ai/premium-render/*` |
 | 1.11 / 1.12 | B2C pays in full (B2B keeps milestones); pre-checkout page captures special services + confirmations | `/checkout/[id]`, `/api/v1/special-services/checkout/{id}` |
-| 2.1–2.4 B2B | Project-level bulk discount, original vs discounted per unit, unit-wise roll-up, customisations | `/admin/approvals` (Pricing), enterprise project page |
-| 3.1–3.5 Project team | Separate vendor and technician status tracks; technician sees only installation; photos on the item | `ItemTrackingBoard`, `/api/v1/item-tracking/*` |
-| 4.1–4.5 Vendor | Mark product unavailable (hidden from marketplace); admin approval queue; supplier allocation after approval | `/vendor/products`, `/admin/approvals`, `/api/v1/approvals/*` |
+| 2.1–2.4 B2B Typologies & Discounts | Architectural typology setup, floor plans per typology, interactive BHK-column flat allocation, tiered volume discounts (up to 15%), and transparent unit customization breakdown | `/enterprise/projects/[id]/units`, `services/business_rules.py`, `models.py` |
+| 3.1–3.5 Unified Progress & Snags | Consolidated tracking cockpit with hero progress gauge, 6 stages (strictly milestone-driven, no dates), dual-track sourcing & installation, in-page component specs, and photo snag filing | `/track/[projectId]`, `customerStore.ts`, `/api/v1/customer/projects/{id}/*` |
+| 4.1–4.5 Vendor Inventory & Locking | Real-time stock ledger, atomic quotation stock reservation & release lifecycle, and instant out-of-stock catalog suppression | `/vendor/inventory`, `/customize/[id]`, `services/inventory_service.py` |
 | 5.1–5.8 Special services | Consultant directory & onboarding, lead routing, consultant portal, commission ledger | `/admin/special-services`, `/consultant`, `/api/v1/special-services/*` |
 
 ### Running the tests

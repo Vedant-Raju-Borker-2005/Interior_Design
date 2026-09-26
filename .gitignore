@@ -59,6 +59,7 @@ backend/assets/floor_plans/*.jpeg
 backend/assets/documents/
 backend/assets/proofs/
 backend/assets/renders/
+backend/assets/typologies/
 backend/pdfs/product_images/
 
 # Temporary diagnostic scripts & logs
