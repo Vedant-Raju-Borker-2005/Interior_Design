@@ -6,7 +6,7 @@
 
 ## System Architecture
 
-The application is built as a Next.js single-page application frontend and a FastAPI backend using SQLAlchemy and a SQLite database.
+The application is built as a Next.js single-page application frontend and a FastAPI backend using SQLAlchemy and a SQLite database, paired with an Automated Interior Design System (backend-ai) for constraint solving and 3D scene assembly.
 
 ```mermaid
 graph TD
@@ -17,14 +17,17 @@ graph TD
   Admin((Platform Admin)) -->|Approvals & System Rules| FE
 
   FE <-->|REST API / JWT| BE[FastAPI Backend]
+  FE <-->|Three.js Viewport| IDS[Automated Interior Design System / backend-ai]
   BE <--> DB[(SQLite Database: interior_ai.db)]
   BE <-->|ReportLab PDF| PDF[Quotation & Presentation PDFs]
   BE <-->|Gemini AI / Imagen 3| AI[Photorealistic AI Renders]
+  BE <-->|Constraint Solver & Scene Models| IDS
 ```
 
 ### Main Directories
 * [`/frontend`](file:///d:/MyFiles/Interior_Design/frontend): Next.js 14 application built with TypeScript, React 18, Zustand, and Tailwind CSS.
-* [`/backend`](file:///d:/MyFiles/Interior_Design/backend): Python REST API built with FastAPI, SQLAlchemy, and SQLite.
+* [`/backend`](file:///d:/MyFiles/Interior_Design/backend): Python REST API built with FastAPI, SQLAlchemy, SQLite, and inventory/business rules services.
+* [`/backend-ai`](file:///d:/MyFiles/Interior_Design/backend-ai): Automated Interior Design System (IDS) engine with 3 workflows (CP-SAT/annealing layout solver, FP-Growth & GBR pricing, procedural PBR bakery, single-file HTML viewer assembly).
 * [`/backend/assets/catalog`](file:///d:/MyFiles/Interior_Design/backend/assets/catalog): Visual product assets, thumbnails, laminate textures, and multi-view catalog images.
 * [`/backend/assets/floor_plans`](file:///d:/MyFiles/Interior_Design/backend/assets/floor_plans): Uploaded customer floor plan layout blueprints.
 
@@ -54,19 +57,27 @@ graph TD
    * Generates photorealistic AI images via Gemini / Imagen 3 / SDXL simulation.
 5. **Quotation & Verification**:
    * Generates professional bank-compliant PDF quotes. Automatically regenerates quotes if customer revises items after review.
-   * Dual horizontal tracking bars visualizes item sourcing status (Ordered to Dispatched) and customer verification bar (Confirm Delivery / Installation).
+6. **Unified Customer Progress Cockpit & Snags**:
+   * Dedicated tracking hub (`/track/[projectId]`) consolidating tracking history into an integrated view.
+   * Dynamic hero circular progress gauge (0–100%) and 6 milestone stages with **strictly zero dates or day forecasts**.
+   * 7-stage item filter chips (All, Ordered, Production, Ready, Dispatched, Delivered, Installed).
+   * In-page item cards with dual-track progress bars: Sourcing Status (PO Approved $\rightarrow$ Dispatched $\rightarrow$ Delivered) and Site Installation Status (Site Received $\rightarrow$ Quality Checked $\rightarrow$ Customer Verified).
+   * Proof photo gallery with interactive full-screen lightbox modal.
+   * Multi-photo customer snag reporting flow (`POST /api/v1/customer/projects/{id}/snags`).
 
 ### 2. Enterprise / Builder (B2B2C) Flow
-1. **Parent-Child Project Creation**: 4-step wizard setting up parent property, unit mix (1BHK-5BHK distribution), and default packages.
-2. **Flat Allocation & Invitation**: Generate unique invitation tokens and assign customer details (name, email, phone) to specific flat units.
-3. **Buyer Journey Handoff**: Customers accept invitation token via `/invite`, automatically creating a child project linked to their assigned flat.
-4. **Portfolio Dashboard**: Tracks overall portfolio completion metrics, flat allocation statuses, and recent project activity.
+1. **Multi-Typology Setup Wizard**: Step 1 wizard configuration supporting multiple typology definitions (Typology A, B, C...) with custom names, BHK configurations, unit square footage, and floor plan blueprint uploads.
+2. **Typology Shelf & Flat Allocation**: Dedicated Project Typologies shelf on the units dashboard and an interactive multi-column BHK allocation modal allowing developers to assign flats to typologies with a single click.
+3. **Flat Allocation & Invitation**: Generate unique invitation tokens and assign customer details (name, email, phone) to specific flat units.
+4. **Buyer Journey Handoff & Typology Inheritance**: Customers accept invitation tokens via `/invite`, automatically creating a child project linked to their assigned flat and pre-populated with the flat's assigned typology BHK and floor plan.
+5. **B2B Tiered Bulk Volume Discounts & Portfolio Analytics**: Automated bulk pricing engine applying discounts (5% for 5–9 units, 10% for 10–19 units, 15% for 20+ units). Portfolio summary cards and unit customization breakdown tables calculate net project contract value (`Net = Base Units + Customization Upgrades - Volume Discount`).
 
 ### 3. Vendor (B2B) Portal Flow
 1. **Onboarding & Document Verification**: Register business profile, submit GST/PAN numbers, and upload verification documents.
-2. **Multi-View Catalog Management**: Manage product inventory and upload up to 3 perspective images (Front, Side, Perspective).
-3. **Assignment Fulfillment**: Receive assigned project items, update 6-stage milestone progress (PO Approved $\rightarrow$ Production $\rightarrow$ Ready $\rightarrow$ Dispatched), upload proof photos, and enter shipping logistics details.
-4. **Issues & Milestone Payouts**: Review customer-reported product issues (`/vendor/issues`) and track milestone-based vendor payout releases.
+2. **Multi-View Catalog & Inventory Ledger**: Manage product inventory and upload up to 3 perspective images (Front, Side, Perspective). Real-time inventory ledger tracking physical stock, reserved stock, and available stock (`available_stock = physical_stock - reserved_stock`).
+3. **Real-Time Inventory Locking & Suppression**: Automatically reserves product inventory upon quotation creation, releases held stock on quotation rejection/expiry, and permanently commits stock upon payment. Out-of-stock items (zero available) are automatically suppressed from customer customizer room views.
+4. **Assignment Fulfillment**: Receive assigned project items, update 6-stage milestone progress (PO Approved $\rightarrow$ Production $\rightarrow$ Ready $\rightarrow$ Dispatched), upload proof photos, and enter shipping logistics details.
+5. **Issues & Milestone Payouts**: Review customer-reported product issues (`/vendor/issues`) and track milestone-based vendor payout releases.
 
 ### 4. Project Team / Site Execution Flow
 1. **Welcome Portal & Role Router**: Access workspace at `/team` to select role (`team_manager`, `team_coordinator`, `team_technician`).
@@ -110,11 +121,20 @@ graph TD
 * **₹12L – ₹20L Budget**: Max product price cap = **₹3,50,000**
 * **₹20L+ Budget**: Max product price cap = **₹5,00,000**
 
-### 4. Customizer & Navigation Rules
+### 4. Enterprise Bulk Volume Discount Tiers
+* **5–9 Units**: 5% discount on base package and upgrade totals
+* **10–19 Units**: 10% discount on base package and upgrade totals
+* **20+ Units**: 15% discount on base package and upgrade totals
+* **Net Formula**: `Net Contract Value = Base Units + Customization Upgrades - Volume Discount`
+
+### 5. Customizer & Navigation Rules
 * **Single-Select Design Vibe**: Selecting a new style card in onboarding replaces the previous selection.
 * **Onboarding Draft Auto-Save & Step Tracking**: B2C onboarding creates a draft project at Step 1 and updates preferences on every step transition (`projectsAPI.update`). Clicking *Continue Onboarding* on `/dashboard` resumes at the exact incomplete step without creating duplicate projects.
-* **Enterprise Locked Onboarding Steps**: For Enterprise Child Projects (`parent_project_id != null`), Steps 0–2 (Property Details, BHK, Budget, Timeline) are strictly locked. Homebuyers resume directly at Step 3 (Design Vibe).
+* **Enterprise Locked Onboarding Steps & Typology Inheritance**: For Enterprise Child Projects (`parent_project_id != null`), Steps 0–2 (Property Details, BHK, Budget, Timeline) are strictly locked. Homebuyers resume directly at Step 3 (Design Vibe) inheriting the flat's assigned typology BHK and blueprint layout.
 * **Preference Legend & Indicator Dots UI**: Customizer section header features a Preference Legend Card. Product cards display compact indicator dots for preference mismatches: 🟡 Material/Fabric, 🔵 Color, and 🔴 Budget Cap limit.
+* **Real-Time Stock Badges & Out-of-Stock Suppression**: Catalog products display live availability badges ("In Stock (X left)", "Low Stock", "Out of Stock"). Items with zero available stock (`available_stock <= 0`) are suppressed from room customizer selection grids.
+* **Real-Time Inventory Reservation Lifecycle**: Creating a quotation reserves item stock atomically via `inventory_service.py`. Quote expiration or cancellation auto-releases stock. Making quotation payment commits stock permanently.
+* **Customer Progress Zero-Date Policy**: Progress tracking across all 6 milestone stages displays pure completion percentages (0–100%) with strictly no estimated completion dates or remaining days shown.
 * **Approval Queue & Supplier Allocation (stakeholder feedback 4.2–4.5)**: There is no straight-through flow. Every new project enters the admin approval queue (`Project.approval_status = PENDING`, `/admin/approvals`). `sync_project_vendor_assignments(project.id, db)` is a no-op until the project is `APPROVED` **and** has an `allocated_vendor_id`; it then assigns items only to that supplier. Customer quotation approval, quotation generation and the vendor dashboard all go through this gate.
 * **Vendor Portal Auto-Approval**: Accessing the Vendor Portal (`/vendor/dashboard`) still marks the seeded vendor `APPROVED` and `active = True`, but orders only appear once an admin allocates a project to that vendor.
 * **BHK Format**: The canonical form is `3BHK` (packages, room templates, onboarding). Use `normalize_bhk()` from `services/business_rules.py` for any lookup — the IDS 3D engine and some callers send `3 BHK`.
@@ -139,6 +159,7 @@ For system architecture and sub-system guides, refer to:
 * **System Architecture Specification**: [`ARCHITECTURE.md`](file:///d:/MyFiles/Interior_Design/ARCHITECTURE.md)
 * **Frontend Guide**: [`frontend/AGENTS.md`](file:///d:/MyFiles/Interior_Design/frontend/AGENTS.md)
 * **Backend Guide**: [`backend/AGENTS.md`](file:///d:/MyFiles/Interior_Design/backend/AGENTS.md)
+* **AI Engine & 3D Solver Guide**: [`backend-ai/AGENTS.md`](file:///d:/MyFiles/Interior_Design/backend-ai/AGENTS.md)
 
 ---
 

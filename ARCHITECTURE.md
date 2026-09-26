@@ -8,7 +8,7 @@ This document serves as the authoritative architectural blueprint for **Interior
 
 ## 📌 1. High-Level System Architecture
 
-InteriorAI is built using a modern decoupled web architecture consisting of a **Next.js 14 (App Router)** single-page frontend application and a high-performance **FastAPI (Python 3.10+)** RESTful backend engine powered by **SQLAlchemy ORM** and an embedded **SQLite database** (`interior_ai.db`).
+InteriorAI is built using a modern decoupled web architecture consisting of a **Next.js 14 (App Router)** single-page frontend application, a high-performance **FastAPI (Python 3.10+)** RESTful backend engine powered by **SQLAlchemy ORM** and an embedded **SQLite database** (`interior_ai.db`), and an **Automated Interior Design System (backend-ai)** for spatial constraint solving and 3D scene assembly.
 
 ```mermaid
 graph TD
@@ -43,6 +43,16 @@ graph TD
         TEAM_ROUTER[project_team.py]
         ADMIN_ROUTER[admin.py]
         CUST_ROUTER[customer_routes.py]
+        SRV_INV[inventory_service.py]
+        SRV_RULES[business_rules.py]
+    end
+
+    subgraph AIEngine ["AI & 3D Solver Engine (backend-ai - Port 8000 / IDS)"]
+        SOLVER[ids.solver.SpatialSolver]
+        MODELS[ids.models.FP-Growth & GBR]
+        SCENE_MODEL[ids.scene.Scene Graph]
+        BAKERY[ids.textures PBR Bakery]
+        EXPORT_3D[ids.export HTML 3D Viewer]
     end
 
     subgraph StorageEngine ["Persistence & File Storage Layer"]
@@ -53,8 +63,10 @@ graph TD
     ClientLayer --> StateStore
     StateStore --> API_Client
     API_Client <-->|REST API / JWT Token| BackendEngine
+    ClientLayer <-->|Three.js Viewport| EXPORT_3D
     BackendEngine <--> DB
     BackendEngine <--> PDF_STATIC
+    BackendEngine <-->|Scene Graph & Recommendations| AIEngine
 ```
 
 ---
@@ -87,8 +99,11 @@ graph TD
     Step2 -->|Choose Package: Basic / Premium / Luxury| Step3[Automatic Room Breakdown Generation]
     Step3 --> Step4[Interactive Room Product Customizer]
     
-    subgraph CustomizerLoop ["Room Customization Engine"]
-        Step4 --> ChecklistCheck{Category Checklist Complete?}
+    subgraph CustomizerLoop ["Room Customization & Inventory Engine"]
+        Step4 --> StockCheck{Stock Available?}
+        StockCheck -->|No: available_stock <= 0| Suppress[Suppress Item from Room View]
+        StockCheck -->|Yes| DisplayStock[Show In-Stock Badge & Compatibility Dots]
+        DisplayStock --> ChecklistCheck{Category Checklist Complete?}
         ChecklistCheck -->|No| SelectProduct[Select Product & Wood/Fabric/Color Finish]
         SelectProduct --> BudgetUpdate[Update Dual Budget Sub-Boxes: Remaining & Variation]
         BudgetUpdate --> AutoTab[Auto Tab Progression to Next Room]
@@ -98,12 +113,18 @@ graph TD
     end
     
     ConfigDone --> Step5[4-Wall AI Visualizer Studio]
-    Step5 -->|Gemini / Imagen 3 AI| Render[Generate Photorealistic 3D Renders]
+    Step5 -->|Gemini / Imagen 3 / IDS| Render[Generate Photorealistic 3D Renders]
     Render --> Step6[Bank-Compliant Quotation Generation]
-    Step6 -->|ReportLab Engine| QuotePDF[PDF Quote Download & Revision Tracker]
-    QuotePDF --> Step7[Dual Sourcing & Verification Tracking Hub]
-    Step7 -->|Vendor Status Bar| Track1[PO Approved → Production → Dispatched]
-    Step7 -->|Customer Verification Bar| Track2[Confirm Delivery & Verify Installation]
+    Step6 -->|ReportLab Engine| QuotePDF[PDF Quote Download & Stock Reservation]
+    QuotePDF --> Step7[Unified Customer Progress Cockpit: /track/id]
+    
+    subgraph TrackingCockpit ["Unified Customer Progress Cockpit"]
+        Step7 --> HeroGauge[Circular Progress Gauge: 0-100% - Strictly Zero Dates]
+        HeroGauge --> DualBars[Dual-Track Progress Bars: Sourcing vs Site Installation]
+        DualBars --> FilterChips[7-Stage Filter Chips: All, Ordered, Production, Ready, Dispatched, Delivered, Installed]
+        FilterChips --> ProofLightbox[Proof Photo Gallery with Lightbox]
+        ProofLightbox --> SnagReporting[Multi-Photo Customer Snag Reporting Flow]
+    end
 ```
 
 **Key Customer Routes & APIs:**
@@ -112,42 +133,57 @@ graph TD
 * Customizer: `/customize/[projectId]` $\rightarrow$ `PUT /api/v1/projects/{id}/rooms/{roomId}`
 * AI Studio: `/visualize/[projectId]` $\rightarrow$ `POST /api/v1/ai/render`
 * Quotation: `/quotation/[projectId]` $\rightarrow$ `POST /api/v1/quotations/{id}/generate`
-* Verification: `/track/[projectId]/execution` $\rightarrow$ `PUT /api/v1/customer/projects/{id}/tracking/{trackingId}`
+* Unified Progress Cockpit: `/track/[projectId]` $\rightarrow$ `GET /api/v1/tracking/{id}`
+* Customer Snags: `/track/[projectId]` $\rightarrow$ `POST /api/v1/customer/projects/{id}/snags`
 
 ---
 
 ### 2.2 Enterprise / Builder (B2B2C) Flow
 
-Real-estate developers setup parent properties, configure multi-unit flat mixes, assign buyers, and issue invitations.
+Real-estate developers setup parent properties with multi-typology configurations, manage unit mixes, assign buyers, and leverage bulk volume discounts.
 
 ```mermaid
 graph TD
     EntStart((Builder / Developer Login)) --> Dashboard[Enterprise Portfolio Dashboard]
     Dashboard --> CreateWizard[4-Step Parent Project Creation Wizard]
-    CreateWizard --> UnitMix[Configure Unit Mix: 1BHK - 5BHK Allocations]
+    CreateWizard --> TypologySetup[Step 1 Typology Setup: Define Typology A, B, C Cards]
+    TypologySetup --> UnitMix[Configure Unit Mix: 1BHK - 5BHK Allocations]
     UnitMix --> FloorPlanUpload[Upload Floor Plan Blueprints]
     FloorPlanUpload --> FlatGrid[Flat Units Inventory Grid]
     
-    FlatGrid --> AssignBuyer[Assign Buyer Name, Phone, & Email]
+    subgraph TypologyAndAllocation ["Typology Shelf & Allocation Modal"]
+        FlatGrid --> TypologyShelf[Project Typologies Shelf]
+        TypologyShelf --> MultiColModal[Interactive Multi-Column BHK Allocation Modal]
+        MultiColModal --> AssignTypology[One-Click Flat-to-Typology Assignment]
+    end
+    
+    AssignTypology --> AssignBuyer[Assign Buyer Name, Phone, & Email]
     AssignBuyer --> GenInvite[Generate Unique Invitation Token]
     GenInvite --> SendInvite[Send Invitation Link to Homebuyer]
     
     SendInvite --> BuyerAccept["Redeem Token at /invite?token=xyz"]
-    BuyerAccept --> ChildProject[Auto-Create Linked Child Customer Project]
-    ChildProject --> OnboardingComplete[Homebuyer Handoff to B2C Customizer]
+    BuyerAccept --> ChildProject[Auto-Create Linked Child Project with Inherited Typology BHK & Blueprint]
+    ChildProject --> LockSteps[Lock Onboarding Steps 0-2: Homebuyer Lands Directly on Step 3]
+    
+    subgraph BulkDiscountEngine ["B2B Bulk Volume Discounts"]
+        FlatGrid --> VolumeRollup[Calculate Bulk Tier: 5% for 5-9 units, 10% for 10-19, 15% for 20+]
+        VolumeRollup --> NetFormula["Net Contract Value = Base Units + Customization Upgrades - Volume Discount"]
+        NetFormula --> SummaryKPI[Portfolio KPI Cards & Units Customization Breakdown Table]
+    end
 ```
 
 **Key Enterprise Routes & APIs:**
 * Dashboard: `/enterprise/dashboard` $\rightarrow$ `GET /api/v1/enterprise/projects`
 * Creation Wizard: `/enterprise/create-project` $\rightarrow$ `POST /api/v1/enterprise/projects`
-* Flat Inventory: `/enterprise/project/[id]` $\rightarrow$ `GET /api/v1/enterprise/projects/{id}/flats`
+* Typology Management: `/enterprise/project/[id]` $\rightarrow$ `POST /api/v1/enterprise/projects/{id}/typologies`
+* Flat Inventory & Allocations: `/enterprise/project/[id]` $\rightarrow$ `GET /api/v1/enterprise/projects/{id}/flats`
 * Invitations: `/invite` $\rightarrow$ `POST /api/v1/enterprise/invitations/accept`
 
 ---
 
 ### 2.3 Furniture & Decor Vendor (B2B) Flow
 
-Vendors manage product catalogs, inventory levels, order assignments, logistics tracking, and customer issues.
+Vendors manage product catalogs, real-time inventory ledgers, order assignments, logistics tracking, and customer issues.
 
 ```mermaid
 graph TD
@@ -156,9 +192,17 @@ graph TD
     AdminApproval -->|Approved| CatalogMgmt[Multi-View Catalog Management]
     
     CatalogMgmt --> UploadViews[Upload 3 Perspective Images: Front, Side, Perspective]
-    UploadViews --> InventoryMgmt[Stock & Reserved Inventory Tracking]
+    UploadViews --> InventoryLedger[Real-Time Inventory Ledger: /vendor/inventory]
     
-    InventoryMgmt --> ReceiveAssign[Receive Project Item Assignments]
+    subgraph StockReservationLifecycle ["Atomic Stock Ledger & Lifecycle"]
+        InventoryLedger --> Formula["available_stock = physical_stock - reserved_stock"]
+        Formula --> QuoteCreate[Customer Quote Generated: Reserve Stock Atomically]
+        QuoteCreate --> QuoteAction{Quote Action}
+        QuoteAction -->|Expired / Cancelled| ReleaseStock[Release Reserved Stock]
+        QuoteAction -->|Payment Completed| CommitStock[Commit Stock: Deduct Physical & Clear Reserved]
+    end
+    
+    CommitStock --> ReceiveAssign[Receive Project Item Assignments]
     ReceiveAssign --> MilestoneUpdate[Update 6-Stage Fulfillment Status]
     
     subgraph LogisticsPipeline ["6-Stage Fulfillment Pipeline"]
@@ -170,13 +214,14 @@ graph TD
         Stage5 --> Stage6[Delivered to Site - Upload Proof Photos]
     end
     
-    Stage6 --> IssueReview[Review Customer Issues: /vendor/issues]
+    Stage6 --> IssueReview[Review Customer Issues & Snags: /vendor/issues]
     IssueReview --> PayoutRelease[Track Milestone Payout Releases]
 ```
 
 **Key Vendor Routes & APIs:**
 * Onboarding: `/vendor/onboarding` $\rightarrow$ `POST /api/v1/vendor/onboarding`
 * Products Catalog: `/vendor/products` $\rightarrow$ `POST /api/v1/vendor/products/{id}/image?view_index=0`
+* Inventory Ledger: `/vendor/inventory` $\rightarrow$ `GET /api/v1/vendor/inventory`
 * Assignments: `/vendor/assignments` $\rightarrow$ `PATCH /api/v1/vendor/assignments/{id}`
 * Logistics: `/vendor/assignments` $\rightarrow$ `PUT /api/v1/vendor/assignments/{id}/shipment`
 * Issues Tracker: `/vendor/issues` $\rightarrow$ `GET /api/v1/vendor/issues`
@@ -224,7 +269,7 @@ graph TD
 
 ### 2.5 Platform Administrator Flow
 
-Super Admins and Operations Managers manage the platform via a persistent navigation layout across 10 specialized sub-routes.
+Super Admins and Operations Managers manage the platform via a persistent navigation layout across 11 specialized sub-routes.
 
 ```mermaid
 graph TD
@@ -272,15 +317,18 @@ erDiagram
     User ||--o{ Flat : assigned_flats
     User ||--o{ AdminRole : has_admin_role
     
+    Project ||--o{ Typology : defines_typologies
     Project ||--o{ Flat : contains_units
     Project ||--o{ Room : contains_rooms
     Project ||--o{ Quotation : generates
     Project ||--o{ ItemTracking : tracks_items
+    Project ||--o{ CustomerSnag : logs_snags
     Project ||--o{ Task : manages_tasks
     Project ||--o{ SiteVisit : schedules_visits
     Project ||--o{ ProjectDelay : records_delays
     Project ||--o{ ProjectTeamMember : assigned_team
     
+    Typology ||--o{ Flat : assigns_typology
     Room ||--o{ RoomItem : contains_items
     Room ||--o{ Render : visualizes
     
@@ -314,9 +362,29 @@ erDiagram
 * **₹12L – ₹20L Budget**: Max product price cap = **₹3,50,000**
 * **₹20L+ Budget**: Max product price cap = **₹5,00,000**
 
+### 4. Enterprise Bulk Volume Discounts
+* **5–9 Units**: 5% discount on base package and upgrade totals
+* **10–19 Units**: 10% discount on base package and upgrade totals
+* **20+ Units**: 15% discount on base package and upgrade totals
+* **Net Formula**: `Net Contract Value = Base Units + Customization Upgrades - Volume Discount`
+
+### 5. Enterprise Typology Inheritance & Locked Steps
+* Child projects bound to an enterprise typology inherit the assigned flat's typology BHK and floor plan blueprint.
+* Steps 0–2 of customer onboarding are locked; homebuyers land directly at Step 3 (Design Vibe).
+
+### 6. Real-Time Stock Reservation Lifecycle & Ledger
+* **Ledger Formula**: `available_stock = physical_stock - reserved_stock`.
+* Generating a quotation atomically reserves required items via `inventory_service.py`.
+* Expiring, cancelling, or revising a quote releases held stock.
+* Quote payment commits stock permanently.
+* Items with `available_stock <= 0` are suppressed from customer room customization views.
+
+### 7. Customer Progress Zero-Date Policy
+* Execution progress is computed strictly as a completion percentage (0–100%) across 6 stages without date predictions or day forecasts.
+
 ---
 
-## 🚀 5. Development & Deployment Operational Commands
+## 🚀 5. Development Operations & Subsystem Index
 
 ### Click-to-Run Launcher (Windows)
 Run the root batch launcher to validate environments, initialize `.venv`, seed test databases, handle port clearances, and start both servers:
@@ -327,3 +395,13 @@ Run the root batch launcher to validate environments, initialize `.venv`, seed t
 * **Frontend Web App**: `http://localhost:3000`
 * **FastAPI Backend API**: `http://localhost:8000`
 * **Swagger API Documentation**: `http://localhost:8000/docs`
+
+---
+
+## 📚 DOX Subsystem Guides
+
+For detailed specifications of each architectural tier:
+* **Root Project Guide**: [`AGENTS.md`](file:///d:/MyFiles/Interior_Design/AGENTS.md)
+* **Frontend Guide**: [`frontend/AGENTS.md`](file:///d:/MyFiles/Interior_Design/frontend/AGENTS.md)
+* **Backend Guide**: [`backend/AGENTS.md`](file:///d:/MyFiles/Interior_Design/backend/AGENTS.md)
+* **AI Engine & 3D Solver Guide**: [`backend-ai/AGENTS.md`](file:///d:/MyFiles/Interior_Design/backend-ai/AGENTS.md)
