@@ -7,10 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Project, Flat, User, FloorPlan, Room, RoomItem, Product, ProjectTeamMember, ProjectAssignment, AuditLog
+from ..models import Project, Flat, User, FloorPlan, Room, RoomItem, Product, ProjectTeamMember, ProjectAssignment, AuditLog, Typology
 from ..schemas import (
     CreateEnterpriseProjectReq, ConfigureUnitMixReq, UpdateFlatReq,
-    AssignCustomerReq, AcceptInvitationReq, UpdateCustomerOnboardingReq
+    AssignCustomerReq, AcceptInvitationReq, UpdateCustomerOnboardingReq,
+    CreateTypologyReq, AssignFlatsTypologyReq
 )
 from ..services.business_rules import normalize_bhk
 from ..auth_utils import current_user
@@ -233,8 +234,11 @@ def list_project_flats(
             "flat_number": f.flat_number,
             "bhk_type": f.bhk_type,
             "floor_plan_id": f.floor_plan_id,
-            "floor_plan_name": f.floor_plan.file_type if f.floor_plan else None,
-            "floor_plan_url": f.floor_plan.file_url if f.floor_plan else None,
+            "floor_plan_name": f.floor_plan.file_type if f.floor_plan else (f.typology.name if f.typology else None),
+            "floor_plan_url": f.floor_plan.file_url if f.floor_plan else (f.typology.floor_plan.file_url if f.typology and f.typology.floor_plan else None),
+            "typology_id": f.typology_id,
+            "typology_name": f.typology.name if f.typology else None,
+            "carpet_area_sqft": f.typology.carpet_area_sqft if f.typology else None,
             "customer_id": f.customer_id,
             "customer_name": cust.name if cust else None,
             "customer_phone": cust.phone if cust else None,
@@ -303,6 +307,171 @@ def list_enterprise_floor_plans(
     return [{"id": p.id, "layout_name": p.file_type, "file_url": p.file_url} for p in plans]
 
 
+# ── Typologies Management ──────────────────────────────────────────────────
+
+@router.get("/projects/{project_id}/typologies", summary="List project typologies")
+def list_project_typologies(
+    project_id: str,
+    user: User = Depends(require_enterprise),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    typologies = db.query(Typology).filter(Typology.project_id == project_id).all()
+    out = []
+    for t in typologies:
+        assigned_flats = [f for f in t.flats]
+        out.append({
+            "id": t.id,
+            "project_id": t.project_id,
+            "name": t.name,
+            "carpet_area_sqft": t.carpet_area_sqft,
+            "floor_plan_id": t.floor_plan_id,
+            "floor_plan_name": t.floor_plan.file_type if t.floor_plan else None,
+            "floor_plan_url": t.floor_plan.file_url if t.floor_plan else None,
+            "assigned_count": len(assigned_flats),
+            "assigned_flat_ids": [f.id for f in assigned_flats],
+            "assigned_flat_numbers": [f.flat_number for f in assigned_flats],
+            "created_at": t.created_at.isoformat() if t.created_at else None
+        })
+    return out
+
+
+@router.post("/projects/{project_id}/typologies", summary="Create a new typology")
+def create_project_typology(
+    project_id: str,
+    req: CreateTypologyReq,
+    user: User = Depends(require_enterprise),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    typology = Typology(
+        id=str(uuid.uuid4()),
+        project_id=project_id,
+        name=req.name,
+        carpet_area_sqft=req.carpet_area_sqft,
+        floor_plan_id=req.floor_plan_id
+    )
+    db.add(typology)
+    db.commit()
+    db.refresh(typology)
+
+    return {
+        "id": typology.id,
+        "name": typology.name,
+        "carpet_area_sqft": typology.carpet_area_sqft,
+        "floor_plan_id": typology.floor_plan_id,
+        "floor_plan_url": typology.floor_plan.file_url if typology.floor_plan else None,
+        "assigned_count": 0
+    }
+
+
+@router.post("/projects/{project_id}/typologies/upload-and-create", summary="Upload blueprint and create typology in one step")
+def upload_and_create_typology(
+    project_id: str,
+    name: str = Form(...),
+    carpet_area_sqft: Optional[float] = Form(None),
+    file: UploadFile = File(...),
+    user: User = Depends(require_enterprise),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    upload_dir = os.path.join("assets", "floor_plans")
+    os.makedirs(upload_dir, exist_ok=True)
+    ext = os.path.splitext(file.filename or "plan.jpg")[1] or ".jpg"
+    file_id = str(uuid.uuid4())
+    filename = f"fp_typ_{file_id[:8]}{ext}"
+    filepath = os.path.join(upload_dir, filename)
+    with open(filepath, "wb") as f:
+        import shutil
+        shutil.copyfileobj(file.file, f)
+
+    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    url = f"{backend_url}/static/assets/floor_plans/{filename}"
+
+    fp = FloorPlan(
+        id=file_id,
+        project_id=project_id,
+        file_url=url,
+        file_type=f"{name} Blueprint",
+        uploaded_by=user.id
+    )
+    db.add(fp)
+    db.flush()
+
+    typology = Typology(
+        id=str(uuid.uuid4()),
+        project_id=project_id,
+        name=name,
+        carpet_area_sqft=carpet_area_sqft,
+        floor_plan_id=fp.id
+    )
+    db.add(typology)
+    db.commit()
+    db.refresh(typology)
+
+    return {
+        "id": typology.id,
+        "name": typology.name,
+        "carpet_area_sqft": typology.carpet_area_sqft,
+        "floor_plan_id": fp.id,
+        "floor_plan_name": fp.file_type,
+        "floor_plan_url": fp.file_url,
+        "assigned_count": 0
+    }
+
+
+@router.delete("/projects/{project_id}/typologies/{typology_id}", summary="Delete a typology")
+def delete_project_typology(
+    project_id: str,
+    typology_id: str,
+    user: User = Depends(require_enterprise),
+    db: Session = Depends(get_db)
+):
+    typ = db.query(Typology).filter(Typology.id == typology_id, Typology.project_id == project_id).first()
+    if not typ:
+        raise HTTPException(404, "Typology not found")
+
+    flats = db.query(Flat).filter(Flat.typology_id == typology_id).all()
+    for f in flats:
+        f.typology_id = None
+
+    db.delete(typ)
+    db.commit()
+    return {"message": "Typology deleted successfully"}
+
+
+@router.post("/projects/{project_id}/typologies/{typology_id}/assign-flats", summary="Assign multiple flats to a typology")
+def assign_flats_to_typology(
+    project_id: str,
+    typology_id: str,
+    req: AssignFlatsTypologyReq,
+    user: User = Depends(require_enterprise),
+    db: Session = Depends(get_db)
+):
+    typ = db.query(Typology).filter(Typology.id == typology_id, Typology.project_id == project_id).first()
+    if not typ:
+        raise HTTPException(404, "Typology not found")
+
+    for fid in req.flat_ids:
+        flat = db.query(Flat).filter(Flat.id == fid, Flat.project_id == project_id).first()
+        if flat:
+            flat.typology_id = typ.id
+            if typ.floor_plan_id:
+                flat.floor_plan_id = typ.floor_plan_id
+
+    db.commit()
+    return {"message": f"Successfully assigned {len(req.flat_ids)} flats to {typ.name}"}
+
+
 @router.put("/flats/{flat_id}", summary="Edit Flat number/name, BHK type, or Floor plan layout")
 def update_flat(
     flat_id: str,
@@ -330,6 +499,16 @@ def update_flat(
             if not fp:
                 raise HTTPException(400, "Invalid floor plan layout ID")
             flat.floor_plan_id = req.floor_plan_id
+    if req.typology_id is not None:
+        if req.typology_id == "":
+            flat.typology_id = None
+        else:
+            typ = db.query(Typology).filter(Typology.id == req.typology_id, Typology.project_id == project.id).first()
+            if not typ:
+                raise HTTPException(400, "Invalid typology ID")
+            flat.typology_id = typ.id
+            if typ.floor_plan_id:
+                flat.floor_plan_id = typ.floor_plan_id
 
     db.commit()
     return {"message": "Flat details updated"}
@@ -575,7 +754,7 @@ def accept_invitation(
                     furnishing_type=parent_project.furnishing_type,
                     budget=0.0,
                     status="draft",
-                    floor_plan_url=flat.floor_plan.file_url if flat.floor_plan else None,
+                    floor_plan_url=(flat.typology.floor_plan.file_url if (flat.typology and flat.typology.floor_plan) else (flat.floor_plan.file_url if flat.floor_plan else None)),
                     color_preferences=[],
                     defaults=parent_project.defaults or {}
                 )
@@ -611,7 +790,7 @@ def accept_invitation(
                 furnishing_type=parent_project.furnishing_type,
                 budget=0.0,
                 status="draft",
-                floor_plan_url=flat.floor_plan.file_url if flat.floor_plan else None,
+                floor_plan_url=(flat.typology.floor_plan.file_url if (flat.typology and flat.typology.floor_plan) else (flat.floor_plan.file_url if flat.floor_plan else None)),
                 color_preferences=[],
                 defaults=parent_project.defaults or {}
             )

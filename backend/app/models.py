@@ -131,6 +131,20 @@ class Project(Base):
     documents = relationship("ProjectDocument", back_populates="project", cascade="all, delete-orphan")
 
 
+class Typology(Base):
+    __tablename__ = "typologies"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    carpet_area_sqft = Column(Float, nullable=True)
+    floor_plan_id = Column(String, ForeignKey("floor_plans.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    project = relationship("Project", backref="typologies")
+    floor_plan = relationship("FloorPlan", foreign_keys=[floor_plan_id])
+    flats = relationship("Flat", back_populates="typology")
+
+
 class Flat(Base):
     __tablename__ = "flats"
     id = Column(String, primary_key=True, default=gen_uuid)
@@ -146,11 +160,13 @@ class Flat(Base):
 
     overall_progress = Column(Float, default=0.0)
     customer_project_id = Column(String, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    typology_id = Column(String, ForeignKey("typologies.id", ondelete="SET NULL"), nullable=True)
 
     project = relationship("Project", foreign_keys=[project_id], back_populates="flats")
     customer = relationship("User", foreign_keys=[customer_id], backref="flats")
     customer_project = relationship("Project", foreign_keys=[customer_project_id])
     floor_plan = relationship("FloorPlan", foreign_keys=[floor_plan_id])
+    typology = relationship("Typology", foreign_keys=[typology_id], back_populates="flats")
 
 
 
