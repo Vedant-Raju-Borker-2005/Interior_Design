@@ -366,3 +366,17 @@ For turnkey project execution beyond standard modular carpentry, the platform pr
 * **Consultant Portal (`/consultant`):** Allows certified interior consultants and trade contractors to review assigned customer briefs, accept jobs, schedule site evaluations, and log on-site progress notes.
 * **Commission & Payout Ledger:** Real-time visibility into project milestones, approved fee schedules, and completed service disbursements.
 * **Admin Governance (`/admin/special-services`):** Admins review consultant credentialing, set regional pricing baselines, and audit customer satisfaction ratings.
+---
+
+## 👷 Site Execution & Field Operations Hub
+
+The Project Team Operations Center bridges digital designs with physical jobsite assembly (`/team`, `frontend/src/app/team/*`).
+
+### 1. Three-Tier Team Hierarchy
+* **Site Execution Manager (`/team/manager`):** High-level operational cockpit tracking overall project velocity, SLA compliance, technician allocation density, and site bottleneck escalation.
+* **Project Coordinator (`/team/coordinator`):** Manages material delivery synchronizations, vendor dispatch schedules, client communications, and on-site checklist verifications.
+* **Field Technician (`/team/technician`):** Mobile-optimized interface for on-site carpenters and installers. Displays day-to-day installation tasks with item-level work instructions.
+
+### 2. Multi-Part Photo Verification & Milestone Approvals
+* Technicians capture and upload on-site progress and completion photos directly through mobile multipart forms.
+* Photo submissions attach directly to the respective SKU item tracking record (`/api/v1/item-tracking/*`), creating an immutable verification trail before customer sign-off.
