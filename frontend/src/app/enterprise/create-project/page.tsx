@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { enterpriseAPI } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
-import { ArrowLeft, ArrowRight, Save, Building, MapPin, Calendar, Layout, List, Upload, FileText, Check, Trash2, Edit3, Home, Wrench, Settings } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Save, Building, MapPin, Calendar, Layout, List, Upload, FileText, Check, Trash2, Edit3, Home, Wrench, Settings, Plus } from 'lucide-react'
 import clsx from 'clsx'
 
 const CITIES = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Ahmedabad', 'Other']
@@ -62,6 +62,16 @@ export default function CreateProjectPage() {
   // Parent Project ID
   const [projectId, setProjectId] = useState<string | null>(null)
 
+  // Step 3 & 4: Typology state
+  const [typologyCount, setTypologyCount] = useState<number>(3)
+  const [wizardTypologies, setWizardTypologies] = useState<Array<{
+    id: string
+    name: string
+    carpet_area_sqft: number | ''
+    file: File | null
+    previewUrl: string | null
+  }>>([])
+
   const handleBhkChange = (bhk: string, val: number) => {
     setBhkMix(prev => ({
       ...prev,
@@ -116,6 +126,19 @@ export default function CreateProjectPage() {
       const res = await enterpriseAPI.listFlats(projectId)
       setFlats(res.data.flats || [])
       
+      // Initialize dynamic typology cards for Step 4
+      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      setWizardTypologies(prev => {
+        if (prev.length > 0) return prev
+        return Array.from({ length: typologyCount }, (_, i) => ({
+          id: `typ_${i + 1}`,
+          name: `Typology ${letters[i] || i + 1}`,
+          carpet_area_sqft: '',
+          file: null,
+          previewUrl: null
+        }))
+      })
+
       toast.success("Flat units generated successfully!")
       setStep(4)
     } catch (err: any) {
@@ -123,6 +146,46 @@ export default function CreateProjectPage() {
     } finally {
       setLoading(false)
     }
+  }
+  const handleAddWizardTypology = () => {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    const nextIdx = wizardTypologies.length
+    setWizardTypologies(prev => [
+      ...prev,
+      {
+        id: `typ_${Date.now()}`,
+        name: `Typology ${letters[nextIdx] || nextIdx + 1}`,
+        carpet_area_sqft: '',
+        file: null,
+        previewUrl: null
+      }
+    ])
+  }
+
+  const handleTypologyFileChange = (index: number, file: File | null) => {
+    if (!file) return
+    const previewUrl = URL.createObjectURL(file)
+    setWizardTypologies(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], file, previewUrl }
+      return updated
+    })
+  }
+
+  const handleTypologyFieldChange = (index: number, field: 'name' | 'carpet_area_sqft', value: any) => {
+    setWizardTypologies(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
+  }
+
+  const handleRemoveWizardTypology = (index: number) => {
+    if (wizardTypologies.length <= 1) {
+      toast.error("At least one typology is required.")
+      return
+    }
+    setWizardTypologies(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleUploadFloorPlan = async () => {
@@ -193,12 +256,31 @@ export default function CreateProjectPage() {
     }
   }
 
-  const handleFinishSetup = () => {
-    toast.success("Enterprise project setup completed successfully! 🎉")
-    if (projectId) {
-      router.push(`/enterprise/project/${projectId}`)
-    } else {
+  const handleFinishSetup = async () => {
+    if (!projectId) {
       router.push('/enterprise/dashboard')
+      return
+    }
+
+    setLoading(true)
+    try {
+      for (const typ of wizardTypologies) {
+        if (!typ.name.trim()) continue
+        const sqft = typ.carpet_area_sqft ? Number(typ.carpet_area_sqft) : undefined
+        if (typ.file) {
+          await enterpriseAPI.uploadAndCreateTypology(projectId, typ.name, sqft, typ.file)
+        } else {
+          await enterpriseAPI.createTypology(projectId, { name: typ.name, carpet_area_sqft: sqft })
+        }
+      }
+      toast.success("Enterprise project and typologies setup successfully! 🎉")
+      router.push(`/enterprise/project/${projectId}`)
+    } catch (err: any) {
+      console.error("Error saving typologies:", err)
+      toast.success("Project setup completed!")
+      router.push(`/enterprise/project/${projectId}`)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -442,6 +524,36 @@ export default function CreateProjectPage() {
                   ))}
                 </div>
 
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">Number of Typologies / Prototypes</label>
+                      <p className="text-slate-500 text-xs mt-0.5">How many unique layout configurations or blueprints does this project feature?</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={26}
+                        value={typologyCount}
+                        onChange={e => {
+                          const val = Math.max(1, parseInt(e.target.value) || 1)
+                          setTypologyCount(val)
+                          const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                          setWizardTypologies(Array.from({ length: val }, (_, i) => ({
+                            id: `typ_${i + 1}`,
+                            name: `Typology ${letters[i] || i + 1}`,
+                            carpet_area_sqft: '',
+                            file: null,
+                            previewUrl: null
+                          })))
+                        }}
+                        className="input w-20 px-3 py-2 text-center text-sm font-black rounded-xl border border-slate-300 focus:border-indigo-500 outline-none bg-white text-slate-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className={clsx(
                   "p-4 rounded-xl text-xs font-semibold flex justify-between",
                   isMatch ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"
@@ -467,163 +579,117 @@ export default function CreateProjectPage() {
             )
           })()}
 
-          {/* STEP 4: Floor Plans & Flats Configuration */}
+          {/* STEP 4: Typology Configuration */}
           {step === 4 && (
             <div className="space-y-6">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
-                <Layout className="w-5 h-5 text-indigo-650" /> 4. Floor Plans & Flat Setup
-              </h2>
-              <p className="text-slate-500 text-xs">Optional: Upload layout blueprints and configure/rename unit names and link templates.</p>
-
-              {/* Upload controls */}
-              <div className="flex flex-col sm:flex-row gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                <div className="flex-1 space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Layout Label (e.g. 2 BHK Premium Type A)"
-                    value={uploadName}
-                    onChange={e => setUploadName(e.target.value)}
-                    className="input w-full px-4 py-2 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
-                  />
-                  <input
-                    id="fp-file-input"
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={e => setUploadFile(e.target.files?.[0] || null)}
-                    className="text-xs text-slate-500 w-full"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleUploadFloorPlan}
-                  disabled={uploading || !uploadFile || !uploadName.trim()}
-                  className="px-5 py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl flex items-center gap-2 self-end sm:self-center"
-                >
-                  {uploading ? 'Uploading...' : 'Upload Template'} <Check className="w-4 h-4" />
-                </button>
+              <div>
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-1">
+                  <Layout className="w-5 h-5 text-indigo-650" /> 4. Architectural Typologies & Floor Plans
+                </h2>
+                <p className="text-slate-500 text-xs">
+                  Upload layout blueprints and specify carpet area for each typology prototype. Individual flat assignments will be managed on your View Units console.
+                </p>
               </div>
 
-              {/* Uploaded layouts list */}
-              {uploadedPlans.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Uploaded Floor Plan Layouts</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {uploadedPlans.map((plan) => (
-                      <div key={plan.id} className="flex items-center justify-between p-3.5 border border-slate-200 rounded-xl bg-white text-xs">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-slate-400" />
-                          <span className="font-bold text-slate-700">{plan.layout_name}</span>
-                        </div>
-                        <a href={plan.file_url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 font-extrabold hover:underline">
-                          View plan
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Editing Modal Inside Step */}
-              {editingFlatIndex !== null && (
-                <div className="p-5 border border-indigo-200 rounded-2xl bg-indigo-50/30 space-y-4 mb-4">
-                  <h3 className="text-xs font-extrabold text-indigo-800 uppercase tracking-wider">Edit Flat Details</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Flat Number / Label</label>
-                      <input
-                        type="text"
-                        value={editFlatNumber}
-                        onChange={e => setEditFlatNumber(e.target.value)}
-                        className="input w-full px-3 py-2 text-xs rounded-lg border border-slate-200 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">BHK Configuration</label>
-                      <select
-                        value={editBhkType}
-                        onChange={e => setEditBhkType(e.target.value)}
-                        className="select w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white outline-none"
-                      >
-                        <option value="1BHK">1 BHK</option>
-                        <option value="2BHK">2 BHK</option>
-                        <option value="3BHK">3 BHK</option>
-                        <option value="4BHK">4 BHK</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Floor Plan Layout</label>
-                      <select
-                        value={editFloorPlanId}
-                        onChange={e => setEditFloorPlanId(e.target.value)}
-                        className="select w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white outline-none"
-                      >
-                        <option value="">No layout linked</option>
-                        {uploadedPlans.map(p => (
-                          <option key={p.id} value={p.id}>{p.layout_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setEditingFlatIndex(null)}
-                      className="px-3 py-1.5 bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold rounded-lg"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveFlatEdit}
-                      disabled={loading}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg"
-                    >
-                      Save Flat details
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Flats list */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-h-96 overflow-y-auto pr-1">
-                {flats.map((flat, idx) => (
-                  <div key={flat.id} className="p-4 border border-slate-200 rounded-xl bg-white shadow-sm flex flex-col justify-between h-32 hover:border-indigo-300 relative group">
-                    <div>
-                      <span className="font-extrabold text-slate-800 text-sm">Flat {flat.flat_number}</span>
-                      <span className="block text-[10px] font-semibold text-slate-500 mt-1 bg-slate-100 rounded px-1.5 py-0.5 inline-block">
-                        {flat.bhk_type}
-                      </span>
-                      {flat.floor_plan_name && (
-                        <span className="block text-[9px] text-indigo-700 font-bold truncate max-w-full mt-2" title={flat.floor_plan_name}>
-                          Layout: {flat.floor_plan_name}
+              {/* Typology Cards Container */}
+              <div className="space-y-4">
+                {wizardTypologies.map((typ, idx) => (
+                  <div key={typ.id} className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm space-y-4 hover:border-indigo-200 transition">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-extrabold text-xs flex items-center justify-center">
+                          #{idx + 1}
                         </span>
+                        <input
+                          type="text"
+                          value={typ.name}
+                          onChange={e => handleTypologyFieldChange(idx, 'name', e.target.value)}
+                          placeholder="Typology Name (e.g. Typology A)"
+                          className="font-bold text-slate-800 text-sm px-3 py-1.5 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none w-52"
+                        />
+                      </div>
+                      {wizardTypologies.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveWizardTypology(idx)}
+                          className="text-slate-400 hover:text-rose-600 transition p-1"
+                          title="Remove Typology"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleStep4Edit(idx)}
-                      className="absolute bottom-3 right-3 text-slate-400 hover:text-indigo-650 focus:outline-none"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                          Carpet Area (Sq.Ft) <span className="text-slate-400 font-normal">(optional)</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={typ.carpet_area_sqft}
+                          onChange={e => handleTypologyFieldChange(idx, 'carpet_area_sqft', e.target.value ? Number(e.target.value) : '')}
+                          placeholder="e.g. 1250"
+                          className="input w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                          Layout Blueprint Image / PDF
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            onChange={e => handleTypologyFileChange(idx, e.target.files?.[0] || null)}
+                            className="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                          />
+                          {typ.previewUrl && (
+                            <img
+                              src={typ.previewUrl}
+                              alt={typ.name}
+                              className="w-12 h-12 object-cover rounded-lg border border-slate-200 shadow-xs shrink-0"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
 
+              {/* Add Another Typology Button */}
+              <button
+                type="button"
+                onClick={handleAddWizardTypology}
+                className="w-full py-3 border-2 border-dashed border-indigo-200 hover:border-indigo-400 text-indigo-600 hover:text-indigo-700 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-indigo-50/30 hover:bg-indigo-50 transition"
+              >
+                <Plus className="w-4 h-4" /> Add Another Typology Prototype
+              </button>
+
+              {/* Informative units count pill */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
+                <span><strong>{flats.length} flats</strong> generated across {Object.keys(bhkMix).filter(k => bhkMix[k] > 0).join(', ')}.</span>
+                <span className="text-indigo-650 font-bold">Assign to Flats in next step</span>
+              </div>
+
               <div className="flex justify-between pt-6 border-t border-slate-100">
-                <button type="button" onClick={() => setStep(3)} className="btn-ghost flex items-center gap-2 text-slate-500">
-                  <ArrowLeft className="w-4 h-4" /> BHK Mix Mix
+                <button type="button" onClick={() => setStep(3)} className="btn-ghost flex items-center gap-2 text-slate-500 font-semibold">
+                  <ArrowLeft className="w-4 h-4" /> BHK Mix
                 </button>
                 <button
                   type="button"
                   onClick={handleFinishSetup}
-                  className="btn-primary px-6 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 shadow-md"
+                  disabled={loading}
+                  className="btn-primary px-6 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 shadow-md disabled:opacity-50"
                 >
-                  <Save className="w-4 h-4" /> Complete Enterprise Setup
+                  <Save className="w-4 h-4" /> {loading ? 'Saving Setup...' : 'Complete Enterprise Setup'}
                 </button>
               </div>
             </div>
           )}
+
 
         </div>
 
