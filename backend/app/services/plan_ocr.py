@@ -13,6 +13,8 @@ from __future__ import annotations
 import math
 import re
 import statistics
+
+from . import plan_scale
 import threading
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -436,6 +438,11 @@ def apply_labels(detection: dict[str, Any], img: Image.Image, texts: Optional[li
         detection["plan_width_m"] = round(W / sx, 2)
         detection["plan_depth_m"] = round(H / sy, 2)
         detection["scale_source"] = "printed sizes"
+        detection.setdefault("_scale_evidence", []).append(
+            plan_scale.Evidence(math.sqrt(sx * sy), "printed sizes", samples=len(sizes)))
+        # Only printed sizes can see that an image was resized unevenly; the
+        # vote settles the size, this keeps the shape.
+        detection["_scale_aspect"] = sy / sx
         if abs(math.log(sx / sy)) > 0.1:
             detection.setdefault("notes", []).append(
                 "This image looks stretched; the room sizes were corrected using the printed dimensions.")
@@ -602,6 +609,8 @@ def apply_area_numbers(detection: dict[str, Any], img: Image.Image,
             detection["plan_width_m"] = round(W / ppm, 2)
             detection["plan_depth_m"] = round(H / ppm, 2)
             detection["scale_source"] = "printed areas"
+            detection.setdefault("_scale_evidence", []).append(
+                plan_scale.Evidence(ppm, "printed areas", samples=len(per_m2)))
 
     for i, value in measured:
         rooms[i]["printed_area_m2"] = value

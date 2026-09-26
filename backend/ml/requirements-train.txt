@@ -1,0 +1,13 @@
+# Training only. A machine that merely serves the site needs none of this —
+# it reads the exported .onnx with the onnxruntime already in requirements.txt.
+#
+# Install torch for your CUDA version FIRST, from https://pytorch.org
+# e.g. CUDA 12.1:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+torch>=2.2
+torchvision>=0.17
+numpy>=1.26
+pillow>=10.0.0
+opencv-python-headless>=4.9
+onnx>=1.16
+onnxruntime>=1.17
