@@ -102,3 +102,8 @@ backend/assets/models/
 backend/plan_dataset/synthetic/
 backend/plan_dataset/augmented/
 backend/plan_dataset/ocr_cache/
+# Training data and checkpoints: large, and regenerable from a seed.
+backend/plan_dataset/seg/
+backend/ml/runs/
+# The exported .onnx IS committed - it is what the app loads.
+!backend/ml/models/

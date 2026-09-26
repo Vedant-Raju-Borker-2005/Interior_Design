@@ -23,6 +23,7 @@ import io
 import json
 import math
 import statistics
+from . import plan_scale as PlanScale
 from functools import lru_cache
 import os
 import re
@@ -129,6 +130,28 @@ def detect_rooms(img: Image.Image, *, bhk_hint: int = 2, raw: Optional[bytes] = 
             notes.append(f"Gemini vision unavailable ({type(exc).__name__}); used the offline detector.")
             result = None
     if result is None:
+        # A trained segmentation model, when one is installed, is better at
+        # finding rooms than tracing walls is. It only says where they are;
+        # the names and the scale still come from the printed text below.
+        from . import plan_model
+        if plan_model.available():
+            try:
+                from .plan_ocr import apply_area_numbers, apply_labels, apply_legend, build_labels, read_texts
+                model_rooms = plan_model.detect(img, bhk_hint=bhk_hint)
+                if model_rooms is not None:
+                    texts = read_texts(img)
+                    result = model_rooms
+                    result = apply_labels(result, img, texts=texts,
+                                          labels=build_labels(texts, w, h))
+                    result = apply_legend(result, img, texts=texts)
+                    result = apply_area_numbers(result, img, texts=texts)
+            except Exception as exc:  # noqa: BLE001
+                import logging
+                logging.getLogger(__name__).exception("segmentation model failed")
+                notes.append(f"The room model could not read this plan ({type(exc).__name__}).")
+                result = None
+
+    if result is None:
         # Read the printed text first: it is erased before tracing walls (big
         # title lettering looks like wall), then names the rooms and sets the scale.
         # Reading labels is an improvement, never a requirement: if it fails
@@ -150,6 +173,19 @@ def detect_rooms(img: Image.Image, *, bhk_hint: int = 2, raw: Optional[bytes] = 
             result = _detect_with_heuristic(img, bhk_hint)
             result.pop("_labels", None)
             notes.append(f"Couldn't read the room names on this plan ({type(exc).__name__}); check them below.")
+    # Every hint the drawing gave about its own scale gets one vote, so a
+    # single misread number is outvoted instead of deciding the answer.
+    evidence = result.pop("_scale_evidence", [])
+    aspect = result.pop("_scale_aspect", None)
+    resolved = PlanScale.resolve(evidence, w, h) if evidence else None
+    if resolved is not None:
+        ppm, named = resolved
+        result["plan_width_m"] = round(w / ppm, 2)
+        # A depth of None means "same scale both ways"; only an unevenly
+        # resized image needs its own number here.
+        result["plan_depth_m"] = round(h / (ppm * aspect), 2) if aspect else None
+        result["scale_source"] = named
+
     result["notes"] = notes + result.get("notes", [])
     result["image_w"], result["image_h"] = w, h
     if len(panels) > 1:
@@ -256,12 +292,16 @@ def _detect_with_heuristic(img: Image.Image, bhk_hint: int,
                    for r in typed if r["room_type"] != "balcony")
     coverage = rooms_px / bbox_px if bbox_px else 0
     ppm_env = math.sqrt(bbox_px / _ENVELOPE_M2.get(min(n_bed or bhk_hint, 5), 85))
-    ppm = math.sqrt(rooms_px / _CARPET_M2.get(min(n_bed, 5), 58)) if rooms_px and coverage >= 0.45 else ppm_env
+    from_carpet = bool(rooms_px and coverage >= 0.45)
+    ppm = math.sqrt(rooms_px / _CARPET_M2.get(min(n_bed, 5), 58)) if from_carpet else ppm_env
+    evidence = [PlanScale.Evidence(
+        ppm, "typical carpet area" if from_carpet else "typical envelope")]
     # Doors are the one thing drawn at a near-constant real size (~0.95 m), so
     # the median door gap is a better ruler than guessed room areas.
     doors = [g for g in gap_samples if 0.5 * ppm <= g <= 1.35 * ppm and g >= 2 * wall_px]
     if len(doors) >= 2 * max(2, int(wall_px)):
         ppm_door = float(np.median(doors)) / 0.95
+        evidence.append(PlanScale.Evidence(ppm_door, "door widths", samples=len(doors)))
         ppm = ppm_door ** 0.65 * ppm ** 0.35
 
     for r in typed:
@@ -270,6 +310,7 @@ def _detect_with_heuristic(img: Image.Image, bhk_hint: int,
     notes = (["Room types and the scale are estimates — check them against your plan."] if typed
              else ["No enclosed rooms were found automatically — draw them on the plan."])
     return {"rooms": _label_rooms(typed), "plan_width_m": round(W / ppm, 2),
+            "_scale_evidence": evidence,
             "door_gaps": _gap_hints(gap_fills, rgbp, pad, W, H, ppm, wall_px),
             "wall_frac": round(wall_px / W, 4),
             "_labels": labels,
