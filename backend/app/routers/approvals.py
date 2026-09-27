@@ -359,7 +359,15 @@ def project_pricing(
         customisations = []
         for flat in flats:
             base_price = _get_bhk_base_price(flat.bhk_type, p.package_id, db)
-            child = db.query(Project).filter(Project.id == flat.customer_project_id).first() if flat.customer_project_id else None
+            # The flat and its project can be linked from either side. Reading
+            # only one of them made a development price a unit at the package
+            # rate while the unit itself priced its own contents, so the two
+            # disagreed and a per-unit discount meant different amounts.
+            child = None
+            if flat.customer_project_id:
+                child = db.query(Project).filter(Project.id == flat.customer_project_id).first()
+            if child is None:
+                child = db.query(Project).filter(Project.flat_id == flat.id).first()
             child_subtotal = _project_subtotal(child, db) if child else 0.0
             child_custs = _customisations(child, db) if child else []
             customisations.extend(child_custs)
