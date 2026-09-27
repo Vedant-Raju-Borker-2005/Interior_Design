@@ -472,9 +472,9 @@ def set_discount(
     p = db.query(Project).filter(Project.id == project_id).first()
     if not p:
         raise HTTPException(404, "Project not found")
-    roles = _roles(user)
-    if "admin" not in roles and p.user_id != user.id:
-        raise HTTPException(403, "Not authorized to discount this project")
+    # What a project costs is the platform's decision, not the buyer's, so
+    # owning the project is not enough to discount it.
+    _require_admin(user)
 
     dtype = str(req.discount_type).upper().strip()
     if dtype in ("PERCENTAGE", "PERCENT"):
@@ -526,9 +526,7 @@ def clear_discount(
     p = db.query(Project).filter(Project.id == project_id).first()
     if not p:
         raise HTTPException(404, "Project not found")
-    roles = _roles(user)
-    if "admin" not in roles and p.user_id != user.id:
-        raise HTTPException(403, "Not authorized to manage discount on this project")
+    _require_admin(user)
     p.discount_type = None
     p.discount_value = 0.0
     p.discount_note = None
