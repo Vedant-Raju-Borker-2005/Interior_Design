@@ -6,7 +6,10 @@ import uuid
 from sqlalchemy.orm import Session
 from .models import Package, Product, Vendor, VendorProduct, ProductVariant, Inventory, InteriorMaterial
 
-BASE_CATALOG_URL = "http://localhost:8000/static/assets/catalog"
+# Where this backend answers from. A deployment must set BACKEND_URL, or every
+# image URL seeded here points at the visitor's own machine.
+BASE_CATALOG_URL = (os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+                    + "/static/assets/catalog")
 
 PACKAGE_THUMBNAILS = {
     ("1BHK", "basic"):    f"{BASE_CATALOG_URL}/Sofa%20Set%20Warm%20Beige.webp",
