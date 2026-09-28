@@ -41,7 +41,10 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         seed_database(db)
-        from .db import sync_demo_data
+        from .db import normalise_asset_urls, sync_demo_data
+        fixed = normalise_asset_urls(db)
+        if fixed:
+            print(f"[startup] repointed image URLs on {fixed} rows to {os.getenv('BACKEND_URL')}")
         sync_demo_data(db, force=True)
     finally:
         db.close()

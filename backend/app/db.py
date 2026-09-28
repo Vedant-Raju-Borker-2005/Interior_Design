@@ -345,6 +345,58 @@ def _migrate_catalog_image_urls(cursor):
                 cursor.execute(f"UPDATE {table} SET {column}=? WHERE id=?", (updated, row_id))
 
 
+# Image URLs are stored absolute, and the seed data was written on a developer's
+# machine, so a deployed copy serves "http://localhost:8000/static/..." to every
+# visitor — which is the visitor's own computer, and shows a broken image. This
+# repoints them at wherever this backend actually answers, on every start, so a
+# fresh deployment heals itself instead of needing the database edited by hand.
+STALE_ASSET_HOSTS = ("http://localhost:8000", "http://127.0.0.1:8000",
+                     "https://localhost:8000")
+
+
+def _repoint(value, public: str):
+    """Swap a stale host inside a string, list or dict. Returns None if nothing changed."""
+    if isinstance(value, str):
+        out = value
+        for stale in STALE_ASSET_HOSTS:
+            out = out.replace(stale, public)
+        return out if out != value else None
+    if isinstance(value, list):
+        swapped = [_repoint(v, public) for v in value]
+        return [n if n is not None else v for n, v in zip(swapped, value)]             if any(n is not None for n in swapped) else None
+    if isinstance(value, dict):
+        swapped = {k: _repoint(v, public) for k, v in value.items()}
+        return {k: (swapped[k] if swapped[k] is not None else v) for k, v in value.items()}             if any(n is not None for n in swapped.values()) else None
+    return None
+
+
+def normalise_asset_urls(db) -> int:
+    """Point stored image URLs at BACKEND_URL. Does nothing when it is unset or
+    still local, so a developer's machine is left exactly as it is."""
+    public = os.getenv("BACKEND_URL", "").rstrip("/")
+    if not public or "localhost" in public or "127.0.0.1" in public:
+        return 0
+
+    from .models import Package, Product, VendorProduct
+    changed = 0
+    for model, fields in ((Product, ("thumbnail_url", "images", "variants")),
+                          (VendorProduct, ("thumbnail_url", "images", "variants")),
+                          (Package, ("thumbnail_url", "images"))):
+        for row in db.query(model).all():
+            touched = False
+            for field in fields:
+                if not hasattr(row, field):
+                    continue
+                fixed = _repoint(getattr(row, field), public)
+                if fixed is not None:
+                    setattr(row, field, fixed)
+                    touched = True
+            changed += touched
+    if changed:
+        db.commit()
+    return changed
+
+
 # Keeping the demo accounts in step costs ~57 queries. That is nothing against a
 # local file, but on a hosted database it is seconds, and it used to run on every
 # dashboard load. It now runs at startup and at most every few minutes after.

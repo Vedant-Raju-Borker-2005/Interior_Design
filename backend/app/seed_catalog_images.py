@@ -215,7 +215,8 @@ def seed_images_to_db():
         prod_id = str(uuid.uuid4())
         sku = f"CAT-{base_name.upper().replace(' ', '-')}-{color.upper().replace(' ', '-')}"
         prod_name = f"{color} {base_name}"
-        thumbnail_url = f"http://localhost:8000/static/assets/catalog/{urllib.parse.quote(filename)}"
+        base = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+        thumbnail_url = f"{base}/static/assets/catalog/{urllib.parse.quote(filename)}"
         
         # Color variants and dictionary
         color_variants = json.dumps([color])
