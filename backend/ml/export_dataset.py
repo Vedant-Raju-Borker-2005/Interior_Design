@@ -36,7 +36,7 @@ OUT = BACKEND / "plan_dataset" / "seg"
 # Room boxes touch at the wall centreline, so a mask drawn from them has no gap
 # between rooms. Pulling each box in by this fraction leaves the wall unlabelled,
 # which is what lets the net learn where one room stops and the next starts.
-INSET = 0.004
+INSET = 0.008
 
 
 def _flat_crop(image: Image.Image, flat: dict, pad: float = 0.012):

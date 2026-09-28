@@ -30,6 +30,8 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.models import ResNet18_Weights, resnet18
 
 BACKEND = Path(__file__).resolve().parents[1]
+if str(BACKEND) not in sys.path:
+    sys.path.insert(0, str(BACKEND))
 SEG = BACKEND / "plan_dataset" / "seg"
 RUNS = Path(__file__).resolve().parent / "runs"
 
@@ -153,6 +155,67 @@ def mean_iou(model, loader, classes: int, device) -> float:
     return float((inter[present] / union[present]).mean()) if present.any() else 0.0
 
 
+def eval_real_plans(model: nn.Module, classes: list[str], size: int, device: str) -> dict:
+    """Evaluate on the 21 real brochure plans directly to guide checkpoint selection."""
+    from PIL import Image
+    from app.services.plan_model import _boxes_from_mask, MEAN, STD
+    from app.services import plan_layout as PL
+    from scripts.plan_eval import DATA, SAME
+
+    gt_file = DATA / "ground_truth.json"
+    if not gt_file.exists():
+        return {}
+    gts = json.loads(gt_file.read_text(encoding="utf-8"))
+
+    model.eval()
+    bhk_correct = 0
+    type_recalls = []
+
+    with torch.no_grad():
+        for pid, gt in gts.items():
+            img_path = DATA / "images" / gt["file"]
+            if not img_path.exists():
+                continue
+            img = Image.open(img_path).convert("RGB")
+            w, h = img.size
+            scaled = img.resize((size, size), Image.BILINEAR)
+            x = np.asarray(scaled, dtype=np.float32) / 255.0
+            x = ((x - MEAN) / STD).transpose(2, 0, 1)[None]
+            t = torch.from_numpy(x).to(device)
+
+            with torch.amp.autocast(device, enabled=device == "cuda"):
+                logits = model(t)[0].cpu().numpy()
+
+            logits = logits - logits.max(axis=0, keepdims=True)
+            probs = np.exp(logits)
+            probs /= probs.sum(axis=0, keepdims=True)
+            labels = probs.argmax(axis=0).astype(np.int32)
+            confidence = probs.max(axis=0)
+
+            rooms = _boxes_from_mask(labels, confidence, classes)
+            bhk_got = PL.plan_bhk(rooms)
+            if bhk_got == gt["bhk"]:
+                bhk_correct += 1
+
+            gt_types = [r["type"] for r in gt.get("rooms", [])]
+            if gt_types and not gt.get("one_of_many_flats"):
+                det_types = [r["room_type"] for r in rooms]
+                matched_types = 0
+                for g_type in gt_types:
+                    equivalents = SAME.get(g_type, {g_type})
+                    if any(d in equivalents for d in det_types):
+                        matched_types += 1
+                type_recalls.append(matched_types / len(gt_types))
+
+    mean_recall = round(float(np.mean(type_recalls)), 3) if type_recalls else 0.0
+    return {
+        "bhk_correct": bhk_correct,
+        "total": len(gts),
+        "bhk_score": f"{bhk_correct}/{len(gts)}",
+        "type_recall": mean_recall,
+    }
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -196,7 +259,7 @@ def main() -> None:
     out = RUNS / args.name
     out.mkdir(parents=True, exist_ok=True)
     (out / "classes.json").write_text(json.dumps(classes, indent=1), encoding="utf-8")
-    history, best = [], -1.0
+    history, best_bhk, best_recall, best_iou = [], -1, -1.0, -1.0
 
     for epoch in range(1, args.epochs + 1):
         model.train()
@@ -211,20 +274,50 @@ def main() -> None:
             scaler.step(opt)
             scaler.update()
             sched.step()
-            total += float(loss)
+            total += float(loss.detach())
         iou = mean_iou(model, val_loader, n_classes, device) if len(val_set) else 0.0
-        row = {"epoch": epoch, "loss": round(total / max(1, len(train_loader)), 4),
-               "val_miou": round(iou, 4), "seconds": round(time.time() - started, 1)}
+        real_eval = eval_real_plans(model, classes, args.size, device)
+        real_bhk = real_eval.get("bhk_correct", 0)
+        real_recall = real_eval.get("type_recall", 0.0)
+
+        is_best_real = (real_bhk > best_bhk) or (real_bhk == best_bhk and real_recall > best_recall)
+
+        row = {
+            "epoch": epoch,
+            "loss": round(total / max(1, len(train_loader)), 4),
+            "val_miou": round(iou, 4),
+            "real_bhk": real_eval.get("bhk_score", "-"),
+            "real_type_recall": real_recall,
+            "seconds": round(time.time() - started, 1),
+        }
         history.append(row)
+        best_marker = "   <- best real plans" if is_best_real else ""
         print(f"epoch {epoch:3d}  loss {row['loss']:.4f}  val mIoU {row['val_miou']:.4f}"
-              f"  {row['seconds']:.0f}s" + ("   <- best" if iou > best else ""))
-        if iou > best:
-            best = iou
-            torch.save({"model": model.state_dict(), "classes": classes,
-                        "size": args.size, "val_miou": iou}, out / "best.pt")
+              f"  real BHK {row['real_bhk']} (recall {row['real_type_recall']:.2f})  {row['seconds']:.0f}s{best_marker}")
+
+        if is_best_real:
+            best_bhk, best_recall = real_bhk, real_recall
+            torch.save({
+                "model": model.state_dict(),
+                "classes": classes,
+                "size": args.size,
+                "val_miou": iou,
+                "real_bhk": real_eval.get("bhk_score"),
+                "real_recall": real_recall,
+            }, out / "best.pt")
+
+        if iou > best_iou:
+            best_iou = iou
+            torch.save({
+                "model": model.state_dict(),
+                "classes": classes,
+                "size": args.size,
+                "val_miou": iou,
+            }, out / "best_synth_miou.pt")
+
         (out / "history.json").write_text(json.dumps(history, indent=1), encoding="utf-8")
 
-    print(f"\nbest validation mIoU {best:.4f}  ->  {out / 'best.pt'}")
+    print(f"\nbest real BHK {best_bhk} (recall {best_recall:.3f})  ->  {out / 'best.pt'}")
     print("next: python ml/export_onnx.py --run", args.name)
 
 

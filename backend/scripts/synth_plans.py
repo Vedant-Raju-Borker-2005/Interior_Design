@@ -874,9 +874,9 @@ def damage(img: Image.Image, gt: dict, rng: random.Random) -> Image.Image:
         dl.text((W * 0.15, H * 0.4), rng.choice(BUILDERS), font=font, fill=(120, 120, 120, 38))
         img = Image.alpha_composite(img.convert("RGBA"), layer.rotate(rng.uniform(-25, 25))).convert("RGB")
         done.append("watermark")
-    if rng.random() < 0.12:                                   # crop into the drawing's margin
+    if rng.random() < 0.22:                                   # crop into the drawing's margin
         side = rng.choice(["l", "r", "t", "b"])
-        cut = rng.uniform(0.02, 0.07)
+        cut = rng.uniform(0.03, 0.12)
         box = [0, 0, W, H]
         if side == "l":
             box[0] = int(W * cut)
@@ -899,16 +899,16 @@ def damage(img: Image.Image, gt: dict, rng: random.Random) -> Image.Image:
                 r["box"] = _recrop(r["box"], fx0, fy0, fx1, fy1)
         W, H = img.size
         done.append("cropped")
-    if rng.random() < 0.14:                                   # uneven stretch
-        sx = rng.uniform(0.85, 1.15)
+    if rng.random() < 0.22:                                   # uneven stretch
+        sx = rng.uniform(0.78, 1.22)
         img = img.resize((int(W * sx), H), Image.BICUBIC)
         W, H = img.size
         done.append("stretched")
-    if rng.random() < 0.12:                                   # photographed or scanned slightly askew
-        img = img.rotate(rng.uniform(-1.5, 1.5), resample=Image.BICUBIC, expand=False,
+    if rng.random() < 0.20:                                   # photographed or scanned slightly askew
+        img = img.rotate(rng.uniform(-3.0, 3.0), resample=Image.BICUBIC, expand=False,
                          fillcolor=img.getpixel((2, 2)))
         done.append("rotated")
-    if rng.random() < 0.05:                                   # exported mirror-image, like plan_17
+    if rng.random() < 0.08:                                   # exported mirror-image, like plan_17
         img = ImageOps.mirror(img)
         for flat in gt["flats"]:
             flat["box"] = [1 - flat["box"][2], flat["box"][1], 1 - flat["box"][0], flat["box"][3]]
@@ -916,11 +916,11 @@ def damage(img: Image.Image, gt: dict, rng: random.Random) -> Image.Image:
                 r["box"] = [1 - r["box"][2], r["box"][1], 1 - r["box"][0], r["box"][3]]
         done.append("mirror_flipped")
     # Final size: what a phone forwards.
-    longest = rng.choice([640, 800, 960, 1080, 1170, 1280, 1400])
+    longest = rng.choice([512, 640, 720, 800, 960, 1080, 1200])
     scale = longest / max(img.size)
     img = img.resize((max(1, int(img.width * scale)), max(1, int(img.height * scale))), Image.LANCZOS)
     W, H = img.size
-    if rng.random() < 0.18:                                   # phone screenshot chrome
+    if rng.random() < 0.25:                                   # phone screenshot chrome
         d = ImageDraw.Draw(img)
         s = int(W * 0.025)
         d.line([(s * 2, s), (s, s * 2), (s * 2, s * 3)], fill=(40, 40, 40), width=max(2, s // 4))
@@ -928,23 +928,23 @@ def damage(img: Image.Image, gt: dict, rng: random.Random) -> Image.Image:
         d.ellipse([cx - s, cy - s, cx + s, cy + s], outline=(40, 40, 40), width=max(2, s // 5))
         d.line([(cx + s * 0.7, cy + s * 0.7), (cx + s * 1.6, cy + s * 1.6)], fill=(40, 40, 40), width=max(2, s // 4))
         done.append("screenshot_icons")
-    if rng.random() < 0.25:
-        img = img.filter(ImageFilter.GaussianBlur(rng.uniform(0.4, 1.2)))
+    if rng.random() < 0.35:
+        img = img.filter(ImageFilter.GaussianBlur(rng.uniform(0.5, 1.8)))
         done.append("blur")
-    if rng.random() < 0.15:
+    if rng.random() < 0.25:
         arr = np.asarray(img, dtype=np.int16)
-        arr = arr + np.random.default_rng(rng.randint(0, 10**9)).normal(0, rng.uniform(3, 9), arr.shape).astype(np.int16)
+        arr = arr + np.random.default_rng(rng.randint(0, 10**9)).normal(0, rng.uniform(4, 14), arr.shape).astype(np.int16)
         img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
         done.append("noise")
-    if rng.random() < 0.12:
-        img = ImageEnhance.Contrast(img).enhance(rng.uniform(0.65, 0.85))
+    if rng.random() < 0.20:
+        img = ImageEnhance.Contrast(img).enhance(rng.uniform(0.55, 0.85))
         done.append("low_contrast")
-    if rng.random() < 0.10:
-        cast = np.array([rng.uniform(0.92, 1.06), rng.uniform(0.92, 1.06), rng.uniform(0.9, 1.04)])
+    if rng.random() < 0.15:
+        cast = np.array([rng.uniform(0.88, 1.10), rng.uniform(0.88, 1.10), rng.uniform(0.85, 1.08)])
         img = Image.fromarray(np.clip(np.asarray(img) * cast, 0, 255).astype(np.uint8))
         done.append("colour_cast")
     gt["corruptions"] = done
-    gt["jpeg_quality"] = rng.choice([35, 45, 55, 65, 75, 85, 92])
+    gt["jpeg_quality"] = rng.choice([22, 30, 40, 50, 60, 70, 80])
     gt["width"], gt["height"] = img.size
     return img
 
