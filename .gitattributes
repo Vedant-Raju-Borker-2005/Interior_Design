@@ -1,0 +1,7 @@
+# ── GitHub Linguist overrides ──────────────────────────────────────────
+# These lines ONLY affect GitHub's language statistics bar.
+# They have ZERO effect on code functionality, builds, or runtime.
+
+# The IDS 3D viewer is a generated single-file HTML bundle (3.5 MB).
+# Exclude it from language stats so the repo correctly shows TypeScript + Python.
+backend-ai/frontend/index.html linguist-generated=true
