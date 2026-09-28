@@ -1,0 +1,18 @@
+{
+ "classes": [
+  "background",
+  "living_room",
+  "dining_area",
+  "kitchen",
+  "master_bedroom",
+  "bedroom",
+  "bathroom",
+  "study",
+  "family_lounge",
+  "pooja_room",
+  "balcony",
+  "passage"
+ ],
+ "size": 512,
+ "val_miou": 0.9580466747283936
+}
