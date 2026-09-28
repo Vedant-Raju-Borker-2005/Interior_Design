@@ -56,6 +56,15 @@ def main() -> None:
     )
     meta = {"classes": classes, "size": size, "val_miou": checkpoint.get("val_miou")}
     out.with_suffix(".classes.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
+    data_file = out.with_name(out.name + ".data")
+    if data_file.exists():
+        import onnx
+        m = onnx.load(str(out), load_external_data=True)
+        onnx.save_model(m, str(out), save_as_external_data=False)
+        try:
+            data_file.unlink()
+        except Exception:
+            pass
 
     try:
         import onnxruntime as ort
