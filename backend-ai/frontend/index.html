@@ -42,6 +42,10 @@ main { display:flex; height:calc(100vh - 248px); min-height:520px; }
 .focus-btn { border:1px solid #D6D0C6; background:rgba(255,255,255,.94); color:#2C2822;
              padding:5px 10px; border-radius:16px; font-size:11.5px; cursor:pointer; }
 .focus-btn.active { background:#2C2822; color:#F7F5F1; border-color:#2C2822; }
+.lay-btn { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:10px;
+           border:1px solid #C9C2B6; background:#F2EFE9; color:#5F594F; font-size:10px; }
+.focus-btn.active .lay-btn { background:#4A443B; color:#F7F5F1; border-color:#6A6358; }
+.lay-btn:hover { background:#E3DED4; }
 #zoom { position:absolute; right:12px; bottom:48px; display:flex; flex-direction:column; gap:6px; }
 #zoom button { width:32px; height:32px; font-size:16px; border-radius:8px; cursor:pointer;
                border:1px solid #D6D0C6; background:rgba(255,255,255,.94); }
@@ -1480,6 +1484,7 @@ controls.addEventListener('end', () => {
 
 let world = new THREE.Group(); scene.add(world);
 let sceneData = null, palette = null, tier = null;
+const roomLayout = new Map();   // room_id -> index into scene.layouts[room_id]
 let centre = new THREE.Vector3(), VIEW = 20, pickables = [], roomGroups = new Map();
 let camPlaced = false;
 let buildToken = 0;
@@ -2098,12 +2103,46 @@ function updateReadout() {
     + `render prompt, not the geometry.`;
 }
 
+function switchRoomLayout(roomId) {
+  const alts = (sceneData.layouts || {})[roomId] || [];
+  if (alts.length < 2) return;
+  const next = ((roomLayout.get(roomId) || 0) + 1) % alts.length;
+  roomLayout.set(roomId, next);
+
+  // Take out whatever this room was showing and put the next arrangement in.
+  // Every other room is left exactly as it is.
+  const swapped = alts[next].objects.map(o => JSON.parse(JSON.stringify(o)));
+  sceneData.objects = sceneData.objects.filter(o => o.room_id !== roomId).concat(swapped);
+  const room = sceneData.rooms.find(r => r.room_id === roomId);
+  if (room) room.object_ids = swapped.map(o => o.object_id);
+
+  // The new pieces need their products and finishes chosen like any other.
+  pickReport = applyPicks(sceneData);
+  document.getElementById('status').textContent = 'rearranging…';
+  clearWorld();
+  buildWorld(sceneData);
+  buildFocusButtons();
+  const active = document.querySelector('.focus-btn.active');
+  if (active && active.dataset.room !== 'home') focusRoom(active.dataset.room);
+}
+
 function buildFocusButtons() {
   const bar = document.getElementById('toolbar');
+  const all = sceneData.layouts || {};
   bar.innerHTML = '<button class="focus-btn active" data-room="home">Entire Home</button>'
-    + sceneData.rooms.map(r => `<button class="focus-btn" data-room="${r.room_id}">${r.label}</button>`).join('');
+    + sceneData.rooms.map(r => {
+        const alts = all[r.room_id] || [];
+        const i = roomLayout.get(r.room_id) || 0;
+        const tag = alts.length > 1
+          ? ` <span class="lay-btn" data-lay="${r.room_id}"
+                    title="Show another way to arrange this room">↻ ${alts[i].name}</span>`
+          : '';
+        return `<button class="focus-btn" data-room="${r.room_id}">${r.label}${tag}</button>`;
+      }).join('');
   bar.querySelectorAll('.focus-btn').forEach(b =>
     b.addEventListener('click', () => focusRoom(b.dataset.room === 'home' ? null : b.dataset.room)));
+  bar.querySelectorAll('.lay-btn').forEach(b =>
+    b.addEventListener('click', ev => { ev.stopPropagation(); switchRoomLayout(b.dataset.lay); }));
 }
 
 /* ═══════════════════════ onboarding controls (unchanged) ════════════════ */

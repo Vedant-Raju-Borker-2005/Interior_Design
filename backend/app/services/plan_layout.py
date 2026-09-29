@@ -1393,14 +1393,25 @@ def _build(plan: dict[str, Any], tier: str, brief: dict[str, Any]) -> dict[str, 
     room_meta = {r["room_type"]: r for r in tscene["rooms"]}
     fallback_meta = tscene["rooms"][0]
     scene_rooms, objects, dropped = [], [], []
+    alternates: dict[str, list] = {}
     pools = _template_pools(variants, bhk, tier)
     used: dict[str, int] = {}
     for s in rooms:
         meta = room_meta.get(s.room_type) or room_meta.get(_meta_alias(s.room_type)) or fallback_meta
         ceiling = float(meta.get("ceiling_m", 2.9))
-        room_objects, lost = _furnish(s, pools, used, openings)
+        room_layouts, lost = _furnish(s, pools, used, openings)
         dropped.extend(lost)
+        # The winning arrangement is the scene. The alternates ride alongside
+        # so the viewer can offer them, without changing what anything else
+        # sees in scene["objects"].
+        room_objects = room_layouts[0]["objects"] if room_layouts else []
         objects.extend(room_objects)
+        if len(room_layouts) > 1:
+            alternates[s.sid] = [
+                {"name": lay["name"],
+                 "objects": [copy.deepcopy(o) for o in lay["objects"]]}
+                for lay in room_layouts
+            ]
         scene_rooms.append({
             "room_id": s.sid, "label": s.label, "room_type": s.room_type,
             "rect": [round(s.x0, 3), round(s.y0, 3), round(s.w, 3), round(s.d, 3)],
@@ -1440,6 +1451,10 @@ def _build(plan: dict[str, Any], tier: str, brief: dict[str, Any]) -> dict[str, 
                      round(balconies[0].w, 3), round(balconies[0].d, 3)] if balconies else None),
         "entrance": entrance,
         "rooms": scene_rooms, "walls": walls, "openings": openings, "objects": objects,
+        # {room_id: [{name, objects}, ...]} — the first entry is what is already
+        # in "objects" above; the rest are the other ways this room could be laid
+        # out. Only the 3D viewer reads this.
+        "layouts": alternates,
     }
     svg = _plan_svg(scene, spaces, brief, tier, catalog)
     summary = {
@@ -1949,14 +1964,63 @@ def _stray_of_a_pair(kept: list[dict[str, Any]]):
     return None
 
 
-def _furnish(space: _Space, pools, used, openings):
-    from ids.scene import Opening as SOpening, Room as SRoom, Scene as SScene, SceneObject as SObj, validate
-    from ids.solver import SpatialSolver, SweepBackend, rule_for
+# Pieces a room can do without when the point is clear floor, and the ones
+# worth keeping when the point is somewhere to put things. Varying these is
+# what makes one layout genuinely different from another rather than the same
+# furniture nudged a few centimetres.
+_LOOSE = ("planter", "floor_lamp", "armchair", "bench", "side_table", "console_table")
+_SEATING = ("armchair", "bench", "side_table")
 
-    rtype = {"family_lounge": "family_lounge", "pooja_room": "pooja_room"}.get(space.room_type, space.room_type)
+# name, solver seed, categories this arrangement leaves out
+LAYOUT_STRATEGIES: tuple[tuple[str, int, tuple[str, ...]], ...] = (
+    ("Balanced", 7, ()),
+    ("Open", 23, _LOOSE),
+    ("Storage", 41, _SEATING),
+)
+
+
+def _openings_for(space: _Space, openings) -> list:
+    """The doors and windows that sit on this room's own walls."""
+    from ids.scene import Opening as SOpening
+
+    out = []
+    for op in openings:
+        (ax0, ay0), (ax1, ay1) = op["p0"], op["p1"]
+        horizontal = abs(ay0 - ay1) < 1e-4
+        if horizontal:
+            if abs(ay0 - space.y0) > 0.02 and abs(ay0 - space.y1) > 0.02:
+                continue
+            if max(ax0, ax1) <= space.x0 or min(ax0, ax1) >= space.x1:
+                continue
+            inside_up = space.cy > ay0
+            p0, p1 = (((min(ax0, ax1), ay0), (max(ax0, ax1), ay0)) if inside_up
+                      else ((max(ax0, ax1), ay0), (min(ax0, ax1), ay0)))
+        else:
+            if abs(ax0 - space.x0) > 0.02 and abs(ax0 - space.x1) > 0.02:
+                continue
+            if max(ay0, ay1) <= space.y0 or min(ay0, ay1) >= space.y1:
+                continue
+            inside_left = space.cx < ax0
+            p0, p1 = (((ax0, min(ay0, ay1)), (ax0, max(ay0, ay1))) if inside_left
+                      else ((ax0, max(ay0, ay1)), (ax0, min(ay0, ay1))))
+        if op["kind"] == "balcony_door":
+            # A sliding balcony door needs a walkway, not a 1.8 m swing arc.
+            (px0, py0), (px1, py1) = p0, p1
+            mx, my = (px0 + px1) / 2, (py0 + py1) / 2
+            ux, uy = (px1 - px0) / (op["width"] or 1), (py1 - py0) / (op["width"] or 1)
+            p0, p1 = (mx - ux * 0.45, my - uy * 0.45), (mx + ux * 0.45, my + uy * 0.45)
+        out.append(SOpening(op["opening_id"], space.sid, p0, p1,
+                            op["kind"] in ("door", "balcony_door", "entrance")))
+    return out
+
+
+def _room_candidates(space: _Space, pools, used):
+    """Everything this room could hold, sized to fit, plus its must-haves."""
+    rtype = {"family_lounge": "family_lounge",
+             "pooja_room": "pooja_room"}.get(space.room_type, space.room_type)
     pool = pools.get(rtype) or pools.get(_meta_alias(rtype)) or []
     if not pool:
-        return [], []
+        return [], [], ()
     idx = used.get(rtype, 0)
     used[rtype] = idx + 1
     template = pool[idx % len(pool)]
@@ -1974,75 +2038,90 @@ def _furnish(space: _Space, pools, used, openings):
             continue
         candidates.append(o)
 
-    # Some templates leave out the very thing that makes the room readable — a
-    # kitchen with wall cabinets but no counter. Borrow that piece from another
-    # template so it keeps its real model, colour and finish.
-    must_have = (_ESSENTIAL.get(space.room_type) or ("",))[0]
-    if must_have and not any(o["category"] == must_have for o in candidates):
-        spare = _example_object(must_have)
-        if spare is not None:
-            spare = copy.deepcopy(spare)
-            dims = spare["dimensions"]
-            fit = min(long_side / max(dims["width"], 1e-6), short_side / max(dims["depth"], 1e-6), 1.0)
-            if fit < 1.0:
-                dims["width"] = round(dims["width"] * fit, 3)
-                dims["depth"] = round(dims["depth"] * fit, 3)
-            candidates.append(spare)
-
-    candidates.sort(key=lambda o: rule_for(o["category"]).priority)
-    budget, used_area, kept = 0.5 * space.w * space.d, 0.0, []
-    for o in candidates:
-        fp = o["dimensions"]["width"] * o["dimensions"]["depth"]
-        stack = rule_for(o["category"]).stackable
-        essential = o["category"] == must_have and not any(k["category"] == must_have for k in kept)
-        if kept and not stack and not essential and used_area + fp > budget:
-            dropped.append(f"{space.label}: {o['label']}")
+    # A bedroom needs a bed AND a wardrobe; a bathroom needs its pan and basin.
+    # All of them, not just the first: the old code read [0] and let everything
+    # after it compete for floor area, which is why bedrooms had no almirah.
+    must_haves = tuple(_ESSENTIAL.get(space.room_type) or ())
+    for wanted in must_haves:
+        if any(o["category"] == wanted for o in candidates):
             continue
-        if not stack:
-            used_area += fp
+        spare = _example_object(wanted)
+        if spare is None:
+            continue
+        spare = copy.deepcopy(spare)
+        dims = spare["dimensions"]
+        fit = min(long_side / max(dims["width"], 1e-6),
+                  short_side / max(dims["depth"], 1e-6), 1.0)
+        if fit < 1.0:
+            dims["width"] = round(dims["width"] * fit, 3)
+            dims["depth"] = round(dims["depth"] * fit, 3)
+        candidates.append(spare)
+    return candidates, dropped, must_haves
+
+
+def _select(space: _Space, candidates, must_haves, omit: tuple[str, ...]):
+    """Which of the candidates this arrangement tries to fit, and what it leaves."""
+    from ids.solver import rule_for
+
+    wanted = [o for o in candidates
+              if o["category"] not in omit or o["category"] in must_haves]
+    left_out = [o for o in candidates if o not in wanted]
+    wanted.sort(key=lambda o: rule_for(o["category"]).priority)
+    floor = space.w * space.d
+
+    def area(o):
+        return o["dimensions"]["width"] * o["dimensions"]["depth"]
+
+    # The pieces that make a room what it is go in first, judged only against a
+    # ceiling that leaves somewhere to stand. Everything else then shares half
+    # of whatever floor is left, so a bed and a wardrobe no longer spend the
+    # whole allowance and leave nothing for a nightstand.
+    kept, taken, seen = [], 0.0, set()
+    for o in wanted:
+        cat = o["category"]
+        if cat not in must_haves or cat in seen:
+            continue
+        if kept and not rule_for(cat).stackable and taken + area(o) > 0.82 * floor:
+            left_out.append(o)
+            continue
+        seen.add(cat)
+        if not rule_for(cat).stackable:
+            taken += area(o)
         kept.append(o)
 
-    room = SRoom(space.sid, space.label, (space.x0, space.y0, space.w, space.d))
-    s_openings = []
-    for op in openings:
-        (ax0, ay0), (ax1, ay1) = op["p0"], op["p1"]
-        horizontal = abs(ay0 - ay1) < 1e-4
-        if horizontal:
-            if abs(ay0 - space.y0) > 0.02 and abs(ay0 - space.y1) > 0.02:
-                continue
-            if max(ax0, ax1) <= space.x0 or min(ax0, ax1) >= space.x1:
-                continue
-            inside_up = space.cy > ay0
-            p0, p1 = ((min(ax0, ax1), ay0), (max(ax0, ax1), ay0)) if inside_up else ((max(ax0, ax1), ay0), (min(ax0, ax1), ay0))
-        else:
-            if abs(ax0 - space.x0) > 0.02 and abs(ax0 - space.x1) > 0.02:
-                continue
-            if max(ay0, ay1) <= space.y0 or min(ay0, ay1) >= space.y1:
-                continue
-            inside_left = space.cx < ax0
-            p0, p1 = ((ax0, min(ay0, ay1)), (ax0, max(ay0, ay1))) if inside_left else ((ax0, max(ay0, ay1)), (ax0, min(ay0, ay1)))
-        if op["kind"] == "balcony_door":
-            # A sliding balcony door needs a walkway, not a 1.8 m swing arc.
-            (px0, py0), (px1, py1) = p0, p1
-            mx, my = (px0 + px1) / 2, (py0 + py1) / 2
-            ux, uy = (px1 - px0) / (op["width"] or 1), (py1 - py0) / (op["width"] or 1)
-            p0, p1 = (mx - ux * 0.45, my - uy * 0.45), (mx + ux * 0.45, my + uy * 0.45)
-        s_openings.append(SOpening(op["opening_id"], space.sid, p0, p1,
-                                   op["kind"] in ("door", "balcony_door", "entrance")))
+    budget, used_area = 0.5 * max(floor - taken, 0.0), 0.0
+    for o in wanted:
+        if o in kept:
+            continue
+        stack = rule_for(o["category"]).stackable
+        if kept and not stack and used_area + area(o) > budget:
+            left_out.append(o)
+            continue
+        if not stack:
+            used_area += area(o)
+        kept.append(o)
+    kept.sort(key=lambda o: rule_for(o["category"]).priority)
+    return kept, left_out
 
-    solver = SpatialSolver(backend=SweepBackend(), seed=7, iterations=500)
-    counts: dict[str, int] = {}
+
+def _solve_layout(space, kept, room, s_openings, must_haves, seed, prefix="", effort=500):
+    """Place the chosen pieces, giving up only on what genuinely will not fit."""
+    from ids.scene import Scene as SScene, SceneObject as SObj, validate
+    from ids.solver import SpatialSolver, SweepBackend, rule_for
+
+    solver = SpatialSolver(backend=SweepBackend(), seed=seed, iterations=effort)
+    dropped, counts = [], {}
     for o in kept:
         counts[o["category"]] = counts.get(o["category"], 0) + 1
         suffix = "" if counts[o["category"]] == 1 else f"_{counts[o['category']]}"
-        o["object_id"] = f"{space.sid}__{o['category']}{suffix}"
+        o["object_id"] = f"{space.sid}__{prefix}{o['category']}{suffix}"
         o["room_id"] = space.sid
 
     shrunk = 0
     for _attempt in range(6):
         s_objs = [SObj(o["object_id"], space.sid, o["category"],
-                       {"x": space.cx, "y": 0.0, "z": space.cy}, {"yaw": 0.0}, dict(o["dimensions"]))
-                  for o in kept]
+                       {"x": space.cx, "y": 0.0, "z": space.cy}, {"yaw": 0.0},
+                       dict(o["dimensions"])) for o in kept]
         place, _report = solver.solve_room(room, s_objs, s_openings)
         for o in kept:
             p = place.get(o["object_id"])
@@ -2063,13 +2142,13 @@ def _furnish(space: _Space, pools, used, openings):
                 continue
             break
         bad_objects = [o for o in kept if o["object_id"] in bad]
-        removable = [o for o in bad_objects if o["category"] != must_have]
+        removable = [o for o in bad_objects if o["category"] not in must_haves]
         if not removable:
-            # A bedroom without its bed is not a bedroom. If the piece that
-            # makes the room readable is the only thing that will not fit, give
-            # it a smaller model rather than either dropping it or stripping
-            # out the furniture around it, which is not in its way.
-            essential = next((o for o in bad_objects if o["category"] == must_have), None)
+            # A bedroom without its bed or its almirah is not a bedroom. If a
+            # piece that makes the room readable is the only thing that will
+            # not fit, give it a smaller model rather than dropping it or
+            # stripping out the furniture around it, which is not in its way.
+            essential = next((o for o in bad_objects if o["category"] in must_haves), None)
             if essential is not None and shrunk < 2:
                 shrunk += 1
                 dims = essential["dimensions"]
@@ -2082,16 +2161,92 @@ def _furnish(space: _Space, pools, used, openings):
         kept = [o for o in kept if o is not worst]
         if not kept:
             break
-    if not kept:
+    return kept, dropped
+
+
+def _layout_score(space: _Space, objects, must_haves) -> float:
+    """How well an arrangement serves the room, so the best one leads."""
+    present = {o["category"] for o in objects}
+    score = 1000.0 * sum(1 for m in must_haves if m in present)
+    score += 10.0 * len(objects)
+    # Furniture wants to sit against something. Reward a layout that leaves the
+    # middle of the room walkable rather than parking a wardrobe in the open.
+    floor = max(space.w * space.d, 1e-6)
+    filled = sum(o["dimensions"]["width"] * o["dimensions"]["depth"] for o in objects)
+    score -= 40.0 * max(0.0, filled / floor - 0.55)
+    return score
+
+
+def _furnish(space: _Space, pools, used, openings):
+    """Up to three workable arrangements for one room, best first.
+
+    Each is solved against this room's own rectangle and its real doors, so the
+    result follows the customer's uploaded plan rather than a stock template.
+    """
+    candidates, dropped, must_haves = _room_candidates(space, pools, used)
+    if not candidates:
+        return [], []
+
+    room_rect = (space.x0, space.y0, space.w, space.d)
+    from ids.scene import Room as SRoom
+    room = SRoom(space.sid, space.label, room_rect)
+    s_openings = _openings_for(space, openings)
+
+    # A shower room barely wider than its door has one sensible arrangement, and
+    # working out two more costs as much as the room it is in. Only rooms with
+    # space to rearrange get alternatives.
+    roomy = space.w * space.d >= 5.0 and len(candidates) >= 3
+    strategies = LAYOUT_STRATEGIES if roomy else LAYOUT_STRATEGIES[:1]
+
+    layouts, seen_signatures = [], set()
+    for index, (name, seed, omit) in enumerate(strategies):
+        chosen, left_out = _select(space, copy.deepcopy(candidates), must_haves, omit)
+        if not chosen:
+            continue
+        prefix = "" if index == 0 else f"L{index}__"
+        # The arrangement that ships gets the full search; the alternatives are
+        # a choice, not the default, and do not need to be hunted as hard.
+        placed, lost = _solve_layout(space, chosen, room, s_openings,
+                                     must_haves, seed, prefix,
+                                     effort=500 if index == 0 else 220)
+        if not placed:
+            continue
+        signature = tuple(sorted(
+            (o["category"], round(o["position"]["x"], 1), round(o["position"]["z"], 1),
+             int(o["rotation"]["yaw"])) for o in placed))
+        if signature in seen_signatures:
+            continue          # the same room twice is not a choice
+        seen_signatures.add(signature)
+        layouts.append({
+            "name": name,
+            "objects": placed,
+            "score": _layout_score(space, placed, must_haves),
+            "dropped": [f"{space.label}: {o['label']}" for o in left_out] + lost,
+        })
+
+    if not layouts:
         # A WC barely wider than its door still has a pan in it. Rather than
         # show the customer an empty tiled box, fit the room's essential piece.
         essential = _essential_fitting(space, candidates, openings)
-        if essential is not None:
-            essential["object_id"] = f"{space.sid}__{essential['category']}"
-            essential["room_id"] = space.sid
-            kept = [essential]
-            dropped = [d for d in dropped if not d.endswith(essential["label"])]
-    return kept, dropped
+        if essential is None:
+            return [], dropped
+        essential["object_id"] = f"{space.sid}__{essential['category']}"
+        essential["room_id"] = space.sid
+        return [{"name": "Balanced", "objects": [essential], "score": 0.0, "dropped": []}], dropped
+
+    layouts.sort(key=lambda lay: -lay["score"])
+    # Whichever arrangement won now takes the plain object ids, because every
+    # other part of the app — the 2D plan, the quotation, the item list —
+    # already reads those. The alternates keep a prefix so all three can be
+    # loaded into the viewer at once and switched between.
+    for index, layout in enumerate(layouts):
+        prefix = "" if index == 0 else f"L{index}__"
+        counts: dict[str, int] = {}
+        for o in layout["objects"]:
+            counts[o["category"]] = counts.get(o["category"], 0) + 1
+            suffix = "" if counts[o["category"]] == 1 else f"_{counts[o['category']]}"
+            o["object_id"] = f"{space.sid}__{prefix}{o['category']}{suffix}"
+    return layouts, dropped + layouts[0]["dropped"]
 
 
 @lru_cache(maxsize=1)
@@ -2109,8 +2264,9 @@ def _example_object(category: str) -> Optional[dict[str, Any]]:
     return _examples_by_category().get(category)
 
 
-_ESSENTIAL = {"bathroom": ("wc", "vanity", "shower"), "kitchen": ("counter_run", "wall_cabinets"),
-              "master_bedroom": ("bed",), "bedroom": ("bed",), "living_room": ("sofa",),
+_ESSENTIAL = {"bathroom": ("wc", "vanity"), "kitchen": ("counter_run", "wall_cabinets"),
+              "master_bedroom": ("bed", "wardrobe"), "bedroom": ("bed", "wardrobe"),
+              "living_room": ("sofa",),
               "dining_area": ("dining_set",), "study": ("desk",), "pooja_room": ("mandir",)}
 
 
