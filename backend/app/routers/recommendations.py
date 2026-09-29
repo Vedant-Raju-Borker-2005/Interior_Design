@@ -742,19 +742,38 @@ def get_complementary_bundle(
                 "priority": entry["priority"],
             })
 
-    # 4. Pre-select top complementary items within budget
-    running_total = anchor.price
-    for item in recommended_items:
-        if (running_total + item["price"]) <= (room_budget * 1.05) and (running_total + item["price"] <= total_budget):
-            item["pre_selected"] = True
-            running_total += item["price"]
-        else:
-            item["pre_selected"] = False
-
-    # 5. Spatial Feasibility & Footprint Check (Module 4)
+    # How big this room really is. Once a floor plan is confirmed these come
+    # from the customer's own drawing; before that they are the BHK defaults.
     room_length = float(room.length_ft) if (room and room.length_ft) else (16.0 if "living" in room_type else 14.0 if "master" in room_type else 12.0)
     room_width = float(room.width_ft) if (room and room.width_ft) else (12.0 if "living" in room_type else 11.0 if "master" in room_type else 10.0)
     room_area_sqft = max(30.0, room_length * room_width)
+
+    # Whether a piece can physically stand in this room is decided in one
+    # place, so the catalogue and this engine cannot disagree about it.
+    from ..services.room_fit import product_fits
+    long_wall, short_wall = max(room_length, room_width), min(room_length, room_width)
+
+    def wall_fit(p: Product) -> dict:
+        fits, why = product_fits(p, room, room_type)
+        return {"fits": fits, "reason": why}
+
+    # 4. Pre-select top complementary items within budget
+    running_total = anchor.price
+    for item in recommended_items:
+        product = db.query(Product).filter(Product.id == item["id"]).first()
+        verdict = wall_fit(product) if product else {"fits": True, "reason": ""}
+        item["fits_room"] = verdict["fits"]
+        item["fit_note"] = verdict["reason"]
+        affordable = ((running_total + item["price"]) <= (room_budget * 1.05)
+                      and running_total + item["price"] <= total_budget)
+        item["pre_selected"] = bool(affordable and verdict["fits"])
+        if item["pre_selected"]:
+            running_total += item["price"]
+    # Anything that cannot physically go in the room sinks to the bottom of the
+    # list rather than being offered first.
+    recommended_items.sort(key=lambda i: (not i.get("fits_room", True), -i.get("priority", 0)))
+
+    # 5. Spatial Feasibility & Footprint Check (Module 4)
 
     def get_footprint_sqft(p: Product) -> float:
         w = float(p.width or 1200.0)
@@ -778,6 +797,10 @@ def get_complementary_bundle(
         "badge_text": f"Uses {round(footprint_pct)}% floor area (within 40% clearance limit)",
         "circulation_envelope": "Preserves 850mm walking clearance",
         "is_valid": footprint_pct <= 42.0,
+        "longest_wall_ft": round(max(room_length, room_width), 1),
+        "anchor_fits": wall_fit(anchor)["fits"],
+        "anchor_fit_note": wall_fit(anchor)["reason"],
+        "wont_fit": [i["name"] for i in recommended_items if not i.get("fits_room", True)],
     }
 
     # 6. Alternative Swaps Engine (Module 6: Budget-Saver & Premium Upgrade)
