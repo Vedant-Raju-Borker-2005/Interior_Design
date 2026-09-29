@@ -2058,6 +2058,18 @@ function applyConfig() {
     tier = key.split('|')[1];
   }
   sceneData = variant.scene;
+  // A room the customer rearranged on a standard layout comes back with the
+  // page; the traced-plan build folds its own in on the server.
+  const savedRooms = (EMBED && EMBED.roomOverrides) || null;
+  if (savedRooms && !traced) {
+    sceneData = JSON.parse(JSON.stringify(sceneData));
+    for (const [rid, objects] of Object.entries(savedRooms)) {
+      if (!Array.isArray(objects)) continue;
+      sceneData.objects = sceneData.objects.filter(o => o.room_id !== rid).concat(objects);
+      const room = sceneData.rooms.find(r => r.room_id === rid);
+      if (room) room.object_ids = objects.map(o => o.object_id);
+    }
+  }
   pickReport = applyPicks(sceneData);
 
   document.getElementById('plan').innerHTML = variant.svg;
@@ -2123,13 +2135,21 @@ function switchRoomLayout(roomId) {
   // Take out whatever this room was showing and put the next arrangement in.
   // Every other room is left exactly as it is.
   const swapped = alts[next].objects.map(o => JSON.parse(JSON.stringify(o)));
-  sceneData.objects = sceneData.objects.filter(o => o.room_id !== roomId).concat(swapped);
+  // Anything the customer put in the room themselves is theirs, not part of
+  // the arrangement, so it stays when they look at a different one. Only
+  // drop it if the new arrangement already provides that kind of piece.
+  const provided = new Set(swapped.map(o => o.category));
+  const mine = sceneData.objects.filter(
+    o => o.room_id === roomId && o.user_added && !provided.has(o.category));
+  const kept = swapped.concat(mine);
+  sceneData.objects = sceneData.objects.filter(o => o.room_id !== roomId).concat(kept);
   const room = sceneData.rooms.find(r => r.room_id === roomId);
-  if (room) room.object_ids = swapped.map(o => o.object_id);
+  if (room) room.object_ids = kept.map(o => o.object_id);
 
   // The new pieces need their products and finishes chosen like any other.
   pickReport = applyPicks(sceneData);
   document.getElementById('status').textContent = 'rearranging…';
+  persistRoom(roomId);
   clearWorld();
   buildWorld(sceneData);
   buildFocusButtons();
@@ -2360,6 +2380,7 @@ function removeObject(objectId) {
 
 function addObject(roomId, suggestion) {
   const obj = JSON.parse(JSON.stringify(suggestion.object));
+  obj.user_added = true;      // kept when the arrangement is switched
   sceneData.objects.push(obj);
   const room = sceneData.rooms.find(r => r.room_id === roomId);
   if (room) room.object_ids = (room.object_ids || []).concat(obj.object_id);

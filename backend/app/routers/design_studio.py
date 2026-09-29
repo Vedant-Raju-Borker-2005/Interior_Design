@@ -633,6 +633,29 @@ SUGGESTABLE: dict[str, tuple[str, ...]] = {
 }
 
 
+def _with_overrides(scene: dict, project) -> dict:
+    """A standard layout with the customer's own changes folded in.
+
+    The traced-plan build applies these itself. A standard layout is assembled
+    in the browser, so without this the server would keep suggesting a piece
+    the customer had already added.
+    """
+    stored = project.plan_layout if isinstance(project.plan_layout, dict) else {}
+    overrides = stored.get("room_overrides") or {}
+    if not overrides:
+        return scene
+    scene = copy.deepcopy(scene)
+    for room_id, objects in overrides.items():
+        if not isinstance(objects, list):
+            continue
+        scene["objects"] = [o for o in scene.get("objects") or []
+                            if o.get("room_id") != room_id] + copy.deepcopy(objects)
+        for room in scene.get("rooms") or []:
+            if room.get("room_id") == room_id:
+                room["object_ids"] = [o.get("object_id") for o in objects]
+    return scene
+
+
 def _standard_scene(project, brief) -> Optional[dict]:
     """The baked layout the viewer falls back to when there is no floor plan.
 
@@ -690,6 +713,7 @@ def room_additions(
         scene = _standard_scene(project, brief)
         if scene is None:
             raise HTTPException(400, "No layout to add to yet")
+        scene = _with_overrides(scene, project)
 
     room = next((r for r in scene["rooms"] if r["room_id"] == room_id), None)
     if room is None:
@@ -788,16 +812,22 @@ def save_room_layout(
     other room; only the ones they have touched are held.
     """
     project = _owned(project_id, user, db)
-    plan = project.plan_layout if isinstance(project.plan_layout, dict) else None
-    if not plan or not plan.get("rooms"):
-        raise HTTPException(400, "Confirm a floor plan first")
+    # A project without a traced plan is shown a standard layout, and the
+    # customer can rearrange that too, so this cannot require a floor plan.
+    # The record lives on plan_layout either way; a dict holding only
+    # room_overrides is not mistaken for a plan by active_plan_layout, which
+    # wants a status and rooms.
+    plan = project.plan_layout if isinstance(project.plan_layout, dict) else {}
     if len(req.objects) > 80:
         raise HTTPException(400, "That is more furniture than a room can hold")
 
     keep = ("object_id", "room_id", "category", "label", "position", "rotation",
             "dimensions", "material", "colour", "colour_hex", "role",
             "asset_reference", "asset_url", "features", "metalness", "roughness",
-            "opacity", "scale")
+            "opacity", "scale",
+            # marks a piece the customer added, so changing the arrangement
+            # keeps it instead of treating it as part of the old one
+            "user_added")
     cleaned = []
     for o in req.objects:
         if not isinstance(o, dict) or not o.get("object_id") or not o.get("category"):
@@ -827,9 +857,7 @@ def reset_room_layout(
     db: Session = Depends(get_db),
 ):
     project = _owned(project_id, user, db)
-    plan = project.plan_layout if isinstance(project.plan_layout, dict) else None
-    if not plan:
-        raise HTTPException(400, "Confirm a floor plan first")
+    plan = project.plan_layout if isinstance(project.plan_layout, dict) else {}
     overrides = dict(plan.get("room_overrides") or {})
     overrides.pop(room_id, None)
     project.plan_layout = {**plan, "room_overrides": overrides}
