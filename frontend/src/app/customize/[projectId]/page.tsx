@@ -348,7 +348,11 @@ export default function GuidedCustomizePage() {
           category: selectedCategory,
           style: project?.style_vibe || 'Modern',
           budget: project?.budget || 500000,
-          project_id: projectId
+          project_id: projectId,
+          // With the room known, the catalogue leaves out anything that cannot
+          // physically stand in it — measured from the customer's floor plan
+          // once they have confirmed one.
+          room_id: activeRoomId || undefined
         })
         const raw = res.data
         const items = Array.isArray(raw) 

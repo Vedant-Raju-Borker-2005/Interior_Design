@@ -498,6 +498,75 @@ async def redetect_plan_layout(project_id: str, panel: Optional[int] = None,
     return _plan_payload(project, db)
 
 
+M_TO_FT = 3.28084
+
+
+def _family(room_type: str) -> str:
+    """Bedrooms and bathrooms are numbered in the database but not on a plan."""
+    t = (room_type or "").lower()
+    if t.startswith("bedroom") or t == "master_bedroom":
+        return "bedroom"
+    if t.startswith("bathroom") or t in ("wc", "toilet"):
+        return "bathroom"
+    return t
+
+
+def _db_room_order(room) -> tuple:
+    """Master first, then 2, 3 ... so the biggest traced room becomes the master."""
+    t = (room.room_type or "").lower()
+    if t.endswith("_master") or t == "master_bedroom":
+        return (0, t)
+    tail = t.rsplit("_", 1)[-1]
+    return (int(tail), t) if tail.isdigit() else (1, t)
+
+
+def sync_room_sizes(project, plan: dict, db) -> int:
+    """Copy the traced room sizes onto the project's rooms.
+
+    Until this ran, the rooms table kept the defaults a BHK is seeded with —
+    a 14x12 ft master bedroom — while the customer's own plan said 8.6x11.5.
+    Everything that shops for furniture reads the table, so it was sizing a
+    room that did not exist and recommending sets that could never fit.
+    """
+    width_m = float(plan.get("plan_width_m") or 0)
+    image_w = float(plan.get("image_w") or 0)
+    image_h = float(plan.get("image_h") or 0)
+    if width_m <= 0 or image_w <= 0 or image_h <= 0:
+        return 0
+    depth_m = float(plan.get("plan_depth_m") or (width_m * image_h / image_w))
+
+    traced: dict[str, list[tuple[float, float]]] = {}
+    for r in plan.get("rooms") or []:
+        box = r.get("box") or []
+        if len(box) != 4:
+            continue
+        w = abs(box[2] - box[0]) * width_m * M_TO_FT
+        d = abs(box[3] - box[1]) * depth_m * M_TO_FT
+        if w < 2 or d < 2:
+            continue
+        traced.setdefault(_family(r.get("room_type") or ""), []).append((w, d))
+
+    rows: dict[str, list] = {}
+    for room in db.query(Room).filter(Room.project_id == project.id).all():
+        rows.setdefault(_family(room.room_type), []).append(room)
+
+    changed = 0
+    for family, sizes in traced.items():
+        targets = sorted(rows.get(family) or [], key=_db_room_order)
+        if not targets:
+            continue
+        # Largest traced room to the master, next to bedroom 2, and so on.
+        sizes.sort(key=lambda wd: -(wd[0] * wd[1]))
+        for room, (w, d) in zip(targets, sizes):
+            length, width = max(w, d), min(w, d)
+            if (round(room.length_ft or 0, 1), round(room.width_ft or 0, 1)) ==                     (round(length, 1), round(width, 1)):
+                continue
+            room.length_ft = round(length, 1)
+            room.width_ft = round(width, 1)
+            changed += 1
+    return changed
+
+
 @router.put("/plan-layout/{project_id}", summary="Floor plan — confirm the rooms and build the 2D plan + 3D model")
 def save_plan_layout(
     project_id: str,
@@ -533,6 +602,10 @@ def save_plan_layout(
         "summary": variant["summary"],
         "confirmed_at": datetime.datetime.utcnow().isoformat(),
     }
+    if req.activate:
+        # A confirmed plan is the truth about this flat from here on, so the
+        # rooms everything else shops against are resized to match it.
+        sync_room_sizes(project, cleaned, db)
     _mark_glb_stale(project)
     db.commit()
     db.refresh(project)

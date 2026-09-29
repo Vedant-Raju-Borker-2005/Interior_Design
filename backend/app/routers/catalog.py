@@ -208,6 +208,8 @@ def list_products(
     skip: int = 0,
     limit: int = 50,
     project_id: Optional[str] = Query(None),
+    room_id: Optional[str] = Query(None, description="Only show what fits this room"),
+    fit_only: bool = Query(True, description="Hide pieces too big for the room"),
     db: Session = Depends(get_db),
 ):
     from sqlalchemy import or_, func
@@ -502,10 +504,41 @@ def list_products(
             )
         )
 
+    # Once the customer has confirmed a floor plan, their rooms carry real
+    # measurements, so the catalogue can stop offering a 2.6 m wardrobe for a
+    # wall that is 1.7 m long. Before a plan exists this falls back to the BHK
+    # defaults, which is still better than showing everything.
+    room_note, excluded = None, []
+    if room_id:
+        from ..models import Room
+        from ..services.room_fit import product_fits, room_size_ft
+
+        room = db.query(Room).filter(Room.id == room_id).first()
+        if room is not None:
+            long_wall, short_wall = room_size_ft(room, room.room_type)
+            by_id = {item["product"].id: item["product"] for item in paginated}
+            keep = []
+            for out in items_out:
+                product = by_id.get(out.get("id"))
+                fits, why = product_fits(product, room, room.room_type) if product else (True, "")
+                out["fits_room"] = fits
+                out["fit_note"] = why
+                (keep if fits else excluded).append(out)
+            room_note = {
+                "room": room.room_type,
+                "size_ft": f"{long_wall:.1f} x {short_wall:.1f}",
+                "measured": bool(room.length_ft and room.width_ft),
+                "hidden": len(excluded),
+            }
+            if fit_only and keep:
+                items_out = keep
+
     return {
         "items": items_out,
-        "total": len(products_with_flags),
-        "exact_color_match_found": exact_color_match_found
+        "total": len(items_out),
+        "exact_color_match_found": exact_color_match_found,
+        "room_fit": room_note,
+        "hidden_for_size": [x.get("name") for x in excluded],
     }
 
 
