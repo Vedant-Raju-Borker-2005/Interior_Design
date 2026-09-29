@@ -8,6 +8,7 @@ kept on the server, so there is always a downloadable file of the current design
 """
 from __future__ import annotations
 
+import copy
 import datetime
 import mimetypes
 import os
@@ -15,7 +16,7 @@ import re
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -37,6 +38,7 @@ from ..services.plan_layout import (
     IMAGE_EXTS,
     MAX_PLAN_BYTES,
     PlanError,
+    _example_object,
     build_plan_variant,
     clean_plan,
     detect_rooms,
@@ -610,6 +612,200 @@ def save_plan_layout(
     db.commit()
     db.refresh(project)
     return _plan_payload(project, db)
+
+
+# Pieces worth offering for an empty corner, in the order they improve a room.
+SUGGESTABLE: dict[str, tuple[str, ...]] = {
+    "living_room": ("sofa", "armchair", "coffee_table", "media_console", "bookshelf",
+                    "side_table", "floor_lamp", "planter", "rug"),
+    "dining_area": ("dining_set", "sideboard", "console_table", "planter", "rug"),
+    "master_bedroom": ("bed", "wardrobe", "nightstand", "dresser", "bench",
+                       "armchair", "floor_lamp", "planter", "rug"),
+    "bedroom": ("bed", "wardrobe", "nightstand", "desk", "chair", "bookshelf",
+                "planter", "rug"),
+    "study": ("desk", "chair", "bookshelf", "tall_storage", "floor_lamp", "planter"),
+    "kitchen": ("counter_run", "wall_cabinets", "island", "fridge", "tall_storage"),
+    "bathroom": ("wc", "vanity", "shower", "tall_storage"),
+    "family_lounge": ("sofa", "armchair", "coffee_table", "bookshelf", "planter", "rug"),
+    "pooja_room": ("mandir", "planter"),
+    "balcony": ("armchair", "side_table", "planter"),
+    "passage": ("console_table", "planter"),
+}
+
+
+@router.get("/room-additions/{project_id}", summary="What else would fit in a room, and where")
+def room_additions(
+    project_id: str,
+    room_id: str = Query(..., description="scene room id, e.g. master_bedroom"),
+    db: Session = Depends(get_db),
+):
+    """Ask the solver what could still go into a room without breaking it.
+
+    The viewer uses this when somebody hovers an empty patch of floor: every
+    suggestion below has already been placed by the same solver that arranged
+    the rest of the room, against the real walls and doors, so accepting one
+    cannot produce an overlap or block a doorway.
+    """
+    from ids.scene import Opening as SOpening, Room as SRoom, Scene as SScene,         SceneObject as SObj, validate
+    from ids.solver import SpatialSolver, SweepBackend, rule_for
+
+    # Read-only, and no more than the interactive viewer already publishes for
+    # the same project, so it is reachable from inside that viewer's iframe.
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if project is None:
+        raise HTTPException(404, "Project not found")
+    plan = active_plan_layout(project)
+    if not plan:
+        raise HTTPException(400, "Confirm a floor plan first")
+    rooms = db.query(Room).filter(Room.project_id == project.id).all()
+    variant = build_plan_variant(plan, build_viewer_brief(project, rooms))
+    scene = variant["scene"]
+
+    room = next((r for r in scene["rooms"] if r["room_id"] == room_id), None)
+    if room is None:
+        raise HTTPException(404, "No such room in this plan")
+    x0, y0, w, d = room["rect"]
+    here = [o for o in scene["objects"] if o["room_id"] == room_id]
+    present = {o["category"] for o in here}
+
+    s_room = SRoom(room_id, room["label"], (x0, y0, w, d))
+    s_openings = [
+        SOpening(o["opening_id"], room_id, tuple(o["p0"]), tuple(o["p1"]),
+                 o.get("kind") in ("door", "balcony_door", "entrance"))
+        for o in scene.get("openings") or []
+        if o.get("room_id") == room_id
+    ]
+    fixed = [SObj(o["object_id"], room_id, o["category"], dict(o["position"]),
+                  dict(o["rotation"]), dict(o["dimensions"])) for o in here]
+
+    floor = w * d
+    used = sum(o["dimensions"]["width"] * o["dimensions"]["depth"] for o in here
+               if not rule_for(o["category"]).stackable)
+    solver = SpatialSolver(backend=SweepBackend(), seed=7, iterations=300)
+
+    wanted = SUGGESTABLE.get(room["room_type"]) or SUGGESTABLE["living_room"]
+    suggestions, taken = [], used
+    for category in wanted:
+        if category in present:
+            continue
+        example = _example_object(category)
+        if example is None:
+            continue
+        dims = dict(example["dimensions"])
+        if dims["width"] > max(w, d) - 0.2 or dims["depth"] > min(w, d) - 0.2:
+            continue
+        if not rule_for(category).stackable and taken + dims["width"] * dims["depth"] > 0.7 * floor:
+            continue
+
+        candidate = SObj(f"{room_id}__new_{category}", room_id, category,
+                         {"x": x0 + w / 2, "y": 0.0, "z": y0 + d / 2}, {"yaw": 0.0}, dims)
+        place, _ = solver.solve_room(s_room, fixed + [candidate], s_openings)
+        spot = place.get(candidate.object_id)
+        if spot is None:
+            continue
+        trial = SScene(rooms=[s_room], openings=s_openings, objects=[
+            SObj(o.object_id, room_id, o.category,
+                 {"x": place[o.object_id].x, "y": 0.0, "z": place[o.object_id].y},
+                 {"yaw": place[o.object_id].yaw}, o.dimensions)
+            for o in fixed + [candidate] if o.object_id in place])
+        if validate(trial):
+            continue        # it would clash with what is already there
+
+        suggestions.append({
+            "category": category,
+            "label": example.get("label") or category.replace("_", " ").title(),
+            "position": {"x": round(spot.x, 3), "y": 0.0, "z": round(spot.y, 3)},
+            "rotation": {"yaw": float(spot.yaw)},
+            "dimensions": dims,
+            "object": {**copy.deepcopy(example),
+                       "object_id": f"{room_id}__added_{category}",
+                       "room_id": room_id,
+                       "position": {"x": round(spot.x, 3), "y": 0.0, "z": round(spot.y, 3)},
+                       "rotation": {"yaw": float(spot.yaw)},
+                       "dimensions": dims},
+        })
+        if not rule_for(category).stackable:
+            taken += dims["width"] * dims["depth"]
+
+    return {
+        "room_id": room_id,
+        "label": room["label"],
+        "size_m": {"width": round(w, 2), "depth": round(d, 2)},
+        "floor_used_pct": round(100.0 * used / floor, 1) if floor else 0.0,
+        "already_there": sorted(present),
+        "suggestions": suggestions,
+    }
+
+
+class RoomArrangementReq(BaseModel):
+    room_id: str
+    objects: list[dict] = Field(default_factory=list,
+                                description="the room's furniture as the customer left it")
+
+
+@router.put("/room-layout/{project_id}", summary="Keep the way the customer arranged a room")
+def save_room_layout(
+    project_id: str,
+    req: RoomArrangementReq,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    """Store one room's furniture exactly as it now stands.
+
+    Adding or removing a piece in the viewer only changed that session. This
+    writes the room's resulting contents onto the plan, so what the customer
+    sees when they come back is what they left. The solver still arranges every
+    other room; only the ones they have touched are held.
+    """
+    project = _owned(project_id, user, db)
+    plan = project.plan_layout if isinstance(project.plan_layout, dict) else None
+    if not plan or not plan.get("rooms"):
+        raise HTTPException(400, "Confirm a floor plan first")
+    if len(req.objects) > 80:
+        raise HTTPException(400, "That is more furniture than a room can hold")
+
+    keep = ("object_id", "room_id", "category", "label", "position", "rotation",
+            "dimensions", "material", "colour", "colour_hex", "role",
+            "asset_reference", "asset_url", "features", "metalness", "roughness",
+            "opacity", "scale")
+    cleaned = []
+    for o in req.objects:
+        if not isinstance(o, dict) or not o.get("object_id") or not o.get("category"):
+            raise HTTPException(400, "Each piece needs an object_id and a category")
+        cleaned.append({k: o[k] for k in keep if k in o})
+
+    overrides = dict(plan.get("room_overrides") or {})
+    if cleaned:
+        overrides[req.room_id] = cleaned
+    else:
+        # An empty room is a real choice, so record it rather than dropping the
+        # override and letting the solver refurnish it on the next build.
+        overrides[req.room_id] = []
+    project.plan_layout = {**plan, "room_overrides": overrides}
+    _mark_glb_stale(project)
+    db.commit()
+    db.refresh(project)
+    return {"room_id": req.room_id, "saved": len(cleaned),
+            "rooms_customised": sorted(overrides)}
+
+
+@router.delete("/room-layout/{project_id}", summary="Let the solver arrange a room again")
+def reset_room_layout(
+    project_id: str,
+    room_id: str = Query(..., description="room to hand back to the solver"),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    project = _owned(project_id, user, db)
+    plan = project.plan_layout if isinstance(project.plan_layout, dict) else None
+    if not plan:
+        raise HTTPException(400, "Confirm a floor plan first")
+    overrides = dict(plan.get("room_overrides") or {})
+    overrides.pop(room_id, None)
+    project.plan_layout = {**plan, "room_overrides": overrides}
+    _mark_glb_stale(project)
+    db.commit()
+    return {"room_id": room_id, "rooms_customised": sorted(overrides)}
 
 
 @router.delete("/plan-layout/{project_id}", summary="Floor plan — switch back to the standard layout")

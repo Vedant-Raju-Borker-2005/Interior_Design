@@ -1366,7 +1366,8 @@ def build_plan_variant(plan: dict[str, Any], brief: Optional[dict[str, Any]] = N
     key_src = json.dumps({"rooms": plan["rooms"], "w": plan["plan_width_m"], "gaps": plan.get("door_gaps") or [],
                           "d": plan.get("plan_depth_m"),
                           "iw": plan["image_w"], "ih": plan["image_h"], "tier": tier,
-                          "v": 3}, sort_keys=True)
+                          "edits": plan.get("room_overrides") or {},
+                          "v": 4}, sort_keys=True)
     key = hashlib.sha1(key_src.encode()).hexdigest()
     if key in _VARIANT_CACHE:
         _VARIANT_CACHE.move_to_end(key)
@@ -1405,6 +1406,14 @@ def _build(plan: dict[str, Any], tier: str, brief: dict[str, Any]) -> dict[str, 
         # so the viewer can offer them, without changing what anything else
         # sees in scene["objects"].
         room_objects = room_layouts[0]["objects"] if room_layouts else []
+        # A room the customer has added to or cleared out by hand keeps what
+        # they left. Their arrangement wins over the solver's, which is the
+        # whole point of letting them move things.
+        override = (plan.get("room_overrides") or {}).get(s.sid)
+        if isinstance(override, list):
+            room_objects = [copy.deepcopy(o) for o in override]
+            room_layouts = [{"name": "Yours", "objects": room_objects,
+                             "score": 0.0, "dropped": []}]
         objects.extend(room_objects)
         if len(room_layouts) > 1:
             alternates[s.sid] = [

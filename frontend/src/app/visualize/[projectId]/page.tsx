@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { projectsAPI, aiAPI, catalogAPI, premiumRenderAPI, designStudioAPI } from '@/lib/api'
+import { projectsAPI, aiAPI, catalogAPI, premiumRenderAPI, designStudioAPI, planLayoutAPI, apiErrorMessage } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 import RenderEntitlementPanel from '@/components/RenderEntitlementPanel'
 import DesignEditForm from '@/components/DesignEditForm'
@@ -230,6 +230,20 @@ export default function ControlledVisualizePage() {
   useEffect(() => {
     setActiveSwapImageIdx(0)
   }, [swappingItem?.id])
+
+  // The 3D viewer runs in an iframe and has no sign-in of its own, so when the
+  // customer adds or removes a piece it tells this page and we do the saving.
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      const msg = e.data
+      if (!msg || msg.type !== 'interiorai:room-layout' || !msg.roomId) return
+      planLayoutAPI.saveRoomLayout(projectId, msg.roomId, msg.objects || [])
+        .then(() => toast.success('Saved how you arranged this room'))
+        .catch((err) => toast.error(apiErrorMessage(err, 'Could not save that change')))
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [projectId])
   const [alternativeProducts, setAlternativeProducts] = useState<any[]>([])
   const [swappingColor, setSwappingColor] = useState('')
   const [swappingFabric, setSwappingFabric] = useState('')
@@ -583,6 +597,18 @@ export default function ControlledVisualizePage() {
                 <>
                   {studioSummary.layout === 'uploaded-plan' && (
                     <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">Your floor plan</span>
+                  )}
+                  {studioSummary.layout !== 'uploaded-plan' && planBrief?.status === 'draft' && (
+                    // A traced plan that was never confirmed leaves the viewer
+                    // showing a standard layout, which looks like nothing
+                    // happened. Say so, and offer the way to finish it.
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/plan-trace/${projectId}`)}
+                      title="Your floor plan has been traced but not applied yet"
+                      className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold hover:bg-amber-500/30">
+                      Floor plan not applied — finish it
+                    </button>
                   )}
                   <span className="font-bold text-slate-200">{studioSummary.bhk}</span>
                   <span>·</span><span>{studioSummary.style}</span>
