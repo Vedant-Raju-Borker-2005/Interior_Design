@@ -2232,9 +2232,12 @@ function renderColourChips() {
 const ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
 const tip = document.getElementById('tooltip');
 let dragging = false, lastPick = 0;
+let peekTimer = null, peekRoom = null;   // hovering empty floor
 let justDragged = false, dragStart = null;
 renderer.domElement.addEventListener('pointerdown', e => {
-  dragging = true; tip.style.display = 'none'; dragStart = [e.clientX, e.clientY];
+  dragging = true; tip.style.display = 'none';
+  clearTimeout(peekTimer); peekRoom = null;
+  dragStart = [e.clientX, e.clientY];
 });
 addEventListener('pointerup', e => {
   dragging = false;
@@ -2273,7 +2276,39 @@ renderer.domElement.addEventListener('pointermove', e => {
     tip.style.display = 'block';
     tip.style.left = (e.clientX - r.left + 14) + 'px';
     tip.style.top = (e.clientY - r.top + 14) + 'px';
-  } else tip.style.display = 'none';
+    clearTimeout(peekTimer); peekRoom = null;
+  } else {
+    // Empty floor. Wait for the pointer to settle before asking the server
+    // what would fit — moving across a room would otherwise fire a solver run
+    // every few pixels.
+    const point = new THREE.Vector3();
+    const room = ray.ray.intersectPlane(GROUND, point)
+      ? roomAtScenePoint(point.x, -point.z) : null;
+    if (!room) { tip.style.display = 'none'; clearTimeout(peekTimer); peekRoom = null; return; }
+    if (room.room_id === peekRoom && tip.style.display === 'block') {
+      tip.style.left = (e.clientX - r.left + 14) + 'px';
+      tip.style.top = (e.clientY - r.top + 14) + 'px';
+      return;
+    }
+    tip.style.display = 'none';
+    clearTimeout(peekTimer);
+    const at = [e.clientX - r.left + 14, e.clientY - r.top + 14];
+    peekTimer = setTimeout(async () => {
+      const data = await suggestionsFor(room.room_id);
+      if (!data) return;
+      const list = (data.suggestions || []).slice(0, 4);
+      peekRoom = room.room_id;
+      tip.innerHTML = `<b>${escHtml(room.label)}</b><br>`
+        + `${data.floor_used_pct}% of the floor is used<br>`
+        + (list.length
+            ? 'Would fit here: ' + list.map(x => escHtml(x.label)).join(', ')
+              + '<br><i>click to add one</i>'
+            : 'Nothing else fits in here.');
+      tip.style.display = 'block';
+      tip.style.left = at[0] + 'px';
+      tip.style.top = at[1] + 'px';
+    }, 400);
+  }
 });
 
 /* ═══════════ edit the room by hand: remove a piece, or add what fits ═════
