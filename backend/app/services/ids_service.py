@@ -480,6 +480,14 @@ def get_viewer_html(project: Optional[Any] = None, rooms: Optional[list] = None,
                                  "summary": variant["summary"]}
         except Exception as exc:  # never lose the viewer over a bad plan
             payload["layoutError"] = f"{type(exc).__name__}: {exc}"
+    else:
+        # No traced plan, so the viewer assembles a standard layout itself.
+        # Any room the customer has rearranged travels with it, or their
+        # changes would be lost every time the page reloaded.
+        stored = project.plan_layout if isinstance(project.plan_layout, dict) else {}
+        overrides = stored.get("room_overrides") or {}
+        if overrides:
+            payload["roomOverrides"] = overrides
     blob = json.dumps(payload, ensure_ascii=False)
     # The plan SVG contains "</…>"; keep it from closing the <script> early.
     blob = blob.replace("</", "<\\/").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
