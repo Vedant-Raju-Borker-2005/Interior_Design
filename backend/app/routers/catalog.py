@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from sqlalchemy.orm import Session
 from typing import Optional, List
 
 from ..db import get_db
+from ..services.asset_urls import base_from, rehost
 from ..models import Package, Product, ColorAnalytics, InteriorMaterial
 from ..schemas import PackageOut, ProductOut
 
@@ -11,6 +12,7 @@ router = APIRouter()
 
 @router.get("/packages", summary="List packages filtered by BHK, tier, budget")
 def list_packages(
+    request: Request,
     bhk: Optional[str] = Query(None),
     tier: Optional[str] = Query(None),
     budget: Optional[float] = Query(None),
@@ -37,17 +39,17 @@ def list_packages(
     pkgs.sort(key=lambda p: (not p.featured, p.base_price))
 
     return {
-        "packages": [_pkg_out(p) for p in pkgs],
+        "packages": [_pkg_out(p, base_from(request)) for p in pkgs],
         "total": len(pkgs),
     }
 
 
 @router.get("/packages/{pkg_id}", summary="Get single package detail")
-def get_package(pkg_id: str, db: Session = Depends(get_db)):
+def get_package(pkg_id: str, request: Request, db: Session = Depends(get_db)):
     pkg = db.query(Package).filter(Package.id == pkg_id).first()
     if not pkg:
         raise HTTPException(404, "Package not found")
-    return _pkg_out(pkg)
+    return _pkg_out(pkg, base_from(request))
 
 
 COLOR_FAMILIES = {
@@ -200,6 +202,7 @@ def get_master_colors(
 
 @router.get("/products", summary="List products filtered by room_type or category")
 def list_products(
+    request: Request,
     room_type: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     style: Optional[str] = Query(None),
@@ -492,8 +495,9 @@ def list_products(
         in_stock = (p.is_available is not False) and (avail_qty > 0)
         items_out.append(
             _prod_out(
-                p, 
+                p,
                 tier_label(p),
+                asset_base=base_from(request),
                 is_color_match=item["is_color_match"],
                 is_material_match=item["is_material_match"],
                 is_fabric_match=item["is_fabric_match"],
@@ -544,7 +548,7 @@ def list_products(
 
 
 @router.get("/products/{prod_id}", summary="Get single product")
-def get_product(prod_id: str, db: Session = Depends(get_db)):
+def get_product(prod_id: str, request: Request, db: Session = Depends(get_db)):
     # A direct link to an unavailable product still resolves, but the payload
     # carries the flag so the UI can disable selection (feedback 4.1).
     prod = db.query(Product).filter(Product.id == prod_id).first()
@@ -554,6 +558,7 @@ def get_product(prod_id: str, db: Session = Depends(get_db)):
     stock = get_stock_status(db, prod.id)
     return _prod_out(
         prod,
+        asset_base=base_from(request),
         available_qty=stock["available_qty"],
         reserved_qty=stock["reserved_qty"],
         is_in_stock=stock["is_in_stock"],
@@ -561,7 +566,7 @@ def get_product(prod_id: str, db: Session = Depends(get_db)):
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-def _pkg_out(p: Package) -> dict:
+def _pkg_out(p: Package, asset_base: Optional[str] = None) -> dict:
     return {
         "id": p.id,
         "name": p.name,
@@ -569,16 +574,17 @@ def _pkg_out(p: Package) -> dict:
         "bhk": p.bhk,
         "base_price": p.base_price,
         "style_tags": p.style_tags or [],
-        "thumbnail_url": p.thumbnail_url,
-        "images": p.images or [],
+        "thumbnail_url": rehost(p.thumbnail_url, asset_base),
+        "images": rehost(p.images or [], asset_base),
         "featured": p.featured,
         "description": p.description,
     }
 
 
 def _prod_out(
-    p: Product, 
+    p: Product,
     availability_tier: str = "national",
+    asset_base: Optional[str] = None,
     is_color_match: bool = True,
     is_material_match: bool = True,
     is_fabric_match: bool = True,
@@ -602,8 +608,8 @@ def _prod_out(
         "price": p.price,
         "materials": p.materials or [],
         "color_variants": p.color_variants or [],
-        "variants": p.variants or {},
-        "thumbnail_url": p.thumbnail_url,
+        "variants": rehost(p.variants or {}, asset_base),
+        "thumbnail_url": rehost(p.thumbnail_url, asset_base),
         "style_tags": p.style_tags or [],
         "availability_tier": availability_tier,
         "primary_material": p.primary_material,
