@@ -988,6 +988,13 @@ export const planLayoutAPI = {
       null, { timeout: 90000 }),
   save: (projectId: string, body: { rooms: PlanRoom[]; plan_width_m: number; plan_depth_m?: number; activate?: boolean; sync_bhk?: boolean }) =>
     axiosInstance.put<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}`, body, { timeout: 60000 }),
+  // Keep a room the way the customer arranged it in the 3D viewer.
+  saveRoomLayout: (projectId: string, roomId: string, objects: any[]) =>
+    axiosInstance.put(`/api/v1/ai/room-layout/${projectId}`,
+      { room_id: roomId, objects }, { timeout: 60000 }),
+  resetRoomLayout: (projectId: string, roomId: string) =>
+    axiosInstance.delete(`/api/v1/ai/room-layout/${projectId}`,
+      { params: { room_id: roomId }, timeout: 60000 }),
   disable: (projectId: string) =>
     axiosInstance.delete<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}`),
 }
