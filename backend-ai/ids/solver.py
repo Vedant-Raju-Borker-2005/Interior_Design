@@ -204,6 +204,7 @@ W_FLANK_MIRROR = 1.8   # the pair balanced either side
 W_ANCHOR_CENTRE = 0.9  # the bed centred on its wall so both fit
 W_WINDOW_CLEAR = 2.5   # a bed or wardrobe across a window
 W_LANDING = 2.5        # the space you step into from a door
+W_BACK_TO_WALL = 16.0  # a headboard belongs against a wall, not just any side
 
 
 def hard_violations(items: dict[str, Item], place: dict[str, Placement],
@@ -245,6 +246,12 @@ def soft_cost(items: dict[str, Item], place: dict[str, Placement],
         r = it.rule
         if r.anchor == "wall" or r.anchor == "counter":
             cost += 2.2 * max(0.0, ctx.wall_distance(b))
+            # Touching a wall with any edge is not enough. A bed shoved
+            # side-on with its headboard in open floor satisfies the line
+            # above and still looks wrong, so charge for the gap behind the
+            # piece specifically — the side it turns its back on.
+            if r.faces_room:
+                cost += W_BACK_TO_WALL * max(0.0, _back_gap(b, p.yaw, ctx))
         elif r.anchor == "corner":
             cost += 1.1 * ctx.corner_distance(b)
         elif r.anchor == "centre":
@@ -384,6 +391,18 @@ def _tidy_pairs(items: dict[str, Item], place: dict[str, Placement], ctx: RoomCo
             if trial_score < score:
                 place, score = trial, trial_score
     return place, score
+
+
+def _back_gap(b: Box, yaw: float, ctx) -> float:
+    """How far the back of a piece sits from the wall it is turned away from."""
+    fx, fy = _facing(yaw)
+    if fy > 0:                      # faces north, back to the south wall
+        return b.y0 - ctx.inner.y0
+    if fy < 0:                      # faces south, back to the north wall
+        return ctx.inner.y1 - b.y1
+    if fx > 0:                      # faces east, back to the west wall
+        return b.x0 - ctx.inner.x0
+    return ctx.inner.x1 - b.x1      # faces west, back to the east wall
 
 
 def _facing(yaw: float) -> tuple[float, float]:
