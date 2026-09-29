@@ -51,6 +51,69 @@ def scene_from_baked(raw: dict) -> Scene:
     return Scene(rooms=rooms, openings=openings, objects=objects)
 
 
+# Which pieces each arrangement leaves out. Varying the contents is what makes
+# one layout genuinely different from another rather than the same furniture
+# nudged a few centimetres.
+LOOSE = ("planter", "floor_lamp", "armchair", "bench", "side_table", "console_table")
+SEATING = ("armchair", "bench", "side_table")
+STRATEGIES = (("Balanced", 7, ()), ("Open", 23, LOOSE), ("Storage", 41, SEATING))
+ESSENTIAL = {"master_bedroom": ("bed", "wardrobe"), "bedroom": ("bed", "wardrobe"),
+             "living_room": ("sofa",), "dining_area": ("dining_set",),
+             "kitchen": ("counter_run",), "bathroom": ("wc",), "study": ("desk",)}
+
+
+def arrangements_for_room(room_raw, objects, openings, solver_seeds=STRATEGIES):
+    """Two or three ways to arrange one baked room, best effort, deduplicated."""
+    from ids.solver import SpatialSolver, SweepBackend, rule_for
+
+    x0, y0, w, d = room_raw["rect"]
+    if w * d < 5.0 or len(objects) < 3:
+        return []                       # no room to rearrange anything
+    rtype = room_raw.get("room_type") or ""
+    must = ESSENTIAL.get(rtype, ())
+    s_room = Room(room_raw["room_id"], room_raw.get("label") or "", (x0, y0, w, d))
+    mine = [o for o in openings if o.room_id == room_raw["room_id"]]
+
+    out, seen = [], set()
+    for index, (name, seed, omit) in enumerate(solver_seeds):
+        chosen = [o for o in objects
+                  if o["category"] not in omit or o["category"] in must]
+        if len(chosen) < 2:
+            continue
+        solver = SpatialSolver(backend=SweepBackend(), seed=seed,
+                               iterations=500 if index == 0 else 220)
+        prefix = "" if index == 0 else f"L{index}__"
+        s_objs = [SceneObject(f"{prefix}{o['object_id']}", o["room_id"], o["category"],
+                              dict(o["position"]), dict(o["rotation"]), dict(o["dimensions"]))
+                  for o in chosen]
+        place, _ = solver.solve_room(s_room, s_objs, mine)
+        built = []
+        for o, so in zip(chosen, s_objs):
+            spot = place.get(so.object_id)
+            if spot is None:
+                continue
+            copy_o = json.loads(json.dumps(o))
+            copy_o["object_id"] = so.object_id
+            copy_o["position"] = {"x": round(spot.x, 3), "y": 0.0, "z": round(spot.y, 3)}
+            copy_o["rotation"] = {"yaw": round(float(spot.yaw), 1)}
+            built.append(copy_o)
+        if not built:
+            continue
+        trial = Scene(rooms=[s_room], openings=mine, objects=[
+            SceneObject(o["object_id"], o["room_id"], o["category"], o["position"],
+                        o["rotation"], o["dimensions"]) for o in built])
+        if validate(trial):
+            continue
+        signature = tuple(sorted((o["category"], round(o["position"]["x"], 1),
+                                  round(o["position"]["z"], 1), int(o["rotation"]["yaw"]))
+                                 for o in built))
+        if signature in seen:
+            continue
+        seen.add(signature)
+        out.append({"name": name, "objects": built})
+    return out if len(out) > 1 else []
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -58,6 +121,8 @@ def main() -> None:
     ap.add_argument("--iterations", type=int, default=900)
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--viewer", default=str(VIEWER))
+    ap.add_argument("--layouts", action="store_true",
+                    help="also bake two or three arrangements per room")
     args = ap.parse_args()
 
     path = Path(args.viewer)
@@ -71,7 +136,7 @@ def main() -> None:
     solver = SpatialSolver(backend=SweepBackend(), seed=args.seed, iterations=args.iterations)
     before_bad = after_bad = moved = 0
 
-    print(f"{'variant':22}{'objects':>8}{'before':>9}{'after':>8}{'moved':>8}")
+    print(f"{'variant':22}{'objects':>8}{'before':>9}{'after':>8}{'moved':>8}{'choices':>8}")
     for key, variant in variants.items():
         raw = variant.get("scene") or {}
         if not raw.get("objects"):
@@ -94,10 +159,24 @@ def main() -> None:
                 changed += 1
             o["position"], o["rotation"] = new_pos, new_rot
 
+        if args.layouts:
+            # The viewer offers these behind the arrows on a room's chip. The
+            # first is what is already in scene["objects"], so only the others
+            # add anything; a room with nothing to offer is left out entirely.
+            per_room, openings = {}, scene.openings
+            for room_raw in raw.get("rooms") or []:
+                mine = [o for o in raw["objects"] if o["room_id"] == room_raw["room_id"]]
+                alts = arrangements_for_room(room_raw, mine, openings)
+                if alts:
+                    per_room[room_raw["room_id"]] = alts
+            if per_room:
+                raw["layouts"] = per_room
+
         before_bad += was
         after_bad += now
         moved += changed
-        print(f"  {key:20}{len(raw['objects']):8d}{was:9d}{now:8d}{changed:8d}")
+        choices = len(raw.get("layouts") or {})
+        print(f"  {key:20}{len(raw['objects']):8d}{was:9d}{now:8d}{changed:8d}{choices:8d}")
 
     print(f"\nviolations {before_bad} -> {after_bad}, {moved} pieces moved")
     if after_bad > before_bad:

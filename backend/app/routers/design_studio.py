@@ -633,6 +633,30 @@ SUGGESTABLE: dict[str, tuple[str, ...]] = {
 }
 
 
+def _standard_scene(project, brief) -> Optional[dict]:
+    """The baked layout the viewer falls back to when there is no floor plan.
+
+    Chosen the same way the viewer chooses it — this BHK and tier, then any
+    layout for this BHK, then whatever exists — so a suggestion lands in the
+    room the customer is actually looking at.
+    """
+    from ..services.plan_layout import _baked, viewer_tier
+
+    try:
+        variants, _catalog = _baked()
+    except Exception:                                     # noqa: BLE001
+        return None
+    bhk = (brief or {}).get("bhk") or normalize_bhk(project.bhk_type) or ""
+    bhk = bhk if " " in bhk else bhk.replace("BHK", " BHK")
+    tier = viewer_tier(brief or {})
+    for key in (f"{bhk}|{tier}",):
+        if key in variants:
+            return variants[key].get("scene")
+    same = [k for k in variants if k.startswith(f"{bhk}|")]
+    key = same[0] if same else (next(iter(variants), None))
+    return variants[key].get("scene") if key else None
+
+
 @router.get("/room-additions/{project_id}", summary="What else would fit in a room, and where")
 def room_additions(
     project_id: str,
@@ -654,12 +678,18 @@ def room_additions(
     project = db.query(Project).filter(Project.id == project_id).first()
     if project is None:
         raise HTTPException(404, "Project not found")
-    plan = active_plan_layout(project)
-    if not plan:
-        raise HTTPException(400, "Confirm a floor plan first")
     rooms = db.query(Room).filter(Room.project_id == project.id).all()
-    variant = build_plan_variant(plan, build_viewer_brief(project, rooms))
-    scene = variant["scene"]
+    brief = build_viewer_brief(project, rooms)
+    plan = active_plan_layout(project)
+    if plan:
+        scene = build_plan_variant(plan, brief)["scene"]
+    else:
+        # No confirmed plan, so the viewer is showing a standard layout for
+        # this BHK. Suggest against that same one, picked the way the viewer
+        # picks it, rather than refusing to help.
+        scene = _standard_scene(project, brief)
+        if scene is None:
+            raise HTTPException(400, "No layout to add to yet")
 
     room = next((r for r in scene["rooms"] if r["room_id"] == room_id), None)
     if room is None:
