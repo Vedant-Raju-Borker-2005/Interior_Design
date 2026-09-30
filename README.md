@@ -10,12 +10,13 @@ InteriorAI is an end-to-end web application that simplifies the interior design 
 
 ### 1. Customer (Homeowner B2C) Portal
 * **6-Step Interactive Onboarding Wizard**: Guided flow capturing project type (New Home vs. Renovation), BHK scope (1BHK to 5BHK), budget limit, completion timeline, single-select design vibe, wood laminate finish, fabric preference, and color explorer. Auto-saves draft project at Step 1 to track progress on the dashboard and resume exact steps without duplicate projects.
-* **Dynamic Package Pricing**: Packages automatically compute tier prices based on onboarding budget limit (`Basic` = budget, `Premium` = budget + ₹2L, `Luxury` = budget + ₹5L).
+* **Dynamic Package Pricing & Strict Budget Bracket Scaling**: Packages compute tier prices anchored to the user's budget bracket (`Basic` = budget minimum, `Premium` = budget + ₹2L, `Luxury` = budget + ₹5L). Strictly enforces linear product catalog price caps across tiers (₹3L–₹5L: max ₹75k; ₹5L–₹8L: max ₹1.25L; ₹8L–₹12L: max ₹2L; ₹12L–₹20L: max ₹3.5L; ₹20L+: max ₹5L).
 * **Interactive 3D Room Canvas & 4-Wall AI Studio**: Powered by Three.js, `@react-three/fiber`, and Gemini / Imagen 3 AI. View Wall A, B, C, D perspectives, test blueprint templates, upload photo layouts, and input room dimensions with automatic pillar clearance.
 * **Smart Customizer & Real-Time Stock Status**: Features a Preference Legend Card on section header and compact indicator dots on product cards (🟡 Material/Fabric, 🔵 Color, 🔴 Budget Cap). Displays real-time stock availability badges (In Stock, Low Stock ≤ 5, Out of Stock) with automatic disabling of depleted SKUs. Live price tracking with dual centered sub-boxes (*Remaining Budget* and *Variation Spent*), auto tab progression, and balcony auto-complete.
 * **ReportLab PDF Quotation Generator**: Generates professional, bank-compliant PDF quotes with detailed room line items, GST breakdown, terms, and bank details. Automatically reserves inventory upon quote creation and regenerates quotes if revised after customer review.
+* **Multi-Channel Milestone Payments Hub (`/track/[projectId]/payments`)**: Structured payment disbursements aligned with execution milestones (e.g. Booking Advance, Production Start, Dispatch, Installation Completion). Supports 4 payment modes: Card, UPI, Netbanking, and **Offline / Bank Transfer (NEFT/RTGS/IMPS)** with UTR reference validation and transaction confirmation.
 * **Unified Customer Project Progress & Snag Cockpit (`/track/[projectId]`)**:
-  * **Hero Execution Banner**: Milestone-driven overall progress gauge (0–100%) and expandable 6-stage core timeline (Design Finalized $\rightarrow$ Procurement $\rightarrow$ Production $\rightarrow$ Logistics $\rightarrow$ Installation $\rightarrow$ Handover) with strictly all dates removed.
+  * **Hero Execution Banner**: Milestone-driven overall progress gauge (0–100%) and expandable 6-stage core timeline (Design Finalized $\rightarrow$ Procurement $\rightarrow$ Production $\rightarrow$ Logistics $\rightarrow$ Installation $\rightarrow$ Handover) with **strictly zero dates or day forecasts**.
   * **Sourcing & Room Filter Bar**: 7 interactive status counter chips (All Items, Ordered, In Production, Quality Check, Dispatched, Delivered, Installation, Completed) with room filter tabs and instant component search.
   * **In-Page Component Tracking Details**: Deep-dive component view featuring **Dual-Track Status Bars** (Vendor Sourcing vs Field Installation), component proof photo gallery with high-res lightbox, full technical specifications, carrier/waybill logistics metadata, and immutable milestone audit history.
   * **Customer Snag & Defect Filing Flow**: Direct defect reporting with target component context banner, category & severity selectors, date encountered input, detailed description, and drag-and-drop multi-photo upload with thumbnail preview removal.
@@ -45,18 +46,23 @@ InteriorAI is an end-to-end web application that simplifies the interior design 
 * **Issues Tracking & Milestone Payouts**: Review customer-reported product issues (`/vendor/issues`) and track milestone-based payout releases.
 
 ### 4. Project Team / Site Execution Center
-* **Welcome Portal & Role Router**: Role selection hub (`/team`) routing users to dedicated manager, coordinator, or technician consoles.
+* **Welcome Portal & Role Router**: Role selection hub (`/team`) routing users to dedicated manager, coordinator, or technician consoles with sleek indigo design accents.
 * **Role-Specific Execution Dashboards**:
-  * **Manager Console (`/team/manager`)**: Portfolio metrics, active vs. delayed projects, team utilization rate, SLA performance metrics, resource assignments.
-  * **Coordinator Console (`/team/coordinator`)**: Assigned projects, item sourcing tracking, vendor delay alerts, site visit scheduling, daily checklist forms.
-  * **Technician Field Console (`/team/technician`)**: Today's installation tasks, daily checklists, direct proof photo uploads with multipart form support.
-* **Operations Console**: Project execution workspace (`/projects/[projectId]/execution`) featuring item tracking, task calendars, checklists, site visit logs, document vault, and SLA delay reporting.
+  * **Manager Console (`/team/manager`)**: Portfolio velocity metrics, active vs. delayed projects, team utilization rates, SLA performance analytics, vendor/technician resource assignments.
+  * **Coordinator Console (`/team/coordinator`)**: Assigned projects, item sourcing tracking, vendor delay alerts, site visit scheduling, daily site checklists.
+  * **Technician Field Console (`/team/technician`)**: Today's assigned installation items, daily checklists, direct mobile photo proof uploads with multipart form support, and instant status updates.
+* **Unified Project Execution Workspace (`/projects/[projectId]/execution`)**:
+  * **Interactive Execution Cockpit**: Hero progress banner with dynamic circular progress gauge (0–100%) and expandable 6 Core Stages Timeline with **strictly zero dates or day forecasts** (Design Finalized $\rightarrow$ Procurement $\rightarrow$ Production $\rightarrow$ Logistics $\rightarrow$ Installation $\rightarrow$ Handover).
+  * **Dual-Track Item Progression**: Simultaneous tracking of Vendor Sourcing (PO Approved $\rightarrow$ Dispatched $\rightarrow$ Delivered) and Site Installation (Site Received $\rightarrow$ Quality Checked $\rightarrow$ Customer Verified).
+  * **Execution Tools**: Gantt timeline view, on-site checklist verification, site visit logs, document vault, customer call logs, and SLA delay notifications.
 
 ### 5. Admin Control Center
-* **Unified Admin Portal Layout**: Super Admin console at `/admin` with persistent sidebar navigation across 11 specialized sub-routes.
-* **11 Dedicated Admin Sub-Pages**:
-  * **Client CRM (`/admin/customers`)**: Customer directory, profile management, account suspension, and reactivation. Auto-synced with enterprise project deletions to prevent ghost accounts.
-  * **Enterprise Partner Management (`/admin/enterprise`)**: Isolated builder partner hub for developer accounts, parent property projects, unit mixes, and portfolio metrics.
+* **Unified Admin Portal Layout**: Super Admin console at `/admin` with persistent sidebar navigation across 12 specialized sub-routes.
+* **Dedicated Admin Control Sub-Pages**:
+  * **Approvals & Supplier Gate (`/admin/approvals`)**: Mandatory approval queue (`Project.approval_status = PENDING`) gating vendor allocation; item assignments remain locked until admin approves the project and assigns the vendor.
+  * **Quotation Admin & Conversions (`/admin/quotations`)**: Search quotations across customers/projects, review offline/bank payments, verify UTR numbers, and 1-click convert paid quotations into active execution projects (`converted_from_project_id`).
+  * **Client CRM (`/admin/customers`)**: Directory of customer accounts, profile editing, suspension, and reactivation. Auto-synced with enterprise project deletions to prevent orphaned/ghost accounts.
+  * **Enterprise Partner Management (`/admin/enterprise`)**: Dedicated management page for B2B real-estate builder accounts, parent property setups, unit mixes, and developer portfolios.
   * **Vendor Governance (`/admin/vendors`)**: Onboarding application review, document inspection, approval, rejection, and suspension.
   * **Team Approvals (`/admin/project-team`)**: Pending team registration approvals and role matrix permissions assignment (`AdminRole`).
   * **Project Control Center (`/admin/projects`)**: Master project creation, manager/coordinator/technician/vendor resource assignment, project closing, and cancellation.
@@ -64,7 +70,7 @@ InteriorAI is an end-to-end web application that simplifies the interior design 
   * **Operational Reports (`/admin/reports`)**: Live CSV report generation for sales, revenue, projects, vendors, and customers.
   * **AI Engine Tuning (`/admin/ai-engine`)**: AI model selection, rendering parameters, and prompt customization templates.
   * **IT Box & System Settings (`/admin/settings`)**: Dynamic platform key-value settings management (`SystemSetting`).
-  * **Audit Logs (`/admin/audit-log` & `/admin/activity-log`)**: Full administrative action trail (`AuditLog`) and real-time developer activity stream.
+  * **Audit Trail & System Logs (`/admin/audit-log` & `/admin/activity-log`)**: Full administrative action trail (`AuditLog`) and real-time developer activity stream.
 
 ---
 
@@ -150,23 +156,38 @@ run **`Click_Run.bat dev`** instead: live reload, but each page compiles on its 
 
 To run the application components manually, open two terminal windows:
 
-### 1. Backend Setup
+### 1. Backend Setup (FastAPI & SQLite)
 ```bash
 cd backend
+
+# Create & activate Python virtual environment
 python -m venv .venv
 source .venv/bin/activate       # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
+
+# Start backend server
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-* **API Documentation**: Interactive Swagger UI is available at `http://localhost:8000/docs`.
+* **API Server**: Available at `http://localhost:8000`.
+* **Health Check**: `http://localhost:8000/health` (returns `{"status":"ok", ...}`).
+* **Interactive API Documentation (Swagger)**: Available at `http://localhost:8000/docs`.
+* **Database & Seed**: On first startup, `backend/interior_ai.db` is initialized and seeded automatically.
 
-### 2. Frontend Setup
+### 2. Frontend Setup (Next.js 14)
 ```bash
 cd frontend
+
+# Install Node dependencies
 npm install
+
+# Start development server
 npm run dev
 ```
 * **Client Portal**: Access the web interface at `http://localhost:3000`.
+* **API Proxy**: Next.js automatically proxies all `/api/v1/*` requests and `/static/*` assets directly to `http://localhost:8000`.
 
 ---
 
@@ -233,7 +254,11 @@ PAYMENT_UPI_ID=
 | 1.11 / 1.12 | B2C pays in full (B2B keeps milestones); pre-checkout page captures special services + confirmations | `/checkout/[id]`, `/api/v1/special-services/checkout/{id}` |
 | 2.1–2.4 B2B Typologies & Discounts | Architectural typology setup, floor plans per typology, interactive BHK-column flat allocation, tiered volume discounts (up to 15%), and transparent unit customization breakdown | `/enterprise/projects/[id]/units`, `services/business_rules.py`, `models.py` |
 | 3.1–3.5 Unified Progress & Snags | Consolidated tracking cockpit with hero progress gauge, 6 stages (strictly milestone-driven, no dates), dual-track sourcing & installation, in-page component specs, and photo snag filing | `/track/[projectId]`, `customerStore.ts`, `/api/v1/customer/projects/{id}/*` |
+| 3.6 Site Execution Workspace | Team execution workspace with 0–100% progress gauge, 6 core stages (strictly zero dates policy), dual-track sourcing vs installation, Gantt timeline, on-site checklists, and mobile photo proof uploads | `/projects/[projectId]/execution`, `/team/*`, `/api/v1/team/*` |
 | 4.1–4.5 Vendor Inventory & Locking | Real-time stock ledger, atomic quotation stock reservation & release lifecycle, and instant out-of-stock catalog suppression | `/vendor/inventory`, `/customize/[id]`, `services/inventory_service.py` |
+| 4.2–4.5 Admin Approvals & Supplier Gate | Mandatory approval queue (`Project.approval_status = PENDING`); vendor allocation locked until admin approval and supplier assignment | `/admin/approvals`, `services/business_rules.py` |
+| 1.9 / 1.10 Milestone Payments & Offline NEFT | Customer payments hub with Card, UPI, Netbanking, and Offline / NEFT transfer recording with UTR reference validation; admin quotation search and 1-click project conversion | `/track/[projectId]/payments`, `/admin/quotations`, `/api/v1/quotation-admin/*` |
+| Dynamic Budget Scaling & Catalog Caps | 3-tier scaling anchored to bracket minimums (`Basic` = budget, `Premium` = +₹2L, `Luxury` = +₹5L) with linear product price caps (₹75k to ₹5L) | `/onboarding`, `/customize/[id]`, `services/business_rules.py` |
 | 5.1–5.8 Special services | Consultant directory & onboarding, lead routing, consultant portal, commission ledger | `/admin/special-services`, `/consultant`, `/api/v1/special-services/*` |
 
 ### Running the tests
