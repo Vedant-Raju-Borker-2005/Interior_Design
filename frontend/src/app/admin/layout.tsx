@@ -34,9 +34,13 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
-  // Customer dropdown state (auto-opens if path is customer, approvals, or quotations)
-  const isCustomerPath = pathname === '/admin/customers' || pathname === '/admin/approvals' || pathname === '/admin/quotations';
+  // Customer dropdown state
+  const isCustomerPath = pathname === '/admin/customers' || pathname === '/admin/quotations';
   const [customerOpen, setCustomerOpen] = useState(isCustomerPath);
+
+  // Project Management dropdown state
+  const isProjectPath = pathname.startsWith('/admin/projects') || pathname === '/admin/approvals';
+  const [projectOpen, setProjectOpen] = useState(isProjectPath);
 
   useEffect(() => {
     setMounted(true);
@@ -46,10 +50,9 @@ export default function AdminLayout({
   }, [isLoggedIn, user, mounted, router]);
 
   useEffect(() => {
-    if (isCustomerPath) {
-      setCustomerOpen(true);
-    }
-  }, [pathname, isCustomerPath]);
+    if (isCustomerPath) setCustomerOpen(true);
+    if (isProjectPath) setProjectOpen(true);
+  }, [pathname, isCustomerPath, isProjectPath]);
 
   if (!mounted || !isLoggedIn || user?.role !== 'admin') {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">Authenticating...</div>;
@@ -57,8 +60,12 @@ export default function AdminLayout({
 
   const customerSubItems = [
     { href: '/admin/customers', label: 'Customer Directory', icon: Users },
-    { href: '/admin/approvals', label: 'Project Approvals', icon: ClipboardCheck },
     { href: '/admin/quotations', label: 'Quotations Search', icon: FileSearch },
+  ];
+
+  const projectSubItems = [
+    { href: '/admin/projects', label: 'Project Directory', icon: LayoutDashboard },
+    { href: '/admin/approvals', label: 'Project Approvals', icon: ClipboardCheck },
   ];
 
   return (
@@ -186,19 +193,57 @@ export default function AdminLayout({
                 Project Team
               </Link>
 
-              {/* Project Management */}
-              <Link
-                href="/admin/projects"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/projects')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
+              {/* Project Management Dropdown */}
+              <div className="space-y-1">
+                <div 
+                  className={clsx(
+                    "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all select-none",
+                    isProjectPath 
+                      ? "bg-indigo-900/80 text-white border border-indigo-700/50" 
+                      : "text-indigo-200 hover:text-white hover:bg-white/10"
+                  )}
+                  onClick={() => setProjectOpen(!projectOpen)}
+                >
+                  <div className="flex items-center gap-3">
+                    <LayoutDashboard className="w-4 h-4 text-indigo-300" />
+                    <span>Project Management</span>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProjectOpen(!projectOpen);
+                    }}
+                    className="p-0.5 text-indigo-300 hover:text-white rounded"
+                  >
+                    {projectOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {projectOpen && (
+                  <div className="pl-4 pr-1 py-1 space-y-1 bg-indigo-900/30 rounded-lg border border-indigo-800/30 my-1">
+                    {projectSubItems.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const isSubActive = pathname === sub.href;
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          className={clsx(
+                            "flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all",
+                            isSubActive
+                              ? "bg-indigo-600 text-white font-semibold shadow-sm"
+                              : "text-indigo-300 hover:text-white hover:bg-indigo-800/50"
+                          )}
+                        >
+                          <SubIcon className={clsx("w-3.5 h-3.5", isSubActive ? "text-white" : "text-indigo-400")} />
+                          {sub.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-              >
-                <LayoutDashboard className="w-4 h-4 text-indigo-300" />
-                Project Management
-              </Link>
+              </div>
 
               {/* Special Services (NEW BOX & SIDEBAR MATCH) */}
               <Link
