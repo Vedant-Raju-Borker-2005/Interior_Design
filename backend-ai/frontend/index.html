@@ -2248,25 +2248,139 @@ function renderColourChips() {
   }));
 }
 
-/* ═══════════════════════════ hover inspection ═══════════════════════════ */
+/* ═══════════════════════════ hover inspection & move furniture ═══════════ */
 const ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
 const tip = document.getElementById('tooltip');
 let dragging = false, lastPick = 0;
 let peekTimer = null, peekRoom = null;   // hovering empty floor
 let justDragged = false, dragStart = null;
+
+let selectedObjectNode = null;
+let selectedObjectId = null;
+let draggingObject = null;
+const dragOffset = new THREE.Vector3();
+const dragStartPos = new THREE.Vector3();
+let selectionIndicator = null;
+
+function showSelectionIndicator(node, dims) {
+  if (!selectionIndicator) {
+    const geo = new THREE.PlaneGeometry(1, 1);
+    const edges = new THREE.EdgesGeometry(geo);
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xC2410C, linewidth: 3 });
+    selectionIndicator = new THREE.LineSegments(edges, lineMat);
+    selectionIndicator.rotation.x = -Math.PI / 2;
+    world.add(selectionIndicator);
+  }
+  const w = (dims && dims.width) || 1;
+  const d = (dims && dims.depth) || 1;
+  selectionIndicator.scale.set(w + 0.08, d + 0.08, 1);
+  selectionIndicator.position.set(node.position.x, 0.015, node.position.z);
+  selectionIndicator.rotation.z = -node.rotation.y;
+  selectionIndicator.visible = true;
+}
+
+function hideSelectionIndicator() {
+  if (selectionIndicator) selectionIndicator.visible = false;
+  selectedObjectNode = null;
+  selectedObjectId = null;
+}
+
+function rotateObject(objectId) {
+  const so = sceneData.objects.find(o => o.object_id === objectId);
+  if (!so) return;
+  so.rotation = so.rotation || { yaw: 0, pitch: 0, roll: 0 };
+  so.rotation.yaw = (Math.round((so.rotation.yaw || 0) + 90)) % 360;
+  let node = selectedObjectNode;
+  if (!node || (node.userData && node.userData.objectId !== objectId)) {
+    world.traverse(n => {
+      if (n.userData && n.userData.objectId === objectId) node = n;
+    });
+  }
+  if (node) {
+    node.rotation.y = Math.PI - THREE.MathUtils.degToRad(so.rotation.yaw);
+    if (selectionIndicator && selectionIndicator.visible) {
+      selectionIndicator.rotation.z = -node.rotation.y;
+    }
+  }
+  so.user_modified = true;
+  persistRoom(so.room_id);
+  sun.shadow.needsUpdate = true;
+  document.getElementById('status').textContent = `Rotated ${so.label || 'piece'} 90°`;
+}
+
 renderer.domElement.addEventListener('pointerdown', e => {
   dragging = true; tip.style.display = 'none';
   clearTimeout(peekTimer); peekRoom = null;
   dragStart = [e.clientX, e.clientY];
+
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(pointer, camera);
+
+  const hit = ray.intersectObjects(pickables, false)[0];
+  if (hit && hit.object.userData.owner) {
+    const owner = hit.object.userData.owner;
+    if (owner === selectedObjectNode || e.shiftKey) {
+      const pt = new THREE.Vector3();
+      if (ray.ray.intersectPlane(GROUND, pt)) {
+        draggingObject = owner;
+        dragOffset.copy(owner.position).sub(pt);
+        dragStartPos.copy(owner.position);
+        controls.enabled = false;
+      }
+    }
+  }
 });
 addEventListener('pointerup', e => {
   dragging = false;
+  if (draggingObject) {
+    controls.enabled = true;
+    const dist = draggingObject.position.distanceTo(dragStartPos);
+    if (dist > 0.04) {
+      const so = sceneData.objects.find(o => o.object_id === draggingObject.userData.objectId);
+      if (so) {
+        so.position.x = draggingObject.position.x;
+        so.position.z = -draggingObject.position.z;
+        so.user_modified = true;
+        persistRoom(so.room_id);
+        document.getElementById('status').textContent = 'Position saved';
+      }
+    }
+    draggingObject = null;
+  }
   // Orbiting ends in a click event too; only treat it as a click if the
   // pointer barely moved, otherwise turning the model opens the card.
   justDragged = !!dragStart && Math.hypot(e.clientX - dragStart[0], e.clientY - dragStart[1]) > 4;
   dragStart = null;
 });
 renderer.domElement.addEventListener('pointermove', e => {
+  if (draggingObject) {
+    const r = renderer.domElement.getBoundingClientRect();
+    pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(pointer, camera);
+    const pt = new THREE.Vector3();
+    if (ray.ray.intersectPlane(GROUND, pt)) {
+      const targetPos = pt.add(dragOffset);
+      const u = draggingObject.userData;
+      const room = sceneData.rooms.find(rm => rm.room_id === u.roomId);
+      if (room) {
+        const [rx, ry, rw, rd] = room.rect;
+        const hw = (u.dims.width || 0.8) / 2;
+        const hd = (u.dims.depth || 0.8) / 2;
+        targetPos.x = THREE.MathUtils.clamp(targetPos.x, rx + hw, rx + rw - hw);
+        targetPos.z = THREE.MathUtils.clamp(targetPos.z, -(ry + rd - hd), -(ry + hd));
+      }
+      draggingObject.position.x = targetPos.x;
+      draggingObject.position.z = targetPos.z;
+      if (selectionIndicator && selectionIndicator.visible) {
+        selectionIndicator.position.x = targetPos.x;
+        selectionIndicator.position.z = targetPos.z;
+      }
+      sun.shadow.needsUpdate = true;
+      document.getElementById('status').textContent = 'Moving ' + (u.label || 'piece') + '…';
+    }
+    return;
+  }
   // picking ~1000 meshes on every move event is what made orbiting feel rough
   if (dragging) return;
   const now = performance.now();
@@ -2339,7 +2453,7 @@ const editCard = document.getElementById('editcard');
 const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let suggestCache = new Map();
 
-function hideEditCard() { editCard.style.display = 'none'; }
+function hideEditCard() { editCard.style.display = 'none'; hideSelectionIndicator(); }
 addEventListener('keydown', e => { if (e.key === 'Escape') hideEditCard(); });
 
 function showEditCard(x, y, html) {
@@ -2417,12 +2531,20 @@ renderer.domElement.addEventListener('click', async e => {
 
   const hit = ray.intersectObjects(pickables, false)[0];
   if (hit && hit.object.userData.owner) {
-    const u = hit.object.userData.owner.userData;
+    const owner = hit.object.userData.owner;
+    const u = owner.userData;
+    selectedObjectNode = owner;
+    selectedObjectId = u.objectId;
+    showSelectionIndicator(owner, u.dims);
     showEditCard(e.clientX, e.clientY,
       `<h5>${escHtml(u.label || u.category)}</h5>`
       + `<div class="muted">${u.dims.width.toFixed(2)} × ${u.dims.depth.toFixed(2)} m</div>`
-      + `<button class="danger" data-remove="${escHtml(u.objectId)}">Remove from this room</button>`
-      + `<button data-close="1">Keep it</button>`);
+      + `<div style="display:flex;gap:6px;margin:8px 0 4px 0;">`
+      +   `<button style="flex:1;background:#2C2822;color:#FFF;border-color:#2C2822;" data-rotate="${escHtml(u.objectId)}">🔄 Rotate 90°</button>`
+      + `</div>`
+      + `<div style="font-size:10.5px;color:#8A8377;margin:3px 0 6px;">💡 Click & drag piece on floor to move</div>`
+      + `<button class="danger" data-remove="${escHtml(u.objectId)}">🗑️ Remove from room</button>`
+      + `<button data-close="1">✓ Keep Placement</button>`);
     return;
   }
 
@@ -2456,6 +2578,7 @@ editCard.addEventListener('click', e => {
   if (!b) return;
   if (b.dataset.close) return hideEditCard();
   if (b.dataset.remove) return removeObject(b.dataset.remove);
+  if (b.dataset.rotate) return rotateObject(b.dataset.rotate);
   if (b.dataset.add !== undefined) {
     const s = (editCard._suggestions || [])[Number(b.dataset.add)];
     if (s) addObject(editCard._roomId, s);
@@ -2500,7 +2623,17 @@ addEventListener('keydown', e => {
   else if (k === 'e') orbitBy(Math.PI / 8);
   else if (k === '+' || k === '=') stepZoom(1.45);
   else if (k === '-' || k === '_') stepZoom(1 / 1.45);
-  else if (k === 'r') resetView();
+  if (k === 'r') {
+    if (selectedObjectId) {
+      rotateObject(selectedObjectId);
+      return;
+    }
+    resetView();
+  }
+  if ((k === 'delete' || k === 'backspace') && selectedObjectId) {
+    removeObject(selectedObjectId);
+    return;
+  }
   else if (k === 'l') setLightMode(lightMode === 'day' ? 'evening' : 'day');
 });
 addEventListener('resize', () => {
