@@ -659,7 +659,11 @@ def get_team_projects(
             "locality": p.locality or p.city,
             "startDate": p.created_at.strftime("%Y-%m-%d") if p.created_at else "N/A",
             "status": p.status,
-            "progress": avg_progress
+            "progress": avg_progress,
+            "assignedTeamCount": db.query(ProjectTeamMember).filter(
+                ProjectTeamMember.project_id == p.id,
+                ProjectTeamMember.status == "ACTIVE"
+            ).count()
         })
     return result
 
@@ -689,7 +693,7 @@ def get_team_directory(
                 return r
         return role_str
     
-    return [
+    result = [
         {
             "id": m.id,
             "name": m.name,
@@ -699,6 +703,14 @@ def get_team_directory(
         }
         for m in members
     ]
+    
+    for member_dict in result:
+        member_dict["assignedProjects"] = db.query(ProjectTeamMember).filter(
+            ProjectTeamMember.user_id == member_dict["id"],
+            ProjectTeamMember.status == "ACTIVE"
+        ).count()
+        
+    return result
 
 
 @router.get("/team/dashboard")
