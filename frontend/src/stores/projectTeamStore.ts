@@ -94,7 +94,6 @@ interface ProjectTeamState {
   fetchGlobalIssues: () => Promise<void>
   fetchGlobalTasks: () => Promise<void>
   fetchGlobalResources: () => Promise<void>
-  resolveIssue: (issueId: string, resolution: string) => Promise<void>
   
   createIssue: (
     projectId: string,
@@ -534,14 +533,6 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
       await teamAPI.escalateIssue(issueId)
     } catch (e: any) {
       throw new Error(e.response?.data?.detail || 'Failed to escalate issue')
-    }
-  },
-
-  resolveIssue: async (issueId, resolution) => {
-    try {
-      await teamAPI.resolveIssue(issueId, resolution)
-    } catch (e: any) {
-      throw new Error(e.response?.data?.detail || 'Failed to resolve issue')
     }
   },
 

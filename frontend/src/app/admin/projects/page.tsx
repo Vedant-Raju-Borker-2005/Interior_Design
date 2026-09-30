@@ -44,7 +44,7 @@ export default function AdminProjectsPage() {
           const res = await adminAPI.getVendors();
           setAssignOptions(res.data?.vendors || res.data || []);
         } else {
-          const res = await teamAPI.getTeamDirectory();
+          const res = await teamAPI.getDirectory();
           // Filter out team members by role
           let filtered = res.data;
           if (assignRole === 'COORDINATOR') filtered = filtered.filter((u: any) => u.role === 'team_coordinator');

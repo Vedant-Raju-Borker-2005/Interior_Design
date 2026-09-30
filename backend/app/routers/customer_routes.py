@@ -1159,8 +1159,19 @@ def create_project_payment(
     )
     db.add(notif)
     
+    payment_mode = payload.get("payment_mode", "online")
+    ref = payload.get("reference", tx_id)
+    
+    # Also update any active quotation for this project to paid
+    q = db.query(Quotation).filter(Quotation.project_id == project_id).order_by(Quotation.created_at.desc()).first()
+    if q:
+        q.status = "paid"
+        q.paid_at = datetime.datetime.utcnow()
+        q.payment_mode = payment_mode
+        q.payment_reference = ref
+        
     db.commit()
-    return {"status": "success", "transactionId": tx_id}
+    return {"status": "success", "transactionId": tx_id, "payment_mode": payment_mode}
 
 
 @router.get("/notifications")

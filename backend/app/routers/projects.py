@@ -5,7 +5,7 @@ import os, shutil
 
 from ..db import get_db
 from ..models import Project, Room, RoomItem, Product, User, Flat
-from ..schemas import CreateProjectReq, UpdateRoomReq, AddRoomItemReq, AddRoomReq
+from ..schemas import CreateProjectReq, UpdateRoomReq, AddRoomItemReq, AddRoomReq, AddRoomItemBundleReq
 from ..auth_utils import current_user
 import uuid
 
@@ -243,6 +243,50 @@ def add_room_item(
     return {"message": "item added", "item_id": item.id, "custom_attributes": attributes}
 
 
+@router.post("/{project_id}/rooms/{room_id}/items/bundle", summary="Add multiple products to room as bundle")
+def add_room_item_bundle(
+    project_id: str,
+    room_id: str,
+    req: AddRoomItemBundleReq,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    project = _get_project_or_404(project_id, user.id, db)
+    room = db.query(Room).filter(Room.id == room_id, Room.project_id == project_id).first()
+    if not room:
+        raise HTTPException(404, "Room not found")
+    
+    added_count = 0
+    for item_req in req.items:
+        product = db.query(Product).filter(Product.id == item_req.product_id).first()
+        if not product:
+            continue
+        attributes = clean_attributes({
+            **{key: getattr(item_req, column) for key, column in LEGACY_COLUMNS.items()},
+            **(item_req.custom_attributes or {}),
+        })
+        existing = db.query(RoomItem).filter(RoomItem.room_id == room_id, RoomItem.product_id == item_req.product_id).first()
+        if existing:
+            existing.qty = item_req.qty
+            apply_attributes(existing, attributes)
+            existing.unit_price = product.price
+        else:
+            item = RoomItem(
+                id=str(uuid.uuid4()),
+                room_id=room_id,
+                product_id=item_req.product_id,
+                qty=item_req.qty,
+                unit_price=product.price,
+            )
+            apply_attributes(item, attributes)
+            db.add(item)
+        added_count += 1
+    
+    _design_changed(project)
+    db.commit()
+    return {"message": f"{added_count} items added to room"}
+
+
 @router.delete("/{project_id}/rooms/{room_id}/items/{item_id}", summary="Remove product from room")
 def remove_room_item(
     project_id: str, room_id: str, item_id: str,
@@ -445,6 +489,7 @@ def _project_summary(p: Project) -> dict:
         "timeline": p.timeline,
         "furnishing_type": p.furnishing_type,
         "approval_status": p.approval_status,
+        "is_converted": bool(p.status in ("execution", "converted") or (isinstance(p.defaults, dict) and p.defaults.get("converted_from_project_id"))),
         "floor_plan_url": p.floor_plan_url,
         "floor_plan_name": fp_name,
         "created_at": p.created_at.isoformat() if p.created_at else None,

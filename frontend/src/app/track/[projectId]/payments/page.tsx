@@ -23,7 +23,8 @@ export default function ProjectPaymentsPage() {
   } = useCustomerStore()
 
   const [checkoutMilestone, setCheckoutMilestone] = useState<any | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'netbanking'>('card')
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'netbanking' | 'offline'>('card')
+  const [offlineRef, setOfflineRef] = useState('')
   const [processingPayment, setProcessingPayment] = useState(false)
 
   // Card input states
@@ -42,8 +43,26 @@ export default function ProjectPaymentsPage() {
     if (!checkoutMilestone) return
     setProcessingPayment(true)
     try {
-      await payMilestone(projectId, checkoutMilestone.name, checkoutMilestone.amount)
-      toast.success(`Payment of ${formatINR(checkoutMilestone.amount)} successful! ✨`)
+      if (paymentMethod === 'offline') {
+        const res = await fetch(`/api/v1/customer/projects/${projectId}/payments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          },
+          body: JSON.stringify({
+            milestoneName: checkoutMilestone.name,
+            amount: checkoutMilestone.amount,
+            payment_mode: 'offline',
+            reference: offlineRef || `OFFLINE-${Date.now()}`
+          })
+        })
+        if (!res.ok) throw new Error('Offline payment request failed')
+        toast.success(`Offline Payment request of ${formatINR(checkoutMilestone.amount)} recorded! ✨`)
+      } else {
+        await payMilestone(projectId, checkoutMilestone.name, checkoutMilestone.amount)
+        toast.success(`Payment of ${formatINR(checkoutMilestone.amount)} successful! ✨`)
+      }
       setCheckoutMilestone(null)
     } catch (e: any) {
       toast.error(e.message || 'Payment failed')
@@ -255,8 +274,8 @@ export default function ProjectPaymentsPage() {
             </div>
 
             {/* Payment Method Selector */}
-            <div className="grid grid-cols-3 gap-2">
-              {(['card', 'upi', 'netbanking'] as const).map((method) => (
+            <div className="grid grid-cols-4 gap-1.5">
+              {(['card', 'upi', 'netbanking', 'offline'] as const).map((method) => (
                 <button
                   key={method}
                   type="button"
@@ -268,10 +287,32 @@ export default function ProjectPaymentsPage() {
                       : 'border-slate-100 hover:border-slate-200 text-slate-500'
                   )}
                 >
-                  {method}
+                  {method === 'offline' ? 'Offline / NEFT' : method}
                 </button>
               ))}
             </div>
+
+            {/* Subforms based on method */}
+            {paymentMethod === 'offline' && (
+              <div className="space-y-3 bg-amber-500/5 border border-amber-500/20 p-4 rounded-xl">
+                <div className="text-xs text-amber-900 font-bold">Offline / Bank Transfer Payment</div>
+                <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                  Make your payment directly to our bank account or via UPI, then enter your UTR / Transfer Reference number below.
+                </p>
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Transaction / UTR / Reference No.
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UTR123456789 or NEFT-88921"
+                    value={offlineRef}
+                    onChange={(e) => setOfflineRef(e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Subforms based on method */}
             {paymentMethod === 'card' && (

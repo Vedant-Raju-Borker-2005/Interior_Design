@@ -97,6 +97,10 @@ class AddRoomItemReq(BaseModel):
     unit_price: Optional[float] = None       # ignored: the catalogue price is authoritative
 
 
+class AddRoomItemBundleReq(BaseModel):
+    items: List[AddRoomItemReq]
+
+
 class AddRoomReq(BaseModel):
     room_type: str
     length_ft: Optional[float] = 12.0
