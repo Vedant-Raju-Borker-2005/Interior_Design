@@ -517,8 +517,7 @@ export default function ManagerDashboardPage() {
                                 {member.role === 'team_coordinator' ? 'Coordinator' : 'Technician'}
                               </td>
                               <td className="py-3 font-medium text-slate-900">
-                                {/* This would be dynamic based on actual assignments */}
-                                0
+                                {member.assignedProjects ?? 0}
                               </td>
                               <td className="py-3 text-right">
                                 <button 
@@ -575,7 +574,7 @@ export default function ManagerDashboardPage() {
                                 </span>
                               </td>
                               <td className="py-3 text-slate-600">
-                                4 Members
+                                {proj.assignedTeamCount ?? 0} Members
                               </td>
                             </tr>
                           ))}
