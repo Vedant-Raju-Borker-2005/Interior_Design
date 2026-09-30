@@ -1419,12 +1419,23 @@ def get_project_analytics(project_id: str, db: Session = Depends(get_db)):
 @router.get("/issues")
 def get_all_assigned_issues(user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Fetch all issues from projects assigned to the current team member."""
-    # Find all project IDs where user is assigned
-    project_ids = [m.project_id for m in db.query(TeamMembership).filter(TeamMembership.user_id == user.id, TeamMembership.status == 'ACTIVE').all()]
-    if user.role.upper() == 'ADMIN':
+    user_roles = [r.strip() for r in (user.role or "").split(",")]
+    is_admin = "admin" in user_roles
+    
+    if is_admin:
         issues = db.query(Issue).order_by(Issue.created_at.desc()).all()
     else:
-        issues = db.query(Issue).filter(Issue.project_id.in_(project_ids)).order_by(Issue.created_at.desc()).all()
+        # Find all project IDs where user is assigned as team member
+        project_ids = [m.project_id for m in db.query(ProjectTeamMember).filter(
+            ProjectTeamMember.user_id == user.id,
+            ProjectTeamMember.status == 'ACTIVE'
+        ).all()]
+        # Managers see all projects they manage (by role in ProjectTeamMember)
+        if "team_manager" in user_roles and not project_ids:
+            # Fallback: show all issues if manager has no specific assignments
+            issues = db.query(Issue).order_by(Issue.created_at.desc()).all()
+        else:
+            issues = db.query(Issue).filter(Issue.project_id.in_(project_ids)).order_by(Issue.created_at.desc()).all()
         
     result = []
     for i in issues:
@@ -1432,9 +1443,9 @@ def get_all_assigned_issues(user: User = Depends(current_user), db: Session = De
             "id": i.id,
             "projectId": i.project_id,
             "itemId": i.item_id,
-            "type": i.type.upper(),
-            "priority": i.priority.upper(),
-            "status": i.status.upper(),
+            "type": i.type.upper() if i.type else "OTHER",
+            "priority": i.priority.upper() if i.priority else "MEDIUM",
+            "status": i.status.upper() if i.status else "OPEN",
             "description": i.description,
             "resolution": i.resolution,
             "resolvedAt": i.resolved_at.isoformat() if i.resolved_at else None,
@@ -1449,12 +1460,20 @@ def get_all_assigned_issues(user: User = Depends(current_user), db: Session = De
 @router.get("/tasks")
 def get_all_assigned_tasks(user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Fetch all tasks from projects assigned to the current team member."""
-    # Find all project IDs where user is assigned
-    project_ids = [m.project_id for m in db.query(TeamMembership).filter(TeamMembership.user_id == user.id, TeamMembership.status == 'ACTIVE').all()]
-    if user.role.upper() == 'ADMIN':
+    user_roles = [r.strip() for r in (user.role or "").split(",")]
+    is_admin = "admin" in user_roles
+    
+    if is_admin:
         tasks = db.query(Task).order_by(Task.due_date.asc()).all()
     else:
-        tasks = db.query(Task).filter(Task.project_id.in_(project_ids)).order_by(Task.due_date.asc()).all()
+        project_ids = [m.project_id for m in db.query(ProjectTeamMember).filter(
+            ProjectTeamMember.user_id == user.id,
+            ProjectTeamMember.status == 'ACTIVE'
+        ).all()]
+        if "team_manager" in user_roles and not project_ids:
+            tasks = db.query(Task).order_by(Task.due_date.asc()).all()
+        else:
+            tasks = db.query(Task).filter(Task.project_id.in_(project_ids)).order_by(Task.due_date.asc()).all()
         
     result = []
     for t in tasks:
@@ -1479,3 +1498,92 @@ def get_all_assigned_tasks(user: User = Depends(current_user), db: Session = Dep
         })
     return result
 
+
+
+@router.get("/resources")
+def get_all_resources(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Fetch vendor assignments, team members, and documents for manager/coordinator projects."""
+    user_roles = [r.strip() for r in (user.role or "").split(",")]
+    is_admin = "admin" in user_roles
+    is_manager = "team_manager" in user_roles
+
+    if is_admin:
+        project_ids = [p.id for p in db.query(Project).all()]
+    else:
+        memberships = db.query(ProjectTeamMember).filter(
+            ProjectTeamMember.user_id == user.id,
+            ProjectTeamMember.status == "ACTIVE"
+        ).all()
+        project_ids = [m.project_id for m in memberships]
+        if is_manager and not project_ids:
+            project_ids = [p.id for p in db.query(Project).all()]
+
+    # 1. Vendors across assigned projects
+    vendor_assignments = db.query(VendorAssignment).filter(
+        VendorAssignment.project_id.in_(project_ids)
+    ).all()
+    vendors_data = []
+    seen_vendor_ids = set()
+    for va in vendor_assignments:
+        vendor = db.query(Vendor).filter(Vendor.id == va.vendor_id).first()
+        if vendor and va.vendor_id not in seen_vendor_ids:
+            seen_vendor_ids.add(va.vendor_id)
+            assigned_count = db.query(VendorAssignment).filter(
+                VendorAssignment.vendor_id == va.vendor_id,
+                VendorAssignment.project_id.in_(project_ids)
+            ).count()
+            vendors_data.append({
+                "id": vendor.id,
+                "name": vendor.business_name or vendor.name,
+                "category": vendor.category or "General",
+                "email": vendor.email,
+                "phone": vendor.phone,
+                "status": vendor.status,
+                "assignedItems": assigned_count
+            })
+
+    # 2. Team members across assigned projects
+    all_members = db.query(ProjectTeamMember).filter(
+        ProjectTeamMember.project_id.in_(project_ids),
+        ProjectTeamMember.status == "ACTIVE"
+    ).all()
+    seen_user_ids = set()
+    team_data = []
+    for m in all_members:
+        if m.user_id not in seen_user_ids:
+            seen_user_ids.add(m.user_id)
+            u = db.query(User).filter(User.id == m.user_id).first()
+            if u:
+                task_count = db.query(Task).filter(
+                    Task.assignee_id == u.id,
+                    Task.project_id.in_(project_ids),
+                    Task.status.in_(["PENDING", "IN_PROGRESS"])
+                ).count()
+                team_data.append({
+                    "id": u.id,
+                    "name": u.name,
+                    "email": u.email,
+                    "role": m.role,
+                    "activeTasks": task_count
+                })
+
+    # 3. Recent documents across assigned projects
+    documents = db.query(ProjectDocument).filter(
+        ProjectDocument.project_id.in_(project_ids)
+    ).order_by(ProjectDocument.uploaded_at.desc()).limit(30).all()
+    docs_data = []
+    for d in documents:
+        docs_data.append({
+            "id": d.id,
+            "projectId": d.project_id,
+            "title": d.title,
+            "type": d.document_type or "DOCUMENT",
+            "fileUrl": d.file_url,
+            "uploadedAt": d.uploaded_at.isoformat() if d.uploaded_at else None
+        })
+
+    return {
+        "vendors": vendors_data,
+        "team": team_data,
+        "documents": docs_data
+    }

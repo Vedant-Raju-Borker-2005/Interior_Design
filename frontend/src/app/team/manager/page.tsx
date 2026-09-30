@@ -33,7 +33,7 @@ export default function ManagerDashboardPage() {
   const { dashboard, projects, teamDirectory, teamDirectoryError, fetchDashboard, fetchProjects, fetchTeamDirectory, isLoading, error } = useProjectTeamStore();
   
   // Navigation tabs for sidebar
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'tasks' | 'issues' | 'team'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'tasks' | 'issues' | 'team' | 'resources'>('dashboard');
   
   // Sub-tabs for Team section
   const [teamTab, setTeamTab] = useState<'members' | 'projects' | 'assignments'>('members');
@@ -45,7 +45,7 @@ export default function ManagerDashboardPage() {
   const [projectAssignments, setProjectAssignments] = useState<any>({}); // Store team members for each project
   const [memberAssignmentCounts, setMemberAssignmentCounts] = useState<any>({}); // Count projects per member
 
-  const { globalIssues, globalTasks, fetchGlobalIssues, fetchGlobalTasks, resolveIssue } = useProjectTeamStore();
+  const { globalIssues, globalTasks, globalResources, fetchGlobalIssues, fetchGlobalTasks, fetchGlobalResources, resolveIssue } = useProjectTeamStore();
   const [resolveFormId, setResolveFormId] = useState<string | null>(null);
   const [resolutionText, setResolutionText] = useState('');
   const [issueFilter, setIssueFilter] = useState<'ALL' | 'OPEN' | 'RESOLVED'>('ALL');
@@ -59,7 +59,8 @@ export default function ManagerDashboardPage() {
   useEffect(() => {
     if (activeTab === 'issues') fetchGlobalIssues().catch(() => {});
     if (activeTab === 'tasks') fetchGlobalTasks().catch(() => {});
-  }, [activeTab, fetchGlobalIssues, fetchGlobalTasks]);
+    if (activeTab === 'resources') fetchGlobalResources().catch(() => {});
+  }, [activeTab, fetchGlobalIssues, fetchGlobalTasks, fetchGlobalResources]);
 
   const handleResolveIssue = async (issueId: string) => {
     try {
@@ -846,17 +847,116 @@ export default function ManagerDashboardPage() {
             </div>
           )}
 
-          {/* Fallback for resources tab */}
+          {/* TAB: Resources */}
           {activeTab === 'resources' && (
-             <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Settings className="w-8 h-8 text-slate-300" />
-                  </div>
-                  <h2 className="text-lg font-bold text-slate-600 capitalize">Resources</h2>
-                  <p className="text-slate-400 text-sm">Resource management module coming soon.</p>
+            <div className="animate-in fade-in duration-300 max-w-7xl mx-auto space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Resources Overview</h2>
+                <p className="text-slate-500 text-sm mt-1">Vendors, team utilization, and project documents across all your projects.</p>
+              </div>
+
+              {/* Vendors */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-800 text-base">Assigned Vendors</h3>
+                  <span className="text-xs bg-indigo-50 text-indigo-600 font-bold px-2 py-1 rounded-full">{globalResources?.vendors?.length ?? 0} vendors</span>
                 </div>
-             </div>
+                {(!globalResources?.vendors || globalResources.vendors.length === 0) ? (
+                  <div className="text-center py-10 text-slate-400 text-sm">No vendors assigned to your projects yet.</div>
+                ) : (
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-100">
+                      <tr>
+                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500 tracking-wider">Vendor</th>
+                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500 tracking-wider">Category</th>
+                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500 tracking-wider">Contact</th>
+                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500 tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500 tracking-wider">Items</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {globalResources.vendors.map((v: any) => (
+                        <tr key={v.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 font-semibold text-slate-800 text-sm">{v.name}</td>
+                          <td className="px-6 py-4 text-xs text-slate-500">{v.category}</td>
+                          <td className="px-6 py-4 text-xs text-slate-600">
+                            <div>{v.email || '—'}</div>
+                            <div className="text-slate-400">{v.phone || ''}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={clsx('px-2 py-0.5 rounded-full text-[10px] font-bold uppercase',
+                              v.status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                            )}>{v.status}</span>
+                          </td>
+                          <td className="px-6 py-4 text-xs font-bold text-indigo-600">{v.assignedItems} items</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Team Utilization */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-800 text-base">Team Utilization</h3>
+                  <span className="text-xs bg-emerald-50 text-emerald-600 font-bold px-2 py-1 rounded-full">{globalResources?.team?.length ?? 0} members</span>
+                </div>
+                {(!globalResources?.team || globalResources.team.length === 0) ? (
+                  <div className="text-center py-10 text-slate-400 text-sm">No team members assigned yet.</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                    {globalResources.team.map((m: any) => (
+                      <div key={m.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                          <span className="text-indigo-700 font-black text-sm">{(m.name || '?')[0].toUpperCase()}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-slate-800 text-sm truncate">{m.name}</p>
+                          <p className="text-[10px] text-slate-400 uppercase font-semibold">{m.role}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-black text-slate-700">{m.activeTasks}</span>
+                          <p className="text-[10px] text-slate-400">tasks</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Documents */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-800 text-base">Project Documents</h3>
+                  <span className="text-xs bg-slate-100 text-slate-600 font-bold px-2 py-1 rounded-full">{globalResources?.documents?.length ?? 0} files</span>
+                </div>
+                {(!globalResources?.documents || globalResources.documents.length === 0) ? (
+                  <div className="text-center py-10 text-slate-400 text-sm">No documents uploaded yet.</div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {globalResources.documents.map((d: any) => (
+                      <div key={d.id} className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
+                            <Settings className="w-4 h-4 text-slate-400" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-800 text-sm">{d.title}</p>
+                            <p className="text-[10px] text-slate-400 font-mono">Project: {d.projectId?.substring(0,8)} · {d.type}</p>
+                          </div>
+                        </div>
+                        {d.fileUrl && (
+                          <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+                            View
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </main>
       </div>
