@@ -23,12 +23,15 @@ export default function TechnicianDashboardPage() {
 
   useEffect(() => {
     fetchDashboard().catch(() => {});
-    fetchProjects().then((projs: any) => {
-      if (projs && projs.length > 0) {
-        setSelectedProjectId(projs[0].id);
-      }
-    }).catch(() => {});
+    fetchProjects().catch(() => {});
   }, [fetchDashboard, fetchProjects]);
+
+  // Auto-select first project when projects load
+  useEffect(() => {
+    if (projects && projects.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId]);
 
   if (isLoading && !dashboard) {
     return (
