@@ -93,7 +93,8 @@ def signup(req: SignupReq, db: Session = Depends(get_db)):
 
     if not user:
         # Brand new user — create with this role
-        user = User(phone=req.phone, email=req.email, name=req.name or "User", role=req.role or "customer")
+        status = "pending_verification" if req.role and ("team" in req.role.lower() or "vendor" in req.role.lower()) else "active"
+        user = User(phone=req.phone, email=req.email, name=req.name or "User", role=req.role or "customer", status=status)
         db.add(user)
         db.commit()
         db.refresh(user)
@@ -101,6 +102,9 @@ def signup(req: SignupReq, db: Session = Depends(get_db)):
         # Existing user signing up for a new role — append role without removing old ones
         if req.role:
             _add_role(user, req.role, db)
+            if "team" in req.role.lower() or "vendor" in req.role.lower():
+                user.status = "pending_verification"
+                db.commit()
 
     # In dev, print OTP to console
     print(f"\n{'='*40}")

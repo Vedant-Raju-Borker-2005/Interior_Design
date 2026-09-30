@@ -97,7 +97,8 @@ class SystemSettingReq(BaseModel):
 
 def get_admin_user(allowed_roles: List[str] = None):
     def dependency(user: User = Depends(current_user), db: Session = Depends(get_db)):
-        if user.role == "admin":
+        user_roles = [r.strip().lower() for r in (user.role or "").split(",")]
+        if "admin" in user_roles:
             return user
         
         # Check AdminRole association
