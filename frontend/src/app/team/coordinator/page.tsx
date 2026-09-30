@@ -166,8 +166,8 @@ export default function CoordinatorDashboardPage() {
                 </div>
                 
                 <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
-                    <CheckSquare className="w-5 h-5 text-amber-600" />
+                  <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <CheckSquare className="w-5 h-5 text-indigo-600" />
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending Tasks</p>
@@ -208,7 +208,7 @@ export default function CoordinatorDashboardPage() {
                               <span className="font-semibold text-slate-800 block text-xs">Living Room Sofa</span>
                             </td>
                             <td className="py-3">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-50 text-amber-600">In Production</span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-50 text-indigo-600">In Production</span>
                             </td>
                             <td className="py-3 text-xs text-slate-600 font-medium">Mike Wilson</td>
                           </tr>
@@ -325,7 +325,7 @@ export default function CoordinatorDashboardPage() {
                           <span className={clsx('px-2 py-0.5 text-[10px] font-bold border rounded-full uppercase',
                             issue.priority === 'CRITICAL' ? 'bg-red-50 text-red-700 border-red-200' :
                             issue.priority === 'HIGH' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                            issue.priority === 'MEDIUM' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            issue.priority === 'MEDIUM' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
                             'bg-slate-50 text-slate-600 border-slate-200'
                           )}>{issue.priority}</span>
                           <span className="text-[10px] text-slate-400 font-mono">Project: {issue.projectId?.substring(0,8)}</span>
@@ -333,7 +333,7 @@ export default function CoordinatorDashboardPage() {
                         <span className={clsx('shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border',
                           issue.status === 'RESOLVED' || issue.status === 'CLOSED' ? 'bg-green-50 text-green-700 border-green-200' :
                           issue.status === 'ESCALATED' ? 'bg-red-50 text-red-700 border-red-200' :
-                          'bg-amber-50 text-amber-700 border-amber-200'
+                          'bg-indigo-50 text-indigo-700 border-indigo-200'
                         )}>{issue.status}</span>
                       </div>
                       <p className="text-sm text-slate-700 font-medium leading-relaxed">{issue.description}</p>
@@ -426,7 +426,7 @@ export default function CoordinatorDashboardPage() {
                             <span className={clsx('px-2 py-0.5 text-[10px] font-bold border rounded-full uppercase',
                               task.priority === 'CRITICAL' ? 'bg-red-50 text-red-700 border-red-200' :
                               task.priority === 'HIGH' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                              task.priority === 'MEDIUM' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              task.priority === 'MEDIUM' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
                               'bg-slate-50 text-slate-600 border-slate-200'
                             )}>{task.priority}</span>
                           </td>
@@ -488,7 +488,7 @@ export default function CoordinatorDashboardPage() {
                           </td>
                           <td className="px-6 py-4">
                             <span className={clsx('px-2 py-0.5 rounded-full text-[10px] font-bold uppercase',
-                              v.status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                              v.status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-indigo-50 text-indigo-700'
                             )}>{v.status}</span>
                           </td>
                           <td className="px-6 py-4 text-xs font-bold text-emerald-600">{v.assignedItems} items</td>

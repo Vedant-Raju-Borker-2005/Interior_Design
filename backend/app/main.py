@@ -77,6 +77,8 @@ async def json_errors(request, call_next):
         import logging
         from fastapi.responses import JSONResponse
         logging.getLogger("app").exception("Unhandled error on %s %s", request.method, request.url.path)
+        with open("backend_error.log", "a") as f:
+            f.write(f"ERROR: {type(exc).__name__}: {str(exc)}\n")
         return JSONResponse(status_code=500, content={
             "detail": f"Something went wrong on the server ({type(exc).__name__}). Please try again."})
 
