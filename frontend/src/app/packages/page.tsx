@@ -35,9 +35,19 @@ function PackagesContent() {
 
   const getDynamicPrice = (pkg: any) => {
     if (!budget) return pkg.base_price
-    if (pkg.tier === 'basic') return budget
-    if (pkg.tier === 'premium') return budget + 200000
-    if (pkg.tier === 'luxury') return budget + 500000
+    
+    // The budget passed in URL is the MAX limit of the selected tier.
+    // We want the 'basic' package to anchor to the MIN limit of that tier.
+    let baseBudget = budget;
+    if (budget <= 500000) baseBudget = 300000;
+    else if (budget <= 800000) baseBudget = 500000;
+    else if (budget <= 1200000) baseBudget = 800000;
+    else if (budget <= 2000000) baseBudget = 1200000;
+    else baseBudget = 2000000;
+
+    if (pkg.tier === 'basic') return baseBudget
+    if (pkg.tier === 'premium') return baseBudget + 200000
+    if (pkg.tier === 'luxury') return baseBudget + 500000
     return pkg.base_price
   }
 
