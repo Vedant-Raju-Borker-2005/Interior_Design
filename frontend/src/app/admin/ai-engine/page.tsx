@@ -43,9 +43,9 @@ export default function AdminAIEnginePage() {
       ]
     },
     {
-      title: 'Execution AI',
+      title: 'Generative Render AI',
       subtitle: 'SC112-SC114',
-      desc: 'AI-driven project scheduling, vendor matching, and delay prediction. Analyzes project timelines and flags potential bottlenecks proactively.',
+      desc: 'Photorealistic AI engine using Gemini / Imagen 3 / SDXL simulation to generate 4-Wall studio renders based on floor plans and room dimensions.',
       icon: Cpu,
       gradient: 'from-slate-800 to-slate-900',
       accent: 'text-slate-400',
@@ -136,12 +136,12 @@ export default function AdminAIEnginePage() {
           </h3>
           <div className="space-y-4">
             {[
-              { label: 'Embedding Model', value: 'text-embedding-3-small' },
-              { label: 'Recommendation Engine', value: 'Vector Similarity (Cosine)' },
-              { label: 'Layout AI', value: 'Agentic Pipeline v2' },
+              { label: 'Image Generation (4-Wall Render)', value: 'Gemini / Imagen 3' },
+              { label: 'Layout Solver', value: 'CP-SAT & Annealing' },
+              { label: 'Pricing Engine', value: 'FP-Growth & GBR' },
               { label: 'Vendor Matching', value: 'Rule-based + ML Hybrid' },
+              { label: '3D Scene Assembly', value: 'Procedural PBR Bakery' },
               { label: 'Confidence Threshold', value: '>= 0.75' },
-              { label: 'Max Autonomous Actions', value: '5 per session' },
             ].map(cfg => (
               <div key={cfg.label} className="flex items-center justify-between">
                 <span className="text-sm text-slate-500">{cfg.label}</span>
