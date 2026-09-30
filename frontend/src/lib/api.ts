@@ -604,6 +604,8 @@ export const teamAPI = {
     axiosInstance.post(`/api/v1/team/issues/${issueId}/escalate`),
   resolveIssue: (issueId: string, resolution: string) =>
     axiosInstance.post(`/api/v1/team/issues/${issueId}/resolve`, { resolution }),
+  getGlobalIssues: () => axiosInstance.get('/api/v1/team/issues'),
+  getGlobalTasks: () => axiosInstance.get('/api/v1/team/tasks'),
   getPhotos: (projectId: string) =>
     axiosInstance.get(`/api/v1/team/projects/${projectId}/photos`),
   uploadPhoto: (projectId: string, data: FormData) =>

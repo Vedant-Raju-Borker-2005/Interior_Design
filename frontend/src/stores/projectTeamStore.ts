@@ -87,6 +87,13 @@ interface ProjectTeamState {
   fetchProgress: (projectId: string) => Promise<void>
   updateProgress: (projectId: string, progress: number, reason?: string) => Promise<void>
   fetchIssues: (projectId: string) => Promise<void>
+  
+  globalIssues: any[]
+  globalTasks: any[]
+  fetchGlobalIssues: () => Promise<void>
+  fetchGlobalTasks: () => Promise<void>
+  resolveIssue: (issueId: string, resolution: string) => Promise<void>
+  
   createIssue: (
     projectId: string,
     data: { type: string; priority: string; description: string; itemId?: string }
@@ -143,6 +150,8 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
   assignmentHistory: [],
   trackingHistory: {},
   projects: [],
+  globalIssues: [],
+  globalTasks: [],
   teamDirectory: [],
   teamDirectoryError: null,
   isLoading: false,
@@ -221,6 +230,32 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
       const res = await teamAPI.getIssues(projectId)
       set({ issues: res.data })
     } catch (e) {}
+  },
+
+  fetchGlobalIssues: async () => {
+    try {
+      const res = await teamAPI.getGlobalIssues()
+      set({ globalIssues: res.data })
+    } catch (e) {}
+  },
+
+  fetchGlobalTasks: async () => {
+    try {
+      const res = await teamAPI.getGlobalTasks()
+      set({ globalTasks: res.data })
+    } catch (e) {}
+  },
+  
+  resolveIssue: async (issueId, resolution) => {
+    try {
+      await teamAPI.resolveIssue(issueId, resolution)
+      set((state) => ({
+        globalIssues: state.globalIssues.map(i => i.id === issueId ? { ...i, status: 'RESOLVED', resolution } : i),
+        issues: state.issues.map(i => i.id === issueId ? { ...i, status: 'RESOLVED', resolution } : i)
+      }))
+    } catch (e: any) {
+      throw new Error(e.response?.data?.detail || 'Failed to resolve issue')
+    }
   },
 
   createIssue: async (projectId, data) => {

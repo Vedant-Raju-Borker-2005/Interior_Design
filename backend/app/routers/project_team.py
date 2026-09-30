@@ -1415,3 +1415,67 @@ def get_project_analytics(project_id: str, db: Session = Depends(get_db)):
             {"month": "Jun", "progress": completion_rate}
         ]
     }
+
+@router.get("/issues")
+def get_all_assigned_issues(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Fetch all issues from projects assigned to the current team member."""
+    # Find all project IDs where user is assigned
+    project_ids = [m.project_id for m in db.query(TeamMembership).filter(TeamMembership.user_id == user.id, TeamMembership.status == 'ACTIVE').all()]
+    if user.role.upper() == 'ADMIN':
+        issues = db.query(Issue).order_by(Issue.created_at.desc()).all()
+    else:
+        issues = db.query(Issue).filter(Issue.project_id.in_(project_ids)).order_by(Issue.created_at.desc()).all()
+        
+    result = []
+    for i in issues:
+        result.append({
+            "id": i.id,
+            "projectId": i.project_id,
+            "itemId": i.item_id,
+            "type": i.type.upper(),
+            "priority": i.priority.upper(),
+            "status": i.status.upper(),
+            "description": i.description,
+            "resolution": i.resolution,
+            "resolvedAt": i.resolved_at.isoformat() if i.resolved_at else None,
+            "createdBy": {
+                "id": i.created_by,
+                "name": i.created_by,
+                "email": i.created_by
+            }
+        })
+    return result
+
+@router.get("/tasks")
+def get_all_assigned_tasks(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Fetch all tasks from projects assigned to the current team member."""
+    # Find all project IDs where user is assigned
+    project_ids = [m.project_id for m in db.query(TeamMembership).filter(TeamMembership.user_id == user.id, TeamMembership.status == 'ACTIVE').all()]
+    if user.role.upper() == 'ADMIN':
+        tasks = db.query(Task).order_by(Task.due_date.asc()).all()
+    else:
+        tasks = db.query(Task).filter(Task.project_id.in_(project_ids)).order_by(Task.due_date.asc()).all()
+        
+    result = []
+    for t in tasks:
+        assignee_name = "Unassigned"
+        if t.assignee_id:
+            u = db.query(User).filter(User.id == t.assignee_id).first()
+            if u:
+                assignee_name = u.name
+                
+        result.append({
+            "id": t.id,
+            "projectId": t.project_id,
+            "title": t.title,
+            "description": t.description,
+            "status": t.status.upper(),
+            "priority": t.priority.upper(),
+            "dueDate": t.due_date.isoformat() if t.due_date else None,
+            "assignee": {
+                "id": t.assignee_id,
+                "name": assignee_name
+            } if t.assignee_id else None
+        })
+    return result
+

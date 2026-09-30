@@ -116,6 +116,7 @@ export default function LoginPage() {
 
       // Auto Login & Set token
       setToken(res.data.access_token, res.data.user_id, res.data.role)
+      localStorage.setItem('active_role', res.data.role)
       useProjectStore.getState().clearProject()
 
       // If they just registered, update their profile details in the authStore

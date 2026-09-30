@@ -377,9 +377,17 @@ export default function ProjectExecutionPage() {
     }
   };
 
-  // Access Control check
   const projectMember = members.find((m) => m.user.id === authUser?.id && m.status === 'ACTIVE');
-  const userRole = projectMember?.role || (authUser?.role?.toUpperCase() === 'ADMIN' ? 'MANAGER' : (authUser?.role?.toLowerCase().includes('technician') ? 'TECHNICIAN' : 'COORDINATOR'));
+  const activeRoleStr = typeof window !== 'undefined' ? localStorage.getItem('active_role')?.toLowerCase() || '' : '';
+  const userRoleStr = activeRoleStr || authUser?.role?.toLowerCase() || '';
+  
+  const userRole = projectMember?.role || (
+    userRoleStr.includes('admin') ? 'MANAGER' :
+    userRoleStr.includes('manager') ? 'MANAGER' :
+    userRoleStr.includes('technician') ? 'TECHNICIAN' : 
+    'COORDINATOR'
+  );
+  
   const isManager = userRole === 'MANAGER';
   const isCoordinator = userRole === 'COORDINATOR';
   const isTechnician = userRole === 'TECHNICIAN';
