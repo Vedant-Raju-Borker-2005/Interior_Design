@@ -243,6 +243,73 @@ def add_room_item(
     return {"message": "item added", "item_id": item.id, "custom_attributes": attributes}
 
 
+@router.post("/{project_id}/rooms/{room_id}/items/bundle", summary="Add/update multiple products in a room at once")
+def add_room_item_bundle(
+    project_id: str,
+    room_id: str,
+    payload: dict,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    """Save a bundle of items (anchor + add-ons) to a room in a single request.
+
+    The frontend recommendation panel calls this endpoint when the customer
+    accepts a complementary-bundle suggestion.  Each element of ``items``
+    follows the same schema as the single-item endpoint.
+    """
+    project = _get_project_or_404(project_id, user.id, db)
+    room = db.query(Room).filter(Room.id == room_id, Room.project_id == project_id).first()
+    if not room:
+        raise HTTPException(404, "Room not found")
+
+    items_in = payload.get("items") or []
+    if not isinstance(items_in, list):
+        raise HTTPException(422, "'items' must be a list")
+
+    results = []
+    for entry in items_in:
+        pid = entry.get("product_id") if isinstance(entry, dict) else None
+        if not pid:
+            continue
+
+        product = db.query(Product).filter(Product.id == pid).first()
+        if not product:
+            # Skip unknown products rather than aborting the whole bundle
+            results.append({"product_id": pid, "status": "not_found"})
+            continue
+
+        attrs = clean_attributes({
+            **{key: entry.get(col) for key, col in LEGACY_COLUMNS.items()},
+            **(entry.get("custom_attributes") or {}),
+        })
+
+        existing = db.query(RoomItem).filter(
+            RoomItem.room_id == room_id,
+            RoomItem.product_id == pid,
+        ).first()
+
+        if existing:
+            existing.qty = int(entry.get("qty") or 1)
+            apply_attributes(existing, attrs)
+            existing.unit_price = product.price
+            results.append({"product_id": pid, "item_id": existing.id, "status": "updated"})
+        else:
+            item = RoomItem(
+                id=str(uuid.uuid4()),
+                room_id=room_id,
+                product_id=pid,
+                qty=int(entry.get("qty") or 1),
+                unit_price=product.price,
+            )
+            apply_attributes(item, attrs)
+            db.add(item)
+            results.append({"product_id": pid, "item_id": item.id, "status": "added"})
+
+    _design_changed(project)
+    db.commit()
+    return {"message": "bundle saved", "results": results}
+
+
 @router.delete("/{project_id}/rooms/{room_id}/items/{item_id}", summary="Remove product from room")
 def remove_room_item(
     project_id: str, room_id: str, item_id: str,
