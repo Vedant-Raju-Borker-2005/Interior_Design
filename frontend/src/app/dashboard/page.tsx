@@ -1,7 +1,7 @@
 'use client'
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { projectsAPI, authAPI } from '@/lib/api'
+import { projectsAPI, authAPI, specialServicesAPI } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useCustomerStore } from '@/stores/customerStore'
 import Navbar from '@/components/Navbar'
@@ -25,11 +25,105 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
 
 const CITIES = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Ahmedabad', 'Other']
 
+
+const LEAD_STAGES = ['NEW', 'ASSIGNED', 'CONTACTED', 'IN_PROGRESS', 'COMPLETED']
+const LEAD_STAGE_LABELS: Record<string, string> = {
+  NEW: 'Request Received',
+  ASSIGNED: 'Consultant Assigned',
+  CONTACTED: 'Consultant Contacted',
+  IN_PROGRESS: 'Work In Progress',
+  COMPLETED: 'Service Completed',
+}
+const LEAD_STATUS_COLOR: Record<string, string> = {
+  NEW: 'bg-slate-100 text-slate-600',
+  ASSIGNED: 'bg-blue-100 text-blue-700',
+  CONTACTED: 'bg-indigo-100 text-indigo-700',
+  IN_PROGRESS: 'bg-amber-100 text-amber-700',
+  COMPLETED: 'bg-emerald-100 text-emerald-700',
+  CANCELLED: 'bg-red-100 text-red-700',
+}
+
+function ServiceLeadsTracking({ leads, loading }: { leads: any[]; loading: boolean }) {
+  if (loading) return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
+      {[1,2].map(i => <div key={i} className="h-28 rounded-xl bg-slate-100 animate-pulse mb-4" />)}
+    </div>
+  )
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-extrabold text-slate-800 text-base">Special Services Tracking</h3>
+        <Link href="/services" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition">+ Request New</Link>
+      </div>
+      {leads.length === 0 ? (
+        <div className="flex flex-col items-center py-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4"><Sparkles className="w-8 h-8 text-indigo-400" /></div>
+          <h4 className="font-bold text-slate-700 text-sm mb-1">No special services yet</h4>
+          <p className="text-slate-400 text-xs max-w-xs">Request a consultant for 3D walkthrough, Vastu, smart home planning or any premium service.</p>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {leads.map((lead: any) => {
+            const stageIdx = LEAD_STAGES.indexOf(lead.status)
+            return (
+              <div key={lead.id} className="border border-slate-100 rounded-2xl overflow-hidden">
+                <div className="flex items-start justify-between p-4 bg-slate-50">
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-sm capitalize">{(lead.service_type || '').replace(/_/g, ' ')}</h4>
+                    {lead.lead_no && <p className="text-[10px] font-mono text-slate-400 mt-0.5">Ref: {lead.lead_no}</p>}
+                    {lead.consultant_name && (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <div className="w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 text-[10px] font-bold">{lead.consultant_name[0]}</div>
+                        <span className="text-xs text-slate-600 font-medium">{lead.consultant_name}</span>
+                        <span className="text-[10px] text-slate-400">(Consultant)</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${LEAD_STATUS_COLOR[lead.status] || 'bg-slate-100 text-slate-600'}`}>{lead.status}</span>
+                </div>
+                <div className="px-4 py-3">
+                  <div className="flex items-center overflow-x-auto">
+                    {LEAD_STAGES.map((stage, idx) => {
+                      const done = idx <= stageIdx && lead.status !== 'CANCELLED'
+                      const active = idx === stageIdx && lead.status !== 'CANCELLED'
+                      return (
+                        <div key={stage} className="flex items-center flex-1 min-w-0">
+                          <div className="flex flex-col items-center min-w-[60px]">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${done ? 'bg-indigo-600 text-white' : active ? 'bg-indigo-200 text-indigo-700 ring-2 ring-indigo-400' : 'bg-slate-100 text-slate-400'}`}>{done && !active ? '?' : idx+1}</div>
+                            <p className="text-[9px] text-center mt-1 text-slate-500 font-medium leading-tight">{LEAD_STAGE_LABELS[stage]}</p>
+                          </div>
+                          {idx < LEAD_STAGES.length - 1 && <div className={`h-0.5 flex-1 mx-1 ${idx < stageIdx ? 'bg-indigo-500' : 'bg-slate-200'}`} />}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+                {lead.status_note && (
+                  <div className="mx-4 mb-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                    <p className="text-[10px] text-indigo-700 font-bold uppercase mb-1">Latest Update from Consultant</p>
+                    <p className="text-xs text-indigo-800 leading-relaxed">{lead.status_note}</p>
+                  </div>
+                )}
+                <div className="flex items-center justify-between px-4 pb-3 pt-1">
+                  <p className="text-[10px] text-slate-400">Requested: {lead.created_at ? new Date(lead.created_at).toLocaleDateString('en-IN', { day:'numeric',month:'short',year:'2-digit' }) : '-'}</p>
+                  {lead.service_value > 0 && <p className="text-xs font-black text-slate-700">?{lead.service_value.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">service value</span></p>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: string) => void }) {
   const { user } = useAuthStore()
   const statusObj = STATUS_CONFIG[project.status] || STATUS_CONFIG.draft
   const isOnboardingIncomplete = !project.package_id || project.status === 'onboarding' || (project.status === 'draft' && (!project.color_preferences || project.color_preferences.length === 0))
   const isExecution = ['ordered', 'done'].includes(project.status)
+  const isAdminApproved = project.approval_status === 'APPROVED'
+  const isPendingAdminApproval = !isAdminApproved && !isOnboardingIncomplete && project.status === 'quoted'
 
   return (
     <motion.div
@@ -126,6 +220,17 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
               <span>Continue Onboarding</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
+          ) : isPendingAdminApproval ? (
+            <div className="w-full flex flex-col gap-2">
+              <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold">
+                <Clock className="w-3.5 h-3.5 animate-pulse" />
+                Quotation Under Admin Review
+              </div>
+              <Link href={`/visualize/${project.id}?from=dashboard`}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition">
+                <Sparkles className="w-3.5 h-3.5" /> View AI Renders
+              </Link>
+            </div>
           ) : !isExecution ? (
             <>
               <Link href={`/customize/${project.id}`}
@@ -143,10 +248,16 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition">
                 <Sparkles className="w-3.5 h-3.5" /> AI View
               </Link>
-              <Link href={`/track/${project.id}`}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
-                <Activity className="w-3.5 h-3.5" /> Track
-              </Link>
+              {isAdminApproved ? (
+                <Link href={`/track/${project.id}`}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
+                  <Activity className="w-3.5 h-3.5" /> Track
+                </Link>
+              ) : (
+                <div className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-100 text-slate-400 text-xs font-bold cursor-not-allowed" title="Tracking available once admin activates your project">
+                  <Activity className="w-3.5 h-3.5" /> Track
+                </div>
+              )}
             </>
           )}
         </div>
@@ -200,6 +311,8 @@ function DashboardContent() {
   // Delete Confirmation Overlay States
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
   const [deletingProject, setDeletingProject] = useState(false)
+  const [serviceLeads, setServiceLeads] = useState<any[]>([])
+  const [loadingLeads, setLoadingLeads] = useState(false)
 
   useEffect(() => {
     if (!isLoggedIn) { router.push('/login'); return }
@@ -208,6 +321,7 @@ function DashboardContent() {
     fetchStats()
     fetchInquiries()
     fetchServices()
+    loadServiceLeads()
 
     // Auto-open modal if ?edit=true is present
     if (searchParams.get('edit') === 'true') {
@@ -234,6 +348,18 @@ function DashboardContent() {
       toast.error('Failed to load projects')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadServiceLeads = async () => {
+    setLoadingLeads(true)
+    try {
+      const res = await specialServicesAPI.leads()
+      setServiceLeads(res.data?.leads || res.data || [])
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingLeads(false)
     }
   }
 
@@ -367,9 +493,9 @@ function DashboardContent() {
                       {inquiries.length}
                     </span>
                   )}
-                  {tab.id === 'services' && services.length > 0 && (
+                  {tab.id === 'services' && serviceLeads.length > 0 && (
                     <span className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-700 rounded-full font-bold">
-                      {services.length}
+                      {serviceLeads.length}
                     </span>
                   )}
                 </button>
@@ -482,44 +608,7 @@ function DashboardContent() {
             )}
 
             {activeTab === 'services' && (
-              <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-extrabold text-slate-800 text-base">Special Services Requests</h3>
-                  <Link
-                    href="/services"
-                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition"
-                  >
-                    Request New Service
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  {services.map((req) => (
-                    <div key={req.id} className="p-4 border border-slate-100 rounded-xl bg-slate-50 flex items-center justify-between gap-4">
-                      <div>
-                        <h4 className="font-bold text-slate-800 text-xs capitalize">{req.service_type.replace('_', ' ')}</h4>
-                        <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{req.requirements}</p>
-                        <p className="text-[9px] text-slate-400 mt-1 font-medium">Logged: {new Date(req.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className={clsx(
-                          'px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider block w-fit ml-auto mb-1',
-                          req.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'
-                        )}>
-                          {req.status}
-                        </span>
-                        {req.quote_amount && (
-                          <span className="text-xs font-black text-slate-850">₹{req.quote_amount.toLocaleString()}</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {services.length === 0 && (
-                    <div className="text-center py-8 text-slate-450 font-semibold text-xs">
-                      No service requests logged. Request rendering or designer consulting.
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ServiceLeadsTracking leads={serviceLeads} loading={loadingLeads} />
             )}
           </div>
 
