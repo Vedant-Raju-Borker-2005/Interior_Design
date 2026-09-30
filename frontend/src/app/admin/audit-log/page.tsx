@@ -3,12 +3,29 @@
 import { useEffect, useState } from 'react';
 import { adminAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { ShieldCheck, RefreshCw, Search, Download } from 'lucide-react';
+import { ShieldCheck, RefreshCw, Search, User, AlertTriangle, CheckCircle, XCircle, Settings } from 'lucide-react';
+
+const ACTION_BADGE: Record<string, string> = {
+  VENDOR_APPROVED: 'bg-emerald-100 text-emerald-700',
+  VENDOR_REJECTED: 'bg-red-100 text-red-700',
+  VENDOR_SUSPENDED: 'bg-orange-100 text-orange-700',
+  VENDOR_REACTIVATED: 'bg-blue-100 text-blue-700',
+  TEAM_MEMBER_APPROVED: 'bg-emerald-100 text-emerald-700',
+  TEAM_MEMBER_REJECTED: 'bg-red-100 text-red-700',
+  PROJECT_CREATED: 'bg-indigo-100 text-indigo-700',
+  PROJECT_CLOSED: 'bg-emerald-100 text-emerald-700',
+  PROJECT_CANCELLED: 'bg-red-100 text-red-700',
+  QUOTE_APPROVED: 'bg-emerald-100 text-emerald-700',
+  CUSTOMER_SUSPENDED: 'bg-red-100 text-red-700',
+  CUSTOMER_REACTIVATED: 'bg-emerald-100 text-emerald-700',
+  RESOURCE_ASSIGNED: 'bg-blue-100 text-blue-700',
+};
 
 export default function AdminAuditLogPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [entityFilter, setEntityFilter] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -25,11 +42,15 @@ export default function AdminAuditLogPage() {
   useEffect(() => { load(); }, []);
 
   const filtered = logs.filter(l =>
-    !search ||
-    l.action?.toLowerCase().includes(search.toLowerCase()) ||
-    l.entity_type?.toLowerCase().includes(search.toLowerCase()) ||
-    l.entity_id?.toLowerCase().includes(search.toLowerCase())
+    (!entityFilter || l.entity_type === entityFilter) &&
+    (!search ||
+      l.action?.toLowerCase().includes(search.toLowerCase()) ||
+      l.entity_type?.toLowerCase().includes(search.toLowerCase()) ||
+      l.entity_id?.toLowerCase().includes(search.toLowerCase()) ||
+      l.user_name?.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const entityTypes = Array.from(new Set(logs.map((l: any) => l.entity_type).filter(Boolean)));
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
@@ -79,11 +100,17 @@ export default function AdminAuditLogPage() {
 
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-slate-100 flex gap-4 bg-slate-50">
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-3 bg-slate-50 flex-wrap">
           <div className="relative flex-1 max-w-sm">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input type="text" placeholder="Filter by action, entity..." value={search} onChange={e => setSearch(e.target.value)}
+            <input type="text" placeholder="Filter by action, entity, user..." value={search} onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+          </div>
+          <div className="flex gap-2 flex-wrap items-center">
+            <button onClick={() => setEntityFilter('')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${!entityFilter ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>All</button>
+            {entityTypes.map((et: string) => (
+              <button key={et} onClick={() => setEntityFilter(et)} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${entityFilter === et ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{et}</button>
+            ))}
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -94,6 +121,7 @@ export default function AdminAuditLogPage() {
                 <th className="px-5 py-4 font-medium">Action</th>
                 <th className="px-5 py-4 font-medium">Entity Type</th>
                 <th className="px-5 py-4 font-medium">Entity ID</th>
+                <th className="px-5 py-4 font-medium">Performed By</th>
                 <th className="px-5 py-4 font-medium">Performed At</th>
               </tr>
             </thead>
@@ -107,10 +135,16 @@ export default function AdminAuditLogPage() {
                   <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-5 py-3 text-slate-400 text-xs">{idx + 1}</td>
                     <td className="px-5 py-3">
-                      <span className="inline-flex px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-xs font-mono">{log.action}</span>
+                      <span className={`inline-flex px-2 py-0.5 rounded text-xs font-mono font-medium ${ACTION_BADGE[log.action] || 'bg-slate-100 text-slate-600'}`}>{log.action}</span>
                     </td>
                     <td className="px-5 py-3 text-slate-600 text-xs font-medium">{log.entity_type}</td>
                     <td className="px-5 py-3 font-mono text-xs text-slate-400">{log.entity_id?.substring(0, 16)}...</td>
+                    <td className="px-5 py-3 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold">{(log.user_name || 'S')[0]}</div>
+                        <span className="text-slate-700 font-medium">{log.user_name || 'System'}</span>
+                      </div>
+                    </td>
                     <td className="px-5 py-3 text-slate-400 text-xs">
                       {log.timestamp ? new Date(log.timestamp).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'medium' }) : '-'}
                     </td>

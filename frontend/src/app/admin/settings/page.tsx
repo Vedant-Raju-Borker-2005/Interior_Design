@@ -16,6 +16,21 @@ export default function AdminSettingsPage() {
   // Role assignment
   const [roleUserId, setRoleUserId] = useState('');
   const [roleName, setRoleName] = useState('OPERATIONS_ADMIN');
+  const [categoryFilter, setCategoryFilter] = useState('');
+
+  const KNOWN_SETTINGS = [
+    { key: 'PLATFORM_NAME', category: 'general', hint: 'Display name of the platform' },
+    { key: 'MAX_PROJECTS_PER_USER', category: 'limits', hint: 'Max projects a single user can create' },
+    { key: 'QUOTATION_EXPIRY_DAYS', category: 'quotation', hint: 'Days before a quotation expires' },
+    { key: 'AI_RENDER_MODEL', category: 'ai', hint: 'Model used for 4-Wall renders (e.g. Gemini/Imagen3)' },
+    { key: 'LAYOUT_SOLVER', category: 'ai', hint: 'Spatial layout solver (CP-SAT / annealing)' },
+    { key: 'GST_RATE', category: 'finance', hint: 'GST percentage applied to all quotations' },
+    { key: 'BULK_DISCOUNT_TIER1', category: 'pricing', hint: '% discount for 5-9 units (enterprise)' },
+    { key: 'BULK_DISCOUNT_TIER2', category: 'pricing', hint: '% discount for 10-19 units (enterprise)' },
+    { key: 'BULK_DISCOUNT_TIER3', category: 'pricing', hint: '% discount for 20+ units (enterprise)' },
+    { key: 'MIN_BUDGET', category: 'limits', hint: 'Minimum allowed project budget (₹)' },
+    { key: 'SUPPORT_EMAIL', category: 'general', hint: 'Platform customer support email' },
+  ];
 
   const load = async () => {
     setLoading(true);
@@ -88,20 +103,41 @@ export default function AdminSettingsPage() {
           {/* Update setting */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2"><Key className="w-5 h-5 text-indigo-500" /> Update System Setting</h3>
-            <div className="flex gap-3 flex-wrap">
-              <input type="text" placeholder="Setting key (e.g. MAX_PROJECTS)" value={editKey} onChange={e => setEditKey(e.target.value)}
-                className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+            <div className="flex gap-3 flex-wrap mb-3">
+              <select
+                value={editKey}
+                onChange={e => { setEditKey(e.target.value); }}
+                className="flex-1 min-w-[220px] px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              >
+                <option value="">-- Select setting key --</option>
+                {KNOWN_SETTINGS.map(s => (
+                  <option key={s.key} value={s.key}>{s.key} ({s.category})</option>
+                ))}
+              </select>
+              <input type="text" placeholder="Or type custom key" value={editKey} onChange={e => setEditKey(e.target.value)}
+                className="flex-1 min-w-[180px] px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
               <input type="text" placeholder="New value" value={editVal} onChange={e => setEditVal(e.target.value)}
                 className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
               <button onClick={handleUpdateSetting} className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors whitespace-nowrap">
                 Update
               </button>
             </div>
+            {editKey && KNOWN_SETTINGS.find(s => s.key === editKey) && (
+              <p className="text-xs text-slate-500 mt-1">{KNOWN_SETTINGS.find(s => s.key === editKey)?.hint}</p>
+            )}
           </div>
 
           {/* Existing settings table */}
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-slate-100 font-semibold text-slate-900">Current System Settings</div>
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <span className="font-semibold text-slate-900">Current System Settings</span>
+              <div className="flex gap-2">
+                <button onClick={() => setCategoryFilter('')} className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${!categoryFilter ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>All</button>
+                {Array.from(new Set(settings.map((s: any) => s.category).filter(Boolean))).map((cat: any) => (
+                  <button key={cat} onClick={() => setCategoryFilter(cat)} className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${categoryFilter === cat ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{cat}</button>
+                ))}
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
@@ -117,7 +153,7 @@ export default function AdminSettingsPage() {
                   ) : settings.length === 0 ? (
                     <tr><td colSpan={3} className="py-8 text-center text-slate-500">No system settings configured</td></tr>
                   ) : (
-                    settings.map((s: any) => (
+                    settings.filter((s: any) => !categoryFilter || s.category === categoryFilter).map((s: any) => (
                       <tr key={s.id || s.key} className="hover:bg-slate-50/50">
                         <td className="px-5 py-3 font-mono text-xs text-slate-700">{s.key}</td>
                         <td className="px-5 py-3 text-slate-600">{s.value}</td>
