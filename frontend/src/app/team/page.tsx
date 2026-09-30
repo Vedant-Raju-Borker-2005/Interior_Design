@@ -47,7 +47,7 @@ export default function TeamWelcomePortal() {
       description: 'Update statuses for assigned items and upload proof of installation.',
       icon: Wrench,
       route: '/team/technician',
-      color: 'amber'
+      color: 'indigo'
     }
   ];
 
