@@ -618,9 +618,10 @@ def get_team_projects(
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
 ):
-    if user.role.upper() == "ADMIN":
+    user_roles = [r.strip().lower() for r in (user.role or "").split(",")]
+    if "admin" in user_roles:
         projects = db.query(Project).all()
-    elif user.role.upper() == "CUSTOMER":
+    elif "customer" in user_roles and not any(r.startswith("team_") for r in user_roles):
         raise HTTPException(status_code=403, detail="Customer not authorized")
     else:
         # PM can see all projects; Coordinators and Technicians see assigned ones
@@ -629,7 +630,7 @@ def get_team_projects(
             ProjectTeamMember.status == "ACTIVE"
         ).all()
         assigned_ids = [m.project_id for m in memberships]
-        is_manager = "team_manager" in user.role or any(m.role == "MANAGER" for m in memberships)
+        is_manager = "team_manager" in user_roles or any(m.role == "MANAGER" for m in memberships)
         
         if is_manager:
             projects = db.query(Project).all()
@@ -669,7 +670,8 @@ def get_team_directory(
     db: Session = Depends(get_db)
 ):
     # Manager check — role field is comma-separated e.g. "customer,team_manager"
-    if "team_manager" not in (user.role or "") and user.role != "admin":
+    user_roles = [r.strip().lower() for r in (user.role or "").split(",")]
+    if "team_manager" not in user_roles and "admin" not in user_roles:
         raise HTTPException(403, "Only managers can view the team directory")
     
     # Use LIKE queries because user.role is comma-separated e.g. "customer,team_coordinator"
@@ -715,13 +717,14 @@ def get_team_dashboard_stats(
     all_possible_roles = ["MANAGER", "COORDINATOR", "TECHNICIAN"]
     roles = [r for r in all_possible_roles if r in {m.role for m in memberships}]
     
-    if "team_manager" in user.role:
+    user_roles = [r.strip().lower() for r in (user.role or "").split(",")]
+    if "team_manager" in user_roles:
         roles.append("MANAGER")
-    if "team_coordinator" in user.role:
+    if "team_coordinator" in user_roles:
         roles.append("COORDINATOR")
-    if "team_technician" in user.role:
+    if "team_technician" in user_roles:
         roles.append("TECHNICIAN")
-    if user.role.upper() == "ADMIN":
+    if "admin" in user_roles:
         roles.append("MANAGER")
         
     roles = list(set(roles))
