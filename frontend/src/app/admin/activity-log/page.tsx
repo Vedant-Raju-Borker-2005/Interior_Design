@@ -60,6 +60,7 @@ export default function AdminActivityLogPage() {
                 <th className="px-5 py-4 font-medium">Action</th>
                 <th className="px-5 py-4 font-medium">Entity Type</th>
                 <th className="px-5 py-4 font-medium">Entity ID</th>
+                <th className="px-5 py-4 font-medium">Performed By</th>
                 <th className="px-5 py-4 font-medium">Timestamp</th>
               </tr>
             </thead>
@@ -81,6 +82,12 @@ export default function AdminActivityLogPage() {
                     </td>
                     <td className="px-5 py-3 text-slate-600 text-xs">{log.entity_type}</td>
                     <td className="px-5 py-3 font-mono text-xs text-slate-400">{log.entity_id?.substring(0, 12)}...</td>
+                    <td className="px-5 py-3 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold">{(log.user_name || 'S')[0]}</div>
+                        <span className="text-slate-700 font-medium">{log.user_name || 'System'}</span>
+                      </div>
+                    </td>
                     <td className="px-5 py-3 text-slate-400 text-xs">
                       {log.timestamp ? new Date(log.timestamp).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
                     </td>
