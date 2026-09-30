@@ -353,6 +353,11 @@ DEMO_SYNC_EVERY_SECONDS = 300.0
 
 
 def sync_demo_data(db, force: bool = False):
+    try:
+        from .seed_master_data import seed_master_data
+        seed_master_data()
+    except Exception as e:
+        pass
     import time
 
     now = time.monotonic()
