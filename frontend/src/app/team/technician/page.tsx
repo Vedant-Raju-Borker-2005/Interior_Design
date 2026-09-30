@@ -4,19 +4,22 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProjectTeamStore } from '@/stores/projectTeamStore';
 import Navbar from '@/components/Navbar';
+import { useAuthStore } from '@/stores/authStore';
 import {
   Wrench,
   MapPin,
   Play,
   ArrowLeft,
   LayoutDashboard,
-  FolderKanban
+  FolderKanban,
+  ShieldAlert
 } from 'lucide-react';
 import ItemTrackingBoard from '@/components/ItemTrackingBoard';
 import clsx from 'clsx';
 
 export default function TechnicianDashboardPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const { dashboard, projects, fetchDashboard, fetchProjects, isLoading, error } = useProjectTeamStore();
   const [activeTab, setActiveTab] = useState<'kpi' | 'projects' | 'installations'>('kpi');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
@@ -32,6 +35,21 @@ export default function TechnicianDashboardPage() {
       setSelectedProjectId(projects[0].id);
     }
   }, [projects, selectedProjectId]);
+
+  if (user?.status === 'pending_verification' && !user?.role?.includes('admin')) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] text-white flex flex-col items-center justify-center p-6 text-center">
+        <ShieldAlert className="w-16 h-16 text-amber-400 mb-4 animate-bounce" />
+        <h1 className="text-3xl font-bold mb-2">Account Approval Pending</h1>
+        <p className="text-slate-300 max-w-md mb-6 leading-relaxed">
+          Your Technician registration is currently pending review by an Administrator. Access to this workspace will be granted once approved.
+        </p>
+        <button onClick={() => router.push('/team')} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transition-all">
+          Return to Team Portal
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading && !dashboard) {
     return (

@@ -122,8 +122,9 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
   const statusObj = STATUS_CONFIG[project.status] || STATUS_CONFIG.draft
   const isOnboardingIncomplete = !project.package_id || project.status === 'onboarding' || (project.status === 'draft' && (!project.color_preferences || project.color_preferences.length === 0))
   const isExecution = ['ordered', 'done'].includes(project.status)
-  const isAdminApproved = project.approval_status === 'APPROVED'
-  const isPendingAdminApproval = !isAdminApproved && !isOnboardingIncomplete && project.status === 'quoted'
+  const isConverted = Boolean(project.is_converted || project.status === 'execution' || project.status === 'converted' || (project.defaults && project.defaults.converted_from_project_id))
+  const canTrack = isConverted && project.approval_status === 'APPROVED'
+  const isPendingAdminApproval = !canTrack && !isOnboardingIncomplete && (project.status === 'quoted' || project.status === 'ordered')
 
   return (
     <motion.div
@@ -248,7 +249,7 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition">
                 <Sparkles className="w-3.5 h-3.5" /> AI View
               </Link>
-              {isAdminApproved ? (
+              {canTrack ? (
                 <Link href={`/track/${project.id}`}
                   className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
                   <Activity className="w-3.5 h-3.5" /> Track
