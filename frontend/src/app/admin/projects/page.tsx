@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { adminAPI } from '@/lib/api';
+import { adminAPI, teamAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { FileText, Search, Plus, Filter, X, CheckCircle2, Clock, XCircle, AlertCircle, Users } from 'lucide-react';
 
@@ -34,6 +34,39 @@ export default function AdminProjectsPage() {
   const [assignProjectId, setAssignProjectId] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [assignRole, setAssignRole] = useState('COORDINATOR');
+  const [assignOptions, setAssignOptions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!showAssignModal) return;
+    const fetchAssignees = async () => {
+      try {
+        if (assignRole === 'VENDOR') {
+          const res = await adminAPI.getVendors();
+          setAssignOptions(res.data?.vendors || res.data || []);
+        } else {
+          const res = await teamAPI.getTeamDirectory();
+          // Filter out team members by role
+          let filtered = res.data;
+          if (assignRole === 'COORDINATOR') filtered = filtered.filter((u: any) => u.role === 'team_coordinator');
+          else if (assignRole === 'TECHNICIAN') filtered = filtered.filter((u: any) => u.role === 'team_technician');
+          else if (assignRole === 'MANAGER') filtered = filtered.filter((u: any) => u.role === 'team_manager');
+          setAssignOptions(filtered);
+        }
+      } catch (err) {
+        toast.error('Failed to load assignees for this role');
+        setAssignOptions([]);
+      }
+    };
+    fetchAssignees();
+  }, [showAssignModal, assignRole]);
+
+  useEffect(() => {
+    if (assignOptions.length > 0) {
+      setAssigneeId(assignOptions[0].id);
+    } else {
+      setAssigneeId('');
+    }
+  }, [assignOptions]);
 
   const load = async () => {
     setLoading(true);
@@ -214,14 +247,19 @@ export default function AdminProjectsPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Assignee User ID</label>
-                <input
-                  type="text"
-                  placeholder="Enter user ID..."
+                <label className="block text-sm font-medium text-slate-700 mb-1">Assignee User</label>
+                <select
                   value={assigneeId}
                   onChange={e => setAssigneeId(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                />
+                >
+                  {assignOptions.length === 0 && <option value="">No assignees found for this role</option>}
+                  {assignOptions.map(opt => (
+                    <option key={opt.id} value={opt.id}>
+                      {assignRole === 'VENDOR' ? opt.business_name || opt.name : opt.name} - ({opt.email || opt.phone})
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
