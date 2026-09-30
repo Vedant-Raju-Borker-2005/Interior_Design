@@ -661,6 +661,8 @@ export const teamAPI = {
     axiosInstance.delete(`/api/v1/team/projects/${projectId}/documents/${documentId}`),
   getAnalytics: (projectId: string) =>
     axiosInstance.get(`/api/v1/team/projects/${projectId}/analytics`),
+  getResources: () =>
+    axiosInstance.get('/api/v1/team/resources'),
 }
 
 // Vendor Module API

@@ -90,8 +90,10 @@ interface ProjectTeamState {
   
   globalIssues: any[]
   globalTasks: any[]
+  globalResources: { vendors: any[]; team: any[]; documents: any[] } | null
   fetchGlobalIssues: () => Promise<void>
   fetchGlobalTasks: () => Promise<void>
+  fetchGlobalResources: () => Promise<void>
   resolveIssue: (issueId: string, resolution: string) => Promise<void>
   
   createIssue: (
@@ -152,6 +154,7 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
   projects: [],
   globalIssues: [],
   globalTasks: [],
+  globalResources: null,
   teamDirectory: [],
   teamDirectoryError: null,
   isLoading: false,
@@ -243,6 +246,13 @@ export const useProjectTeamStore = create<ProjectTeamState>((set, get) => ({
     try {
       const res = await teamAPI.getGlobalTasks()
       set({ globalTasks: res.data })
+    } catch (e) {}
+  },
+
+  fetchGlobalResources: async () => {
+    try {
+      const res = await teamAPI.getResources()
+      set({ globalResources: res.data })
     } catch (e) {}
   },
   
