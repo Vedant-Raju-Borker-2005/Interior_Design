@@ -19,6 +19,8 @@ export default function TeamWelcomePortal() {
   if (!mounted) return null;
 
   const role = user?.role || '';
+  const activeRole = typeof window !== 'undefined' ? localStorage.getItem('active_role') || '' : '';
+  
   // Parse comma-separated roles into an exact list e.g. "customer,team_coordinator" → ["customer","team_coordinator"]
   const roleList = role.split(',').map((r: string) => r.trim());
 
@@ -77,7 +79,7 @@ export default function TeamWelcomePortal() {
             {cards.map((card) => {
               const Icon = card.icon;
               // Exact role match — prevents "team_coordinator" from accidentally enabling "team_manager"
-              const isEnabled = roleList.includes(card.id) || roleList.includes('admin');
+              const isEnabled = (activeRole ? activeRole === card.id : roleList.includes(card.id)) || roleList.includes('admin');
               
               return (
                 <div 
