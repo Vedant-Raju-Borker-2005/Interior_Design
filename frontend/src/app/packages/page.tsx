@@ -36,18 +36,20 @@ function PackagesContent() {
   const getDynamicPrice = (pkg: any) => {
     if (!budget) return pkg.base_price
     
-    // The budget passed in URL is the MAX limit of the selected tier.
-    // We want the 'basic' package to anchor to the MIN limit of that tier.
-    let baseBudget = budget;
-    if (budget <= 500000) baseBudget = 300000;
-    else if (budget <= 800000) baseBudget = 500000;
-    else if (budget <= 1200000) baseBudget = 800000;
-    else if (budget <= 2000000) baseBudget = 1200000;
-    else baseBudget = 2000000;
+    let minBudget = 300000;
+    let maxBudget = 500000;
+    
+    if (budget <= 500000) { minBudget = 300000; maxBudget = 500000; }
+    else if (budget <= 800000) { minBudget = 500000; maxBudget = 800000; }
+    else if (budget <= 1200000) { minBudget = 800000; maxBudget = 1200000; }
+    else if (budget <= 2000000) { minBudget = 1200000; maxBudget = 2000000; }
+    else { minBudget = 2000000; maxBudget = 3000000; }
 
-    if (pkg.tier === 'basic') return baseBudget
-    if (pkg.tier === 'premium') return baseBudget + 200000
-    if (pkg.tier === 'luxury') return baseBudget + 500000
+    const step = (maxBudget - minBudget) / 2;
+
+    if (pkg.tier === 'basic') return minBudget
+    if (pkg.tier === 'premium') return minBudget + step
+    if (pkg.tier === 'luxury') return maxBudget
     return pkg.base_price
   }
 
@@ -94,7 +96,8 @@ function PackagesContent() {
   const handleSelect = async (pkg: any) => {
     setSelecting(pkg.id)
     try {
-      await projectsAPI.update(projectId, { package_id: pkg.id })
+      const finalBudget = getDynamicPrice(pkg)
+      await projectsAPI.update(projectId, { package_id: pkg.id, budget: finalBudget })
       setSelectedPackage(pkg.id)
       const projRes = await projectsAPI.get(projectId)
       const { setCurrentProject } = useProjectStore.getState()

@@ -306,16 +306,9 @@ def list_products(
 
     # Max product price limit table mapping
     def get_max_product_price_limit(budget: float) -> float:
-        if budget <= 500000:
-            return 75000.0
-        elif budget <= 800000:
-            return 125000.0
-        elif budget <= 1200000:
-            return 200000.0
-        elif budget <= 2000000:
-            return 350000.0
-        else:
-            return 500000.0
+        # Strict linear scaling: product limit is 25% of the total project budget
+        # Example: 3L budget -> 75k max product. 4L budget -> 100k max product. 5L budget -> 125k max product.
+        return budget * 0.25
 
     max_price_limit = get_max_product_price_limit(project_budget)
 
