@@ -40,6 +40,9 @@ out/
 *.sqlite3
 *.db-journal
 *.db-wal
+*.db-shm
+backend/interior_ai.db-shm
+plan.md
 
 # OS files
 .DS_Store
