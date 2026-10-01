@@ -262,6 +262,21 @@ export default function CreateProjectPage() {
       return
     }
 
+    const minRequired = Math.max(1, wizardTypologies.length - 1)
+    const uploadedCount = wizardTypologies.filter(t => t.file !== null).length
+
+    if (uploadedCount < minRequired) {
+      toast.error(`Please upload layout blueprints for at least ${minRequired} of ${wizardTypologies.length} typologies before proceeding.`)
+      return
+    }
+
+    for (const typ of wizardTypologies) {
+      if (typ.file && (!typ.carpet_area_sqft || Number(typ.carpet_area_sqft) <= 0)) {
+        toast.error(`Please specify a valid carpet area (sq.ft) for ${typ.name}.`)
+        return
+      }
+    }
+
     setLoading(true)
     try {
       for (const typ of wizardTypologies) {
@@ -582,6 +597,7 @@ export default function CreateProjectPage() {
           {/* STEP 4: Typology Configuration */}
           {step === 4 && (
             <div className="space-y-6">
+              {/* Step 4 Header & Blueprint Upload Progress Status */}
               <div>
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-1">
                   <Layout className="w-5 h-5 text-indigo-650" /> 4. Architectural Typologies & Floor Plans
@@ -591,72 +607,117 @@ export default function CreateProjectPage() {
                 </p>
               </div>
 
+              {(() => {
+                const minRequired = Math.max(1, wizardTypologies.length - 1)
+                const uploadedCount = wizardTypologies.filter(t => t.file !== null).length
+                const isSatisfied = uploadedCount >= minRequired
+
+                return (
+                  <div className={clsx(
+                    "p-3.5 rounded-2xl border text-xs font-semibold flex items-center justify-between transition",
+                    isSatisfied
+                      ? "bg-emerald-50/80 border-emerald-200 text-emerald-800"
+                      : "bg-amber-50/80 border-amber-200 text-amber-800"
+                  )}>
+                    <div className="flex items-center gap-2">
+                      <Layout className="w-4 h-4 text-indigo-600" />
+                      <span>
+                        Blueprints Attached: <strong>{uploadedCount}</strong> of <strong>{wizardTypologies.length}</strong>
+                      </span>
+                    </div>
+                    <span className="font-bold">
+                      {isSatisfied
+                        ? `✓ Minimum threshold met (${minRequired} required)`
+                        : `⚠ Need ${minRequired - uploadedCount} more blueprint${minRequired - uploadedCount > 1 ? 's' : ''} to proceed`}
+                    </span>
+                  </div>
+                )
+              })()}
+
               {/* Typology Cards Container */}
               <div className="space-y-4">
-                {wizardTypologies.map((typ, idx) => (
-                  <div key={typ.id} className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm space-y-4 hover:border-indigo-200 transition">
-                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                      <div className="flex items-center gap-3">
-                        <span className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-extrabold text-xs flex items-center justify-center">
-                          #{idx + 1}
-                        </span>
-                        <input
-                          type="text"
-                          value={typ.name}
-                          onChange={e => handleTypologyFieldChange(idx, 'name', e.target.value)}
-                          placeholder="Typology Name (e.g. Typology A)"
-                          className="font-bold text-slate-800 text-sm px-3 py-1.5 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none w-52"
-                        />
-                      </div>
-                      {wizardTypologies.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveWizardTypology(idx)}
-                          className="text-slate-400 hover:text-rose-600 transition p-1"
-                          title="Remove Typology"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+                {(() => {
+                  const minRequired = Math.max(1, wizardTypologies.length - 1)
+                  const uploadedCount = wizardTypologies.filter(t => t.file !== null).length
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                          Carpet Area (Sq.Ft) <span className="text-slate-400 font-normal">(optional)</span>
-                        </label>
-                        <input
-                          type="number"
-                          value={typ.carpet_area_sqft}
-                          onChange={e => handleTypologyFieldChange(idx, 'carpet_area_sqft', e.target.value ? Number(e.target.value) : '')}
-                          placeholder="e.g. 1250"
-                          className="input w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 font-semibold"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                          Layout Blueprint Image / PDF
-                        </label>
+                  return wizardTypologies.map((typ, idx) => (
+                    <div key={typ.id} className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm space-y-4 hover:border-indigo-200 transition">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                         <div className="flex items-center gap-3">
+                          <span className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-extrabold text-xs flex items-center justify-center">
+                            #{idx + 1}
+                          </span>
                           <input
-                            type="file"
-                            accept="image/*,application/pdf"
-                            onChange={e => handleTypologyFileChange(idx, e.target.files?.[0] || null)}
-                            className="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                            type="text"
+                            value={typ.name}
+                            onChange={e => handleTypologyFieldChange(idx, 'name', e.target.value)}
+                            placeholder="Typology Name (e.g. Typology A)"
+                            className="font-bold text-slate-800 text-sm px-3 py-1.5 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none w-52"
                           />
-                          {typ.previewUrl && (
-                            <img
-                              src={typ.previewUrl}
-                              alt={typ.name}
-                              className="w-12 h-12 object-cover rounded-lg border border-slate-200 shadow-xs shrink-0"
-                            />
+                          {typ.file ? (
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold flex items-center gap-1">
+                              <Check className="w-3 h-3 stroke-[3]" /> Blueprint Ready
+                            </span>
+                          ) : uploadedCount < minRequired ? (
+                            <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+                              ⚠ Blueprint Required
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-medium">
+                              Optional Pending
+                            </span>
                           )}
+                        </div>
+                        {wizardTypologies.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveWizardTypology(idx)}
+                            className="text-slate-400 hover:text-rose-600 transition p-1"
+                            title="Remove Typology"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                            Carpet Area (Sq.Ft) {typ.file ? <span className="text-rose-500 font-bold">*</span> : <span className="text-slate-400 font-normal">(optional)</span>}
+                          </label>
+                          <input
+                            type="number"
+                            value={typ.carpet_area_sqft}
+                            onChange={e => handleTypologyFieldChange(idx, 'carpet_area_sqft', e.target.value ? Number(e.target.value) : '')}
+                            placeholder="e.g. 1250"
+                            className="input w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                            Layout Blueprint Image / PDF
+                          </label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="file"
+                              accept="image/*,application/pdf"
+                              onChange={e => handleTypologyFileChange(idx, e.target.files?.[0] || null)}
+                              className="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                            />
+                            {typ.previewUrl && (
+                              <img
+                                src={typ.previewUrl}
+                                alt={typ.name}
+                                className="w-12 h-12 object-cover rounded-lg border border-slate-200 shadow-xs shrink-0"
+                              />
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                })()}
               </div>
 
               {/* Add Another Typology Button */}
@@ -678,14 +739,22 @@ export default function CreateProjectPage() {
                 <button type="button" onClick={() => setStep(3)} className="btn-ghost flex items-center gap-2 text-slate-500 font-semibold">
                   <ArrowLeft className="w-4 h-4" /> BHK Mix
                 </button>
-                <button
-                  type="button"
-                  onClick={handleFinishSetup}
-                  disabled={loading}
-                  className="btn-primary px-6 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 shadow-md disabled:opacity-50"
-                >
-                  <Save className="w-4 h-4" /> {loading ? 'Saving Setup...' : 'Complete Enterprise Setup'}
-                </button>
+                {(() => {
+                  const minRequired = Math.max(1, wizardTypologies.length - 1)
+                  const uploadedCount = wizardTypologies.filter(t => t.file !== null).length
+                  const canFinish = uploadedCount >= minRequired
+
+                  return (
+                    <button
+                      type="button"
+                      onClick={handleFinishSetup}
+                      disabled={loading || !canFinish}
+                      className="btn-primary px-6 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4" /> {loading ? 'Saving Setup...' : 'Complete Enterprise Setup'}
+                    </button>
+                  )
+                })()}
               </div>
             </div>
           )}
