@@ -925,7 +925,7 @@ def get_customer_stats(
     
     active_projects = db.query(Project).filter(
         Project.user_id == user.id,
-        Project.status.in_(["quoted", "ordered"])
+        Project.status.in_(["quoted", "ordered", "execution"])
     ).count()
     
     total_quotations = db.query(Quotation).filter(Quotation.project_id.in_(project_ids)).count() if project_ids else 0

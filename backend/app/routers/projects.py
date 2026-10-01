@@ -124,7 +124,14 @@ def create_project(
 @router.get("", summary="List current user's projects")
 def list_projects(user: User = Depends(current_user), db: Session = Depends(get_db)):
     projects = db.query(Project).filter(Project.user_id == user.id).order_by(Project.created_at.desc()).all()
-    return {"projects": [_project_summary(p) for p in projects]}
+    # Filter out projects that have been superseded by conversion into an execution project
+    converted_source_ids = {
+        p.defaults.get("converted_from_project_id")
+        for p in projects
+        if isinstance(p.defaults, dict) and p.defaults.get("converted_from_project_id")
+    }
+    visible = [p for p in projects if p.id not in converted_source_ids and p.status != "converted"]
+    return {"projects": [_project_summary(p) for p in visible]}
 
 
 @router.get("/{project_id}", summary="Get project detail with rooms")
