@@ -15,6 +15,8 @@ import re
 import statistics
 
 from . import plan_scale
+import time
+import logging
 import threading
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -22,33 +24,52 @@ from typing import Any, Optional
 import numpy as np
 from PIL import Image
 
-_ENGINE: dict[str, Any] = {"ocr": None, "failed": False}
+# "missing" means the library is not installed and never will be during this
+# run. Anything else — most often no memory left to load the model on a small
+# box — is worth trying again shortly, because giving up permanently means
+# every plan after it is read with no labels at all, quietly and much worse.
+_ENGINE: dict[str, Any] = {"ocr": None, "missing": False, "failed_at": 0.0}
 _LOCK = threading.Lock()
+RETRY_AFTER_SECONDS = 30.0
+
+
+def _giving_up() -> bool:
+    if _ENGINE["missing"]:
+        return True
+    since = _ENGINE["failed_at"]
+    return bool(since) and (time.monotonic() - since) < RETRY_AFTER_SECONDS
 
 
 def ocr_available() -> bool:
     try:
         import rapidocr_onnxruntime  # noqa: F401
-        return not _ENGINE["failed"]
+        return not _giving_up()
     except Exception:
+        _ENGINE["missing"] = True
         return False
 
 
 def _engine():
     """Load the OCR model once; it takes a few seconds on a slow machine."""
     with _LOCK:
-        if _ENGINE["ocr"] is None and not _ENGINE["failed"]:
+        if _ENGINE["ocr"] is None and not _giving_up():
             try:
                 from rapidocr_onnxruntime import RapidOCR
                 _ENGINE["ocr"] = RapidOCR()
+                _ENGINE["failed_at"] = 0.0
+            except ImportError:
+                _ENGINE["missing"] = True
             except Exception:
-                _ENGINE["failed"] = True
+                # Transient: note when, and let a later plan try again.
+                _ENGINE["failed_at"] = time.monotonic()
+                logging.getLogger(__name__).warning(
+                    "could not load the OCR model; retrying in %.0fs", RETRY_AFTER_SECONDS)
         return _ENGINE["ocr"]
 
 
 def warm_up_in_background() -> None:
     """Start loading the model so the customer's upload doesn't wait for it."""
-    if _ENGINE["ocr"] is None and not _ENGINE["failed"] and ocr_available():
+    if _ENGINE["ocr"] is None and not _giving_up() and ocr_available():
         threading.Thread(target=_engine, name="plan-ocr-warmup", daemon=True).start()
 
 
