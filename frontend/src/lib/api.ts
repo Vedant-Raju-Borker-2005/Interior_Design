@@ -1,5 +1,8 @@
 import axios from 'axios'
 
+// Reading a floor plan is the one slow call in the app; see plan.detect below.
+const PLAN_READ_TIMEOUT = 240000
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 const axiosInstance = axios.create({
@@ -979,17 +982,20 @@ export interface PlanLayoutPayload {
 export const planLayoutAPI = {
   get: (projectId: string) =>
     axiosInstance.get<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}`),
-  // Room detection can take a few seconds (longer with Gemini vision).
+  // Reading a plan takes about five seconds on a developer's machine, but the
+  // hosted backend runs on a fraction of a CPU and has been measured at 52-116
+  // seconds for the same image. Ninety seconds cut real uploads off part-way
+  // and the browser reported it as the backend being unreachable.
   detect: (projectId: string, file: File) => {
     const form = new FormData()
     form.append('file', file)
-    return axiosInstance.post<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}/detect`, form, { timeout: 90000 })
+    return axiosInstance.post<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}/detect`, form, { timeout: PLAN_READ_TIMEOUT })
   },
   // `panel` picks another flat when the upload was a sheet of several.
   redetect: (projectId: string, panel?: number) =>
     axiosInstance.post<PlanLayoutPayload>(
       `/api/v1/ai/plan-layout/${projectId}/redetect${panel === undefined ? '' : `?panel=${panel}`}`,
-      null, { timeout: 90000 }),
+      null, { timeout: PLAN_READ_TIMEOUT }),
   save: (projectId: string, body: { rooms: PlanRoom[]; plan_width_m: number; plan_depth_m?: number; activate?: boolean; sync_bhk?: boolean }) =>
     axiosInstance.put<PlanLayoutPayload>(`/api/v1/ai/plan-layout/${projectId}`, body, { timeout: 60000 }),
   // Keep a room the way the customer arranged it in the 3D viewer.
