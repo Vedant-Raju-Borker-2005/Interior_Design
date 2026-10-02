@@ -65,7 +65,7 @@ TUNING: dict[str, float] = {
     "blob_mass": 0.002,       # ...or covers at least this share of it
     "door_m": 1.72,            # the widest gap closed as a doorway, in metres
     "wide_m": 2.8,            # the widest opening still treated as one space
-    "min_room_m2": 0.85,       # the smallest space kept as a room
+    "min_room_m2": 0.6,       # the smallest space kept as a room
     "sliver_walls": 1.5,      # a sliver thinner than this many walls joins its neighbour
 }
 
@@ -2173,6 +2173,37 @@ def _solve_layout(space, kept, room, s_openings, must_haves, seed, prefix="", ef
     return kept, dropped
 
 
+# How far a piece must move before the eye registers it as a new arrangement.
+NOTICEABLE_M = 0.25
+NOTICEABLE_COUNT = 2
+
+
+def _worth_offering(candidate, existing) -> bool:
+    """Is this arrangement different enough from one already on offer?"""
+    def by_category(objects):
+        out: dict[str, list] = {}
+        for o in objects:
+            out.setdefault(o["category"], []).append(o)
+        return out
+
+    mine, theirs = by_category(candidate), by_category(existing)
+    if set(mine) != set(theirs):
+        return True                       # different pieces entirely
+    if any(len(mine[c]) != len(theirs[c]) for c in mine):
+        return True
+    moved = 0
+    for category, items in mine.items():
+        for a, b in zip(items, theirs[category]):
+            if abs(float(a["rotation"]["yaw"]) - float(b["rotation"]["yaw"])) >= 45:
+                moved += 1
+                continue
+            dx = a["position"]["x"] - b["position"]["x"]
+            dz = a["position"]["z"] - b["position"]["z"]
+            if math.hypot(dx, dz) >= NOTICEABLE_M:
+                moved += 1
+    return moved >= NOTICEABLE_COUNT
+
+
 def _layout_score(space: _Space, objects, must_haves) -> float:
     """How well an arrangement serves the room, so the best one leads."""
     present = {o["category"] for o in objects}
@@ -2220,12 +2251,15 @@ def _furnish(space: _Space, pools, used, openings):
                                      effort=500 if index == 0 else 220)
         if not placed:
             continue
-        signature = tuple(sorted(
+        # Offering an arrangement that turns out to be the one already on
+        # screen makes the control look broken, so a new one has to be
+        # visibly different: either it holds different pieces, or two of them
+        # have actually moved somewhere a person would notice.
+        if any(not _worth_offering(placed, kept["objects"]) for kept in layouts):
+            continue
+        seen_signatures.add(tuple(sorted(
             (o["category"], round(o["position"]["x"], 1), round(o["position"]["z"], 1),
-             int(o["rotation"]["yaw"])) for o in placed))
-        if signature in seen_signatures:
-            continue          # the same room twice is not a choice
-        seen_signatures.add(signature)
+             int(o["rotation"]["yaw"])) for o in placed)))
         layouts.append({
             "name": name,
             "objects": placed,
