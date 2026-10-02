@@ -37,14 +37,13 @@ async def lifespan(app: FastAPI):
     # Startup
     os.makedirs("assets", exist_ok=True)
     os.makedirs("assets/floor_plans", exist_ok=True)
+    # Only what a request cannot be answered without: the schema has to exist,
+    # and an empty database needs its catalogue. Both are a handful of queries.
     init_db()
     db = SessionLocal()
     try:
         seed_database(db)
-        from .db import normalise_asset_urls, sync_demo_data
-        fixed = normalise_asset_urls(db)
-        if fixed:
-            print(f"[startup] repointed image URLs on {fixed} rows to {os.getenv('BACKEND_URL')}")
+        from .db import sync_demo_data
         sync_demo_data(db, force=True)
     finally:
         db.close()
