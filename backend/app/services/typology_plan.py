@@ -183,3 +183,55 @@ def apply_to_project(db: Session, project: Project, typology: Optional[Typology]
     _mark_glb_stale(project)
     db.commit()
     return True
+
+
+# ── the builder's layouts, installed ─────────────────────────────────────────
+
+def seed_builder_layouts(db: Session) -> int:
+    """Put the builder's written-down layouts into the catalogue.
+
+    Called from the ordinary database seed, so a fresh deployment comes up with
+    the real layouts rather than placeholders. Idempotent: an existing row is
+    brought up to date rather than duplicated, and a layout whose drawing is
+    missing from the image folder is still installed -- the card falls back to
+    no picture, which is better than the layout not existing.
+    """
+    from . import builder_typologies as bt
+    from ..models import FloorPlan, Typology
+
+    base = os.getenv("BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
+    installed = 0
+    for layout in bt.ALL:
+        row = db.query(Typology).filter(Typology.name == layout.name,
+                                        Typology.project_id.is_(None)).first()
+        if row is None:
+            row = Typology(project_id=None, name=layout.name)
+            db.add(row)
+            db.flush()
+
+        url = f"{base}/static/assets/floor_plans/builder_{layout.key}.png"
+        plan_row = db.query(FloorPlan).filter(FloorPlan.file_url == url).first()
+        if plan_row is None:
+            plan_row = FloorPlan(project_id=None, file_url=url,
+                                 file_type="png", uploaded_by="builder")
+            db.add(plan_row)
+            db.flush()
+
+        row.bhk_type = layout.bhk
+        row.carpet_area_sqft = layout.carpet_area_sqft
+        row.description = layout.description
+        row.floor_plan_id = plan_row.id
+        row.image_url = url
+        # Written down, not traced: these rooms are already exact.
+        row.plan_cache = {**bt.to_plan(layout), "image_url": url}
+        installed += 1
+
+    # Any catalogue layout that is not one of the builder's is a placeholder
+    # from before they were supplied, and would otherwise sit beside them.
+    names = {layout.name for layout in bt.ALL}
+    for stale in db.query(Typology).filter(Typology.project_id.is_(None)).all():
+        if stale.name not in names:
+            db.delete(stale)
+
+    db.commit()
+    return installed
