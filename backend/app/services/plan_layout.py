@@ -375,11 +375,38 @@ def _structural_walls(rgb: np.ndarray, with_thin: bool = False):
     ink = ((lum < 175) & (sat < 45)) | ((paper >= 225) & (paper - minc >= 30))
     anchors = ndi.binary_opening(dark, structure=np.ones((3, 3), bool))
     thin = _double_line_walls(ink, walls, anchors)
-    if (walls | thin).sum() < 0.004 * dark.size:
-        # Nothing solid and no double lines: an architect's export where every
-        # wall is a single stroke. The line work itself is the wall network.
+    if (walls | thin).sum() < 0.004 * dark.size or not _encloses_rooms(walls | thin):
+        # Either nothing solid was found, or what was found does not shut any
+        # rooms in. Treat the line work itself as the wall network.
         thin = thin | _single_line_walls(ink)
     return (walls | thin, thin) if with_thin else walls | thin
+
+
+# A plan is expected to have at least this many rooms shut off from each other
+# before the wall network is believed. Fewer than this and the drawing is being
+# read as one or two big open spaces, which no flat is.
+ENCLOSED_ROOMS_EXPECTED = 4
+
+
+def _encloses_rooms(walls: np.ndarray) -> bool:
+    """Whether this wall network actually closes rooms off.
+
+    How much wall ink was found says nothing about whether it forms rooms. On a
+    plan drawn in thin grey line work, the dark-pixel pass can return a mask
+    that looks healthy -- a few percent of the page -- while consisting
+    entirely of the one dark stair core and the heaviest outer wall. That
+    encloses a single pocket in a corner; every real room stays open, no
+    rectangle can be traced in it, and the labels read off the drawing have
+    nothing to attach to. Counting the regions the walls actually shut in asks
+    the question the pixel count only appears to answer.
+    """
+    outside = _outside_mask(walls)
+    interior = ~outside & ~walls
+    labelled, count = ndi.label(interior)
+    if not count:
+        return False
+    sizes = np.bincount(labelled.ravel())[1:]
+    return int((sizes > 0.002 * walls.size).sum()) >= ENCLOSED_ROOMS_EXPECTED
 
 
 def _single_line_walls(ink: np.ndarray) -> np.ndarray:
