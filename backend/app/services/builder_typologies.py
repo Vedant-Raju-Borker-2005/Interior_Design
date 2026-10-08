@@ -72,8 +72,14 @@ class Layout:
 
     @property
     def carpet_area_sqft(self) -> float:
-        """Enclosed floor area, excluding balconies and terraces."""
-        inside = sum(s.area_m2 for s in self.spaces
+        """Enclosed floor area, excluding balconies and terraces.
+
+        Includes the hall between the rooms, because carpet area does and
+        because that is the floor the model builds. Computed from the same
+        spaces the plan is built from, so the figure on the card and the one
+        the viewer reports are the same number.
+        """
+        inside = sum(s.area_m2 for s in self.spaces + circulation(self)
                      if s.room_type != "balcony" and "terrace" not in s.label.lower()
                      and "balcon" not in s.label.lower())
         return round(inside * 10.7639, 1)
@@ -320,6 +326,56 @@ def openings(layout: Layout) -> list[Opening]:
     return found
 
 
+def circulation(layout: Layout, step: float = 0.05) -> tuple[Space, ...]:
+    """The hall and passage floor between this layout's rooms, as rectangles.
+
+    A layout is written as the rooms the drawing dimensions, and a drawing does
+    not dimension the hall you walk through to reach them. Left unnamed that
+    floor is still enclosed, so the engine fills it in anyway and the flat
+    reports more area than its rooms account for -- Borda read 774 sq ft
+    against 654 sq ft of rooms. Naming it here keeps the two the same number
+    and gives the circulation a floor the solver knows to keep clear.
+    """
+    import numpy as np
+    import scipy.ndimage as ndi
+
+    nx = int(round(layout.width_m / step))
+    ny = int(round(layout.depth_m / step))
+    grid = np.zeros((ny, nx), dtype=bool)
+    for sp in layout.spaces:
+        grid[int(sp.y / step):int(round((sp.y + sp.h) / step)),
+             int(sp.x / step):int(round((sp.x + sp.w) / step))] = True
+
+    labelled, count = ndi.label(~grid)
+    open_to_outside = set(labelled[0, :]) | set(labelled[-1, :]) |                       set(labelled[:, 0]) | set(labelled[:, -1])
+    enclosed = np.zeros_like(grid)
+    for i in range(1, count + 1):
+        if i not in open_to_outside:
+            enclosed |= (labelled == i)
+
+    # Greedy maximal rectangles: take the widest run on a row, extend it down
+    # as far as it stays clear. Few, large pieces beat many slivers, which the
+    # wall builder would otherwise turn into a thicket of stubs.
+    out: list[Space] = []
+    todo = enclosed.copy()
+    while todo.any():
+        ys, xs = np.where(todo)
+        y0, x0 = int(ys[0]), int(xs[np.where(ys == ys[0])].min())
+        x1 = x0
+        while x1 + 1 < nx and todo[y0, x1 + 1]:
+            x1 += 1
+        y1 = y0
+        while y1 + 1 < ny and todo[y1 + 1, x0:x1 + 1].all():
+            y1 += 1
+        todo[y0:y1 + 1, x0:x1 + 1] = False
+        w, h = (x1 + 1 - x0) * step, (y1 + 1 - y0) * step
+        if w * h < 0.5:
+            continue                              # a sliver is not a hall
+        out.append(Space("passage", "Hall", round(x0 * step, 2), round(y0 * step, 2),
+                         round(w, 2), round(h, 2)))
+    return tuple(out)
+
+
 def to_plan(layout: Layout) -> dict[str, Any]:
     """The layout in the shape the rest of the pipeline reads.
 
@@ -331,7 +387,7 @@ def to_plan(layout: Layout) -> dict[str, Any]:
     image_w = int(round(layout.width_m * 100))
     image_h = int(round(layout.depth_m * 100))
     rooms = []
-    for i, s in enumerate(layout.spaces, start=1):
+    for i, s in enumerate(layout.spaces + circulation(layout), start=1):
         rooms.append({
             "id": f"{layout.key}-r{i}",
             "label": s.label,
@@ -361,6 +417,42 @@ def to_plan(layout: Layout) -> dict[str, Any]:
         "method": "builder",
         "source_file": layout.source,
     }
+
+
+def holes(layout: Layout, step: float = 0.05) -> list[tuple[float, float, float, float]]:
+    """Enclosed floor this layout leaves unnamed, as rectangles in metres.
+
+    A hand-written layout is a set of rectangles, and rectangles leave gaps.
+    The engine fills an enclosed gap in with circulation so the model has a
+    continuous floor, which is right -- but it means the flat reports more
+    floor than the rooms account for, and the difference shows up as a carpet
+    area nobody can explain. Finding the gaps here makes them a thing to fix
+    rather than a discrepancy to notice later.
+    """
+    import numpy as np
+    nx = int(round(layout.width_m / step))
+    ny = int(round(layout.depth_m / step))
+    grid = np.zeros((ny, nx), dtype=bool)
+    for sp in layout.spaces:
+        x0, y0 = int(sp.x / step), int(sp.y / step)
+        x1, y1 = int(round((sp.x + sp.w) / step)), int(round((sp.y + sp.h) / step))
+        grid[y0:y1, x0:x1] = True
+
+    import scipy.ndimage as ndi
+    empty = ~grid
+    labelled, count = ndi.label(empty)
+    outside = set(labelled[0, :]) | set(labelled[-1, :]) |               set(labelled[:, 0]) | set(labelled[:, -1])
+    found = []
+    for i in range(1, count + 1):
+        if i in outside:
+            continue                              # open to the outside, not a hole
+        ys, xs = np.where(labelled == i)
+        area = len(ys) * step * step
+        if area < 0.5:
+            continue                              # a sliver, not a room's worth
+        found.append((round(xs.min() * step, 2), round(ys.min() * step, 2),
+                      round((xs.max() + 1) * step, 2), round((ys.max() + 1) * step, 2)))
+    return found
 
 
 def check(layout: Layout) -> list[str]:
