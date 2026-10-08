@@ -463,6 +463,17 @@ export const adminAPI = {
 
 // Customer Module API
 export const customerAPI = {
+  // Which of the builder's layouts the customer's flat is. Asked during
+  // onboarding, before anything that depends on the room sizes.
+  listTypologies: (params: { bhk?: string; projectId?: string } = {}) =>
+    axiosInstance.get(`/api/v1/customer/typologies`, {
+      params: { bhk: params.bhk || undefined, project_id: params.projectId || undefined },
+    }),
+  getProjectTypology: (projectId: string) =>
+    axiosInstance.get(`/api/v1/customer/projects/${projectId}/typology`),
+  setProjectTypology: (projectId: string, typologyId: string | null) =>
+    axiosInstance.put(`/api/v1/customer/projects/${projectId}/typology`, { typology_id: typologyId }),
+
   getFloorplans: (projectId: string) =>
     axiosInstance.get(`/api/v1/customer/projects/${projectId}/floorplans`),
   uploadFloorplan: (projectId: string, formData: FormData) =>

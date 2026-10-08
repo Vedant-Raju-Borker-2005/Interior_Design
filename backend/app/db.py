@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from sqlalchemy import create_engine, event, exc
@@ -62,10 +63,55 @@ def _missing_tables() -> set[str]:
     return set(Base.metadata.tables) - present
 
 
+# Columns added after a table first shipped. create_all() creates tables but
+# never alters one that already exists, so a deployed database keeps the shape
+# it was created with until something widens it. Checked in one catalogue query
+# and applied only where a column is genuinely absent.
+LATER_COLUMNS: tuple[tuple[str, str, str], ...] = (
+    ("typologies", "bhk_type", "VARCHAR"),
+    ("typologies", "image_url", "VARCHAR"),
+    ("typologies", "description", "VARCHAR"),
+    ("typologies", "plan_cache", "JSON"),
+    ("projects", "typology_id", "VARCHAR"),
+)
+
+
+def _add_later_columns():
+    """Bring an existing database up to the columns the models expect.
+
+    Works on both backends: SQLAlchemy's inspector reads the live columns, and
+    both Postgres and SQLite accept a plain ADD COLUMN for a nullable column.
+    """
+    from sqlalchemy import inspect, text
+    insp = inspect(engine)
+    live = set(insp.get_table_names())
+    for table in sorted({t for t, _, _ in LATER_COLUMNS}):
+        if table not in live:
+            continue                             # create_all will make it whole
+        have = {c["name"] for c in insp.get_columns(table)}
+        absent = [(c, t) for tbl, c, t in LATER_COLUMNS if tbl == table and c not in have]
+        if not absent:
+            continue
+        with engine.begin() as conn:
+            for column, sqltype in absent:
+                conn.execute(text(f'ALTER TABLE {table} ADD COLUMN "{column}" {sqltype}'))
+                logging.getLogger(__name__).info("added %s.%s", table, column)
+
+    # A catalogue layout belongs to no project, so this can no longer be
+    # required. SQLite cannot drop a constraint and does not need to here.
+    if "postgres" in DATABASE_URL and "typologies" in live:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE typologies ALTER COLUMN project_id DROP NOT NULL"))
+        except Exception:
+            pass
+
+
 def init_db():
     missing = _missing_tables()
     if missing:
         Base.metadata.create_all(bind=engine)
+    _add_later_columns()
     if "sqlite" in DATABASE_URL:
         import sqlite3
         db_path = DATABASE_URL.replace("sqlite:///", "")

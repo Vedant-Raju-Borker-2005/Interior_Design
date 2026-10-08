@@ -60,6 +60,9 @@ class Project(Base):
     id = Column(String, primary_key=True, default=gen_uuid)
     user_id = Column(String, ForeignKey("users.id"))
     bhk_type = Column(String)
+    # Which of the builder's layouts the customer said is theirs. A flat carries
+    # its own typology_id; this is the same answer for a project without a flat.
+    typology_id = Column(String, ForeignKey("typologies.id", ondelete="SET NULL"), nullable=True)
     property_name = Column(String)
     locality = Column(String)
     city = Column(String)
@@ -112,6 +115,9 @@ class Project(Base):
     plan_layout = Column(JSON, nullable=True)
 
     user = relationship("User", back_populates="projects")
+    # The layout the customer said is theirs. Named explicitly because
+    # typologies point back at projects as well, so there are two paths.
+    typology = relationship("Typology", foreign_keys=[typology_id])
     rooms = relationship("Room", back_populates="project", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="project", cascade="all, delete-orphan")
     package = relationship("Package", back_populates="projects")
@@ -132,15 +138,32 @@ class Project(Base):
 
 
 class Typology(Base):
+    """One layout a builder offers -- "2 BHK Type A" -- with its floor plan.
+
+    A tower prints several layouts per configuration: two 1 BHKs that differ in
+    where the kitchen sits, three 2 BHKs of different carpet areas. The customer
+    knows which flat is theirs, so they are asked to point at it rather than
+    having one assumed, and everything downstream follows from that choice.
+
+    project_id is null for a catalogue layout, which is one offered to any
+    customer rather than to the buyers of one tower.
+    """
     __tablename__ = "typologies"
     id = Column(String, primary_key=True, default=gen_uuid)
-    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
     name = Column(String, nullable=False)
+    bhk_type = Column(String, nullable=True)      # which configuration it belongs under
     carpet_area_sqft = Column(Float, nullable=True)
+    image_url = Column(String, nullable=True)     # the flat photo, where the plan is separate
+    description = Column(String, nullable=True)   # what sets it apart from its siblings
     floor_plan_id = Column(String, ForeignKey("floor_plans.id", ondelete="SET NULL"), nullable=True)
+    # The rooms read off this layout's drawing, cached. Reading a plan takes
+    # tens of seconds and the answer depends only on the drawing, so it is done
+    # once per layout instead of once per customer who chooses it.
+    plan_cache = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    project = relationship("Project", backref="typologies")
+    project = relationship("Project", foreign_keys=[project_id], backref="typologies")
     floor_plan = relationship("FloorPlan", foreign_keys=[floor_plan_id])
     flats = relationship("Flat", back_populates="typology")
 

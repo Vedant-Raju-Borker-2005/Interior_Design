@@ -4,12 +4,12 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProjectStore } from '@/stores/projectStore'
 import { useAuthStore } from '@/stores/authStore'
-import { projectsAPI, catalogAPI, enterpriseAPI, premiumRenderAPI } from '@/lib/api'
+import { projectsAPI, catalogAPI, enterpriseAPI, premiumRenderAPI, customerAPI } from '@/lib/api'
 
 import BhkSelector from '@/components/BhkSelector'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
-import { ArrowRight, ArrowLeft, CheckCircle2, Home, Sparkles, Wrench, Upload, FileText, Layout, Check, ShieldAlert } from 'lucide-react'
+import { ArrowRight, ArrowLeft, CheckCircle2, Home, Sparkles, Wrench, Upload, FileText, Layout, Check, ShieldAlert, Ruler, Maximize2 } from 'lucide-react'
 import clsx from 'clsx'
 import { getColorHex, getColorFamily } from '@/lib/colorUtils'
 
@@ -68,11 +68,23 @@ const CITIES = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 
 const STEPS = [
   'Property Details',
   'Home Configuration',
+  'Your Layout',
   'Budget & Timeline',
   'Design Vibe',
   'Material & Fabric',
   'Colors'
 ]
+
+// Steps are referred to by name, not by position. A step inserted in the middle
+// used to mean renumbering every comparison in this file, which is how the
+// wrong panel ends up on the wrong step.
+const S_PROPERTY = 0
+const S_CONFIG   = 1
+const S_LAYOUT   = 2
+const S_BUDGET   = 3
+const S_VIBE     = 4
+const S_MATERIAL = 5
+const S_COLORS   = 6
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -107,7 +119,13 @@ export default function OnboardingPage() {
   })
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
 
+  // The builder's layouts for the chosen configuration, and which one is theirs.
+  const [typologies, setTypologies] = useState<any[]>([])
+  const [typologyLoading, setTypologyLoading] = useState(false)
+  const [typologySkipped, setTypologySkipped] = useState(false)
+
   const [local, setLocal] = useState({
+    typology_id:         '',
     style_tags:          [] as string[],
     color_preferences:   [] as string[],
     bhk:                 '',
@@ -148,8 +166,9 @@ export default function OnboardingPage() {
             if (data.customer_project_id) {
               setChildProjectId(data.customer_project_id)
             }
-            // Starts directly at Step 3 (Design Vibe)
-            setStep(3)
+            // Property and configuration come from the invitation, so the
+            // first thing to ask is which of the tower's layouts is theirs.
+            setStep(S_LAYOUT)
           })
           .catch(err => {
             console.error("Invalid token details:", err)
@@ -184,17 +203,22 @@ export default function OnboardingPage() {
           }))
 
           if (isEnt) {
-            if (!p.style_tags || p.style_tags.length === 0) setStep(3)
-            else if (!p.interior_material_preference) setStep(4)
-            else if (!p.color_preferences || p.color_preferences.length === 0) setStep(5)
+            if (!p.typology_id) setStep(S_LAYOUT)
+            else if (!p.style_tags || p.style_tags.length === 0) setStep(S_VIBE)
+            else if (!p.interior_material_preference) setStep(S_MATERIAL)
+            else if (!p.color_preferences || p.color_preferences.length === 0) setStep(S_COLORS)
             else router.push(`/packages?projectId=${p.id}&bhk=${p.bhk_type || '2BHK'}&budget=${p.budget || 1000000}`)
           } else {
-            if (!p.property_name) setStep(0)
-            else if (!p.bhk_type) setStep(1)
-            else if (!p.budget) setStep(2)
-            else if (!p.style_tags || p.style_tags.length === 0) setStep(3)
-            else if (!p.interior_material_preference) setStep(4)
-            else if (!p.color_preferences || p.color_preferences.length === 0) setStep(5)
+            if (!p.property_name) setStep(S_PROPERTY)
+            else if (!p.bhk_type) setStep(S_CONFIG)
+            // The layout is asked right after the configuration, in both flows.
+            // Leaving it out here sent anyone with a half-finished project
+            // straight past the step and on to a standard arrangement.
+            else if (!p.typology_id) setStep(S_LAYOUT)
+            else if (!p.budget) setStep(S_BUDGET)
+            else if (!p.style_tags || p.style_tags.length === 0) setStep(S_VIBE)
+            else if (!p.interior_material_preference) setStep(S_MATERIAL)
+            else if (!p.color_preferences || p.color_preferences.length === 0) setStep(S_COLORS)
             else router.push(`/packages?projectId=${p.id}&bhk=${p.bhk_type || '2BHK'}&budget=${p.budget || 1000000}`)
           }
         }).catch(err => {
@@ -232,6 +256,26 @@ export default function OnboardingPage() {
     fetchColors()
   }, [local.style_tags])
 
+  // Loaded when the step opens rather than up front: the list depends on the
+  // configuration chosen on the step before it.
+  useEffect(() => {
+    if (step !== S_LAYOUT) return
+    let cancelled = false
+    setTypologyLoading(true)
+    customerAPI
+      .listTypologies({ bhk: local.bhk, projectId: childProjectId || undefined })
+      .then((res) => {
+        if (cancelled) return
+        const list = res.data?.typologies || []
+        setTypologies(list)
+        const already = res.data?.selected?.id
+        if (already) setLocal((s) => (s.typology_id ? s : { ...s, typology_id: already }))
+      })
+      .catch(() => { if (!cancelled) setTypologies([]) })
+      .finally(() => { if (!cancelled) setTypologyLoading(false) })
+    return () => { cancelled = true }
+  }, [step, local.bhk, childProjectId])
+
   if (!isLoggedIn) {
     if (typeof window !== 'undefined') router.push('/login')
     return null
@@ -266,18 +310,33 @@ export default function OnboardingPage() {
     }))
   }
 
+
+  const selectedTypology = typologies.find((t) => t.id === local.typology_id) || null
+
+  const saveTypology = async (typologyId: string | null) => {
+    if (!childProjectId) return
+    try {
+      await customerAPI.setProjectTypology(childProjectId, typologyId)
+    } catch (err) {
+      console.error('Could not save the chosen layout:', err)
+      toast.error('Could not save your layout. You can change it later.')
+    }
+  }
+
   const canNext = () => {
-    if (step === 0) return !!local.city && !!local.property_name
-    if (step === 1) return !!local.bhk && !!local.furnishing_type
-    if (step === 2) return !!local.budget && !!local.timeline && !!local.material_preference
-    if (step === 3) return local.style_tags.length > 0
-    if (step === 4) return !!local.interior_material_preference && !!local.fabric_preference
-    if (step === 5) return local.color_preferences.length > 0
+    if (step === S_PROPERTY) return !!local.city && !!local.property_name
+    if (step === S_CONFIG) return !!local.bhk && !!local.furnishing_type
+    // Nothing to choose, or they said none of these fit: either way, carry on.
+    if (step === S_LAYOUT) return typologies.length === 0 || typologySkipped || !!local.typology_id
+    if (step === S_BUDGET) return !!local.budget && !!local.timeline && !!local.material_preference
+    if (step === S_VIBE) return local.style_tags.length > 0
+    if (step === S_MATERIAL) return !!local.interior_material_preference && !!local.fabric_preference
+    if (step === S_COLORS) return local.color_preferences.length > 0
     return false
   }
 
   const handleNext = async () => {
-    if (step === 0) {
+    if (step === S_PROPERTY) {
       if (local.pincode && (local.pincode.length !== 6 || !/^\d+$/.test(local.pincode))) {
         toast.error("Pincode must be a 6-digit number.")
         return
@@ -285,7 +344,7 @@ export default function OnboardingPage() {
     }
 
     // Direct B2C: Auto-create draft project at Step 1 if not created yet
-    if (!isB2B2C && step === 1 && !childProjectId) {
+    if (!isB2B2C && step === S_CONFIG && !childProjectId) {
       try {
         const budgetObj = BUDGET_RANGES.find((b) => b.id === local.budget)
         const res = await projectsAPI.create({
@@ -336,6 +395,13 @@ export default function OnboardingPage() {
       } catch (err) {
         console.error("Failed to update draft project step:", err)
       }
+    }
+
+    if (step === S_LAYOUT) {
+      await saveTypology(local.typology_id || null)
+      // An invited buyer's budget and timeline come from the builder, so the
+      // next thing to ask them about is the design itself.
+      if (isB2B2C) { setStep(S_VIBE); return }
     }
 
     setStep((s) => s + 1)
@@ -474,10 +540,40 @@ export default function OnboardingPage() {
           })}
         </div>
 
+        {/* The layout stays on screen once chosen, so it is never a decision
+            the customer made early and then cannot find again. */}
+        {step > S_LAYOUT && (selectedTypology || local.typology_id) && (
+          <div className="mb-5 flex items-center justify-between gap-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl px-4 py-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="w-9 h-9 rounded-xl bg-white border border-indigo-100 flex items-center justify-center flex-none">
+                <Layout className="w-4 h-4 text-indigo-600" />
+              </span>
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">Your layout</div>
+                <div className="text-sm font-bold text-slate-900 truncate">
+                  {selectedTypology?.name || 'Selected'}
+                  {selectedTypology?.carpet_area_sqft ? (
+                    <span className="font-semibold text-slate-500">
+                      {' '}&middot; {Math.round(selectedTypology.carpet_area_sqft)} sq ft
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStep(S_LAYOUT)}
+              className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-white border border-indigo-200 rounded-lg px-3 py-1.5 whitespace-nowrap transition-colors"
+            >
+              Change
+            </button>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
 
           {/* Step 0: Property Details */}
-          {step === 0 && (
+          {step === S_PROPERTY && (
             <motion.div key="details" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
               <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Property Details</h2>
               <p className="text-slate-500 mb-8">Let's locate your property to customize delivery constraints.</p>
@@ -513,7 +609,7 @@ export default function OnboardingPage() {
           )}
 
           {/* Step 1: Preferences + Home Configuration */}
-          {step === 1 && (
+          {step === S_CONFIG && (
             <motion.div key="bhk" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-6">
               <div>
                 <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Scope & Home Configuration</h2>
@@ -606,7 +702,118 @@ export default function OnboardingPage() {
           )}
 
           {/* Step 2: Budget & Timeline */}
-          {step === 2 && (
+          {step === S_LAYOUT && (
+            <motion.div key="layout" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-6">
+              <div>
+                <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Which layout is your home?</h2>
+                <p className="text-slate-500 mb-1">
+                  Builders print more than one layout for a {local.bhk || 'home'} &mdash; the rooms sit differently in each.
+                  Pick the one that matches your flat and we will design against its real plan.
+                </p>
+                <p className="text-slate-400 text-sm">You can change this at any point, including after onboarding.</p>
+              </div>
+
+              {typologyLoading && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-card p-4 animate-pulse">
+                      <div className="h-36 bg-slate-100 rounded-xl mb-3" />
+                      <div className="h-4 bg-slate-100 rounded w-1/2 mb-2" />
+                      <div className="h-3 bg-slate-100 rounded w-3/4" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!typologyLoading && typologies.length === 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center">
+                  <Layout className="w-7 h-7 text-amber-600 mx-auto mb-2" />
+                  <p className="text-sm font-bold text-amber-900">No layouts listed for {local.bhk || 'this configuration'} yet</p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    We will use standard room sizes for now, and you can upload your floor plan later.
+                  </p>
+                </div>
+              )}
+
+              {!typologyLoading && typologies.length > 0 && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {typologies.map((t) => {
+                      const active = local.typology_id === t.id
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            setTypologySkipped(false)
+                            setLocal((s) => ({ ...s, typology_id: active ? '' : t.id }))
+                          }}
+                          className={clsx(
+                            'text-left bg-white rounded-2xl border-2 p-4 transition-all shadow-card hover:shadow-lg',
+                            active ? 'border-indigo-600 ring-2 ring-indigo-100' : 'border-slate-100 hover:border-indigo-300'
+                          )}
+                        >
+                          <div className="relative h-40 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 mb-3 flex items-center justify-center">
+                            {t.image_url ? (
+                              <img src={t.image_url} alt={t.name} className="w-full h-full object-contain" />
+                            ) : (
+                              <div className="text-center px-3">
+                                <Layout className="w-8 h-8 text-slate-300 mx-auto mb-1" />
+                                <span className="text-[11px] text-slate-400">Floor plan coming soon</span>
+                              </div>
+                            )}
+                            {active && (
+                              <span className="absolute top-2 right-2 w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow">
+                                <Check className="w-4 h-4" />
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-extrabold text-slate-900 leading-tight">{t.name}</span>
+                            {t.bhk_type && (
+                              <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md whitespace-nowrap">
+                                {t.bhk_type}
+                              </span>
+                            )}
+                          </div>
+
+                          {t.carpet_area_sqft ? (
+                            <div className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold mt-1.5">
+                              <Maximize2 className="w-3.5 h-3.5 text-slate-400" />
+                              {Math.round(t.carpet_area_sqft)} sq ft carpet area
+                            </div>
+                          ) : null}
+
+                          {t.description && (
+                            <p className="text-xs text-slate-500 mt-2 leading-relaxed">{t.description}</p>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTypologySkipped(true)
+                      setLocal((s) => ({ ...s, typology_id: '' }))
+                    }}
+                    className={clsx(
+                      'w-full text-center text-sm font-semibold rounded-xl border-2 border-dashed py-3 transition-all',
+                      typologySkipped
+                        ? 'border-indigo-400 bg-indigo-50/50 text-indigo-700'
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                    )}
+                  >
+                    {typologySkipped ? "We'll use standard room sizes \u2014 you can set this later" : "None of these match my flat"}
+                  </button>
+                </>
+              )}
+            </motion.div>
+          )}
+
+          {step === S_BUDGET && (
             <motion.div key="budget" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-6">
               <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Budget & Timeline</h2>
               <p className="text-slate-500 mb-4">Helps us curate package price tiers aligned with your preference.</p>
@@ -683,7 +890,7 @@ export default function OnboardingPage() {
           )}
 
           {/* Step 3: Design Vibe */}
-          {step === 3 && (
+          {step === S_VIBE && (
             <motion.div key="style" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
               <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">What's your design vibe?</h2>
               <p className="text-slate-500 mb-8">Select one interior style. Visual representations guide our design engine.</p>
@@ -729,7 +936,7 @@ export default function OnboardingPage() {
           )}
 
           {/* Step 4: Material & Fabric Preferences */}
-          {step === 4 && (
+          {step === S_MATERIAL && (
             <motion.div key="material-pref" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-8">
               <div>
                 <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Material & Fabric Preferences</h2>
@@ -825,14 +1032,14 @@ export default function OnboardingPage() {
           )}
 
           {/* Step 5: Colors */}
-          {step === 5 && !availableColors && (
+          {step === S_COLORS && !availableColors && (
             <div className="text-center py-20">
               <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
               <p className="text-slate-500 text-sm">Loading color preferences catalog...</p>
             </div>
           )}
 
-          {step === 5 && availableColors && (() => {
+          {step === S_COLORS && availableColors && (() => {
             const categoriesNames = ["Neutral", "Earthy", "Luxury / Premium", "Accent"];
 
             return (
@@ -1105,8 +1312,8 @@ export default function OnboardingPage() {
         {/* Navigation */}
         <div className="flex justify-between mt-10">
           <button 
-            onClick={() => setStep((s) => Math.max(isB2B2C ? 3 : 0, s - 1))} 
-            disabled={(isB2B2C && step <= 3) || step === 0}
+            onClick={() => setStep((s) => Math.max(isB2B2C ? S_LAYOUT : S_PROPERTY, s - 1))} 
+            disabled={(isB2B2C && step <= S_LAYOUT) || step === S_PROPERTY}
             className="btn-ghost flex items-center gap-2 disabled:opacity-30"
           >
             <ArrowLeft className="w-4 h-4" /> Back

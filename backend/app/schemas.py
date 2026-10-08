@@ -331,7 +331,10 @@ class UpdateFlatReq(BaseModel):
 
 class CreateTypologyReq(BaseModel):
     name: str
+    bhk_type: Optional[str] = None          # which configuration it is offered under
     carpet_area_sqft: Optional[float] = None
+    description: Optional[str] = None       # what sets it apart from its siblings
+    image_url: Optional[str] = None
     floor_plan_id: Optional[str] = None
 
 

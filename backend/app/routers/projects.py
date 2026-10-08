@@ -477,9 +477,13 @@ def _project_summary(p: Project) -> dict:
         else:
             fp_name = "Standard 2D Layout Plan"
 
+    typology = p.typology if getattr(p, "typology_id", None) else None
     return {
         "id": p.id,
         "bhk_type": p.bhk_type,
+        "typology_id": p.typology_id,
+        "typology_name": typology.name if typology else None,
+        "typology_carpet_area_sqft": typology.carpet_area_sqft if typology else None,
         "property_name": p.property_name,
         "city": p.city,
         "budget": p.budget,
