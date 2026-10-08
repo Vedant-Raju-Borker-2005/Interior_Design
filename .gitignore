@@ -111,3 +111,6 @@ backend/plan_dataset/seg/
 backend/ml/runs/
 # The exported .onnx IS committed - it is what the app loads.
 !backend/ml/models/
+
+# The builder's own layout drawings are product data, not customer uploads.
+!backend/assets/floor_plans/builder_*.png

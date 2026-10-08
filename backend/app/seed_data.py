@@ -4,7 +4,7 @@ import re
 import urllib.parse
 import uuid
 from sqlalchemy.orm import Session
-from .models import Package, Product, Vendor, VendorProduct, ProductVariant, Inventory, InteriorMaterial
+from .models import Package, Product, Vendor, VendorProduct, ProductVariant, Inventory, InteriorMaterial, Typology
 
 # Where this backend answers from. A deployment must set BACKEND_URL, or every
 # image URL seeded here points at the visitor's own machine.
@@ -288,12 +288,44 @@ VENDORS = [
 ]
 
 
+# The layouts offered to a customer who is not buying in a builder's tower.
+# A builder's own layouts come in through the enterprise screen and are shown
+# in place of these, so this list is a floor and not a default.
+# Carpet areas are typical Indian apartment sizes for each configuration.
+CATALOGUE_TYPOLOGIES: tuple[tuple[str, str, float, str], ...] = (
+    ("1 BHK Compact", "1BHK", 380.0,
+     "Kitchen opens off the living room, one bathroom reached from the passage."),
+    ("1 BHK Wide", "1BHK", 465.0,
+     "Separate kitchen with a utility balcony, and a longer living room."),
+    ("2 BHK Type A", "2BHK", 650.0,
+     "Both bedrooms on one side, a shared bathroom, kitchen beside the entrance."),
+    ("2 BHK Type B", "2BHK", 735.0,
+     "Master bedroom with attached bathroom, second bathroom off the passage."),
+    ("2 BHK Corner", "2BHK", 820.0,
+     "Corner flat with windows on two sides and a wider balcony off the living room."),
+    ("3 BHK Type A", "3BHK", 1050.0,
+     "Three bedrooms along one corridor, two bathrooms, kitchen with a utility area."),
+    ("3 BHK Type B", "3BHK", 1240.0,
+     "Master with a walk-in wardrobe and attached bath, dining set apart from the living room."),
+    ("4 BHK Duplex", "4BHK", 1680.0,
+     "Living, dining and kitchen on the lower level, four bedrooms above."),
+)
+
+
 def seed_database(db: Session):
     # Seed interior materials independently
     if db.query(InteriorMaterial).count() == 0:
         materials = ["Oak Laminate", "Teak Laminate", "Walnut Laminate"]
         for m in materials:
             db.add(InteriorMaterial(id=str(uuid.uuid4()), name=m))
+        db.commit()
+
+    # Seeded independently too: a customer reaches the layout step on their
+    # first visit, long before packages or products matter.
+    if db.query(Typology).filter(Typology.project_id.is_(None)).count() == 0:
+        for name, bhk, area, note in CATALOGUE_TYPOLOGIES:
+            db.add(Typology(id=str(uuid.uuid4()), project_id=None, name=name,
+                            bhk_type=bhk, carpet_area_sqft=area, description=note))
         db.commit()
 
     if db.query(Package).count() > 0:
