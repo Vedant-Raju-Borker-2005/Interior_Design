@@ -200,9 +200,33 @@ app.include_router(premium_render.router,   prefix="/api/v1/ai",              ta
 app.include_router(design_studio.router,    prefix="/api/v1/ai",              tags=["Design Studio"])
 
 
+def _running_commit() -> str:
+    """Which commit this process is actually running.
+
+    Render sets RENDER_GIT_COMMIT on every build; locally we read the checkout.
+    Without this there is no way to tell a deployment that has not picked up a
+    push from one that has, which is a long way to go round to find out that
+    nothing shipped.
+    """
+    for var in ("RENDER_GIT_COMMIT", "GIT_COMMIT", "SOURCE_VERSION", "HEROKU_SLUG_COMMIT"):
+        value = os.getenv(var)
+        if value:
+            return value[:12]
+    try:
+        head = Path(__file__).resolve().parents[2] / ".git" / "HEAD"
+        ref = head.read_text(encoding="utf-8").strip()
+        if ref.startswith("ref: "):
+            ref = (head.parent / ref[5:]).read_text(encoding="utf-8").strip()
+        return ref[:12]
+    except Exception:
+        return "unknown"
+
+
 @app.get("/health", tags=["Health"])
 def health():
-    return {"status": "ok", "service": "Interior AI Platform", "version": "2.0.0"}
+    return {"status": "ok", "service": "Interior AI Platform", "version": "2.0.0",
+            "commit": _running_commit(),
+            "branch": os.getenv("RENDER_GIT_BRANCH") or None}
 
 
 @app.get("/", tags=["Root"])
