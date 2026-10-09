@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, ArrowLeft, Clock, CheckCircle2, Download,
   Image as ImageIcon, RefreshCw, X, Layout, AlignLeft, Settings,
-  ChevronLeft, ChevronRight, Lock, PencilRuler, Box, Map as MapIcon, Loader2, FileText, ScanLine
+  ChevronLeft, ChevronRight, Lock, PencilRuler, Box, Map as MapIcon, Loader2, FileText, ScanLine, Footprints
 } from 'lucide-react'
 import clsx from 'clsx'
 import { getBestColorMatch, getColorHex } from '@/lib/colorUtils'
@@ -210,8 +210,8 @@ export default function ControlledVisualizePage() {
   const [viewerKey, setViewerKey] = useState(0)            // bump to redraw 2D + 3D
   const [viewerReady, setViewerReady] = useState(false)
   const [studioSummary, setStudioSummary] = useState<any>(null)
-  // 2D plan and 3D model are separate views (never merged side by side).
-  const [layoutMode, setLayoutMode] = useState<'plan' | '3d'>('plan')
+  // 2D plan, 3D dollhouse model, and GTA Walkthrough views.
+  const [layoutMode, setLayoutMode] = useState<'plan' | '3d' | 'walkthrough'>('plan')
   const [editOpen, setEditOpen] = useState(false)
   const [renderStudioOpen, setRenderStudioOpen] = useState(false)
   const [geminiUnlocked, setGeminiUnlocked] = useState(false)
@@ -494,6 +494,11 @@ export default function ControlledVisualizePage() {
         setStudioSummary(msg.summary)
       }
 
+      if (msg.type === 'interiorai:view-mode') {
+        if (msg.mode === 'walkthrough') setLayoutMode('walkthrough')
+        else if (msg.mode === 'dollhouse' && layoutMode === 'walkthrough') setLayoutMode('3d')
+      }
+
       const pending = glbRequest.current
       if ((msg.type === 'ids:glb' || msg.type === 'ids:glb-error') && pending && pending.id === msg.requestId) {
         const { mode } = pending
@@ -530,9 +535,20 @@ export default function ControlledVisualizePage() {
     return () => window.removeEventListener('message', onMessage)
   }, [viewerOrigin, projectId, project?.property_name])
 
-  // Layout: 2D plan / split / 3D model.
+  // Layout: 2D plan / 3D dollhouse / GTA Walkthrough.
   useEffect(() => {
-    if (viewerReady) postToViewer({ type: 'ids:layout', mode: layoutMode })
+    if (viewerReady) {
+      if (layoutMode === 'plan') {
+        postToViewer({ type: 'ids:layout', mode: 'plan' })
+        postToViewer({ type: 'ids:view-mode', mode: 'dollhouse' })
+      } else if (layoutMode === '3d') {
+        postToViewer({ type: 'ids:layout', mode: '3d' })
+        postToViewer({ type: 'ids:view-mode', mode: 'dollhouse' })
+      } else if (layoutMode === 'walkthrough') {
+        postToViewer({ type: 'ids:layout', mode: '3d' })
+        postToViewer({ type: 'ids:view-mode', mode: 'in-house' })
+      }
+    }
   }, [layoutMode, viewerReady, postToViewer])
 
   // First visit or after an edit: save the current 3D model to the project.
@@ -643,15 +659,16 @@ export default function ControlledVisualizePage() {
             </div>
           </div>
 
-          {/* View: 2D plan or 3D model — shown separately */}
+          {/* View: 2D plan, 3D model, Walkthrough */}
           <div className="flex bg-slate-950/70 p-1 rounded-xl border border-white/10">
             {([
               { id: 'plan', label: '2D plan', icon: MapIcon },
               { id: '3d', label: '3D model', icon: Box },
+              { id: 'walkthrough', label: 'Walkthrough', icon: Footprints },
             ] as const).map((m) => (
               <button key={m.id} type="button" onClick={() => setLayoutMode(m.id)}
                 className={clsx('px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition',
-                  layoutMode === m.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white')}>
+                  layoutMode === m.id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white')}>
                 <m.icon className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{m.label}</span>
               </button>
             ))}

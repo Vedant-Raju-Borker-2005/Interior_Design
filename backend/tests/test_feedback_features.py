@@ -33,6 +33,8 @@ def client():
 
     from fastapi.testclient import TestClient
     from app.main import app
+    os.environ.pop("GEMINI_KEY", None)           # never call a paid API from tests
+    os.environ.pop("ROOM_MODEL_PATH", None)      # deterministic offline detector in unit tests
 
     with TestClient(app) as c:                   # runs lifespan: migrate + seed
         yield c
