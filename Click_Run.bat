@@ -21,19 +21,19 @@ set "ROOT=%~dp0"
 ::   Click_Run.bat dev    -> development (live reload)
 set "MODE=fast"
 if /i "%~1"=="dev" set "MODE=dev"
-set "BACKEND=%ROOT%backend"
-set "FRONTEND=%ROOT%frontend"
+set "BACKEND=!ROOT!backend"
+set "FRONTEND=!ROOT!frontend"
 
 :: ============================================================
 :: [0] HARD CHECK - Backend folder must exist
 ::     This app does NOT run in dummy/mock mode.
 :: ============================================================
-if not exist "%BACKEND%\requirements.txt" (
+if not exist "!BACKEND!\requirements.txt" (
     echo.
     echo ============================================================
     echo   ERROR: Backend folder not found!
     echo.
-    echo   Looked for: %BACKEND%\requirements.txt
+    echo   Looked for: !BACKEND!\requirements.txt
     echo.
     echo   This app does NOT run in dummy/mock mode.
     echo   Please make sure the full repo is cloned with the
@@ -85,18 +85,18 @@ echo.
 echo [3/5] Setting up backend...
 
 :: Pre-create static directories
-if not exist "%BACKEND%\assets" mkdir "%BACKEND%\assets"
-if not exist "%BACKEND%\assets\floor_plans" mkdir "%BACKEND%\assets\floor_plans"
-if not exist "%BACKEND%\assets\documents" mkdir "%BACKEND%\assets\documents"
-if not exist "%BACKEND%\assets\proofs" mkdir "%BACKEND%\assets\proofs"
-if not exist "%BACKEND%\assets\renders" mkdir "%BACKEND%\assets\renders"
+if not exist "!BACKEND!\assets" mkdir "!BACKEND!\assets"
+if not exist "!BACKEND!\assets\floor_plans" mkdir "!BACKEND!\assets\floor_plans"
+if not exist "!BACKEND!\assets\documents" mkdir "!BACKEND!\assets\documents"
+if not exist "!BACKEND!\assets\proofs" mkdir "!BACKEND!\assets\proofs"
+if not exist "!BACKEND!\assets\renders" mkdir "!BACKEND!\assets\renders"
 
 :: Sync .env file if it exists in root to backend folder
-if exist "%ROOT%\.env" (
-    copy /y "%ROOT%\.env" "%BACKEND%\.env" >nul
+if exist "!ROOT!\.env" (
+    copy /y "!ROOT!\.env" "!BACKEND!\.env" >nul
 )
 
-cd /d "%BACKEND%"
+cd /d "!BACKEND!"
 
 if not exist ".venv" (
     echo   Creating Python virtual environment...
@@ -133,14 +133,14 @@ if not exist ".venv\installed.flag" (
 )
 
 echo   Backend ready.
-cd /d "%ROOT%"
+cd /d "!ROOT!"
 echo.
 
 :: ============================================================
 :: [4/5] Frontend - npm install
 :: ============================================================
 echo [4/5] Setting up frontend...
-cd /d "%FRONTEND%"
+cd /d "!FRONTEND!"
 
 if not exist "node_modules" (
     echo   Installing frontend dependencies ^(first time only - takes ~2-3 min^)...
@@ -156,7 +156,7 @@ if not exist "node_modules" (
 )
 
 echo   Frontend ready.
-cd /d "%ROOT%"
+cd /d "!ROOT!"
 echo.
 
 :: ============================================================
@@ -180,34 +180,34 @@ echo.
 :: Launch Backend (auto-reload only in dev mode: it runs a second process)
 set "RELOAD="
 if /i "%MODE%"=="dev" set "RELOAD=--reload"
-start "InteriorAI - Backend (port 8000)" /d "%BACKEND%" cmd /k "chcp 65001 >nul && set PYTHONIOENCODING=utf-8 && call .venv\Scripts\activate.bat && echo Backend starting... && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 %RELOAD%"
+start "InteriorAI - Backend (port 8000)" /d "!BACKEND!" cmd /k "chcp 65001 >nul && set PYTHONIOENCODING=utf-8 && call .venv\Scripts\activate.bat && echo Backend starting... && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 !RELOAD!"
 
 :: Wait for backend to initialize
 timeout /t 4 /nobreak >nul 2>&1
 
 :: Launch Frontend
 if /i "%MODE%"=="dev" (
-    start "InteriorAI - Frontend (port 3000)" /d "%FRONTEND%" cmd /k "chcp 65001 >nul && echo Frontend starting in dev mode... && npm run dev"
+    start "InteriorAI - Frontend (port 3000)" /d "!FRONTEND!" cmd /k "chcp 65001 >nul && echo Frontend starting in dev mode... && npm run dev"
 ) else (
     rem Rebuild only when the code changed since the last build (or never built).
     set "HEAD=nobuild"
-    for /f %%i in ('git -C "%ROOT%." rev-parse HEAD 2^>nul') do set "HEAD=%%i"
+    for /f %%i in ('git rev-parse HEAD 2^>nul') do set "HEAD=%%i"
     set "BUILT="
-    if exist "%FRONTEND%\.next\BUILD_ID" if exist "%FRONTEND%\.next\BUILT_FROM" set /p BUILT=<"%FRONTEND%\.next\BUILT_FROM"
+    if exist "!FRONTEND!\.next\BUILD_ID" if exist "!FRONTEND!\.next\BUILT_FROM" set /p BUILT=<"!FRONTEND!\.next\BUILT_FROM"
     if not "!BUILT!"=="!HEAD!" (
         echo   Building the frontend once for fast page loads. This takes a few minutes...
-        pushd "%FRONTEND%"
+        pushd "!FRONTEND!"
         call npm run build
         if errorlevel 1 (
             echo   Build failed - starting in dev mode instead.
             popd
-            start "InteriorAI - Frontend (port 3000)" /d "%FRONTEND%" cmd /k "chcp 65001 >nul && npm run dev"
+            start "InteriorAI - Frontend (port 3000)" /d "!FRONTEND!" cmd /k "chcp 65001 >nul && npm run dev"
             goto :frontend_started
         )
-        >"%FRONTEND%\.next\BUILT_FROM" echo !HEAD!
+        >"!FRONTEND!\.next\BUILT_FROM" echo !HEAD!
         popd
     )
-    start "InteriorAI - Frontend (port 3000)" /d "%FRONTEND%" cmd /k "chcp 65001 >nul && echo Frontend starting... && npm run start"
+    start "InteriorAI - Frontend (port 3000)" /d "!FRONTEND!" cmd /k "chcp 65001 >nul && echo Frontend starting... && npm run start"
 )
 :frontend_started
 
