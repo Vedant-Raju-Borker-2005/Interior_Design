@@ -98,13 +98,41 @@ def _add_later_columns():
                 logging.getLogger(__name__).info("added %s.%s", table, column)
 
     # A catalogue layout belongs to no project, so this can no longer be
-    # required. SQLite cannot drop a constraint and does not need to here.
+    # required.
     if "postgres" in DATABASE_URL and "typologies" in live:
         try:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE typologies ALTER COLUMN project_id DROP NOT NULL"))
         except Exception:
             pass
+    elif "sqlite" in DATABASE_URL and "typologies" in live:
+        try:
+            with engine.begin() as conn:
+                info = conn.exec_driver_sql("PRAGMA table_info(typologies)").fetchall()
+                proj_col = next((c for c in info if c[1] == "project_id"), None)
+                if proj_col and proj_col[3] == 1:
+                    conn.exec_driver_sql("""
+                        CREATE TABLE typologies_migration_tmp (
+                            id VARCHAR PRIMARY KEY,
+                            project_id VARCHAR,
+                            name VARCHAR NOT NULL,
+                            carpet_area_sqft FLOAT,
+                            floor_plan_id VARCHAR,
+                            created_at DATETIME,
+                            bhk_type VARCHAR,
+                            image_url VARCHAR,
+                            description VARCHAR,
+                            plan_cache JSON,
+                            FOREIGN KEY(project_id) REFERENCES projects (id) ON DELETE CASCADE,
+                            FOREIGN KEY(floor_plan_id) REFERENCES floor_plans (id) ON DELETE SET NULL
+                        )
+                    """)
+                    conn.exec_driver_sql("INSERT INTO typologies_migration_tmp SELECT id, project_id, name, carpet_area_sqft, floor_plan_id, created_at, bhk_type, image_url, description, plan_cache FROM typologies")
+                    conn.exec_driver_sql("DROP TABLE typologies")
+                    conn.exec_driver_sql("ALTER TABLE typologies_migration_tmp RENAME TO typologies")
+        except Exception:
+            pass
+
 
 
 def init_db():
