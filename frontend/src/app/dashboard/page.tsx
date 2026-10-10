@@ -17,10 +17,12 @@ import Link from 'next/link'
 import clsx from 'clsx'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  draft:   { label: 'Draft',       color: 'bg-slate-100 text-slate-600',   icon: Edit3 },
-  quoted:  { label: 'Quoted',      color: 'bg-amber-100 text-amber-700',   icon: FileText },
-  ordered: { label: 'In Progress', color: 'bg-blue-100 text-blue-700',     icon: TrendingUp },
-  done:    { label: 'Completed',   color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 },
+  draft:     { label: 'Draft',        color: 'bg-slate-100 text-slate-600',     icon: Edit3 },
+  quoted:    { label: 'Quoted',       color: 'bg-amber-100 text-amber-700',     icon: FileText },
+  ordered:   { label: 'In Progress',  color: 'bg-blue-100 text-blue-700',       icon: TrendingUp },
+  execution: { label: 'In Execution', color: 'bg-blue-100 text-blue-700',       icon: TrendingUp },
+  converted: { label: 'In Execution', color: 'bg-blue-100 text-blue-700',       icon: TrendingUp },
+  done:      { label: 'Completed',    color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 },
 }
 
 const CITIES = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Ahmedabad', 'Other']
@@ -121,9 +123,17 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
   const { user } = useAuthStore()
   const statusObj = STATUS_CONFIG[project.status] || STATUS_CONFIG.draft
   const isOnboardingIncomplete = !project.package_id || project.status === 'onboarding' || (project.status === 'draft' && (!project.color_preferences || project.color_preferences.length === 0))
-  const isExecution = ['ordered', 'done'].includes(project.status)
-  const isAdminApproved = project.approval_status === 'APPROVED'
-  const isPendingAdminApproval = !isAdminApproved && !isOnboardingIncomplete && project.status === 'quoted'
+  const isConverted = Boolean(
+    project.is_converted ||
+    project.status === 'execution' ||
+    project.status === 'converted' ||
+    (project.defaults && project.defaults.converted_from_project_id)
+  )
+  const isExecution = ['execution', 'ordered', 'done'].includes(project.status) || isConverted
+  const canTrack = isConverted || isExecution
+  const isPendingAdminApproval = !canTrack && !isOnboardingIncomplete && (project.status === 'quoted')
+
+  const cleanPropertyName = (project.property_name || '').replace(/\s*[—–-]\s*Execution$/i, '').trim()
 
   return (
     <motion.div
@@ -144,7 +154,7 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
       <div className="p-5">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-slate-800 text-lg leading-tight truncate">{project.property_name}</h3>
+            <h3 className="font-bold text-slate-800 text-lg leading-tight truncate">{cleanPropertyName || project.property_name}</h3>
             <div className="flex items-center gap-1.5 text-sm text-slate-500 mt-0.5">
               <span className="font-semibold text-indigo-600">{project.bhk_type}</span>
               <span>•</span>
@@ -231,33 +241,25 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
                 <Sparkles className="w-3.5 h-3.5" /> View AI Renders
               </Link>
             </div>
-          ) : !isExecution ? (
+          ) : (isConverted || isExecution) ? (
+            <Link
+              href={`/track/${project.id}`}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-sm"
+            >
+              <Activity className="w-4 h-4 text-white" />
+              <span>Project Progress</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          ) : (
             <>
               <Link href={`/customize/${project.id}`}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition">
                 <Edit3 className="w-3.5 h-3.5" /> Customise
               </Link>
               <Link href={`/visualize/${project.id}?from=dashboard`}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
                 <Sparkles className="w-3.5 h-3.5" /> AI View
               </Link>
-            </>
-          ) : (
-            <>
-              <Link href={`/visualize/${project.id}?from=dashboard`}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition">
-                <Sparkles className="w-3.5 h-3.5" /> AI View
-              </Link>
-              {isAdminApproved ? (
-                <Link href={`/track/${project.id}`}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
-                  <Activity className="w-3.5 h-3.5" /> Track
-                </Link>
-              ) : (
-                <div className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-100 text-slate-400 text-xs font-bold cursor-not-allowed" title="Tracking available once admin activates your project">
-                  <Activity className="w-3.5 h-3.5" /> Track
-                </div>
-              )}
             </>
           )}
         </div>
@@ -298,6 +300,14 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'projects' | 'inquiries' | 'services'>('projects')
   const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null)
+
+  // Filter out historical source projects that have been superseded by conversion into an execution project
+  const activeProjects = projects.filter((p) => {
+    const isSuperseded = projects.some(
+      (other) => other.defaults?.converted_from_project_id === p.id
+    )
+    return p.status !== 'converted' && !isSuperseded
+  })
   
   // Profile Editor Modal States
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -454,7 +464,7 @@ function DashboardContent() {
           {[
             { icon: MessageSquare, label: 'Inquiries', value: stats?.totalInquiries ?? inquiries.length, color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
             { icon: FileText,      label: 'Quotations', value: stats?.totalQuotations ?? 0, color: 'bg-amber-50 text-amber-700 border-amber-100' },
-            { icon: Home,          label: 'Active Projects', value: stats?.activeProjects ?? projects.length, color: 'bg-blue-50 text-blue-600 border-blue-100' },
+            { icon: Home,          label: 'Active Projects', value: stats?.activeProjects ?? activeProjects.length, color: 'bg-blue-50 text-blue-600 border-blue-100' },
             { icon: CreditCard,    label: 'Total Payments', value: stats?.totalPayments ?? 0, color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-2xl p-5 shadow-card border border-slate-100 text-center relative overflow-hidden card-hover">
@@ -509,7 +519,7 @@ function DashboardContent() {
                     <div key={i} className="bg-white rounded-2xl shadow-card h-60 shimmer" />
                   ))}
                 </div>
-              ) : projects.length === 0 ? (
+              ) : activeProjects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
@@ -529,7 +539,7 @@ function DashboardContent() {
                 </div>
               ) : (
                 <div className="grid md:grid-cols-2 gap-6">
-                  {projects.map((project) => (
+                  {activeProjects.map((project) => (
                     <ProjectCard
                       key={project.id}
                       project={project}

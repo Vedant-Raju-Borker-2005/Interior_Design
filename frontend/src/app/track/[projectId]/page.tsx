@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { projectsAPI, customerAPI, customerExtrasAPI, quotationsAPI } from '@/lib/api'
 import { useCustomerStore } from '@/stores/customerStore'
+import { useAuthStore } from '@/stores/authStore'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import {
@@ -66,6 +67,7 @@ const STATUS_FILTERS = [
 export default function TrackPage() {
   const { projectId } = useParams() as { projectId: string }
   const router = useRouter()
+  const { user } = useAuthStore()
   const {
     tracking,
     photos,
@@ -419,7 +421,36 @@ export default function TrackPage() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
-    )
+    );
+  }
+  const isConvertedByAdmin = Boolean(
+    project?.is_converted ||
+    project?.status === 'execution' ||
+    project?.status === 'converted' ||
+    (project?.defaults && project?.defaults.converted_from_project_id)
+  );
+
+  if (project && !isConvertedByAdmin && user?.role === 'customer') {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">
+        <Navbar />
+        <div className="max-w-md mx-auto pt-32 text-center space-y-4">
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-6 shadow-sm space-y-3">
+            <Clock className="w-12 h-12 text-amber-500 mx-auto animate-pulse" />
+            <h2 className="text-base font-black uppercase tracking-wider text-amber-800">Tracking Pending Admin Conversion</h2>
+            <p className="text-xs text-amber-700 font-semibold leading-relaxed">
+              Your quotation is currently under review by our Admin Team. Progress tracking will unlock as soon as an Administrator converts your quotation into an active execution project.
+            </p>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shadow-sm"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -1505,7 +1536,7 @@ export default function TrackPage() {
               </div>
               <div className="flex gap-2">
                 <a
-                  href={`/api/v1/quotations/${projectId}/download`}
+                  href={quotationsAPI.download(projectId)}
                   target="_blank"
                   rel="noreferrer"
                   className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-center flex items-center justify-center gap-1.5 transition"

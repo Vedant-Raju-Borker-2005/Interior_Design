@@ -159,6 +159,21 @@ export default function ManagerDashboardPage() {
   // Check if user is customer (read-only mode)
   const isCustomer = user?.role === 'customer';
 
+  if (user?.status === 'pending_verification' && !user?.role?.includes('admin')) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] text-white flex flex-col items-center justify-center p-6 text-center">
+        <ShieldAlert className="w-16 h-16 text-amber-400 mb-4 animate-bounce" />
+        <h1 className="text-3xl font-bold mb-2">Account Approval Pending</h1>
+        <p className="text-slate-300 max-w-md mb-6 leading-relaxed">
+          Your Manager registration is currently pending review by an Administrator. Access to this workspace will be granted once approved.
+        </p>
+        <button onClick={() => router.push('/team')} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transition-all">
+          Return to Team Portal
+        </button>
+      </div>
+    );
+  }
+
   if (isLoading && !dashboard) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
@@ -297,8 +312,8 @@ export default function ManagerDashboardPage() {
                 </div>
 
                 <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
-                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                  <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <AlertCircle className="w-5 h-5 text-indigo-600" />
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending Items</p>
@@ -347,7 +362,7 @@ export default function ManagerDashboardPage() {
                             <span className={clsx(
                               "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide",
                               proj.status === 'ordered' ? "bg-blue-50 text-blue-700" :
-                              proj.status === 'production' ? "bg-amber-50 text-amber-700" :
+                              proj.status === 'production' ? "bg-indigo-50 text-indigo-700" :
                               "bg-emerald-50 text-emerald-700"
                             )}>
                               {proj.status === 'ordered' ? 'In Progress' : proj.status}
@@ -720,7 +735,7 @@ export default function ManagerDashboardPage() {
                           <span className={clsx('px-2 py-0.5 text-[10px] font-bold border rounded-full uppercase',
                             issue.priority === 'CRITICAL' ? 'bg-red-50 text-red-700 border-red-200' :
                             issue.priority === 'HIGH' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                            issue.priority === 'MEDIUM' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            issue.priority === 'MEDIUM' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
                             'bg-slate-50 text-slate-600 border-slate-200'
                           )}>{issue.priority}</span>
                           <span className="text-[10px] text-slate-400 font-mono">Project: {issue.projectId?.substring(0,8)}</span>
@@ -728,7 +743,7 @@ export default function ManagerDashboardPage() {
                         <span className={clsx('shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border',
                           issue.status === 'RESOLVED' || issue.status === 'CLOSED' ? 'bg-green-50 text-green-700 border-green-200' :
                           issue.status === 'ESCALATED' ? 'bg-red-50 text-red-700 border-red-200' :
-                          'bg-amber-50 text-amber-700 border-amber-200'
+                          'bg-indigo-50 text-indigo-700 border-indigo-200'
                         )}>{issue.status}</span>
                       </div>
                       <p className="text-sm text-slate-700 font-medium leading-relaxed">{issue.description}</p>
@@ -822,7 +837,7 @@ export default function ManagerDashboardPage() {
                             <span className={clsx('px-2 py-0.5 text-[10px] font-bold border rounded-full uppercase',
                               task.priority === 'CRITICAL' ? 'bg-red-50 text-red-700 border-red-200' :
                               task.priority === 'HIGH' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                              task.priority === 'MEDIUM' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              task.priority === 'MEDIUM' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
                               'bg-slate-50 text-slate-600 border-slate-200'
                             )}>{task.priority}</span>
                           </td>
@@ -884,7 +899,7 @@ export default function ManagerDashboardPage() {
                           </td>
                           <td className="px-6 py-4">
                             <span className={clsx('px-2 py-0.5 rounded-full text-[10px] font-bold uppercase',
-                              v.status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                              v.status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-indigo-50 text-indigo-700'
                             )}>{v.status}</span>
                           </td>
                           <td className="px-6 py-4 text-xs font-bold text-indigo-600">{v.assignedItems} items</td>

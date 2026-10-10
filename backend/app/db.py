@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from sqlalchemy import create_engine, event, exc
@@ -46,8 +47,71 @@ else:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
+def _missing_tables() -> set[str]:
+    """Mapped tables that the database does not have yet.
+
+    create_all(checkfirst=True) asks the server about each table in turn, which
+    is 60-odd round trips. Against a database in another region that is most of
+    the time a cold start spends before it can answer anything, and on a
+    deployment where the schema is already there it buys nothing. One listing
+    answers the same question."""
+    from sqlalchemy import inspect
+    try:
+        present = set(inspect(engine).get_table_names())
+    except Exception:
+        return set(Base.metadata.tables)      # cannot tell: let create_all decide
+    return set(Base.metadata.tables) - present
+
+
+# Columns added after a table first shipped. create_all() creates tables but
+# never alters one that already exists, so a deployed database keeps the shape
+# it was created with until something widens it. Checked in one catalogue query
+# and applied only where a column is genuinely absent.
+LATER_COLUMNS: tuple[tuple[str, str, str], ...] = (
+    ("typologies", "bhk_type", "VARCHAR"),
+    ("typologies", "image_url", "VARCHAR"),
+    ("typologies", "description", "VARCHAR"),
+    ("typologies", "plan_cache", "JSON"),
+    ("projects", "typology_id", "VARCHAR"),
+)
+
+
+def _add_later_columns():
+    """Bring an existing database up to the columns the models expect.
+
+    Works on both backends: SQLAlchemy's inspector reads the live columns, and
+    both Postgres and SQLite accept a plain ADD COLUMN for a nullable column.
+    """
+    from sqlalchemy import inspect, text
+    insp = inspect(engine)
+    live = set(insp.get_table_names())
+    for table in sorted({t for t, _, _ in LATER_COLUMNS}):
+        if table not in live:
+            continue                             # create_all will make it whole
+        have = {c["name"] for c in insp.get_columns(table)}
+        absent = [(c, t) for tbl, c, t in LATER_COLUMNS if tbl == table and c not in have]
+        if not absent:
+            continue
+        with engine.begin() as conn:
+            for column, sqltype in absent:
+                conn.execute(text(f'ALTER TABLE {table} ADD COLUMN "{column}" {sqltype}'))
+                logging.getLogger(__name__).info("added %s.%s", table, column)
+
+    # A catalogue layout belongs to no project, so this can no longer be
+    # required. SQLite cannot drop a constraint and does not need to here.
+    if "postgres" in DATABASE_URL and "typologies" in live:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE typologies ALTER COLUMN project_id DROP NOT NULL"))
+        except Exception:
+            pass
+
+
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    missing = _missing_tables()
+    if missing:
+        Base.metadata.create_all(bind=engine)
+    _add_later_columns()
     if "sqlite" in DATABASE_URL:
         import sqlite3
         db_path = DATABASE_URL.replace("sqlite:///", "")
@@ -345,6 +409,64 @@ def _migrate_catalog_image_urls(cursor):
                 cursor.execute(f"UPDATE {table} SET {column}=? WHERE id=?", (updated, row_id))
 
 
+# Image URLs are stored absolute, and the seed data was written on a developer's
+# machine, so a deployed copy serves "http://localhost:8000/static/..." to every
+# visitor — which is the visitor's own computer, and shows a broken image. This
+# repoints them at wherever this backend actually answers, on every start, so a
+# fresh deployment heals itself instead of needing the database edited by hand.
+STALE_ASSET_HOSTS = ("http://localhost:8000", "http://127.0.0.1:8000",
+                     "https://localhost:8000")
+
+
+def _repoint(value, public: str):
+    """Swap a stale host inside a string, list or dict. Returns None if nothing changed."""
+    if isinstance(value, str):
+        out = value
+        for stale in STALE_ASSET_HOSTS:
+            out = out.replace(stale, public)
+        return out if out != value else None
+    if isinstance(value, list):
+        swapped = [_repoint(v, public) for v in value]
+        return [n if n is not None else v for n, v in zip(swapped, value)]             if any(n is not None for n in swapped) else None
+    if isinstance(value, dict):
+        swapped = {k: _repoint(v, public) for k, v in value.items()}
+        return {k: (swapped[k] if swapped[k] is not None else v) for k, v in value.items()}             if any(n is not None for n in swapped.values()) else None
+    return None
+
+
+def normalise_asset_urls(db) -> int:
+    """Point stored image URLs at BACKEND_URL. Does nothing when it is unset or
+    still local, so a developer's machine is left exactly as it is.
+
+    No longer called at startup. services/asset_urls.rehost() rewrites the host
+    as a response goes out, which gets the same images to the browser without
+    rewriting 124 rows on boot and without the stored URL deciding which machine
+    can serve them -- writing the deployed host into the database is what used to
+    break image loading in local development. Kept for a one-off repair."""
+    public = os.getenv("BACKEND_URL", "").rstrip("/")
+    if not public or "localhost" in public or "127.0.0.1" in public:
+        return 0
+
+    from .models import Package, Product, VendorProduct
+    changed = 0
+    for model, fields in ((Product, ("thumbnail_url", "images", "variants")),
+                          (VendorProduct, ("thumbnail_url", "images", "variants")),
+                          (Package, ("thumbnail_url", "images"))):
+        for row in db.query(model).all():
+            touched = False
+            for field in fields:
+                if not hasattr(row, field):
+                    continue
+                fixed = _repoint(getattr(row, field), public)
+                if fixed is not None:
+                    setattr(row, field, fixed)
+                    touched = True
+            changed += touched
+    if changed:
+        db.commit()
+    return changed
+
+
 # Keeping the demo accounts in step costs ~57 queries. That is nothing against a
 # local file, but on a hosted database it is seconds, and it used to run on every
 # dashboard load. It now runs at startup and at most every few minutes after.
@@ -442,9 +564,30 @@ def sync_demo_data(db, force: bool = False):
     # 3. Auto-assign all existing projects to the team user and the vendor
 
     all_projects = db.query(Project).all()
+
+    # What follows used to ask the database about each project in turn: its
+    # rooms, its items, its quotation, its team member, five round trips a
+    # project. That is the whole sync's cost once the demo data is in place, it
+    # runs on every boot, and it grew with every project a customer created.
+    # The same questions are answered here in four queries for all projects at
+    # once, and the loop below reads the answers from memory.
+    rooms_by_project: dict[str, list] = {}
+    for room in db.query(Room).all():
+        rooms_by_project.setdefault(room.project_id, []).append(room)
+    rooms_with_items = {rid for (rid,) in db.query(RoomItem.room_id).distinct().all()}
+    projects_with_quote = {pid for (pid,) in db.query(Quotation.project_id).distinct().all()}
+
+    _products: list = []
+
+    def products_once() -> list:
+        """The catalogue, fetched at most once and only if an item is missing."""
+        if not _products:
+            _products.extend(db.query(Product).all())
+        return _products
+
     for proj in all_projects:
         # Check if project has rooms
-        existing_rooms = db.query(Room).filter(Room.project_id == proj.id).all()
+        existing_rooms = rooms_by_project.get(proj.id, [])
         if not existing_rooms:
             r1 = Room(id=f"room-living-{proj.id}", project_id=proj.id, room_type="living_room")
             r2 = Room(id=f"room-master-{proj.id}", project_id=proj.id, room_type="bedroom_master")
@@ -456,9 +599,9 @@ def sync_demo_data(db, force: bool = False):
         else:
             r1, r2, r3 = existing_rooms[0], existing_rooms[1] if len(existing_rooms) > 1 else existing_rooms[0], existing_rooms[2] if len(existing_rooms) > 2 else existing_rooms[0]
 
-        existing_items = db.query(RoomItem).filter(RoomItem.room_id.in_([r.id for r in existing_rooms])).all() if existing_rooms else []
+        existing_items = [r for r in existing_rooms if r.id in rooms_with_items]
         if not existing_items:
-            prods = db.query(Product).all()
+            prods = products_once()
             if prods:
                 sofa_prod = next((p for p in prods if "Sofa" in p.name), prods[0])
                 bed_prod = next((p for p in prods if "Bed" in p.name), prods[0])
@@ -473,8 +616,7 @@ def sync_demo_data(db, force: bool = False):
                 db.commit()
 
         # Check if project has quotation
-        existing_quote = db.query(Quotation).filter(Quotation.project_id == proj.id).first()
-        if not existing_quote:
+        if proj.id not in projects_with_quote:
             from .services.business_rules import next_quotation_no
             subtotal = 650000.0
             gst = subtotal * 0.18
@@ -493,20 +635,30 @@ def sync_demo_data(db, force: bool = False):
 
     # 4. Auto-assign all existing projects to the team user and the vendor
     team_user = users.get("team")
-    all_projects = db.query(Project).all()
     roles = ["MANAGER", "COORDINATOR", "TECHNICIAN"]
-    for i, proj in enumerate(all_projects):
+    # One query for this user's memberships rather than one per project, and the
+    # project list from step 3 rather than a second pass over the table.
+    member_by_project = {}
+    if team_user:
+        for m in db.query(ProjectTeamMember).filter(
+                ProjectTeamMember.user_id == team_user.id).all():
+            member_by_project.setdefault(m.project_id, m)
+
+    # Read what the loop needs as plain values first. A commit expires every
+    # object in the session, so reading proj.approval_status after one sends
+    # SQLAlchemy back to the server for that row -- once per project, which is
+    # where most of this function's round trips were going.
+    project_rows = [(p.id, p.approval_status, p.allocated_vendor_id) for p in all_projects]
+
+    for i, (pid, approval_status, allocated_vendor_id) in enumerate(project_rows):
         # Assign to Team User
         if team_user:
             role = roles[i % len(roles)]
-            member = db.query(ProjectTeamMember).filter(
-                ProjectTeamMember.project_id == proj.id,
-                ProjectTeamMember.user_id == team_user.id
-            ).first()
+            member = member_by_project.get(pid)
             if not member:
                 member = ProjectTeamMember(
                     id=str(uuid.uuid4()),
-                    project_id=proj.id,
+                    project_id=pid,
                     user_id=team_user.id,
                     role=role,
                     status="ACTIVE"
@@ -515,7 +667,7 @@ def sync_demo_data(db, force: bool = False):
                 # Also add project assignment
                 assignment = ProjectAssignment(
                     id=str(uuid.uuid4()),
-                    project_id=proj.id,
+                    project_id=pid,
                     assignee_id=team_user.id,
                     assigned_by_id=team_user.id,
                     role=role
@@ -526,11 +678,14 @@ def sync_demo_data(db, force: bool = False):
                 member.role = role
                 db.commit()
 
-        # Sync assignments per RoomItem
-        sync_project_vendor_assignments(proj.id, db)
+        # Sync assignments per RoomItem. Its own first check is this one, made
+        # against a project it re-reads; we are holding the project already, so
+        # an unapproved or unallocated one costs nothing instead of a round trip.
+        if approval_status == "APPROVED" and allocated_vendor_id:
+            sync_project_vendor_assignments(pid, db)
 
 
-def sync_project_vendor_assignments(project_id: str, db: Session):
+def sync_project_vendor_assignments(project_id: str, db: Session, project=None):
     from .models import Room, RoomItem, VendorAssignment, Product, Vendor, Project
     import uuid
 
@@ -538,7 +693,11 @@ def sync_project_vendor_assignments(project_id: str, db: Session):
     # A supplier receives a project's items only after an admin has approved
     # the project AND allocated it to that supplier. Until then this is a no-op,
     # whichever path calls it (quotation, vendor dashboard, demo sync).
-    project = db.query(Project).filter(Project.id == project_id).first()
+    # A caller that already holds the project passes it in rather than making us
+    # read it again; the demo sync calls this once per project, so on a hosted
+    # database those were twenty-odd needless round trips every boot.
+    if project is None:
+        project = db.query(Project).filter(Project.id == project_id).first()
     if not project or project.approval_status != "APPROVED" or not project.allocated_vendor_id:
         return
     allocated = db.query(Vendor).filter(Vendor.id == project.allocated_vendor_id).first()

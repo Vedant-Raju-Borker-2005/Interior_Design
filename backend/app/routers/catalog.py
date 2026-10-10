@@ -628,8 +628,11 @@ def _prod_out(
         "reserved_qty": reserved_qty,
         "unavailable_reason": reason,
         # Feedback 1.6 — images list travels with the product so the client can
-        # fall back to a secondary image when the thumbnail 404s.
-        "images": p.images or [],
+        # fall back to a secondary image when the thumbnail 404s. Rehosted like
+        # the thumbnail beside it: these rows were seeded with the deployed
+        # host, so without this the fallback points at a machine that may be
+        # asleep and the picture never arrives.
+        "images": rehost(p.images or [], asset_base),
     }
 
 

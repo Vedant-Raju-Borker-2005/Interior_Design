@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 import random
 from dotenv import load_dotenv
@@ -24,6 +25,11 @@ from .routers import (
     vendor_availability,  # 4.1 supplier availability switch
 )
 
+# Any host of ours in front of an asset path. Matched on the response bytes,
+# which is cheaper than walking every serialized structure.
+_FOREIGN_ASSET = re.compile(
+    rb"https?://[A-Za-z0-9.\-]+(?::\d+)?(/static/(?:assets|uploads)/)")
+
 DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
 CORS_ORIGINS = [
     origin.strip()
@@ -37,6 +43,8 @@ async def lifespan(app: FastAPI):
     # Startup
     os.makedirs("assets", exist_ok=True)
     os.makedirs("assets/floor_plans", exist_ok=True)
+    # Only what a request cannot be answered without: the schema has to exist,
+    # and an empty database needs its catalogue. Both are a handful of queries.
     init_db()
     db = SessionLocal()
     try:
@@ -77,8 +85,38 @@ async def json_errors(request, call_next):
         import logging
         from fastapi.responses import JSONResponse
         logging.getLogger("app").exception("Unhandled error on %s %s", request.method, request.url.path)
+        with open("backend_error.log", "a") as f:
+            f.write(f"ERROR: {type(exc).__name__}: {str(exc)}\n")
         return JSONResponse(status_code=500, content={
             "detail": f"Something went wrong on the server ({type(exc).__name__}). Please try again."})
+
+
+@app.middleware("http")
+async def serve_assets_from_this_host(request, call_next):
+    """Point asset URLs in any JSON response at whoever answered the request.
+
+    Image URLs are stored absolute, with whichever host last seeded the
+    database baked in -- in practice the deployed backend. Every serializer
+    that forgets to rewrite one sends the browser to that host instead, and on
+    a free tier that is asleep the picture simply never arrives. Rehosting in
+    one place means a serializer cannot leak the wrong host by omission.
+
+    Only our own /static/assets and /static/uploads paths are touched, so a
+    CDN or a supplier's URL passes through untouched.
+    """
+    response = await call_next(request)
+    ctype = response.headers.get("content-type", "")
+    if not ctype.startswith("application/json"):
+        return response
+
+    body = b"".join([chunk async for chunk in response.body_iterator])
+    here = str(request.base_url).rstrip("/").encode()
+    swapped = _FOREIGN_ASSET.sub(lambda m: here + m.group(1), body)
+    if swapped is not body:
+        response.headers["content-length"] = str(len(swapped))
+    from starlette.responses import Response
+    return Response(content=swapped, status_code=response.status_code,
+                    headers=dict(response.headers), media_type=response.media_type)
 
 
 app.add_middleware(

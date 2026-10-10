@@ -268,7 +268,7 @@ export default function AdminQuotationsPage() {
             The new project goes to the approval queue before a supplier is allocated.
           </p>
           <Field label="Project name (optional)">
-            <input placeholder={`${converting.project?.property_name} — Execution`} value={propertyName}
+            <input placeholder={converting.project?.property_name || 'Project name'} value={propertyName}
               onChange={(e) => setPropertyName(e.target.value)} className="w-full border border-slate-200 rounded-lg p-2 text-sm" />
           </Field>
           <div className="flex justify-end gap-2 mt-5">

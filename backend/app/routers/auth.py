@@ -212,6 +212,7 @@ def me(db: Session = Depends(get_db),
         "budget_min": user.budget_min,
         "budget_max": user.budget_max,
         "role": user.role or "customer",
+        "status": user.status,
         # Feedback 1.3 — billing identity printed on quotations
         "gst_number": user.gst_number,
         "company_name": user.company_name,

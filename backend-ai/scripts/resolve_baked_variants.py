@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -60,6 +61,33 @@ STRATEGIES = (("Balanced", 7, ()), ("Open", 23, LOOSE), ("Storage", 41, SEATING)
 ESSENTIAL = {"master_bedroom": ("bed", "wardrobe"), "bedroom": ("bed", "wardrobe"),
              "living_room": ("sofa",), "dining_area": ("dining_set",),
              "kitchen": ("counter_run",), "bathroom": ("wc",), "study": ("desk",)}
+
+
+NOTICEABLE_M = 0.25
+NOTICEABLE_COUNT = 2
+
+
+def _worth_offering(candidate, existing) -> bool:
+    """Is this arrangement different enough from one already on offer?"""
+    def by_category(objects):
+        out = {}
+        for o in objects:
+            out.setdefault(o["category"], []).append(o)
+        return out
+
+    mine, theirs = by_category(candidate), by_category(existing)
+    if set(mine) != set(theirs) or any(len(mine[c]) != len(theirs[c]) for c in mine):
+        return True
+    moved = 0
+    for category, items in mine.items():
+        for a, b in zip(items, theirs[category]):
+            if abs(float(a["rotation"]["yaw"]) - float(b["rotation"]["yaw"])) >= 45:
+                moved += 1
+                continue
+            if math.hypot(a["position"]["x"] - b["position"]["x"],
+                          a["position"]["z"] - b["position"]["z"]) >= NOTICEABLE_M:
+                moved += 1
+    return moved >= NOTICEABLE_COUNT
 
 
 def arrangements_for_room(room_raw, objects, openings, solver_seeds=STRATEGIES):
@@ -104,12 +132,11 @@ def arrangements_for_room(room_raw, objects, openings, solver_seeds=STRATEGIES):
                         o["rotation"], o["dimensions"]) for o in built])
         if validate(trial):
             continue
-        signature = tuple(sorted((o["category"], round(o["position"]["x"], 1),
-                                  round(o["position"]["z"], 1), int(o["rotation"]["yaw"]))
-                                 for o in built))
-        if signature in seen:
+        # An arrangement that turns out to be the one already on screen makes
+        # the control look broken, so it has to be visibly different from the
+        # others before it is worth offering.
+        if any(not _worth_offering(built, kept["objects"]) for kept in out):
             continue
-        seen.add(signature)
         out.append({"name": name, "objects": built})
     return out if len(out) > 1 else []
 

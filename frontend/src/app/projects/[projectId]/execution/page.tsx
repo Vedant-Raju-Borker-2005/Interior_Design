@@ -8,12 +8,15 @@ import { ExecutionProgressBar } from '@/components/vendor/ExecutionProgressBar';
 import { TimelineView } from '@/components/vendor/TimelineView';
 import ItemTrackingBoard from '@/components/ItemTrackingBoard';
 import Navbar from '@/components/Navbar';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Image as ImageIcon, Calendar, Clock, CheckSquare, ClipboardList,
   PhoneCall, FileText, BarChart2, Shield, User, Trash2, Send, AlertTriangle, Upload,
-  Eye, Download, ShieldAlert, Award, MessageSquare, Check, X, Users, RefreshCw
+  Eye, Download, ShieldAlert, Award, MessageSquare, Check, X, Users, RefreshCw,
+  Building2, MapPin, CheckCircle2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import clsx from 'clsx';
 
 export default function ProjectExecutionPage() {
   const { projectId } = useParams() as { projectId: string };
@@ -74,6 +77,75 @@ export default function ProjectExecutionPage() {
 
   // Active Tab state
   const [activeTab, setActiveTab] = useState<'sourcing' | 'tasks' | 'visits' | 'issues' | 'documents' | 'analytics'>('sourcing');
+  const [isStagesExpanded, setIsStagesExpanded] = useState(true);
+
+  const CORE_STAGES = [
+    { id: 'STG_DESIGN', label: '01 Design Brief & Scope', desc: 'Space measurements & style preferences lock' },
+    { id: 'STG_LAYOUT', label: '02 Floor Plan & 3D Model', desc: 'Layout tracing & room dimension validation' },
+    { id: 'STG_CUSTOM', label: '03 Product Customization', desc: 'Laminates, fabrics, & finish selections' },
+    { id: 'STG_PROD', label: '04 Factory Production', desc: 'Modular woodworking & vendor manufacturing' },
+    { id: 'STG_DISPATCH', label: '05 Site Dispatch & Quality', desc: 'Transit verification & site arrival inspection' },
+    { id: 'STG_HANDOVER', label: '06 Final Installation & Signoff', desc: 'On-site assembly, snag resolution & handover' }
+  ];
+
+  const calculateProgressMetrics = () => {
+    const trackedItems = tracking || [];
+    const totalItems = trackedItems.length;
+    if (totalItems === 0) {
+      const rawPct = progress || 0;
+      const stageIdx = Math.min(5, Math.floor((rawPct / 100) * 6));
+      return {
+        progressPct: rawPct,
+        currentStageIndex: stageIdx,
+        activeStage: CORE_STAGES[stageIdx],
+        stages: CORE_STAGES.map((stg, i) => ({
+          ...stg,
+          state: i < stageIdx ? 'completed' : i === stageIdx ? 'active' : 'upcoming'
+        }))
+      };
+    }
+
+    let totalWeight = 0;
+    trackedItems.forEach((item: any) => {
+      const vs = (item.vendor_status || '').toUpperCase();
+      const ts = (item.technician_status || '').toUpperCase();
+      let weight = 10;
+      if (vs === 'ACCEPTED') weight = 25;
+      else if (vs === 'IN_PRODUCTION') weight = 45;
+      else if (vs === 'READY' || vs === 'DISPATCHED') weight = 65;
+      else if (vs === 'DELIVERED') weight = 75;
+
+      if (ts === 'RECEIVED') weight = Math.max(weight, 80);
+      else if (ts === 'INSTALLATION') weight = Math.max(weight, 90);
+      else if (ts === 'INSTALLED') weight = 100;
+      else if (ts === 'SNAG') weight = Math.max(weight, 85);
+
+      totalWeight += weight;
+    });
+
+    const progressPct = Math.min(100, Math.round(totalWeight / totalItems));
+    let currentStageIndex = 0;
+    if (progressPct >= 100) currentStageIndex = 5;
+    else if (progressPct >= 80) currentStageIndex = 4;
+    else if (progressPct >= 60) currentStageIndex = 3;
+    else if (progressPct >= 40) currentStageIndex = 2;
+    else if (progressPct >= 20) currentStageIndex = 1;
+    else currentStageIndex = 0;
+
+    const stages = CORE_STAGES.map((stg, i) => ({
+      ...stg,
+      state: i < currentStageIndex ? 'completed' : i === currentStageIndex ? 'active' : 'upcoming'
+    }));
+
+    return {
+      progressPct,
+      currentStageIndex,
+      activeStage: CORE_STAGES[currentStageIndex],
+      stages
+    };
+  };
+
+  const progressMetrics = calculateProgressMetrics();
 
   // Details expander states
   const [selectedItemHistory, setSelectedItemHistory] = useState<string | null>(null);
@@ -514,8 +586,114 @@ export default function ProjectExecutionPage() {
             {/* TAB CONTENT: Sourcing */}
             {activeTab === 'sourcing' && (
               <div className="space-y-6 animate-in fade-in duration-200">
-                {/* Progress Bar */}
-                <ExecutionProgressBar progress={progress} status={projectDetail?.status === 'Delayed' ? 'DELAYED' : 'ON_TRACK'} />
+                {/* ── TOP FULL-WIDTH HERO PROGRESS BANNER (NO DATES) ── */}
+                <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-50/60 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          Real-Time Execution Tracker
+                        </span>
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          {progressMetrics.activeStage.label}
+                        </span>
+                      </div>
+                      <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                        {projectDetail?.property_name || 'Project Execution Milestones'}
+                      </h2>
+                    </div>
+
+                    {/* Overall Progress Gauge */}
+                    <div className="flex items-center gap-4 bg-slate-50/80 border border-slate-100 p-3.5 rounded-2xl">
+                      <div className="text-right">
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                          Overall Completion
+                        </span>
+                        <span className="text-2xl font-black text-indigo-650 tracking-tight">
+                          {progressMetrics.progressPct}%
+                        </span>
+                      </div>
+                      <div className="w-14 h-14 rounded-full border-4 border-slate-200 border-t-indigo-600 border-r-indigo-600 flex items-center justify-center font-black text-xs text-indigo-700 bg-white shadow-2xs">
+                        {progressMetrics.progressPct}%
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="mt-4 space-y-2">
+                    <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progressMetrics.progressPct}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-emerald-500 h-full rounded-full"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                      <span>Stage {progressMetrics.currentStageIndex + 1} of 6: {progressMetrics.activeStage.label}</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsStagesExpanded(!isStagesExpanded)}
+                        className="text-indigo-600 hover:text-indigo-800 transition flex items-center gap-1 underline"
+                      >
+                        {isStagesExpanded ? 'Collapse Stages ▲' : 'View All 6 Stages ▼'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expandable 6 Core Stages Timeline - STRICTLY NO DATES */}
+                  <AnimatePresence>
+                    {isStagesExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-6 pt-6 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
+                      >
+                        {progressMetrics.stages.map((stg, idx) => {
+                          const isDone = stg.state === 'completed';
+                          const isActive = stg.state === 'active';
+
+                          return (
+                            <div
+                              key={stg.id}
+                              className={clsx(
+                                'p-3 rounded-2xl border transition-all flex flex-col justify-between space-y-2',
+                                isDone
+                                  ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                                  : isActive
+                                  ? 'bg-indigo-50/70 border-indigo-200 text-indigo-950 shadow-2xs'
+                                  : 'bg-slate-50/50 border-slate-200/60 text-slate-400'
+                              )}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-wider">
+                                  0{idx + 1}
+                                </span>
+                                {isDone ? (
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                ) : isActive ? (
+                                  <Clock className="w-4 h-4 text-indigo-600 animate-spin-slow" />
+                                ) : (
+                                  <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-300" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="text-xs font-black leading-snug">{stg.label}</div>
+                                <p className="text-[10px] leading-tight mt-1 opacity-80 line-clamp-2">{stg.desc}</p>
+                              </div>
+                              <div className="text-[9px] font-extrabold uppercase tracking-wider pt-1 border-t border-black/5">
+                                {isDone ? 'Completed' : isActive ? 'Active Now' : 'Upcoming'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
                 {/* Gantt Timeline */}
                 <TimelineView resources={timelineResources} />

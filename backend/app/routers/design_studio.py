@@ -522,6 +522,27 @@ def _db_room_order(room) -> tuple:
     return (int(tail), t) if tail.isdigit() else (1, t)
 
 
+# Families the catalogue furnishes, so a plan room of this kind earns a row.
+ROOMS_WORTH_A_ROW = {"living_room", "dining_area", "kitchen", "bedroom",
+                     "bathroom", "study", "family_lounge", "pooja_room"}
+
+
+def _make_room(project, family: str, index: int, db):
+    """A room the plan has and the project does not, named the way the rest of
+    the database names them: master first, then 2, 3 ..."""
+    if family == "bedroom":
+        room_type = "bedroom_master" if index == 0 else f"bedroom_{index + 1}"
+    elif index == 0:
+        room_type = family
+    else:
+        room_type = f"{family}_{index + 1}"
+    room = Room(id=str(uuid.uuid4()), project_id=project.id, room_type=room_type,
+                length_ft=12, width_ft=10, height_ft=9)
+    db.add(room)
+    db.flush()
+    return room
+
+
 def sync_room_sizes(project, plan: dict, db) -> int:
     """Copy the traced room sizes onto the project's rooms.
 
@@ -555,10 +576,20 @@ def sync_room_sizes(project, plan: dict, db) -> int:
     changed = 0
     for family, sizes in traced.items():
         targets = sorted(rows.get(family) or [], key=_db_room_order)
-        if not targets:
-            continue
         # Largest traced room to the master, next to bedroom 2, and so on.
         sizes.sort(key=lambda wd: -(wd[0] * wd[1]))
+        # A plan routinely holds a room the project was never seeded with: a
+        # dining area in a flat seeded as a plain 2 BHK, a third bedroom. The
+        # model shows it and the customer cannot furnish it, because nothing
+        # shops for a room with no row -- and every floor-area total disagrees
+        # with every other. Give it a row. Balconies and passages are left
+        # alone: a plan has several of each and neither is furnished from the
+        # catalogue.
+        while len(targets) < len(sizes) and family in ROOMS_WORTH_A_ROW:
+            targets.append(_make_room(project, family, len(targets), db))
+            changed += 1
+        if not targets:
+            continue
         for room, (w, d) in zip(targets, sizes):
             length, width = max(w, d), min(w, d)
             if (round(room.length_ft or 0, 1), round(room.width_ft or 0, 1)) ==                     (round(length, 1), round(width, 1)):

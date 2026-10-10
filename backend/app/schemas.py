@@ -97,6 +97,10 @@ class AddRoomItemReq(BaseModel):
     unit_price: Optional[float] = None       # ignored: the catalogue price is authoritative
 
 
+class AddRoomItemBundleReq(BaseModel):
+    items: List[AddRoomItemReq]
+
+
 class AddRoomReq(BaseModel):
     room_type: str
     length_ft: Optional[float] = 12.0
@@ -327,7 +331,10 @@ class UpdateFlatReq(BaseModel):
 
 class CreateTypologyReq(BaseModel):
     name: str
+    bhk_type: Optional[str] = None          # which configuration it is offered under
     carpet_area_sqft: Optional[float] = None
+    description: Optional[str] = None       # what sets it apart from its siblings
+    image_url: Optional[str] = None
     floor_plan_id: Optional[str] = None
 
 

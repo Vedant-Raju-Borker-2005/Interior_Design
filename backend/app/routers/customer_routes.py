@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
+from pydantic import BaseModel
+
 from ..db import get_db
 from ..models import (
     User, Project, FloorPlan, Quotation, QuotationRevision, 
@@ -13,8 +15,77 @@ from ..models import (
     ServiceRequest, Notification, Inquiry, Payment, ProjectDocument
 )
 from ..auth_utils import current_user
+from ..services import typologies as typology_service
 
 router = APIRouter()
+
+
+# ── LAYOUT (TYPOLOGY) CHOICE ─────────────────────────────────────────────
+
+class TypologyChoiceReq(BaseModel):
+    typology_id: Optional[str] = None
+
+
+@router.get("/typologies", summary="The layouts this customer can pick from")
+def list_typologies(
+    bhk: Optional[str] = None,
+    project_id: Optional[str] = None,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    """Offered during onboarding, before the customer chooses anything else.
+
+    No project yet is normal: the step runs before the draft project exists on
+    a direct signup, so the catalogue layouts are returned for the given BHK.
+    """
+    project = None
+    if project_id:
+        project = db.query(Project).filter(Project.id == project_id,
+                                           Project.user_id == user.id).first()
+    return {
+        "typologies": typology_service.available(db, bhk=bhk or (project.bhk_type if project else None),
+                                                 project=project),
+        "selected": typology_service.chosen(db, project) if project else None,
+    }
+
+
+@router.get("/projects/{project_id}/typology", summary="The layout chosen for this home")
+def get_project_typology(
+    project_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    project = db.query(Project).filter(Project.id == project_id,
+                                       Project.user_id == user.id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+    return {
+        "selected": typology_service.chosen(db, project),
+        "typologies": typology_service.available(db, bhk=project.bhk_type, project=project),
+    }
+
+
+@router.put("/projects/{project_id}/typology", summary="Choose or change the layout")
+def set_project_typology(
+    project_id: str,
+    req: TypologyChoiceReq,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    """Used by the onboarding step and by the change control shown afterwards."""
+    project = db.query(Project).filter(Project.id == project_id,
+                                       Project.user_id == user.id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+    try:
+        typology_service.apply_choice(db, project, req.typology_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return {
+        "selected": typology_service.chosen(db, project),
+        "bhk_type": project.bhk_type,
+    }
+
 
 # ── FLOOR PLAN MANAGEMENT ─────────────────────────────────────────────────────
 
@@ -925,7 +996,7 @@ def get_customer_stats(
     
     active_projects = db.query(Project).filter(
         Project.user_id == user.id,
-        Project.status.in_(["quoted", "ordered"])
+        Project.status.in_(["quoted", "ordered", "execution"])
     ).count()
     
     total_quotations = db.query(Quotation).filter(Quotation.project_id.in_(project_ids)).count() if project_ids else 0
@@ -1159,8 +1230,19 @@ def create_project_payment(
     )
     db.add(notif)
     
+    payment_mode = payload.get("payment_mode", "online")
+    ref = payload.get("reference", tx_id)
+    
+    # Also update any active quotation for this project to paid
+    q = db.query(Quotation).filter(Quotation.project_id == project_id).order_by(Quotation.created_at.desc()).first()
+    if q:
+        q.status = "paid"
+        q.paid_at = datetime.datetime.utcnow()
+        q.payment_mode = payment_mode
+        q.payment_reference = ref
+        
     db.commit()
-    return {"status": "success", "transactionId": tx_id}
+    return {"status": "success", "transactionId": tx_id, "payment_mode": payment_mode}
 
 
 @router.get("/notifications")

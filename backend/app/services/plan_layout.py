@@ -65,7 +65,7 @@ TUNING: dict[str, float] = {
     "blob_mass": 0.002,       # ...or covers at least this share of it
     "door_m": 1.72,            # the widest gap closed as a doorway, in metres
     "wide_m": 2.8,            # the widest opening still treated as one space
-    "min_room_m2": 0.85,       # the smallest space kept as a room
+    "min_room_m2": 0.6,       # the smallest space kept as a room
     "sliver_walls": 1.5,      # a sliver thinner than this many walls joins its neighbour
 }
 
@@ -375,11 +375,38 @@ def _structural_walls(rgb: np.ndarray, with_thin: bool = False):
     ink = ((lum < 175) & (sat < 45)) | ((paper >= 225) & (paper - minc >= 30))
     anchors = ndi.binary_opening(dark, structure=np.ones((3, 3), bool))
     thin = _double_line_walls(ink, walls, anchors)
-    if (walls | thin).sum() < 0.004 * dark.size:
-        # Nothing solid and no double lines: an architect's export where every
-        # wall is a single stroke. The line work itself is the wall network.
+    if (walls | thin).sum() < 0.004 * dark.size or not _encloses_rooms(walls | thin):
+        # Either nothing solid was found, or what was found does not shut any
+        # rooms in. Treat the line work itself as the wall network.
         thin = thin | _single_line_walls(ink)
     return (walls | thin, thin) if with_thin else walls | thin
+
+
+# A plan is expected to have at least this many rooms shut off from each other
+# before the wall network is believed. Fewer than this and the drawing is being
+# read as one or two big open spaces, which no flat is.
+ENCLOSED_ROOMS_EXPECTED = 4
+
+
+def _encloses_rooms(walls: np.ndarray) -> bool:
+    """Whether this wall network actually closes rooms off.
+
+    How much wall ink was found says nothing about whether it forms rooms. On a
+    plan drawn in thin grey line work, the dark-pixel pass can return a mask
+    that looks healthy -- a few percent of the page -- while consisting
+    entirely of the one dark stair core and the heaviest outer wall. That
+    encloses a single pocket in a corner; every real room stays open, no
+    rectangle can be traced in it, and the labels read off the drawing have
+    nothing to attach to. Counting the regions the walls actually shut in asks
+    the question the pixel count only appears to answer.
+    """
+    outside = _outside_mask(walls)
+    interior = ~outside & ~walls
+    labelled, count = ndi.label(interior)
+    if not count:
+        return False
+    sizes = np.bincount(labelled.ravel())[1:]
+    return int((sizes > 0.002 * walls.size).sum()) >= ENCLOSED_ROOMS_EXPECTED
 
 
 def _single_line_walls(ink: np.ndarray) -> np.ndarray:
@@ -2173,6 +2200,37 @@ def _solve_layout(space, kept, room, s_openings, must_haves, seed, prefix="", ef
     return kept, dropped
 
 
+# How far a piece must move before the eye registers it as a new arrangement.
+NOTICEABLE_M = 0.25
+NOTICEABLE_COUNT = 2
+
+
+def _worth_offering(candidate, existing) -> bool:
+    """Is this arrangement different enough from one already on offer?"""
+    def by_category(objects):
+        out: dict[str, list] = {}
+        for o in objects:
+            out.setdefault(o["category"], []).append(o)
+        return out
+
+    mine, theirs = by_category(candidate), by_category(existing)
+    if set(mine) != set(theirs):
+        return True                       # different pieces entirely
+    if any(len(mine[c]) != len(theirs[c]) for c in mine):
+        return True
+    moved = 0
+    for category, items in mine.items():
+        for a, b in zip(items, theirs[category]):
+            if abs(float(a["rotation"]["yaw"]) - float(b["rotation"]["yaw"])) >= 45:
+                moved += 1
+                continue
+            dx = a["position"]["x"] - b["position"]["x"]
+            dz = a["position"]["z"] - b["position"]["z"]
+            if math.hypot(dx, dz) >= NOTICEABLE_M:
+                moved += 1
+    return moved >= NOTICEABLE_COUNT
+
+
 def _layout_score(space: _Space, objects, must_haves) -> float:
     """How well an arrangement serves the room, so the best one leads."""
     present = {o["category"] for o in objects}
@@ -2220,12 +2278,15 @@ def _furnish(space: _Space, pools, used, openings):
                                      effort=500 if index == 0 else 220)
         if not placed:
             continue
-        signature = tuple(sorted(
+        # Offering an arrangement that turns out to be the one already on
+        # screen makes the control look broken, so a new one has to be
+        # visibly different: either it holds different pieces, or two of them
+        # have actually moved somewhere a person would notice.
+        if any(not _worth_offering(placed, kept["objects"]) for kept in layouts):
+            continue
+        seen_signatures.add(tuple(sorted(
             (o["category"], round(o["position"]["x"], 1), round(o["position"]["z"], 1),
-             int(o["rotation"]["yaw"])) for o in placed))
-        if signature in seen_signatures:
-            continue          # the same room twice is not a choice
-        seen_signatures.add(signature)
+             int(o["rotation"]["yaw"])) for o in placed)))
         layouts.append({
             "name": name,
             "objects": placed,

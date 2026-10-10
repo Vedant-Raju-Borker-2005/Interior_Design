@@ -4,31 +4,52 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProjectTeamStore } from '@/stores/projectTeamStore';
 import Navbar from '@/components/Navbar';
+import { useAuthStore } from '@/stores/authStore';
 import {
   Wrench,
   MapPin,
   Play,
   ArrowLeft,
   LayoutDashboard,
-  FolderKanban
+  FolderKanban,
+  ShieldAlert
 } from 'lucide-react';
 import ItemTrackingBoard from '@/components/ItemTrackingBoard';
 import clsx from 'clsx';
 
 export default function TechnicianDashboardPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const { dashboard, projects, fetchDashboard, fetchProjects, isLoading, error } = useProjectTeamStore();
   const [activeTab, setActiveTab] = useState<'kpi' | 'projects' | 'installations'>('kpi');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
 
   useEffect(() => {
     fetchDashboard().catch(() => {});
-    fetchProjects().then((projs: any) => {
-      if (projs && projs.length > 0) {
-        setSelectedProjectId(projs[0].id);
-      }
-    }).catch(() => {});
+    fetchProjects().catch(() => {});
   }, [fetchDashboard, fetchProjects]);
+
+  // Auto-select first project when projects load
+  useEffect(() => {
+    if (projects && projects.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId]);
+
+  if (user?.status === 'pending_verification' && !user?.role?.includes('admin')) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] text-white flex flex-col items-center justify-center p-6 text-center">
+        <ShieldAlert className="w-16 h-16 text-amber-400 mb-4 animate-bounce" />
+        <h1 className="text-3xl font-bold mb-2">Account Approval Pending</h1>
+        <p className="text-slate-300 max-w-md mb-6 leading-relaxed">
+          Your Technician registration is currently pending review by an Administrator. Access to this workspace will be granted once approved.
+        </p>
+        <button onClick={() => router.push('/team')} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transition-all">
+          Return to Team Portal
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading && !dashboard) {
     return (
@@ -52,13 +73,13 @@ export default function TechnicianDashboardPage() {
         <aside className="w-72 bg-white border-r border-slate-200 hidden md:flex flex-col p-6 h-[calc(100vh-80px)] sticky top-20 overflow-y-auto">
           <button
             onClick={() => router.push('/team')}
-            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-amber-600 transition mb-8"
+            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition mb-8"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Welcome Portal
           </button>
           
           <div className="mb-10">
-            <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-4">
               <Wrench className="w-6 h-6" />
             </div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Technician</h1>
@@ -70,7 +91,7 @@ export default function TechnicianDashboardPage() {
               onClick={() => setActiveTab('kpi')}
               className={clsx(
                 "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-                activeTab === 'kpi' ? "bg-amber-500 text-white shadow-md shadow-amber-200" : "text-slate-600 hover:bg-slate-100"
+                activeTab === 'kpi' ? "bg-indigo-500 text-white shadow-md shadow-indigo-200" : "text-slate-600 hover:bg-slate-100"
               )}
             >
               <LayoutDashboard className="w-5 h-5" /> Performance
@@ -79,7 +100,7 @@ export default function TechnicianDashboardPage() {
               onClick={() => setActiveTab('projects')}
               className={clsx(
                 "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-                activeTab === 'projects' ? "bg-amber-500 text-white shadow-md shadow-amber-200" : "text-slate-600 hover:bg-slate-100"
+                activeTab === 'projects' ? "bg-indigo-500 text-white shadow-md shadow-indigo-200" : "text-slate-600 hover:bg-slate-100"
               )}
             >
               <FolderKanban className="w-5 h-5" /> My Assignments
@@ -88,7 +109,7 @@ export default function TechnicianDashboardPage() {
               onClick={() => setActiveTab('installations')}
               className={clsx(
                 "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-                activeTab === 'installations' ? "bg-amber-500 text-white shadow-md shadow-amber-200" : "text-slate-600 hover:bg-slate-100"
+                activeTab === 'installations' ? "bg-indigo-500 text-white shadow-md shadow-indigo-200" : "text-slate-600 hover:bg-slate-100"
               )}
             >
               <Wrench className="w-5 h-5" /> Installation Items
@@ -113,11 +134,11 @@ export default function TechnicianDashboardPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white border-none p-6 rounded-3xl shadow-sm shadow-amber-200/50 relative overflow-hidden group">
-                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full group-hover:scale-150 transition-transform duration-500 z-0"></div>
+                <div className="bg-white border-none p-6 rounded-3xl shadow-sm shadow-indigo-200/50 relative overflow-hidden group">
+                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full group-hover:scale-150 transition-transform duration-500 z-0"></div>
                   <div className="relative z-10">
-                    <span className="text-xs uppercase font-extrabold text-amber-500 tracking-wider">Assigned Installations</span>
-                    <div className="text-5xl font-black text-amber-600 mt-2">{stats.assignedInstallations}</div>
+                    <span className="text-xs uppercase font-extrabold text-indigo-500 tracking-wider">Assigned Installations</span>
+                    <div className="text-5xl font-black text-indigo-600 mt-2">{stats.assignedInstallations}</div>
                   </div>
                 </div>
                 <div className="bg-white border-none p-6 rounded-3xl shadow-sm shadow-slate-200/50 relative overflow-hidden group">
@@ -148,7 +169,7 @@ export default function TechnicianDashboardPage() {
                         <p className="text-sm font-semibold text-slate-500 mt-1 flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {proj.locality || "No location provided"}</p>
                       </div>
                       <span className={clsx("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider", 
-                        proj.status === 'ordered' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                        proj.status === 'ordered' ? 'bg-blue-100 text-blue-800' : 'bg-indigo-100 text-indigo-800'
                       )}>
                         {proj.status}
                       </span>
@@ -169,12 +190,12 @@ export default function TechnicianDashboardPage() {
                       <div className="flex items-center gap-3 w-1/2">
                         <span className="text-sm font-black text-slate-700">{proj.progress}%</span>
                         <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                          <div className="bg-amber-500 h-full rounded-full" style={{ width: `${proj.progress}%` }} />
+                          <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${proj.progress}%` }} />
                         </div>
                       </div>
                       <button
                         onClick={() => router.push(`/projects/${proj.id}/execution`)}
-                        className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black rounded-xl uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm shadow-amber-200"
+                        className="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-black rounded-xl uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm shadow-indigo-200"
                       >
                         Open Execution <Play className="w-3.5 h-3.5 fill-current" />
                       </button>
