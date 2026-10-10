@@ -32,12 +32,27 @@ def client():
     sys.path.insert(0, str(BACKEND))
 
     from fastapi.testclient import TestClient
+    import app.db as db_mod
+    old_engine = db_mod.engine
+    old_session = db_mod.SessionLocal
+    old_url = db_mod.DATABASE_URL
+
+    db_mod.DATABASE_URL = os.environ["DATABASE_URL"]
+    db_mod.engine = db_mod.create_engine(db_mod.DATABASE_URL, connect_args={"check_same_thread": False})
+    db_mod.SessionLocal = db_mod.sessionmaker(autocommit=False, autoflush=False, bind=db_mod.engine)
+
     from app.main import app
     os.environ.pop("GEMINI_KEY", None)           # never call a paid API from tests
     os.environ.pop("ROOM_MODEL_PATH", None)      # deterministic offline detector in unit tests
 
-    with TestClient(app) as c:                   # runs lifespan: migrate + seed
-        yield c
+    try:
+        with TestClient(app) as c:                   # runs lifespan: migrate + seed
+            yield c
+    finally:
+        db_mod.engine = old_engine
+        db_mod.SessionLocal = old_session
+        db_mod.DATABASE_URL = old_url
+
 
 
 def login(client, email: str, role: str | None = None) -> dict:
