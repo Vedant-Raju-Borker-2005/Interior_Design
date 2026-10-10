@@ -4,9 +4,12 @@ import re
 import urllib.parse
 import uuid
 from sqlalchemy.orm import Session
-from .models import Package, Product, Vendor, VendorProduct, ProductVariant, Inventory, InteriorMaterial
+from .models import Package, Product, Vendor, VendorProduct, ProductVariant, Inventory, InteriorMaterial, Typology
 
-BASE_CATALOG_URL = "http://localhost:8000/static/assets/catalog"
+# Where this backend answers from. A deployment must set BACKEND_URL, or every
+# image URL seeded here points at the visitor's own machine.
+BASE_CATALOG_URL = (os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+                    + "/static/assets/catalog")
 
 PACKAGE_THUMBNAILS = {
     ("1BHK", "basic"):    f"{BASE_CATALOG_URL}/Sofa%20Set%20Warm%20Beige.webp",
@@ -292,6 +295,17 @@ def seed_database(db: Session):
         for m in materials:
             db.add(InteriorMaterial(id=str(uuid.uuid4()), name=m))
         db.commit()
+
+    # Seeded independently too: a customer reaches the layout step on their
+    # first visit, long before packages or products matter. These are the
+    # builder's own layouts, written out from their drawings, so a fresh
+    # deployment comes up with the real ones and not a placeholder.
+    try:
+        from .services.typology_plan import seed_builder_layouts
+        seed_builder_layouts(db)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("could not seed the builder layouts")
 
     if db.query(Package).count() > 0:
         return  # already seeded

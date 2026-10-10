@@ -47,7 +47,7 @@ export default function TeamWelcomePortal() {
       description: 'Update statuses for assigned items and upload proof of installation.',
       icon: Wrench,
       route: '/team/technician',
-      color: 'amber'
+      color: 'indigo'
     }
   ];
 
@@ -75,11 +75,21 @@ export default function TeamWelcomePortal() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {cards.map((card) => {
+            {user?.status === 'pending_verification' && !roleList.includes('admin') && (
+              <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/30 backdrop-blur-md rounded-2xl text-amber-200 text-center max-w-2xl mx-auto shadow-lg">
+                <div className="text-xl font-bold text-amber-300 mb-2">Registration Pending Approval</div>
+                <p className="text-sm text-amber-100/90 font-medium">
+                  Your registration as a team member is currently undergoing review. Platform access will be enabled as soon as an Administrator approves your request.
+                </p>
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-3 gap-8">
+              {cards.map((card) => {
               const Icon = card.icon;
-              // Exact role match — prevents "team_coordinator" from accidentally enabling "team_manager"
-              const isEnabled = (activeRole ? activeRole === card.id : roleList.includes(card.id)) || roleList.includes('admin');
+              const isApproved = user?.status ? user.status === 'active' : true;
+              const hasRole = (activeRole ? activeRole === card.id : roleList.includes(card.id)) || roleList.includes('admin');
+              const isEnabled = hasRole && (isApproved || roleList.includes('admin'));
               
               return (
                 <div 
@@ -117,6 +127,8 @@ export default function TeamWelcomePortal() {
                         <>
                           Enter Workspace <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </>
+                      ) : !isApproved && hasRole ? (
+                        'Approval Pending'
                       ) : (
                         'Access Restricted'
                       )}

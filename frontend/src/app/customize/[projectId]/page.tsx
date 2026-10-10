@@ -112,9 +112,11 @@ export default function GuidedCustomizePage() {
   // Active customization state
   const [customizingProduct, setCustomizingProduct] = useState<any>(null)
   const [activeImageIdx, setActiveImageIdx] = useState(0)
+  const [activeDetailTab, setActiveDetailTab] = useState<'about' | 'variants'>('about')
 
   useEffect(() => {
     setActiveImageIdx(0)
+    setActiveDetailTab('about')
   }, [customizingProduct?.id])
   // One value per option group the vendor defined for the product (colour,
   // fabric, wood finish, size, texture, cushion style, or anything they add).
@@ -1487,300 +1489,431 @@ export default function GuidedCustomizePage() {
                   </button>
                 </div>
 
-                <div className="grid md:grid-cols-12 gap-6">
-                  {/* Left Column: Product Info Card */}
-                  <div className="md:col-span-5 bg-[#F7F8FF] border border-[#E5E7F2] p-4 rounded-2xl flex flex-col justify-between">
-                    <div>
-                      <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3 group bg-white border border-[#E5E7F2] flex items-center justify-center">
-                        {galleryImages[activeImageIdx] ? (
-                          <ProductImage
-                            src={galleryImages[activeImageIdx]}
-                            fallbacks={[customizingProduct.thumbnail_url]}
-                            alt={customizingProduct.name}
-                            eager
-                            iconClassName="w-10 h-10"
-                            className="w-full h-full object-cover transition-all duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-50 select-none">
-                            <ImageIcon className="w-8 h-8 text-[#64748B] mb-2" />
-                            <h5 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Optional View Not Uploaded</h5>
-                            <p className="text-[9px] text-[#64748B] mt-1 max-w-xs leading-relaxed">
-                              The vendor has provided primary perspective for this component.
-                            </p>
-                          </div>
-                        )}
-                        
-                        <button
-                          type="button"
-                          onClick={() => setActiveImageIdx((prev) => (prev === 0 ? 2 : prev - 1))}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-[#172554] flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm border border-[#E5E7F2]"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveImageIdx((prev) => (prev === 2 ? 0 : prev + 1))}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-[#172554] flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm border border-[#E5E7F2]"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* Thumbnails */}
-                      <div className="grid grid-cols-3 gap-2.5 mb-4">
-                        {[0, 1, 2].map((idx) => {
-                          const imgUrl = galleryImages[idx]
-                          const isActive = activeImageIdx === idx
-                          const label = idx === 0 ? "Front" : idx === 1 ? "Side" : "Top"
-                          
-                          return (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setActiveImageIdx(idx)}
-                              className={clsx(
-                                "relative h-12 rounded-lg overflow-hidden border transition flex flex-col items-center justify-center text-center p-1",
-                                isActive ? "border-[#6366F1] bg-[#F5F3FF] shadow-sm" : "border-[#E5E7F2] bg-white hover:bg-slate-50"
-                              )}
-                            >
-                              {imgUrl ? (
-                                <ProductImage
-                                  src={imgUrl}
-                                  alt={`Thumb ${idx}`}
-                                  iconClassName="w-3.5 h-3.5"
-                                  className="w-full h-full object-cover rounded"
-                                />
-                              ) : (
-                                <div className="flex flex-col items-center justify-center">
-                                  <ImageIcon className="w-3.5 h-3.5 text-[#64748B] mb-0.5" />
-                                  <span className="text-[7px] text-[#64748B] font-bold uppercase tracking-wider">{label} N/A</span>
-                                </div>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-
-                      <h4 className="text-sm font-extrabold text-[#172554]">{customizingProduct.name}</h4>
-                      <p className="text-[10px] text-[#64748B] mt-1 leading-relaxed">
-                        Design variant elements will overlay inside the visual rendering engine.
-                      </p>
+                <div className="grid md:grid-cols-12 gap-6 items-start">
+                  {/* Left Column: Product Media Studio & Prominent Base Price */}
+                  <div className="md:col-span-5 bg-[#F7F8FF] border border-[#E5E7F2] p-4 rounded-2xl flex flex-col">
+                    <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3 group bg-white border border-[#E5E7F2] flex items-center justify-center">
+                      {galleryImages[activeImageIdx] ? (
+                        <ProductImage
+                          src={galleryImages[activeImageIdx]}
+                          fallbacks={[customizingProduct.thumbnail_url]}
+                          alt={customizingProduct.name}
+                          eager
+                          iconClassName="w-10 h-10"
+                          className="w-full h-full object-cover transition-all duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-50 select-none">
+                          <ImageIcon className="w-8 h-8 text-[#64748B] mb-2" />
+                          <h5 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Optional View Not Uploaded</h5>
+                          <p className="text-[9px] text-[#64748B] mt-1 max-w-xs leading-relaxed">
+                            The vendor has provided primary perspective for this component.
+                          </p>
+                        </div>
+                      )}
+                      
+                      <button
+                        type="button"
+                        onClick={() => setActiveImageIdx((prev) => (prev === 0 ? 2 : prev - 1))}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-[#172554] flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm border border-[#E5E7F2]"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveImageIdx((prev) => (prev === 2 ? 0 : prev + 1))}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-[#172554] flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm border border-[#E5E7F2]"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-[#E5E7F2] flex items-center justify-between">
-                      <span className="text-[#64748B] text-xs font-semibold">Base Price:</span>
-                      <span className="text-base font-extrabold text-[#4F46E5]">
-                        ₹{customizingProduct.price.toLocaleString('en-IN')}
-                      </span>
+
+                    {/* Perspective Thumbnails */}
+                    <div className="grid grid-cols-3 gap-2.5 mb-2">
+                      {[0, 1, 2].map((idx) => {
+                        const imgUrl = galleryImages[idx]
+                        const isActive = activeImageIdx === idx
+                        const label = idx === 0 ? "Front" : idx === 1 ? "Side" : "Top"
+                        
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setActiveImageIdx(idx)}
+                            className={clsx(
+                              "relative h-12 rounded-lg overflow-hidden border transition flex flex-col items-center justify-center text-center p-1",
+                              isActive ? "border-[#6366F1] bg-[#F5F3FF] shadow-sm" : "border-[#E5E7F2] bg-white hover:bg-slate-50"
+                            )}
+                          >
+                            {imgUrl ? (
+                              <ProductImage
+                                src={imgUrl}
+                                alt={`Thumb ${idx}`}
+                                iconClassName="w-3.5 h-3.5"
+                                className="w-full h-full object-cover rounded"
+                              />
+                            ) : (
+                              <div className="flex flex-col items-center justify-center">
+                                <ImageIcon className="w-3.5 h-3.5 text-[#64748B] mb-0.5" />
+                                <span className="text-[7px] text-[#64748B] font-bold uppercase tracking-wider">{label} N/A</span>
+                              </div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* Product Name & Relocated Base Price (Directly Aligned) */}
+                    <div className="mt-2 pt-3 border-t border-[#E5E7F2] flex items-center justify-between">
+                      <div className="min-w-0 pr-2">
+                        <h4 className="text-sm font-extrabold text-[#172554] truncate">{customizingProduct.name}</h4>
+                        <p className="text-[10px] text-[#64748B] mt-0.5 leading-snug">
+                          Design variant elements overlay in visual rendering engine.
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[9px] text-[#64748B] font-bold uppercase tracking-wider block">Base Price</span>
+                        <span className="text-base font-extrabold text-[#4F46E5]">
+                          ₹{customizingProduct.price.toLocaleString('en-IN')}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Right Column: Custom Attribute Selectors */}
-                  <div className="md:col-span-7 space-y-5">
-                    <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Sliders className="w-4 h-4 text-[#4F46E5]" />
-                      <span>Available Variants</span>
-                    </h3>
+                  {/* Right Column: Interactive Flip Block (About this Product <-> Available Variants) */}
+                  <div className="md:col-span-7 bg-[#F8FAFC] border border-[#E5E7F2] p-5 rounded-2xl flex flex-col justify-between min-h-[360px]">
+                    <div>
+                      {/* Interactive Header with Arrows to Toggle */}
+                      <div className="flex items-center justify-between border-b border-[#E5E7F2] pb-3 mb-4">
+                        <div className="flex items-center gap-2">
+                          {activeDetailTab === 'about' ? (
+                            <>
+                              <Info className="w-4 h-4 text-[#4F46E5]" />
+                              <h3 className="text-xs font-extrabold text-[#172554] uppercase tracking-wider">
+                                About this Product
+                              </h3>
+                            </>
+                          ) : (
+                            <>
+                              <Sliders className="w-4 h-4 text-[#4F46E5]" />
+                              <h3 className="text-xs font-extrabold text-[#172554] uppercase tracking-wider">
+                                Available Variants & Styling
+                              </h3>
+                            </>
+                          )}
+                        </div>
 
-                    {variantGroups(customizingProduct).length === 0 && (
-                      <p className="text-xs text-[#64748B]">This product comes in a single variant.</p>
-                    )}
-
-                    {/* Every option group the vendor defined, in a stable order */}
-                    {variantGroups(customizingProduct).map(({ key, label, values }) => {
-                      const bestColour = key === 'color'
-                        ? getBestColorMatch(values, project?.color_preferences || []).color
-                        : ''
-                      return (
-                        <div key={key} className="space-y-2">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                            <span className="text-[10px] font-bold text-[#64748B] uppercase block">{label}</span>
-                            {key === 'color' && project?.color_preferences?.length > 0 && (
-                              <span className="text-[9px] text-[#64748B]">
-                                🎨 Selected Palette: <strong className="text-[#4F46E5]">{project.color_preferences.join(', ')}</strong>
-                              </span>
+                        {/* Navigation Arrow Switcher */}
+                        <div className="flex items-center gap-1.5 bg-white border border-[#E5E7F2] rounded-xl p-1 shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => setActiveDetailTab('about')}
+                            className={clsx(
+                              "px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1",
+                              activeDetailTab === 'about'
+                                ? "bg-[#4F46E5] text-white shadow-xs"
+                                : "text-[#64748B] hover:text-[#172554]"
                             )}
+                            title="View Product Specifications"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                            <span>Specs</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveDetailTab('variants')}
+                            className={clsx(
+                              "px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1",
+                              activeDetailTab === 'variants'
+                                ? "bg-[#4F46E5] text-white shadow-xs"
+                                : "text-[#64748B] hover:text-[#172554]"
+                            )}
+                            title="Customize Available Variants"
+                          >
+                            <span>Variants</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* State A: ABOUT THIS PRODUCT (Specifications Table) */}
+                      {activeDetailTab === 'about' && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                            {/* Left Specs Column */}
+                            <div className="space-y-1">
+                              <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                                <span className="col-span-1 text-[#64748B] font-semibold text-[11px]">Material</span>
+                                <span className="col-span-2 text-[#172554] font-bold pl-2 text-[11px]">{customizingProduct.primary_material || customizingProduct.primaryMaterial || 'Solid Wood'}</span>
+                              </div>
+                              <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                                <span className="col-span-1 text-[#64748B] font-semibold text-[11px]">Dimensions</span>
+                                <span className="col-span-2 text-[#172554] font-bold pl-2 text-[11px]">
+                                  {customizingProduct.width || 1200}w × {customizingProduct.height || 750}h × {customizingProduct.depth || 600}d mm
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                                <span className="col-span-1 text-[#64748B] font-semibold text-[11px]">Weight</span>
+                                <span className="col-span-2 text-[#172554] font-bold pl-2 text-[11px]">{customizingProduct.weight || 15} kg</span>
+                              </div>
+                              <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                                <span className="col-span-1 text-[#64748B] font-semibold text-[11px]">Capacity</span>
+                                <span className="col-span-2 text-[#172554] font-bold pl-2 text-[11px]">{customizingProduct.weight_capacity || customizingProduct.weightCapacity || 120} kg</span>
+                              </div>
+                            </div>
+
+                            {/* Right Specs Column */}
+                            <div className="space-y-1">
+                              <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                                <span className="col-span-1 text-[#64748B] font-semibold text-[11px]">Style</span>
+                                <span className="col-span-2 text-[#172554] font-bold pl-2 text-[11px]">{customizingProduct.style || 'Modern'}</span>
+                              </div>
+                              <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                                <span className="col-span-1 text-[#64748B] font-semibold text-[11px]">Finish</span>
+                                <span className="col-span-2 text-[#172554] font-bold pl-2 text-[11px]">{customizingProduct.finish || 'Matte'}</span>
+                              </div>
+                              <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                                <span className="col-span-1 text-[#64748B] font-semibold text-[11px]">Mounting</span>
+                                <span className="col-span-2 text-[#172554] font-bold pl-2 text-[11px]">{customizingProduct.mounting_type || customizingProduct.mountingType || 'Floor Standing'}</span>
+                              </div>
+                              <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
+                                <span className="col-span-1 text-[#64748B] font-semibold text-[11px]">Assembly</span>
+                                <span className="col-span-2 text-[#172554] font-bold pl-2 text-[11px]">{customizingProduct.assembly_required || customizingProduct.assemblyRequired || 'No'}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {values.map((val) => {
-                              const isSelected = customAttrs[key] === val
-                              const isBestMatch = key === 'color' && bestColour === val && (project?.color_preferences?.length || 0) > 0
+
+                          <div className="pt-3 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setActiveDetailTab('variants')}
+                              className="text-xs font-bold text-[#4F46E5] hover:text-[#4338CA] flex items-center gap-1.5 py-2 px-3.5 rounded-xl bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-200 transition"
+                            >
+                              <span>Customize Variants & Colors</span>
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* State B: AVAILABLE VARIANTS */}
+                      {activeDetailTab === 'variants' && (
+                        <div className="space-y-4">
+                          {variantGroups(customizingProduct).length === 0 && (
+                            <p className="text-xs text-[#64748B] py-4">This product comes in a standard single variant.</p>
+                          )}
+
+                          {variantGroups(customizingProduct).map(({ key, label, values }) => {
+                            const bestColour = key === 'color'
+                              ? getBestColorMatch(values, project?.color_preferences || []).color
+                              : ''
+                            return (
+                              <div key={key} className="space-y-1.5">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                  <span className="text-[10px] font-bold text-[#64748B] uppercase block">{label}</span>
+                                  {key === 'color' && project?.color_preferences?.length > 0 && (
+                                    <span className="text-[9px] text-[#64748B]">
+                                      🎨 Selected Palette: <strong className="text-[#4F46E5]">{project.color_preferences.join(', ')}</strong>
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {values.map((val) => {
+                                    const isSelected = customAttrs[key] === val
+                                    const isBestMatch = key === 'color' && bestColour === val && (project?.color_preferences?.length || 0) > 0
+                                    return (
+                                      <button
+                                        key={val}
+                                        type="button"
+                                        onClick={() => setAttr(key, val)}
+                                        className={clsx(
+                                          'px-3 py-1.5 rounded-xl text-xs transition border font-semibold flex items-center gap-1.5',
+                                          isSelected
+                                            ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
+                                            : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
+                                        )}
+                                      >
+                                        {key === 'color' && (
+                                          <i className="w-3 h-3 rounded-full border border-black/10" style={{ background: getColorHex(val) }} />
+                                        )}
+                                        {isBestMatch && <span>⭐</span>}
+                                        {val}
+                                        {isBestMatch && <span className="text-[9px] opacity-75 font-normal ml-0.5">(Best Match)</span>}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })}
+
+                          {variantGroups(customizingProduct).length > 0 && (
+                            <p className="text-[10px] text-[#64748B] leading-relaxed pt-1">
+                              Your choices are shown on this piece in the 2D plan and 3D model, and used for AI renders.
+                            </p>
+                          )}
+
+                          <div className="pt-2 flex justify-start">
+                            <button
+                              type="button"
+                              onClick={() => setActiveDetailTab('about')}
+                              className="text-xs font-bold text-[#64748B] hover:text-[#172554] flex items-center gap-1 py-1.5 px-3 rounded-lg bg-white border border-[#E5E7F2] hover:bg-slate-50 transition"
+                            >
+                              <ChevronLeft className="w-3.5 h-3.5" />
+                              <span>Back to Specifications</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ROW 2: FULL-WIDTH COMPLETE THE ROOM — AI CURATED PAIRINGS (2-Across Grid) */}
+                {(() => {
+                  const selectedAddonsList = (complementaryData?.recommended_items || []).filter((it: any) =>
+                    selectedAddonIds.includes(it.id)
+                  )
+                  const selectedAddonsCost = selectedAddonsList.reduce((acc: number, it: any) => acc + (it.price || 0), 0)
+                  const totalBundlePrice = (customizingProduct?.price || 0) + selectedAddonsCost
+                  const roomBudget = complementaryData?.room_budget || 100000
+                  const remainingRoomAfterBundle = Math.max(0, roomBudget - totalBundlePrice)
+
+                  return (
+                    <div className="mt-6 space-y-4">
+                      {loadingComplementary ? (
+                        <div className="p-6 rounded-3xl bg-[#F8FAFC] border border-[#E5E7F2] animate-pulse space-y-3">
+                          <div className="h-4 bg-slate-200 rounded w-1/4" />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="h-20 bg-slate-200 rounded-2xl" />
+                            <div className="h-20 bg-slate-200 rounded-2xl" />
+                          </div>
+                        </div>
+                      ) : complementaryData?.recommended_items && complementaryData.recommended_items.length > 0 ? (
+                        <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#F8FAFC] to-[#EEF2FF] border border-[#C7D2FE] shadow-sm space-y-5">
+                          {/* Panel Header */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-100 pb-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-[#4F46E5]" />
+                                <h4 className="text-sm font-extrabold text-[#172554]">
+                                  Complete the Room — AI Curated Pairings
+                                </h4>
+                              </div>
+                              <p className="text-[11px] text-[#64748B] mt-0.5">
+                                Harmonized with your{' '}
+                                <strong className="text-[#4F46E5]">{project?.interior_material_preference || 'wood'}</strong> &{' '}
+                                <strong className="text-[#4F46E5]">{project?.style_vibe || 'Modern'}</strong> design. Capped within budget.
+                              </p>
+                            </div>
+                            <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[10px] font-extrabold text-emerald-700 shrink-0 self-start sm:self-auto">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Budget Protected ({Math.round((totalBundlePrice / roomBudget) * 100)}% of Room)</span>
+                            </span>
+                          </div>
+
+                          {/* 2 Cards Per Row Responsive Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {complementaryData.recommended_items.map((item: any) => {
+                              const isSelected = selectedAddonIds.includes(item.id)
                               return (
-                                <button
-                                  key={val}
-                                  type="button"
-                                  onClick={() => setAttr(key, val)}
+                                <div
+                                  key={item.id}
+                                  onClick={() => {
+                                    setSelectedAddonIds((prev) =>
+                                      prev.includes(item.id)
+                                        ? prev.filter((id) => id !== item.id)
+                                        : [...prev, item.id]
+                                    )
+                                  }}
                                   className={clsx(
-                                    'px-3 py-1.5 rounded-xl text-xs transition border font-semibold flex items-center gap-1.5',
+                                    'p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3',
                                     isSelected
-                                      ? 'bg-[#F5F3FF] border-[#6366F1] text-[#4F46E5]'
-                                      : 'bg-white border-[#E5E7F2] text-[#64748B] hover:border-slate-300'
+                                      ? 'bg-white border-[#6366F1] shadow-xs ring-1 ring-[#6366F1]/20'
+                                      : 'bg-white/80 border-slate-200 hover:border-slate-300 opacity-85 hover:opacity-100'
                                   )}
                                 >
-                                  {key === 'color' && (
-                                    <i className="w-3 h-3 rounded-full border border-black/10" style={{ background: getColorHex(val) }} />
-                                  )}
-                                  {isBestMatch && <span>⭐</span>}
-                                  {val}
-                                  {isBestMatch && <span className="text-[9px] opacity-75 font-normal ml-0.5">(Best Match)</span>}
-                                </button>
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    {/* Custom Checkbox */}
+                                    <div
+                                      className={clsx(
+                                        'w-5 h-5 rounded-lg flex items-center justify-center border transition-all shrink-0',
+                                        isSelected
+                                          ? 'bg-[#4F46E5] border-[#4F46E5] text-white'
+                                          : 'border-slate-300 bg-white'
+                                      )}
+                                    >
+                                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                    </div>
+
+                                    {/* Product Thumbnail */}
+                                    <img
+                                      src={item.thumbnail_url}
+                                      alt={item.name}
+                                      className="w-12 h-12 rounded-xl object-cover border border-slate-100 shrink-0 bg-slate-50"
+                                    />
+
+                                    {/* Product Info */}
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-extrabold text-[#4F46E5] uppercase tracking-wide">
+                                          {item.category_label}
+                                        </span>
+                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                          ✨ {item.match_pct}% Match
+                                        </span>
+                                      </div>
+                                      <h5 className="text-xs font-bold text-[#172554] truncate mt-0.5">
+                                        {item.name}
+                                      </h5>
+
+                                      {/* Explainability Tags */}
+                                      <div className="flex flex-wrap gap-1.5 mt-1">
+                                        {(item.reasons || []).map((reason: string, idx: number) => (
+                                          <span
+                                            key={idx}
+                                            className="text-[9px] font-semibold text-[#64748B] bg-slate-100 px-1.5 py-0.5 rounded"
+                                          >
+                                            • {reason}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Price & Cap Details */}
+                                  <div className="text-right shrink-0">
+                                    <div className="text-xs font-extrabold text-[#172554]">
+                                      +₹{item.price.toLocaleString('en-IN')}
+                                    </div>
+                                    <div className="text-[9px] text-slate-500 font-semibold mt-0.5">
+                                      Cap: ₹{item.category_cap.toLocaleString('en-IN')}
+                                    </div>
+                                  </div>
+                                </div>
                               )
                             })}
                           </div>
-                        </div>
-                      )
-                    })}
 
-                    {variantGroups(customizingProduct).length > 0 && (
-                      <p className="text-[10px] text-[#64748B] leading-relaxed">
-                        Your choices are shown on this piece in the 2D plan and 3D model, and used for AI renders.
-                      </p>
-                    )}
-
-                    {/* COMPLEMENTARY ADD-ONS SMART PANEL */}
-                    {(() => {
-                      const selectedAddonsList = (complementaryData?.recommended_items || []).filter((it: any) =>
-                        selectedAddonIds.includes(it.id)
-                      )
-                      const selectedAddonsCost = selectedAddonsList.reduce((acc: number, it: any) => acc + (it.price || 0), 0)
-                      const totalBundlePrice = (customizingProduct?.price || 0) + selectedAddonsCost
-                      const roomBudget = complementaryData?.room_budget || 100000
-                      const remainingRoomAfterBundle = Math.max(0, roomBudget - totalBundlePrice)
-
-                      return (
-                        <div className="space-y-4 pt-2">
-                          {loadingComplementary ? (
-                            <div className="p-4 rounded-2xl bg-[#F7F8FF] border border-[#E5E7F2] animate-pulse space-y-3">
-                              <div className="h-4 bg-slate-200 rounded w-1/3" />
-                              <div className="h-16 bg-slate-200 rounded-xl" />
+                          {/* Dynamic Bundle Summary Box */}
+                          <div className="p-4 bg-white rounded-2xl border border-indigo-100 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="text-xs font-bold text-[#172554]">
+                              Bundle Total:{' '}
+                              <span className="text-sm font-extrabold text-[#4F46E5]">
+                                ₹{totalBundlePrice.toLocaleString('en-IN')}
+                              </span>{' '}
+                              <span className="text-[11px] text-[#64748B] font-semibold">
+                                ({customizingProduct.name} + {selectedAddonsList.length} add-ons)
+                              </span>
                             </div>
-                          ) : complementaryData?.recommended_items && complementaryData.recommended_items.length > 0 ? (
-                            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-[#F8FAFC] to-[#EEF2FF] border border-[#C7D2FE] shadow-sm space-y-4">
-                              {/* Panel Header */}
-                              <div className="flex items-start justify-between gap-3 border-b border-indigo-100 pb-3">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-[#4F46E5]" />
-                                    <h4 className="text-sm font-extrabold text-[#172554]">
-                                      Complete the Room — AI Curated Pairings
-                                    </h4>
-                                  </div>
-                                  <p className="text-[11px] text-[#64748B] mt-0.5">
-                                    Harmonized with your{' '}
-                                    <strong className="text-[#4F46E5]">{project?.interior_material_preference || 'wood'}</strong> &{' '}
-                                    <strong className="text-[#4F46E5]">{project?.style_vibe || 'Modern'}</strong> design. Capped within budget.
-                                  </p>
-                                </div>
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[10px] font-extrabold text-emerald-700 shrink-0">
-                                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Budget Protected ({Math.round((totalBundlePrice / roomBudget) * 100)}% of Room)</span>
-                                </span>
-                              </div>
-
-                              {/* Recommended Companion List */}
-                              <div className="space-y-2">
-                                {complementaryData.recommended_items.map((item: any) => {
-                                  const isSelected = selectedAddonIds.includes(item.id)
-                                  return (
-                                    <div
-                                      key={item.id}
-                                      onClick={() => {
-                                        setSelectedAddonIds((prev) =>
-                                          prev.includes(item.id)
-                                            ? prev.filter((id) => id !== item.id)
-                                            : [...prev, item.id]
-                                        )
-                                      }}
-                                      className={clsx(
-                                        'p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3',
-                                        isSelected
-                                          ? 'bg-white border-[#6366F1] shadow-xs'
-                                          : 'bg-white/70 border-slate-200 hover:border-slate-300 opacity-80 hover:opacity-100'
-                                      )}
-                                    >
-                                      <div className="flex items-center gap-3 min-w-0">
-                                        {/* Custom Checkbox */}
-                                        <div
-                                          className={clsx(
-                                            'w-5 h-5 rounded-lg flex items-center justify-center border transition-all shrink-0',
-                                            isSelected
-                                              ? 'bg-[#4F46E5] border-[#4F46E5] text-white'
-                                              : 'border-slate-300 bg-white'
-                                          )}
-                                        >
-                                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                                        </div>
-
-                                        {/* Product Thumbnail */}
-                                        <img
-                                          src={item.thumbnail_url}
-                                          alt={item.name}
-                                          className="w-12 h-12 rounded-xl object-cover border border-slate-100 shrink-0 bg-slate-50"
-                                        />
-
-                                        {/* Product Info */}
-                                        <div className="min-w-0">
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-[10px] font-extrabold text-[#4F46E5] uppercase tracking-wide">
-                                              {item.category_label}
-                                            </span>
-                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                              ✨ {item.match_pct}% Match
-                                            </span>
-                                          </div>
-                                          <h5 className="text-xs font-bold text-[#172554] truncate mt-0.5">
-                                            {item.name}
-                                          </h5>
-
-                                          {/* Explainability Tags */}
-                                          <div className="flex flex-wrap gap-1.5 mt-1">
-                                            {(item.reasons || []).map((reason: string, idx: number) => (
-                                              <span
-                                                key={idx}
-                                                className="text-[9px] font-semibold text-[#64748B] bg-slate-100 px-1.5 py-0.5 rounded"
-                                              >
-                                                • {reason}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      {/* Price & Cap Details */}
-                                      <div className="text-right shrink-0">
-                                        <div className="text-xs font-extrabold text-[#172554]">
-                                          +₹{item.price.toLocaleString('en-IN')}
-                                        </div>
-                                        <div className="text-[9px] text-slate-500 font-semibold mt-0.5">
-                                          Cap: ₹{item.category_cap.toLocaleString('en-IN')}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-
-                              {/* Dynamic Bundle Summary Box */}
-                              <div className="p-3.5 bg-white rounded-2xl border border-indigo-100 shadow-2xs">
-                                <div className="text-xs font-bold text-[#172554]">
-                                  Bundle Total:{' '}
-                                  <span className="text-sm font-extrabold text-[#4F46E5]">
-                                    ₹{totalBundlePrice.toLocaleString('en-IN')}
-                                  </span>{' '}
-                                  <span className="text-[11px] text-[#64748B] font-semibold">
-                                    ({customizingProduct.name} + {selectedAddonsList.length} add-ons)
-                                  </span>
-                                </div>
-                                <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>₹{remainingRoomAfterBundle.toLocaleString('en-IN')} buffer remaining (Within Budget)</span>
-                                </p>
-                              </div>
-                            </div>
-                          ) : null}
+                            <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                              <span>₹{remainingRoomAfterBundle.toLocaleString('en-IN')} buffer remaining (Within Budget)</span>
+                            </p>
+                          </div>
 
                           {/* Action Buttons */}
-                          <div className="flex items-stretch gap-2 pt-2">
+                          <div className="flex flex-col sm:flex-row items-stretch gap-3 pt-1">
                             {selectedAddonsList.length > 0 && (
                               <button
                                 type="button"
@@ -1794,8 +1927,7 @@ export default function GuidedCustomizePage() {
                                   <>
                                     <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
                                     <span className="text-left leading-tight">
-                                      Save {customizingProduct.name} + {selectedAddonsList.length} Items<br />
-                                      <span className="font-extrabold">₹{totalBundlePrice.toLocaleString('en-IN')}</span>
+                                      Save {customizingProduct.name} + {selectedAddonsList.length} Items (₹{totalBundlePrice.toLocaleString('en-IN')})
                                     </span>
                                   </>
                                 )}
@@ -1809,7 +1941,7 @@ export default function GuidedCustomizePage() {
                               className={clsx(
                                 'py-3 px-4 font-bold rounded-xl flex items-center justify-center gap-2 transition text-xs shrink-0',
                                 selectedAddonsList.length > 0
-                                  ? 'bg-slate-100 hover:bg-slate-200 text-[#172554] border border-[#E5E7F2]'
+                                  ? 'bg-white hover:bg-slate-100 text-[#172554] border border-[#E5E7F2]'
                                   : 'flex-1 bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-sm text-sm'
                               )}
                             >
@@ -1817,70 +1949,38 @@ export default function GuidedCustomizePage() {
                                 <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                               ) : (
                                 <>
-                                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                                   <span className="text-left leading-tight">
-                                    Save {customizingProduct.name} Only<br />
-                                    <span className="font-extrabold">₹{customizingProduct.price.toLocaleString('en-IN')}</span>
+                                    Save {customizingProduct.name} Only (₹{customizingProduct.price.toLocaleString('en-IN')})
                                   </span>
                                 </>
                               )}
                             </button>
                           </div>
                         </div>
-                      )
-                    })()}
-                  </div>
-                </div>
-
-                {/* About this Product */}
-                <div className="border-t border-[#E5E7F2] pt-5 mt-6 space-y-4">
-                  <h3 className="text-sm font-extrabold text-[#172554] uppercase tracking-wider">About this Product</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-xs">
-                    
-                    {/* Left Column */}
-                    <div className="space-y-1">
-                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
-                        <span className="col-span-1 text-[#64748B] font-semibold">Material</span>
-                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.primary_material || customizingProduct.primaryMaterial || 'Solid Wood'}</span>
-                      </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
-                        <span className="col-span-1 text-[#64748B] font-semibold">Dimensions</span>
-                        <span className="col-span-2 text-[#172554] font-bold pl-2">
-                          {customizingProduct.width || 1200}w × {customizingProduct.height || 750}h × {customizingProduct.depth || 600}d mm
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
-                        <span className="col-span-1 text-[#64748B] font-semibold">Weight</span>
-                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.weight || 15} kg</span>
-                      </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
-                        <span className="col-span-1 text-[#64748B] font-semibold">Capacity</span>
-                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.weight_capacity || customizingProduct.weightCapacity || 120} kg</span>
-                      </div>
+                      ) : (
+                        /* Standalone Save button if no companion items */
+                        <div className="flex justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSaveSelection(false)}
+                            disabled={savingItem}
+                            className="py-3 px-6 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-sm transition"
+                          >
+                            {savingItem ? (
+                              <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                                <span>Save {customizingProduct.name} (₹{customizingProduct.price.toLocaleString('en-IN')})</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Right Column */}
-                    <div className="space-y-1">
-                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
-                        <span className="col-span-1 text-[#64748B] font-semibold">Style</span>
-                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.style || 'Modern'}</span>
-                      </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
-                        <span className="col-span-1 text-[#64748B] font-semibold">Finish</span>
-                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.finish || 'Matte'}</span>
-                      </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
-                        <span className="col-span-1 text-[#64748B] font-semibold">Mounting</span>
-                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.mounting_type || customizingProduct.mountingType || 'Floor Standing'}</span>
-                      </div>
-                      <div className="grid grid-cols-3 py-1.5 border-b border-[#E5E7F2]">
-                        <span className="col-span-1 text-[#64748B] font-semibold">Assembly</span>
-                        <span className="col-span-2 text-[#172554] font-bold pl-2">{customizingProduct.assembly_required || customizingProduct.assemblyRequired || 'No'}</span>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
+                  )
+                })()}
 
               </motion.div>
             )}

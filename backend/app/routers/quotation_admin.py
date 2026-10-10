@@ -223,7 +223,7 @@ def convert_quotation_to_project(
     delivery = Project(
         user_id=source.user_id,
         bhk_type=source.bhk_type,
-        property_name=req.property_name or f"{source.property_name} — Execution",
+        property_name=req.property_name or source.property_name,
         locality=source.locality,
         city=source.city,
         pincode=source.pincode,

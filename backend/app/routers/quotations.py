@@ -219,15 +219,52 @@ def download_quotation(project_id_or_quotation_id: str, db: Session = Depends(ge
     ).order_by(Quotation.created_at.desc()).first()
     
     if not q:
-        raise HTTPException(404, "Quotation not found")
+        project = db.query(Project).filter(Project.id == project_id_or_quotation_id).first()
+        if project:
+            user = db.query(User).filter(User.id == project.user_id).first()
+            if not user:
+                user = db.query(User).filter(User.role.ilike("%admin%")).first()
+            if user:
+                gen_res = generate_quotation(project.id, user=user, db=db)
+                q = db.query(Quotation).filter(Quotation.id == gen_res["id"]).first()
+    
+    if not q:
+        raise HTTPException(404, "Quotation not found for this project")
         
-    pdf_filename = f"quotation_{q.id[:8]}.pdf"
+    safe_ref = (q.quotation_no or q.id[:8]).replace("/", "-")
+    pdf_filename = f"quotation_{safe_ref}.pdf"
     filepath = os.path.join(_pdf_dir(), pdf_filename)
+    
     if not os.path.exists(filepath):
-        raise HTTPException(404, f"Quotation PDF file not found on disk: {pdf_filename}")
+        alt_path = os.path.join("assets", pdf_filename)
+        if os.path.exists(alt_path):
+            filepath = alt_path
+        else:
+            project = db.query(Project).filter(Project.id == q.project_id).first()
+            user = db.query(User).filter(User.id == project.user_id).first() if project else None
+            if not user:
+                user = db.query(User).first()
+            if project and user:
+                filepath = generate_quotation_pdf(
+                    quotation_id=q.id,
+                    project=project,
+                    user=user,
+                    line_items=q.line_items or [],
+                    subtotal=q.subtotal or 0,
+                    gst=q.gst or 0,
+                    total=q.total or 0,
+                    valid_until=q.valid_until or (datetime.datetime.utcnow() + datetime.timedelta(days=30)).strftime("%Y-%m-%d"),
+                    quotation_no=q.quotation_no,
+                    billing=q.billing_snapshot or {},
+                    discount={"original_total": q.original_total, "discount_amount": q.discount_amount}
+                )
+
+    if not os.path.exists(filepath):
+        raise HTTPException(500, "Quotation PDF file could not be created")
         
+    filename = f"Quotation_{safe_ref}.pdf"
     return FileResponse(
         filepath,
         media_type="application/pdf",
-        filename=f"Quotation_{q.id[:8]}.pdf"
+        filename=filename
     )

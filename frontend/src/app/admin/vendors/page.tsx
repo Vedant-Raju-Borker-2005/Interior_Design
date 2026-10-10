@@ -61,8 +61,8 @@ export default function AdminVendorsPage() {
   };
 
   const filtered = vendors.filter(v => 
-    v.business_name?.toLowerCase().includes(search.toLowerCase()) || 
-    v.category?.toLowerCase().includes(search.toLowerCase())
+    (v.name || '').toLowerCase().includes(search.toLowerCase()) || 
+    (v.category || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const totalCount = vendors.length;
@@ -160,7 +160,7 @@ export default function AdminVendorsPage() {
               ) : (
                 filtered.map(v => (
                   <tr key={v.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4 font-medium text-slate-900">{v.business_name}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900">{v.name}</td>
                     <td className="px-6 py-4 text-slate-600">{v.category || '-'}</td>
                     <td className="px-6 py-4 text-slate-600">{v.city || '-'}</td>
                     <td className="px-6 py-4">

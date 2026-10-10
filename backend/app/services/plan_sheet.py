@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
+import scipy.ndimage as ndi
 from PIL import Image
 
 # A panel is only worth keeping if it could hold a flat.
@@ -30,6 +31,8 @@ MIN_SIDE_FRACTION = 0.18        # of the sheet's width / height
 GUTTER_FRACTION = 0.035         # a blank band this wide separates drawings
 INK_IN_GUTTER = 0.012           # a band is blank when under 1.2% of it is ink
 MAX_PANELS = 8
+ONE_PLAN_INK = 0.70             # one drawing holding this much of the ink is the whole sheet
+BRIDGE_PX = 5                   # closes doorways and dashed lines so one plan stays one piece
 MIRROR_MATCH = 0.45             # grey correlation: real mirrored plates score 0.5-0.95,
                                 # the two halves of one flat stay under 0.3
 PARTY_WALL = 0.55               # two flats back to back share a wall along the mirror line
@@ -192,12 +195,31 @@ def _halves(box: tuple[int, int, int, int], axis: str) -> list[tuple[int, int, i
     return [(x0, y0, mid, y1), (mid, y0, x1, y1)]
 
 
+def _one_drawing(mask: np.ndarray) -> bool:
+    """Whether the ink on this sheet is a single drawing.
+
+    Gutters alone cannot answer this. A floor plan is mostly blank paper -- its
+    rooms are empty -- so a band of white wide enough to look like a gutter runs
+    across almost every plan, and a single flat gets quartered into "flats" that
+    are really its own terrace and balcony. Separate drawings are separate
+    things, though: bridge the doorways and a flat becomes one connected
+    structure, while a sheet of two flats stays two. When one structure holds
+    most of the ink, there is only one drawing here.
+    """
+    grown = ndi.binary_dilation(mask, structure=np.ones((BRIDGE_PX, BRIDGE_PX), bool))
+    labelled, count = ndi.label(grown)
+    if count < 2:
+        return True
+    sizes = np.bincount(labelled.ravel())[1:]
+    return bool(sizes.max() >= ONE_PLAN_INK * sizes.sum())
+
+
 def split_sheet(img: Image.Image) -> list[Panel]:
     """Flats printed on one sheet. A single-plan sheet returns one whole panel."""
     mask, lines, grey = _masks(img)
     h, w = mask.shape
     whole = _trim(mask) or (0, 0, w, h)
-    boxes = _cut(lines, whole, 0)
+    boxes = [whole] if _one_drawing(mask) else _cut(lines, whole, 0)
 
     keep = []
     for box in boxes:

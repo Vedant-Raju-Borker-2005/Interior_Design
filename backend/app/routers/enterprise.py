@@ -327,7 +327,10 @@ def list_project_typologies(
             "id": t.id,
             "project_id": t.project_id,
             "name": t.name,
+            "bhk_type": t.bhk_type,
             "carpet_area_sqft": t.carpet_area_sqft,
+            "description": t.description,
+            "image_url": t.image_url,
             "floor_plan_id": t.floor_plan_id,
             "floor_plan_name": t.floor_plan.file_type if t.floor_plan else None,
             "floor_plan_url": t.floor_plan.file_url if t.floor_plan else None,
@@ -354,7 +357,10 @@ def create_project_typology(
         id=str(uuid.uuid4()),
         project_id=project_id,
         name=req.name,
+        bhk_type=req.bhk_type,
         carpet_area_sqft=req.carpet_area_sqft,
+        description=req.description,
+        image_url=req.image_url,
         floor_plan_id=req.floor_plan_id
     )
     db.add(typology)
@@ -364,7 +370,10 @@ def create_project_typology(
     return {
         "id": typology.id,
         "name": typology.name,
+        "bhk_type": typology.bhk_type,
         "carpet_area_sqft": typology.carpet_area_sqft,
+        "description": typology.description,
+        "image_url": typology.image_url,
         "floor_plan_id": typology.floor_plan_id,
         "floor_plan_url": typology.floor_plan.file_url if typology.floor_plan else None,
         "assigned_count": 0

@@ -1585,16 +1585,16 @@ def get_all_resources(user: User = Depends(current_user), db: Session = Depends(
     # 3. Recent documents across assigned projects
     documents = db.query(ProjectDocument).filter(
         ProjectDocument.project_id.in_(project_ids)
-    ).order_by(ProjectDocument.uploaded_at.desc()).limit(30).all()
+    ).limit(30).all()
     docs_data = []
     for d in documents:
         docs_data.append({
             "id": d.id,
             "projectId": d.project_id,
             "title": d.title,
-            "type": d.document_type or "DOCUMENT",
-            "fileUrl": d.file_url,
-            "uploadedAt": d.uploaded_at.isoformat() if d.uploaded_at else None
+            "type": d.type or "DOCUMENT",
+            "fileUrl": d.url,
+            "uploadedAt": None
         })
 
     return {
