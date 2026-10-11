@@ -114,3 +114,13 @@ backend/ml/runs/
 
 # The builder's own layout drawings are product data, not customer uploads.
 !backend/assets/floor_plans/builder_*.png
+
+# Local scratch notes, evaluation tools, and diagrams (excluded from remote)
+GTA_WALKTHROUGH_CONTEXT.md
+backend-ai/GTA_WALKTHROUGH_CONTEXT.md
+backend-ai/FIRST_PERSON_WALKTHROUGH_SPEC.md
+upgrade_gta_walkthrough.py
+test_edge.png
+walkthrough_performance_evaluation.png
+*.docx
+
