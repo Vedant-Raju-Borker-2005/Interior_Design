@@ -1349,6 +1349,9 @@ def _vision_prompt() -> str:
         '- "box_2d": [ymin, xmin, ymax, xmax] on the 0-1000 scale, following the INSIDE face of '
         "that room's walls. Be precise: the boxes should tile the flat, meeting at the walls "
         "between rooms, not overlapping each other and not extending past plan_bounds.\n"
+        "- the printed room sizes are the single most important thing on this drawing. "
+        "Nearly every room on a plan like this has its size printed under its name. Read "
+        "each one and copy it out; do not leave it blank because the text is small.\n"
         '- "printed_size": the size string exactly as printed for that room, for example '
         "10'6\" X 12'0\" or 3.56 X 2.50. Empty if no size is printed for it.\n"
         '- "width_m" and "depth_m": that printed size in metres, width horizontal and depth '
@@ -1423,7 +1426,7 @@ TILE_TOLERANCE = 0.015
 # A gap no wider than this is the wall between two rooms, not a corridor. At
 # an eight-metre plan this is about 40 cm -- wider than any wall, narrower
 # than anything a person could walk down.
-WALL_GAP = 0.05
+WALL_GAP = 0.012
 
 
 def _close_wall_gaps(rooms: list[dict[str, Any]], bound: float = 0.045) -> None:
@@ -1494,6 +1497,9 @@ def _tile_rooms(rooms: list[dict[str, Any]]) -> list[dict[str, Any]]:
     snapped = _snap_rects_aligned(rects, TILE_TOLERANCE)
     out = []
     for room, rect in zip(rooms, snapped):
+        if not rect:
+            out.append(room)          # the overlap pass had nothing to say
+            continue
         x0, y0, x1, y1 = rect
         if x1 - x0 < 0.015 or y1 - y0 < 0.015:
             continue                      # snapped away to nothing
@@ -1511,6 +1517,203 @@ VISION_CACHE_SIZE = 64
 
 DEFAULT_DOOR_M = 0.90
 DEFAULT_WINDOW_M = 1.20
+
+
+_FEET = re.compile(r"(\d+)\s*'\s*(?:(\d+)\s*\")?")
+_METRIC = re.compile(r"(\d+(?:\.\d+)?)")
+
+
+def _printed_metres(item: dict[str, Any]) -> Optional[tuple[float, float]]:
+    """The room's printed size in metres, width then depth.
+
+    The model is asked for both the string as printed and its own conversion.
+    The string is parsed here as well, because a drawing that says 10'3" X
+    11'0" has stated the answer and there is no reason to prefer anybody's
+    arithmetic over it.
+    """
+    for key_w, key_d in (("width_m", "depth_m"),):
+        try:
+            w, d = float(item.get(key_w) or 0), float(item.get(key_d) or 0)
+            if 0.5 <= w <= 30 and 0.5 <= d <= 30:
+                return w, d
+        except (TypeError, ValueError):
+            pass
+
+    text = str(item.get("printed_size") or "").strip()
+    if not text:
+        return None
+    parts = re.split(r"[xX\u00d7]", text)
+    if len(parts) != 2:
+        return None
+    out = []
+    for part in parts:
+        feet = _FEET.search(part)
+        if feet and "'" in part:
+            inches = float(feet.group(2) or 0)
+            out.append((float(feet.group(1)) + inches / 12.0) * 0.3048)
+            continue
+        metric = _METRIC.search(part)
+        if not metric:
+            return None
+        value = float(metric.group(1))
+        out.append(value if value <= 30 else value / 1000.0)
+    w, d = out
+    return (w, d) if 0.5 <= w <= 30 and 0.5 <= d <= 30 else None
+
+
+def _resize_to_printed(rooms: list[dict[str, Any]], plan_w: float, plan_d: float) -> int:
+    """Set each room to the size printed on the drawing, keeping its centre.
+
+    The boxes say where the rooms are, and they are good at that. They are
+    less good at how big: measured off a drawing they came out 10 to 40 per
+    cent out, and the gap-closing pass then stretched them further. The
+    drawing itself states the sizes, so those are used and the box is reduced
+    to deciding position.
+    """
+    if plan_w <= 0 or plan_d <= 0:
+        return 0
+    fixed = 0
+    for r in rooms:
+        printed = r.get("_printed")
+        if not printed:
+            continue
+        want_w, want_d = printed
+        x0, y0, x1, y1 = r["box"]
+        # The drawing's width may be the box's height when a room is labelled
+        # along its short side; match whichever orientation is closer.
+        have_w, have_d = (x1 - x0) * plan_w, (y1 - y0) * plan_d
+        if abs(have_w - want_w) + abs(have_d - want_d) > \
+           abs(have_w - want_d) + abs(have_d - want_w):
+            want_w, want_d = want_d, want_w
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        half_x, half_y = (want_w / plan_w) / 2, (want_d / plan_d) / 2
+        r["box"] = [round(cx - half_x, 4), round(cy - half_y, 4),
+                    round(cx + half_x, 4), round(cy + half_y, 4)]
+        fixed += 1
+    return fixed
+
+
+STAIR_RISER_M = 0.17            # a comfortable step
+STAIR_TREAD_M = 0.27
+
+
+def _stair_flight(space) -> list[dict[str, Any]]:
+    """The steps themselves, so the stair reads as a stair.
+
+    Drawn as a run of treads climbing the long axis of the space. It is not
+    furniture -- nothing can be added to it or taken off it -- but leaving the
+    floor flat and empty made a staircase look like a small blank room, which
+    is what it had been mistaken for.
+    """
+    along = max(space.w, space.d)
+    across = min(space.w, space.d)
+    steps = max(3, min(18, int(along / STAIR_TREAD_M)))
+    run = along / steps
+    out = []
+    for i in range(steps):
+        rise = STAIR_RISER_M * (i + 1)
+        if space.w >= space.d:
+            cx = space.x0 + run * (i + 0.5)
+            cy = space.y0 + space.d / 2
+            w, d = run, across
+        else:
+            cx = space.x0 + space.w / 2
+            cy = space.y0 + run * (i + 0.5)
+            w, d = across, run
+        out.append({
+            "object_id": f"{space.sid}__step{i + 1}",
+            "room_id": space.sid,
+            "category": "stair_step",
+            "asset_reference": None,
+            "position": {"x": round(cx, 3), "y": round(rise - STAIR_RISER_M / 2, 3),
+                         "z": round(cy, 3)},
+            "rotation": {"yaw": 0.0},
+            "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+            "dimensions": {"width": round(w, 3), "height": STAIR_RISER_M,
+                           "depth": round(d, 3)},
+            "material": "concrete", "role": "structure",
+            "colour": "Concrete", "colour_hex": "#CFCCC6",
+            "roughness": 0.9, "metalness": 0.0, "opacity": 1.0,
+            "label": "Step", "features": [],
+            "fixed": True,
+        })
+    return out
+
+
+def _sizes_missing(text: str) -> bool:
+    """Whether a reply came back without the dimensions the drawing prints."""
+    try:
+        data = json.loads(re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.M).strip())
+    except Exception:
+        return True
+    rooms = data.get("rooms") if isinstance(data, dict) else None
+    if not rooms:
+        return True
+    # Balconies and corridors are rarely dimensioned; rooms almost always are.
+    named = [r for r in rooms if r.get("name") and
+             r.get("type") not in ("balcony", "passage", "staircase")]
+    if not named:
+        return False
+    sized = sum(1 for r in named if _printed_metres(r))
+    return sized < max(1, int(0.6 * len(named)))
+
+
+def _align_without_resizing(rooms: list[dict[str, Any]], tol: float = 0.035) -> None:
+    """Slide rooms so their edges line up, without changing any room's size.
+
+    Setting each room to its printed dimensions makes the sizes right and the
+    arrangement loose: rooms that share a wall on the drawing end up a few
+    centimetres apart, so the model finds no shared boundary between them, and
+    with no boundary there is nowhere to put a door. Three rooms on one plan
+    came out with no way in at all.
+
+    Growing them to meet would undo the sizes. Moving them does not: edges
+    that nearly agree are snapped to one line and each room is translated onto
+    it, keeping its width and depth exactly as printed.
+    """
+    for axis, lo_i, hi_i in ((0, 0, 2), (1, 1, 3)):
+        edges = sorted({v for r in rooms for v in (r["box"][lo_i], r["box"][hi_i])})
+        groups: list[list[float]] = []
+        for e in edges:
+            if groups and e - groups[-1][-1] <= tol:
+                groups[-1].append(e)
+            else:
+                groups.append([e])
+        line = {e: sum(g) / len(g) for g in groups for e in g}
+
+        for r in rooms:
+            lo, hi = r["box"][lo_i], r["box"][hi_i]
+            size = hi - lo
+            want_lo, want_hi = line[lo], line[hi]
+            # Follow whichever edge moves least, then carry the other with it,
+            # so the room shifts rather than stretches.
+            shift = (want_lo - lo) if abs(want_lo - lo) <= abs(want_hi - hi) else (want_hi - hi)
+            r["box"][lo_i] = round(lo + shift, 4)
+            r["box"][hi_i] = round(lo + shift + size, 4)
+
+
+def _unreachable(rooms: list[dict[str, Any]]) -> list[str]:
+    """Rooms you could not walk into, going only through shared walls.
+
+    A plan is not just a picture: if a bedroom touches nothing, no door can be
+    put in it and the home cannot be walked. Checking it here, on the rooms
+    themselves, catches the problem while it can still be fixed rather than
+    after the model has been built around it.
+    """
+    touching: dict[int, set[int]] = {i: set() for i in range(len(rooms))}
+    for i, a in enumerate(rooms):
+        ax0, ay0, ax1, ay1 = a["box"]
+        for j, b in enumerate(rooms):
+            if i >= j:
+                continue
+            bx0, by0, bx1, by1 = b["box"]
+            shares_v = (abs(ax1 - bx0) < 0.012 or abs(bx1 - ax0) < 0.012) and                        min(ay1, by1) - max(ay0, by0) > 0.03
+            shares_h = (abs(ay1 - by0) < 0.012 or abs(by1 - ay0) < 0.012) and                        min(ax1, bx1) - max(ax0, bx0) > 0.03
+            if shares_v or shares_h:
+                touching[i].add(j)
+                touching[j].add(i)
+    return [str(rooms[i].get("label") or rooms[i]["room_type"])
+            for i, nb in touching.items() if not nb]
 
 
 def _marked_openings(rooms: list[dict[str, Any]], plan_width_m: float,
@@ -1643,11 +1846,33 @@ def _detect_with_gemini(raw: bytes, mime: str, w: int, h: int, bhk_hint: int) ->
 
     text = "".join(p.get("text", "") for c in resp.json().get("candidates", [])
                    for p in c.get("content", {}).get("parts", []))
+
+    # The reply is not stable between calls: the same drawing comes back once
+    # with every room's printed size and once with none, and without them the
+    # rooms fall back to pixel measurements that are 10-40% out. One retry on
+    # a stronger model is cheaper than shipping a wrong plan.
+    if _sizes_missing(text):
+        for name in ("gemini-flash-latest", "gemini-3-flash-preview"):
+            try:
+                again = requests.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{name}"
+                    ":generateContent", json=payload, timeout=120,
+                    headers={"x-goog-api-key": os.getenv("GEMINI_KEY", "")})
+            except requests.RequestException:
+                continue
+            if again.status_code != 200:
+                continue
+            retry_text = "".join(p.get("text", "") for c in again.json().get("candidates", [])
+                                 for p in c.get("content", {}).get("parts", []))
+            if not _sizes_missing(retry_text):
+                text = retry_text
+                break
     text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.M).strip()
     data = json.loads(text)
     bounds = data.get("plan_bounds") if isinstance(data, dict) else None
     overall_w = data.get("overall_width_m") if isinstance(data, dict) else None
-    rooms, widths = [], []
+    overall_d = data.get("overall_depth_m") if isinstance(data, dict) else None
+    rooms, widths, depths = [], [], []
     for item in data.get("rooms", []) if isinstance(data, dict) else []:
         box = item.get("box_2d") or []
         if len(box) != 4:
@@ -1662,20 +1887,33 @@ def _detect_with_gemini(raw: bytes, mime: str, w: int, h: int, bhk_hint: int) ->
         rooms.append({"box": [x0, y0, x1, y1], "room_type": rtype, "label": name or None,
                       "_open_to": [str(v) for v in (item.get("open_to") or []) if v],
                       "_doors": item.get("doors") or [],
-                      "_windows": item.get("windows") or []})
-        for key, span in (("width_m", x1 - x0), ("depth_m", (y1 - y0) * h / w)):
-            try:
-                metres = float(item.get(key) or 0)
-            except (TypeError, ValueError):
-                metres = 0
-            if 0.8 <= metres <= 15 and span > 0.03:
-                widths.append(metres / span)
+                      "_windows": item.get("windows") or [],
+                      "_printed": _printed_metres(item)})
+
     for r in rooms:
         if not r["label"]:
             r.pop("label")
     # Measured against the flat, not the sheet, and clipped to it.
     rooms = _fit_inside(rooms, bounds)
-    rooms = _tile_rooms(rooms)
+
+    # Now that a room's box is a fraction of the flat, each printed size says
+    # how many metres the flat spans. Taken over every dimensioned room, the
+    # median is a far steadier reading than any single number on the sheet.
+    for r in rooms:
+        printed = r.get("_printed")
+        if not printed:
+            continue
+        pw, pd = printed
+        span_x, span_y = r["box"][2] - r["box"][0], r["box"][3] - r["box"][1]
+        if span_x <= 0.03 or span_y <= 0.03:
+            continue
+        # A room labelled along its short side is matched either way round.
+        if abs(pd / span_x - pw / span_y) < abs(pw / span_x - pd / span_y):
+            pw, pd = pd, pw
+        if 3 <= pw / span_x <= 80:
+            widths.append(pw / span_x)
+        if 3 <= pd / span_y <= 80:
+            depths.append(pd / span_y)
     # A drawing that prints its overall width has told us the scale outright.
     # Deriving it from a handful of room dimensions instead is how a 9.75 m
     # flat came back as 11.91 m, with every room 22% too big.
@@ -1687,19 +1925,81 @@ def _detect_with_gemini(raw: bytes, mime: str, w: int, h: int, bhk_hint: int) ->
     except (TypeError, ValueError):
         pass
 
-    plan_width = printed_overall or (float(np.median(widths)) if len(widths) >= 2 else None)
+    # Two independent readings of the same thing: the overall figure printed on
+    # the sheet, and the median implied by each room's own printed size. The
+    # first is one number the model may misread; the second is cross-checked
+    # across every dimensioned room. Where they disagree badly, the room
+    # evidence wins -- a lone wrong number should not rescale the whole flat.
+    measured_width = float(np.median(widths)) if len(widths) >= 2 else None
+    if measured_width is not None and not 3 <= measured_width <= 80:
+        measured_width = None
+    plan_width = printed_overall or measured_width
+    if printed_overall and measured_width:
+        if abs(printed_overall - measured_width) / measured_width > 0.15:
+            plan_width = measured_width
+    if plan_width is None or not 3 <= plan_width <= 60:
+        n_bed_tmp = sum(1 for r in rooms if r["room_type"] in BEDROOM_TYPES)
+        area_tmp = sum((r["box"][2] - r["box"][0]) * (r["box"][3] - r["box"][1]) * h / w
+                       for r in rooms if r["room_type"] != "balcony")
+        plan_width = (math.sqrt(_CARPET_M2.get(min(n_bed_tmp, 5), 58) / area_tmp)
+                      if area_tmp else _fallback_width(bhk_hint, w / h))
+
+    # The drawing's own numbers, where it gives them, then a light tidy so the
+    # rooms sit on shared lines rather than a few millimetres apart.
+    printed_depth = None
+    try:
+        value = float(overall_d or 0)
+        if 3.0 <= value <= 80.0:
+            printed_depth = value
+    except (TypeError, ValueError):
+        pass
+    measured_depth = float(np.median(depths)) if len(depths) >= 2 else None
+    if measured_depth is not None and not 3 <= measured_depth <= 80:
+        measured_depth = None
+    plan_depth = printed_depth or measured_depth
+    if printed_depth and measured_depth:
+        if abs(printed_depth - measured_depth) / measured_depth > 0.15:
+            plan_depth = measured_depth
+    if not plan_depth:
+        plan_depth = plan_width * (h / w) if w else plan_width
+
+    # Tidy the arrangement first, then set the sizes. The other way round, the
+    # snapping pass pulls a room off the dimension its own drawing states.
+    rooms = _tile_rooms(rooms)
+    _resize_to_printed(rooms, plan_width, plan_depth)
+    # Sizes are right; now make the arrangement hold together, by moving rooms
+    # rather than resizing them.
+    _align_without_resizing(rooms)
+    stranded = _unreachable(rooms)
     if plan_width is None or not 3 <= plan_width <= 60:
         n_bed = sum(1 for r in rooms if r["room_type"] in BEDROOM_TYPES)
         area_norm = sum((r["box"][2] - r["box"][0]) * (r["box"][3] - r["box"][1]) * h / w
                         for r in rooms if r["room_type"] != "balcony")
         plan_width = math.sqrt(_CARPET_M2.get(min(n_bed, 5), 58) / area_norm) if area_norm else _fallback_width(bhk_hint, w / h)
     openings = _open_plan_gaps(rooms) + _marked_openings(rooms, plan_width, h / w if w else 1.0)
-    scratch = ("_open_to", "_doors", "_windows")
+    scratch = ("_open_to", "_doors", "_windows", "_printed")
     rooms = _label_rooms([{k: v for k, v in r.items() if k not in scratch} |
                           {"box": [round(v, 4) for v in r["box"]]} for r in rooms])
-    result = {"rooms": rooms, "plan_width_m": round(plan_width, 2), "method": "gemini",
-              "door_gaps": openings,
-              "notes": ["Rooms read from your plan by Gemini vision — check them before generating."]}
+    # Where the flat sits on the sheet, as a fraction of the image. Everything
+    # downstream works in flat co-ordinates, so without this there is no way
+    # to put a result back over the original drawing and compare them.
+    frame = None
+    if isinstance(bounds, dict):
+        try:
+            frame = [round(max(0.0, min(1.0, float(bounds["xmin"]) / 1000)), 4),
+                     round(max(0.0, min(1.0, float(bounds["ymin"]) / 1000)), 4),
+                     round(max(0.0, min(1.0, float(bounds["xmax"]) / 1000)), 4),
+                     round(max(0.0, min(1.0, float(bounds["ymax"]) / 1000)), 4)]
+        except (KeyError, TypeError, ValueError):
+            frame = None
+
+    result = {"rooms": rooms, "plan_width_m": round(plan_width, 2),
+              "plan_depth_m": round(plan_depth, 2) if (printed_depth or measured_depth) else None,
+              "plan_frame": frame,
+              "method": "gemini", "door_gaps": openings,
+              "notes": ["Rooms read from your plan by Gemini vision — check them before generating."]
+                       + ([f"Not connected to the rest of the plan: {', '.join(stranded)}."
+                           " Check these before generating."] if stranded else [])}
     _VISION_CACHE[key] = copy.deepcopy(result)
     while len(_VISION_CACHE) > VISION_CACHE_SIZE:
         _VISION_CACHE.popitem(last=False)
@@ -1873,6 +2173,13 @@ def _build(plan: dict[str, Any], tier: str, brief: dict[str, Any]) -> dict[str, 
     for s in rooms:
         meta = room_meta.get(s.room_type) or room_meta.get(_meta_alias(s.room_type)) or fallback_meta
         ceiling = float(meta.get("ceiling_m", 2.9))
+        if s.room_type in UNUSABLE_TYPES:
+            # A staircase is drawn, walled and walked past, but it is not a
+            # room of this home: it belongs to the building. Listing it as one
+            # gave the customer a Staircase tab offering to furnish the steps.
+            # The flight itself is modelled below instead.
+            objects.extend(_stair_flight(s))
+            continue
         room_layouts, lost = _furnish(s, pools, used, openings)
         dropped.extend(lost)
         # The winning arrangement is the scene. The alternates ride alongside
@@ -2378,6 +2685,36 @@ def _openings(spaces, adjacency, exterior, walls, hints=()):
                 add(f"{s.sid}_window_1", s.sid, axis, fixed, start, round(width, 3), "window", height, sill,
                     into_sign(s, axis, fixed), hinge="end")
                 break
+
+    # Nothing may be sealed. Door placement is driven by what the drawing shows
+    # and by preferences between room types, and between them a room can come
+    # out with no way in -- three of seven on one plan, including a living room
+    # and a bedroom. A home with a room you cannot enter is wrong however
+    # faithfully the rest was read, so any room still without a door gets one
+    # on the longest wall it shares with a neighbour.
+    with_door = {o["room_id"] for o in openings if o["kind"] != "window"}
+    for s in spaces:
+        if s.sid in with_door or s.kind in ("balcony", "circulation") or            s.room_type in UNUSABLE_TYPES:
+            continue
+        shared = []
+        for (a_sid, b_sid), segs in adjacency.items():
+            if s.sid not in (a_sid, b_sid):
+                continue
+            for axis, fixed, lo, hi in segs:
+                shared.append((hi - lo, axis, fixed, lo, hi))
+        if not shared:
+            continue
+        shared.sort(reverse=True)
+        span, axis, fixed, lo, hi = shared[0]
+        width = min(0.9, span - 0.2)
+        if width < 0.6:
+            continue
+        start = free_slot(axis, fixed, lo, hi, width, prefer="centre")
+        if start is None:
+            start = (lo + hi - width) / 2
+        add(f"{s.sid}_door_fallback", s.sid, axis, fixed, start, round(width, 3),
+            "door", 2.1, 0.0, into_sign(s, axis, fixed))
+
     return openings, entrance
 
 
