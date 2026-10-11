@@ -1611,6 +1611,12 @@ def _stair_flight(space) -> list[dict[str, Any]]:
     run = along / steps
     out = []
     for i in range(steps):
+        # Each step is a solid block standing on the floor, as tall as that
+        # step is high -- not a thin tread floating at its own height. The
+        # viewer draws an unknown category as a box from its dimensions and
+        # stands it on the floor, so a floating tread came out flat: a run of
+        # stripes on the ground rather than a flight of stairs. Blocks read as
+        # stairs however the viewer treats height.
         rise = STAIR_RISER_M * (i + 1)
         if space.w >= space.d:
             cx = space.x0 + run * (i + 0.5)
@@ -1625,11 +1631,10 @@ def _stair_flight(space) -> list[dict[str, Any]]:
             "room_id": space.sid,
             "category": "stair_step",
             "asset_reference": None,
-            "position": {"x": round(cx, 3), "y": round(rise - STAIR_RISER_M / 2, 3),
-                         "z": round(cy, 3)},
+            "position": {"x": round(cx, 3), "y": 0.0, "z": round(cy, 3)},
             "rotation": {"yaw": 0.0},
             "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
-            "dimensions": {"width": round(w, 3), "height": STAIR_RISER_M,
+            "dimensions": {"width": round(w, 3), "height": round(rise, 3),
                            "depth": round(d, 3)},
             "material": "concrete", "role": "structure",
             "colour": "Concrete", "colour_hex": "#CFCCC6",
@@ -2885,7 +2890,7 @@ def _room_candidates(space: _Space, pools, used):
 
 def _select(space: _Space, candidates, must_haves, omit: tuple[str, ...]):
     """Which of the candidates this arrangement tries to fit, and what it leaves."""
-    from ids.solver import rule_for
+    from ids.solver import occupies_floor, rule_for
 
     wanted = [o for o in candidates
               if o["category"] not in omit or o["category"] in must_haves]
@@ -2896,6 +2901,10 @@ def _select(space: _Space, candidates, must_haves, omit: tuple[str, ...]):
     def area(o):
         return o["dimensions"]["width"] * o["dimensions"]["depth"]
 
+    def on_floor(o):
+        """Does this piece spend any of the room's floor?"""
+        return occupies_floor(o["category"], o["dimensions"].get("height", 0.0))
+
     # The pieces that make a room what it is go in first, judged only against a
     # ceiling that leaves somewhere to stand. Everything else then shares half
     # of whatever floor is left, so a bed and a wardrobe no longer spend the
@@ -2905,23 +2914,22 @@ def _select(space: _Space, candidates, must_haves, omit: tuple[str, ...]):
         cat = o["category"]
         if cat not in must_haves or cat in seen:
             continue
-        if kept and not rule_for(cat).stackable and taken + area(o) > 0.82 * floor:
+        if kept and on_floor(o) and taken + area(o) > 0.66 * floor:
             left_out.append(o)
             continue
         seen.add(cat)
-        if not rule_for(cat).stackable:
+        if on_floor(o):
             taken += area(o)
         kept.append(o)
 
-    budget, used_area = 0.5 * max(floor - taken, 0.0), 0.0
+    budget, used_area = 0.42 * max(floor - taken, 0.0), 0.0
     for o in wanted:
         if o in kept:
             continue
-        stack = rule_for(o["category"]).stackable
-        if kept and not stack and used_area + area(o) > budget:
+        if kept and on_floor(o) and used_area + area(o) > budget:
             left_out.append(o)
             continue
-        if not stack:
+        if on_floor(o):
             used_area += area(o)
         kept.append(o)
     kept.sort(key=lambda o: rule_for(o["category"]).priority)
@@ -2941,8 +2949,10 @@ def _solve_layout(space, kept, room, s_openings, must_haves, seed, prefix="", ef
         o["object_id"] = f"{space.sid}__{prefix}{o['category']}{suffix}"
         o["room_id"] = space.sid
 
+    # Six passes covered dropping what would not fit. A room can now also be
+    # rejected for having nowhere to walk, which takes a pass of its own.
     shrunk = 0
-    for _attempt in range(6):
+    for _attempt in range(10):
         s_objs = [SObj(o["object_id"], space.sid, o["category"],
                        {"x": space.cx, "y": 0.0, "z": space.cy}, {"yaw": 0.0},
                        dict(o["dimensions"])) for o in kept]
@@ -2950,7 +2960,9 @@ def _solve_layout(space, kept, room, s_openings, must_haves, seed, prefix="", ef
         for o in kept:
             p = place.get(o["object_id"])
             if p is not None:
-                o["position"] = {"x": round(p.x, 3), "y": 0.0, "z": round(p.y, 3)}
+                o["position"] = {"x": round(p.x, 3),
+                                 "y": round(rule_for(o["category"]).mount, 3),
+                                 "z": round(p.y, 3)}
                 o["rotation"] = {"yaw": float(p.yaw)}
         scene = SScene(rooms=[room], openings=s_openings,
                        objects=[SObj(o["object_id"], space.sid, o["category"], o["position"],
@@ -3221,11 +3233,15 @@ def _plan_svg(scene, spaces, brief, tier, catalog) -> str:
         a("</g>")
 
     labels = []
-    # Rugs sit under everything else.
-    for o in sorted(scene["objects"], key=lambda o: o["category"] != "rug"):
+    # Rugs sit under everything else; overhead joinery goes on top of it all.
+    def stacking(o):
+        return (_mounted(o["category"]), o["category"] != "rug")
+
+    for o in sorted(scene["objects"], key=stacking):
         _object_symbol(o, a, poly, line, X, Y, s, esc)
         dims = o["dimensions"]
-        if dims["width"] * dims["depth"] >= 0.9 and o["category"] != "rug":
+        if (dims["width"] * dims["depth"] >= 0.9 and o["category"] != "rug"
+                and not _mounted(o["category"])):
             labels.append((o["position"]["x"], o["position"]["z"], o["label"].upper()))
     for x, y, t in labels:
         text(x, y, t, 6.2, fill="#5F564A")
@@ -3353,6 +3369,12 @@ def _plan_svg(scene, spaces, brief, tier, catalog) -> str:
 _ROUND = {"side_table", "floor_lamp", "planter"}
 
 
+def _mounted(category: str) -> bool:
+    """Does this piece hang on the wall rather than stand on the floor?"""
+    from ids.solver import rule_for
+    return rule_for(category).mount > 0.05
+
+
 def _object_symbol(o, a, poly, line, X, Y, s, esc):
     dims, role = o["dimensions"], o.get("role") or "wood"
     yaw = int(round(o["rotation"].get("yaw", 0))) % 360
@@ -3370,6 +3392,11 @@ def _object_symbol(o, a, poly, line, X, Y, s, esc):
     elif o["category"] == "rug":
         poly([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], "#F8EEED", "#EDD2CF", 0.9,
              f' stroke-dasharray="6,4" class="fx-{role}-s fxs-{role}-o"')
+    elif _mounted(o["category"]):
+        # Dashed and unfilled, because this one is above the reader's head and
+        # the worktop it hangs over is the thing actually on the floor.
+        poly([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], "none", stroke, 0.8,
+             ' stroke-dasharray="5,3"')
     else:
         poly([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], "#E5D6C3", stroke, 0.9, f' class="fx-{role}-b"')
         if o["category"] in ("sofa", "armchair", "bed", "bench", "chair"):

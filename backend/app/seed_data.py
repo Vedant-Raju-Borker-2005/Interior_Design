@@ -304,6 +304,12 @@ def seed_database(db: Session):
         from .services.typology_plan import seed_builder_layouts
         seed_builder_layouts(db)
     except Exception:
+        # A half-finished flush leaves the session refusing every later
+        # statement, so the rest of the seed -- packages, products, the
+        # catalogue -- failed too and the app came up empty. The builder
+        # layouts are the optional part; roll back to the last good point and
+        # carry on seeding without them.
+        db.rollback()
         import logging
         logging.getLogger(__name__).exception("could not seed the builder layouts")
 

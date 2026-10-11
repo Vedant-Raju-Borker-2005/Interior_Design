@@ -75,6 +75,24 @@ class Box:
         return Box(self.x0 - margin, self.y0 - margin, self.x1 + margin, self.y1 + margin)
 
 
+def front_strip(box: Box, yaw: float, depth: float) -> Box:
+    """The strip of floor in front of a box facing `yaw`.
+
+    Yaw 0 faces +y (north); the viewer applies PI - yaw, so this is the same
+    convention the renderer uses.
+    """
+    if depth <= 0:
+        return Box(box.cx, box.cy, box.cx, box.cy)
+    y = int(round(yaw)) % 360
+    if y == 180:
+        return Box(box.x0, box.y0 - depth, box.x1, box.y0)
+    if y == 90:
+        return Box(box.x1, box.y0, box.x1 + depth, box.y1)
+    if y == 270:
+        return Box(box.x0 - depth, box.y0, box.x0, box.y1)
+    return Box(box.x0, box.y1, box.x1, box.y1 + depth)
+
+
 @dataclass
 class Room:
     room_id: str
@@ -247,7 +265,8 @@ class Scene:
 
 def validate(scene: Scene) -> list[Violation]:
     """Validate all hard constraints on a scene. Returns empty list if feasible."""
-    from .solver import rule_for
+    from .solver import collide, needs_access, occupies_floor, rule_for
+    from .walk import Piece, walk_report
 
     violations: list[Violation] = []
     for room in scene.rooms:
@@ -269,12 +288,15 @@ def validate(scene: Scene) -> list[Violation]:
         for i in range(len(objs)):
             for j in range(i + 1, len(objs)):
                 o1, o2 = objs[i], objs[j]
-                r1 = rule_for(o1.category)
-                r2 = rule_for(o2.category)
-                if r1.stackable or r2.stackable:
+                # Sharing floor is only a clash if they also share height: the
+                # upper cabinets sit above the worktop and the rug lies under
+                # the sofa, but a planter inside the media console is two
+                # objects in one place and has to be solved.
+                if not collide(o1.category, o1.dimensions.get("height", 0.0),
+                               o2.category, o2.dimensions.get("height", 0.0)):
                     continue
                 ov = o1.footprint().overlap(o2.footprint())
-                if ov > 0.04:
+                if ov > 0.01:
                     violations.append(
                         Violation("overlap", f"{o1.object_id}&{o2.object_id}", f"overlap area {ov:.2f}m²")
                     )
@@ -285,7 +307,7 @@ def validate(scene: Scene) -> list[Violation]:
             if not sb:
                 continue
             for o in objs:
-                if rule_for(o.category).stackable:
+                if not occupies_floor(o.category, o.dimensions.get("height", 0.0)):
                     continue
                 ov = sb.overlap(o.footprint())
                 if ov > 0.03:
@@ -303,5 +325,28 @@ def validate(scene: Scene) -> list[Violation]:
                         violations.append(
                             Violation("window_blocked", o.object_id, f"tall object blocks window {w.opening_id}")
                         )
+
+        # 5. Is there anywhere left to walk?
+        #
+        # Every check above is pairwise, and an arrangement can pass all of
+        # them and still be unusable -- a sideboard in the one gap past the
+        # dining table cuts the far half of the room off, and no pair of
+        # objects is at fault. This one rasterises the floor and walks it.
+        pieces = []
+        for o in objs:
+            h = float(o.dimensions.get("height", 0.0))
+            b = o.footprint()
+            strip = front_strip(b, o.rotation.get("yaw", 0.0),
+                                rule_for(o.category).clearance)
+            wanted = needs_access(o.category) and strip.area > 0
+            pieces.append(Piece(
+                o.object_id, (b.x0, b.y0, b.x1, b.y1),
+                blocks_floor=occupies_floor(o.category, h),
+                access=(strip.x0, strip.y0, strip.x1, strip.y1) if wanted else None,
+            ))
+        walk = walk_report((inner.x0, inner.y0, inner.x1, inner.y1), pieces,
+                           [(d.opening_id, *d.centre) for d in doors])
+        for object_id in walk.blame:
+            violations.append(Violation("unwalkable", object_id, walk.reason))
 
     return violations

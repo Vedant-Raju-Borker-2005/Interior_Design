@@ -28,7 +28,7 @@ ENGINE = HERE.parent
 sys.path.insert(0, str(ENGINE))
 
 from ids.scene import Opening, Room, Scene, SceneObject, validate  # noqa: E402
-from ids.solver import SpatialSolver, SweepBackend  # noqa: E402
+from ids.solver import SpatialSolver, SweepBackend, rule_for  # noqa: E402
 
 VIEWER = ENGINE / "frontend" / "index.html"
 MARKER = "window.__VARIANTS__ = "
@@ -122,7 +122,9 @@ def arrangements_for_room(room_raw, objects, openings, solver_seeds=STRATEGIES):
                 continue
             copy_o = json.loads(json.dumps(o))
             copy_o["object_id"] = so.object_id
-            copy_o["position"] = {"x": round(spot.x, 3), "y": 0.0, "z": round(spot.y, 3)}
+            copy_o["position"] = {"x": round(spot.x, 3),
+                                  "y": round(rule_for(o["category"]).mount, 3),
+                                  "z": round(spot.y, 3)}
             copy_o["rotation"] = {"yaw": round(float(spot.yaw), 1)}
             built.append(copy_o)
         if not built:
@@ -172,6 +174,17 @@ def main() -> None:
         was = len(validate(scene))
         solved, _reports = solver.solve_scene(scene)
         now = len(validate(solved))
+
+        if now > was:
+            # The solver is seeded and its annealing is a random walk, so a
+            # variant can come back worse than the arrangement somebody froze
+            # by hand. Leaving that one alone is the same rule solve_room
+            # applies to itself: never ship a worse layout.
+            print(f"  {key:20}{len(raw['objects']):8d}{was:9d}{was:8d}{0:8d}"
+                  f"{len(raw.get('layouts') or {}):8d}  kept")
+            before_bad += was
+            after_bad += was
+            continue
 
         placed = {o.object_id: o for o in solved.objects}
         changed = 0

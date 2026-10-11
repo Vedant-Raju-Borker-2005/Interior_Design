@@ -23,12 +23,25 @@ from __future__ import annotations
 
 import math
 import random
+import zlib
 from dataclasses import dataclass, field, replace
 from typing import Iterable, Protocol, Sequence
 
-from .scene import Box, Opening, Room, Scene, SceneObject, yaw_footprint
+from .scene import (Box, Opening, Room, Scene, SceneObject, front_strip,
+                    yaw_footprint)
 
 YAWS = (0.0, 90.0, 180.0, 270.0)
+
+
+def _stable_hash(text: str) -> int:
+    """A room id turned into a seed that is the same in every process.
+
+    Python randomises str.__hash__ per interpreter unless PYTHONHASHSEED is
+    set, so seeding off it meant the same plan came back arranged differently
+    on every run -- and the docstring above promising reproducibility was
+    quietly untrue.
+    """
+    return zlib.crc32(text.encode("utf-8")) & 0xFFFF
 
 
 # ─────────────────────────────────────────────────── placement rules ───────
@@ -41,9 +54,10 @@ class Rule:
     against: tuple[str, ...] = () # categories it likes to be beside
     gap: float = 0.35             # preferred distance to those categories
     priority: int = 50            # lower places first (anchors before fillers)
-    stackable: bool = False       # may sit under other items (rugs, planters)
+    stackable: bool = False       # lies flat on the floor, things go on top
     keeps_window_clear: bool = False   # a bed across a window reads as a mistake
     flanks: bool = False          # a pair sits either side of its partner
+    mount: float = 0.0            # metres off the floor the piece begins
 
 
 RULES: dict[str, Rule] = {
@@ -55,7 +69,7 @@ RULES: dict[str, Rule] = {
     "dining_set":     Rule("centre", 0.85, True, (), 0.35, 8),
     "media_console":  Rule("wall", 0.70, True, ("sofa",), 2.40, 15, keeps_window_clear=True),
     "bookshelf":      Rule("wall", 0.55, True, (), 0.35, 20, keeps_window_clear=True),
-    "wall_cabinets":  Rule("wall", 0.00, True, ("counter_run",), 0.00, 18),
+    "wall_cabinets":  Rule("wall", 0.00, True, ("counter_run",), 0.00, 18, mount=1.40),
     "tall_storage":   Rule("corner", 0.65, True, (), 0.35, 18, keeps_window_clear=True),
     "vanity":         Rule("wall", 0.70, True, (), 0.35, 8),
     "wc":             Rule("wall", 0.60, True, (), 0.35, 9),
@@ -73,7 +87,7 @@ RULES: dict[str, Rule] = {
     "console_table":  Rule("wall", 0.50, True, (), 0.35, 38),
     "armchair":       Rule("free", 0.50, True, ("coffee_table",), 0.70, 45),
     "floor_lamp":     Rule("corner", 0.15, False, ("sofa",), 0.35, 70),
-    "planter":        Rule("corner", 0.10, False, (), 0.35, 80, stackable=True),
+    "planter":        Rule("corner", 0.10, False, (), 0.35, 80),
     "rug":            Rule("centre", 0.00, False, ("sofa", "bed"), 0.00, 90, stackable=True),
     "fridge":         Rule("wall", 0.80, True, (), 0.35, 14),
 }
@@ -82,6 +96,61 @@ DEFAULT_RULE = Rule()
 
 def rule_for(category: str) -> Rule:
     return RULES.get(category, DEFAULT_RULE)
+
+
+# Anything lower than this is stepped over rather than walked around: a rug,
+# a threshold strip. Everything taller is in the way.
+FLAT_H = 0.06
+# Two pieces have to share this much height before they are in each other.
+TOUCH_H = 0.02
+
+
+def levels(category: str, height: float) -> tuple[float, float]:
+    """The slice of air a piece occupies, measured up from the floor."""
+    base = rule_for(category).mount
+    return base, base + max(0.0, float(height))
+
+
+def occupies_floor(category: str, height: float) -> bool:
+    """Does this piece take floor space away from the person in the room?
+
+    A wall cabinet hangs over the worktop and a rug lies under the sofa.
+    Neither costs anybody a step, and charging them floor area is part of what
+    filled small kitchens with furniture that had nowhere to stand.
+    """
+    return rule_for(category).mount <= 0.05 and float(height) > FLAT_H
+
+
+# Below this, the clearance a piece asks for is not a walkway but a reach:
+# you get at a nightstand across the bed it stands beside, and at a floor lamp
+# past the sofa. Only the pieces that want somewhere to stand are checked for
+# whether anybody can stand there.
+STANDING_CLEARANCE = 0.50
+
+
+def needs_access(category: str) -> bool:
+    """Does using this piece mean standing in front of it?"""
+    return rule_for(category).clearance >= STANDING_CLEARANCE
+
+
+def shared_height(a_cat: str, a_h: float, b_cat: str, b_h: float) -> float:
+    """Metres of height at which two pieces would pass through each other.
+
+    Zero if either is flat enough to be walked over, which is how a rug goes
+    under a sofa, and zero if one is mounted clear of the other, which is how
+    upper cabinets go above a worktop. Positive means a real collision, on the
+    floor plan or in the air, and either way it has to be solved.
+    """
+    if float(a_h) <= FLAT_H or float(b_h) <= FLAT_H:
+        return 0.0
+    a0, a1 = levels(a_cat, a_h)
+    b0, b1 = levels(b_cat, b_h)
+    return max(0.0, min(a1, b1) - max(a0, b0))
+
+
+def collide(a_cat: str, a_h: float, b_cat: str, b_h: float) -> bool:
+    """Would these two pieces fight over the same space, given the chance?"""
+    return shared_height(a_cat, a_h, b_cat, b_h) > TOUCH_H
 
 
 # ──────────────────────────────────────────────────────── placements ───────
@@ -113,20 +182,7 @@ class Placement:
 
     def clearance_box(self, item: Item) -> Box:
         """The access strip in front of the item, in its facing direction."""
-        c = item.rule.clearance
-        if c <= 0:
-            return Box(self.x, self.y, self.x, self.y)
-        w, d = yaw_footprint(item.width, item.depth, self.yaw)
-        b = self.box(item)
-        # yaw 0 faces +y (north); the viewer applies PI - yaw, so this is the
-        # same convention the renderer uses.
-        if self.yaw == 0:
-            return Box(b.x0, b.y1, b.x1, b.y1 + c)
-        if self.yaw == 180:
-            return Box(b.x0, b.y0 - c, b.x1, b.y0)
-        if self.yaw == 90:
-            return Box(b.x1, b.y0, b.x1 + c, b.y1)
-        return Box(b.x0 - c, b.y0, b.x0, b.y1)
+        return front_strip(self.box(item), self.yaw, item.rule.clearance)
 
 
 @dataclass
@@ -203,7 +259,7 @@ W_FLANK = 2.0          # a nightstand beside its bed, level with the headboard
 W_FLANK_MIRROR = 1.8   # the pair balanced either side
 W_ANCHOR_CENTRE = 0.9  # the bed centred on its wall so both fit
 W_WINDOW_CLEAR = 2.5   # a bed or wardrobe across a window
-W_LANDING = 2.5        # the space you step into from a door
+W_LANDING = 6.0        # the space you step into from a door
 W_BACK_TO_WALL = 16.0  # a headboard belongs against a wall, not just any side
 
 
@@ -217,7 +273,7 @@ def hard_violations(items: dict[str, Item], place: dict[str, Placement],
             dx = max(0.0, ctx.inner.x0 - b.x0) + max(0.0, b.x1 - ctx.inner.x1)
             dy = max(0.0, ctx.inner.y0 - b.y0) + max(0.0, b.y1 - ctx.inner.y1)
             bad += 4.0 * (dx + dy)
-        if items[k].rule.stackable:
+        if not occupies_floor(items[k].category, items[k].height):
             continue
         for ng in ctx.no_go:
             bad += 6.0 * ng.overlap(b)
@@ -229,7 +285,8 @@ def hard_violations(items: dict[str, Item], place: dict[str, Placement],
     for i in range(len(keys)):
         for j in range(i + 1, len(keys)):
             a, c = keys[i], keys[j]
-            if items[a].rule.stackable or items[c].rule.stackable:
+            if not collide(items[a].category, items[a].height,
+                           items[c].category, items[c].height):
                 continue
             bad += 5.0 * boxes[a].overlap(boxes[c])
     return bad
@@ -261,15 +318,15 @@ def soft_cost(items: dict[str, Item], place: dict[str, Placement],
         cb = p.clearance_box(it)
         if cb.area > 0:
             for k2, b2 in boxes.items():
-                if k2 == k or items[k2].rule.stackable:
+                if k2 == k or not occupies_floor(items[k2].category, items[k2].height):
                     continue
                 cost += 3.0 * cb.overlap(b2)
             cost += 1.5 * max(0.0, cb.area - ctx.inner.overlap(cb))
 
         # walking path from every door, and the space you step into
-        if not r.stackable:
+        if occupies_floor(it.category, it.height):
             for path in ctx.paths:
-                cost += 1.2 * path.overlap(b)
+                cost += 3.0 * path.overlap(b)
             for landing in ctx.landings:
                 cost += W_LANDING * landing.overlap(b)
 
@@ -549,9 +606,10 @@ class CPSATBackend:
                 m.Add(x >= to_u(ng.x1)).OnlyEnforceIf(bx.Not())
                 m.Add(ye <= to_u(ng.y0)).OnlyEnforceIf(by)
                 m.Add(y >= to_u(ng.y1)).OnlyEnforceIf(by.Not())
-                if not items[k].rule.stackable:
+                if occupies_floor(items[k].category, items[k].height):
                     m.AddBoolOr([bx, by])
-        movable = [k for k in items if not items[k].rule.stackable]
+        movable = [k for k in items
+                   if occupies_floor(items[k].category, items[k].height)]
         if movable:
             m.AddNoOverlap2D([ivx[i] for i, k in enumerate(items) if k in movable],
                              [ivy[i] for i, k in enumerate(items) if k in movable])
@@ -600,7 +658,7 @@ class SpatialSolver:
                    ) -> tuple[dict[str, Placement], SolveReport]:
         items = {o.object_id: Item.from_object(o) for o in objects}
         ctx = RoomContext(room, openings, self.wall_margin)
-        rng = random.Random(self.seed_value ^ (hash(room.room_id) & 0xFFFF))
+        rng = random.Random(self.seed_value ^ _stable_hash(room.room_id))
         if not items:
             return {}, SolveReport(room.room_id, self.backend.name, 0, True, 0, 0.0, 0, False)
 
@@ -699,7 +757,9 @@ class SpatialSolver:
             reports.append(rep)
             for oid, p in place.items():
                 o = by_id[oid]
-                o.position = {"x": round(p.x, 3), "y": 0.0, "z": round(p.y, 3)}
+                o.position = {"x": round(p.x, 3),
+                              "y": round(rule_for(o.category).mount, 3),
+                              "z": round(p.y, 3)}
                 o.rotation = {"yaw": float(p.yaw)}
         return out, reports
 
