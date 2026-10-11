@@ -22,8 +22,15 @@ import time
 import traceback
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
+# Without this GEMINI_KEY is unset, detect_rooms silently falls back to the
+# offline tracer, and the run reports the tracer's numbers under whatever
+# tag you gave it. That has now happened twice.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
 DATA = BACKEND / "plan_dataset"
 
 from app.services import plan_layout as PL  # noqa: E402
@@ -42,10 +49,16 @@ SAME = {
 
 
 def score_plan(pid: str, gt: dict) -> dict:
-    img = PL.load_plan_image((DATA / "images" / gt["file"]).read_bytes())
+    raw = (DATA / "images" / gt["file"]).read_bytes()
+    img = PL.load_plan_image(raw)
+    ext = Path(gt["file"]).suffix.lstrip(".").lower() or "png"
+    mime = f"image/{'jpeg' if ext in ('jpg', 'jpeg') else ext}"
     t0 = time.time()
     try:
-        det = PL.detect_rooms(img, bhk_hint=2)
+        # The original bytes, not just the decoded image: the vision tier needs
+        # them and silently stands aside without them, which would have scored
+        # the offline tracer twice and reported no difference between the two.
+        det = PL.detect_rooms(img, bhk_hint=2, raw=raw, mime=mime)
     except Exception as exc:
         return {"id": pid, "error": f"{type(exc).__name__}: {exc}",
                 "trace": traceback.format_exc(limit=3), "seconds": round(time.time() - t0, 1)}
@@ -108,6 +121,7 @@ def score_plan(pid: str, gt: dict) -> dict:
 
     return {
         "id": pid, "split": gt["split"], "style": gt["style"], "seconds": seconds,
+        "method": det.get("method"),
         "bhk_want": gt["bhk"], "bhk_got": PL.plan_bhk(rooms), "bhk_ok": PL.plan_bhk(rooms) == gt["bhk"],
         "rooms_want": len(gt_types), "rooms_got": len(detected),
         "one_of_many_flats": one_of_many,
@@ -159,6 +173,10 @@ def main() -> None:
         "area_err_median": round(statistics.median(errs), 3) if errs else None,
         "size_err_median": round(statistics.median(sizes), 3) if sizes else None,
         "seconds_mean": round(statistics.mean([r["seconds"] for r in ok]), 1) if ok else None,
+        # Which reader actually answered. A run that says "heuristic" when you
+        # meant to measure the vision tier is measuring nothing.
+        "methods": {m: sum(1 for r in ok if r.get("method") == m)
+                    for m in sorted({r.get("method") for r in ok if r.get("method")})},
     }
     print("\n" + json.dumps(summary, indent=1))
     (DATA / "runs").mkdir(exist_ok=True)

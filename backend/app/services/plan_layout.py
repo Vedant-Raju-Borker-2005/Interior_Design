@@ -50,7 +50,14 @@ ROOM_TYPES: "OrderedDict[str, dict[str, str]]" = OrderedDict([
     ("pooja_room",     {"label": "Pooja Room",      "fill": "#F7EBD3"}),
     ("balcony",        {"label": "Balcony",         "fill": "#E7E9E2"}),
     ("passage",        {"label": "Passage / Utility", "fill": "#F3F0EA"}),
+    # Drawn on the plan, walked through, but not part of the flat: a common
+    # stair belongs to the building. Without a name for it the reader called
+    # it a passage, which put it in the carpet area and sent the solver
+    # looking for furniture to stand on the steps.
+    ("staircase",      {"label": "Staircase",       "fill": "#E4E4E0"}),
 ])
+# Counted in no carpet area and furnished with nothing.
+UNUSABLE_TYPES = {"staircase"}
 BEDROOM_TYPES = {"master_bedroom", "bedroom"}
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_PLAN_BYTES = 10 * 1024 * 1024
@@ -114,7 +121,14 @@ def detect_rooms(img: Image.Image, *, bhk_hint: int = 2, raw: Optional[bytes] = 
         chosen = panel if panel is not None and 0 <= panel < len(panels) else \
             max(range(len(panels)), key=lambda i: area(panels[i]))
         img = panels[chosen].crop(img)
-        raw, mime = None, mime            # the crop is what gets read from here on
+        # The crop is what gets read from here on, so it has to become the
+        # bytes too. Blanking them instead switched the vision tier off for
+        # every multi-flat sheet -- exactly the plans it is most needed on,
+        # because the tracer has to find one flat among several.
+        import io
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        raw, mime = buf.getvalue(), "image/png"
         notes.append(f"This sheet shows {len(panels)} flats; reading flat {chosen + 1}."
                      " Pick another below if that is not yours.")
 
@@ -1197,35 +1211,442 @@ def _fallback_width(bhk: int, aspect: float) -> float:
 _GEMINI_TYPES = ", ".join(ROOM_TYPES)
 
 
+# What the model must return. A schema makes the shape the server's problem
+# rather than something to recover from a string, and a reply that parses is
+# one we can use.
+_VISION_SCHEMA: dict[str, Any] = {
+    "type": "OBJECT",
+    "properties": {
+        "plan_bounds": {
+            "type": "OBJECT",
+            "description": "the flat's own outline, excluding margins, title block and any neighbouring unit",
+            "properties": {
+                "ymin": {"type": "NUMBER"}, "xmin": {"type": "NUMBER"},
+                "ymax": {"type": "NUMBER"}, "xmax": {"type": "NUMBER"},
+            },
+            "required": ["ymin", "xmin", "ymax", "xmax"],
+            "propertyOrdering": ["ymin", "xmin", "ymax", "xmax"],
+        },
+        "rooms": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "name": {"type": "STRING", "description": "exactly as printed; empty if unlabelled"},
+                    "type": {"type": "STRING", "enum": list(ROOM_TYPES)},
+                    "box_2d": {"type": "ARRAY", "items": {"type": "NUMBER"},
+                               "minItems": 4, "maxItems": 4,
+                               "description": "[ymin, xmin, ymax, xmax] on the inside face of the walls, 0-1000"},
+                    "printed_size": {"type": "STRING", "description": "the size string as printed; empty if none"},
+                    "width_m": {"type": "NUMBER"},
+                    "depth_m": {"type": "NUMBER"},
+                    "open_to": {
+                        "type": "ARRAY", "items": {"type": "STRING"},
+                        "description": "names of spaces this one runs straight into with no "
+                                       "dividing wall, as in an open-plan kitchen",
+                    },
+                    "doors": {
+                        "type": "ARRAY",
+                        "items": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "wall": {"type": "STRING", "enum": ["north", "south", "east", "west"]},
+                                "along": {"type": "NUMBER",
+                                          "description": "0-1 along that wall, left to right or top to bottom"},
+                                "width_m": {"type": "NUMBER"},
+                                "is_entrance": {"type": "BOOLEAN"},
+                            },
+                            "required": ["wall", "along"],
+                            "propertyOrdering": ["wall", "along", "width_m", "is_entrance"],
+                        },
+                    },
+                    "windows": {
+                        "type": "ARRAY",
+                        "items": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "wall": {"type": "STRING", "enum": ["north", "south", "east", "west"]},
+                                "along": {"type": "NUMBER"},
+                                "width_m": {"type": "NUMBER"},
+                            },
+                            "required": ["wall", "along"],
+                            "propertyOrdering": ["wall", "along", "width_m"],
+                        },
+                    },
+                },
+                "required": ["type", "box_2d"],
+                "propertyOrdering": ["name", "type", "box_2d", "printed_size",
+                                     "width_m", "depth_m", "open_to", "doors", "windows"],
+            },
+        },
+        "overall_width_m": {
+            "type": "NUMBER",
+            "description": "the overall width printed on the drawing, in metres; omit if not printed",
+        },
+        "overall_depth_m": {
+            "type": "NUMBER",
+            "description": "the overall depth printed on the drawing, in metres; omit if not printed",
+        },
+        "bedroom_count": {"type": "INTEGER"},
+        "bathroom_count": {"type": "INTEGER"},
+    },
+    "required": ["rooms"],
+    "propertyOrdering": ["plan_bounds", "rooms", "overall_width_m", "overall_depth_m",
+                         "bedroom_count", "bathroom_count"],
+}
+
+
+# Tried in order. GEMINI_VISION_MODEL puts one in front of the list.
+#
+# Lite first, because measured on a plan it answers in about five seconds
+# against a minute or more for the preview model, which reasons at length
+# before replying. A customer waiting on an upload feels that difference, and
+# the free tier's quota for the preview model runs out long before the day
+# does -- after which every call spends time failing through it anyway.
+VISION_MODELS = ("gemini-flash-lite-latest", "gemini-flash-latest",
+                 "gemini-3-flash-preview")
+
+
+def _vision_models() -> list[str]:
+    chosen = os.getenv("GEMINI_VISION_MODEL", "").strip()
+    names = list(VISION_MODELS)
+    if chosen:
+        names = [chosen] + [n for n in names if n != chosen]
+    return names
+
+
+def _vision_prompt() -> str:
+    """What the model is asked for.
+
+    Each instruction below answers a way the previous prompt went wrong:
+    corridors were skipped because it asked for "enclosed" rooms and a corridor
+    is open at both ends; rooms overran the flat because nothing established
+    where the flat ended; and sizes were invented for rooms that had none
+    printed, which is worse than having none, because a wrong size silently
+    rescales the whole plan.
+    """
+    return (
+        "This image is a 2D architectural floor plan. Read it exactly as drawn.\n\n"
+        "FIRST give \"plan_bounds\": the outline of the flat itself on a 0-1000 scale over the "
+        "whole image. Exclude the sheet's white margin, the title block, dimension lines, the "
+        "compass, and any neighbouring unit printed on the same sheet. Every room must lie "
+        "inside these bounds.\n\n"
+        "THEN list EVERY space a person can walk on or into, working around the plan "
+        "systematically so none is skipped. Include in particular:\n"
+        "- corridors, passages, hallways, foyers and lobbies, EVEN THOUGH they are open at both "
+        "ends rather than enclosed by four walls. They connect the flat and are the most "
+        "commonly missed. A plan with rooms but no corridor is wrong.\n"
+        "- balconies, terraces, utility areas, wash areas and sit-outs.\n"
+        "- every bathroom, WC and toilet, however small.\n"
+        "- staircases, typed \"staircase\". A flight of steps, usually drawn as parallel "
+        "lines with an UP or DN arrow. It is not a passage: it belongs to the building "
+        "rather than the flat, so getting it right keeps it out of the floor area.\n\n"
+        f"For each space give:\n"
+        f'- "type": one of {_GEMINI_TYPES}. bathroom for WC/toilet; passage for corridors, '
+        "hallways, foyers, utility and wash areas; master_bedroom for the largest bedroom or the "
+        "one with an attached bathroom; bedroom for the others.\n"
+        '- "name": the label exactly as printed. Empty if unlabelled -- do not invent one.\n'
+        '- "box_2d": [ymin, xmin, ymax, xmax] on the 0-1000 scale, following the INSIDE face of '
+        "that room's walls. Be precise: the boxes should tile the flat, meeting at the walls "
+        "between rooms, not overlapping each other and not extending past plan_bounds.\n"
+        '- "printed_size": the size string exactly as printed for that room, for example '
+        "10'6\" X 12'0\" or 3.56 X 2.50. Empty if no size is printed for it.\n"
+        '- "width_m" and "depth_m": that printed size in metres, width horizontal and depth '
+        "vertical in the image. OMIT BOTH when no size is printed for that room. Never estimate "
+        "a size from how large the room looks.\n\n"
+        '- "open_to": the names of the spaces this one runs straight into with NO dividing '
+        "wall. An open-plan kitchen that forms one space with the living and dining area is "
+        "the common case; a counter or an island between them is not a wall. Leave the list "
+        "empty when the space is walled off and entered through a door.\n\n"
+        '- "doors": one entry for each doorway in that room\'s walls. A doorway is a break '
+        "in the wall, usually drawn with a quarter-circle swing arc. Give the wall it sits in "
+        "(north is the top of the image), how far along that wall it is as 0-1, its width in "
+        "metres if you can tell, and whether it is the flat's main entrance. Include the "
+        "openings between rooms, not only the front door.\n"
+        '- "windows": the same, for windows. A window is a thin double or triple line drawn '
+        "within the wall itself, with no swing arc, usually on an outside wall.\n\n"
+        "Then give the drawing's OVERALL printed dimensions as \"overall_width_m\" and "
+        "\"overall_depth_m\", in metres. These are the long dimension lines running along the "
+        "outside of the plan, often the largest numbers on the sheet, for example 32' and 36' "
+        "or 11.18 and 10.16. Convert feet-and-inches to metres. Omit them if the drawing does "
+        "not print overall dimensions -- but look carefully first, because they set the scale "
+        "of everything else.\n\n"
+        "Ignore furniture, fixtures, dimension lines and arrows, hatching, the north arrow, the "
+        "title block, and text that is not a room label or a room size.\n\n"
+        "Finally count the bedrooms and bathrooms independently of the list above."
+    )
+
+
+def _fit_inside(rooms: list[dict[str, Any]], bounds: Optional[dict[str, Any]]
+                ) -> list[dict[str, Any]]:
+    """Rescale the rooms so the flat fills the frame, and clip strays.
+
+    The model is asked for the flat's outline separately from the rooms. Using
+    it turns boxes measured against the whole sheet -- margin, title block and
+    all -- into boxes measured against the flat, which is what every later
+    stage assumes. A room that still pokes out is clipped rather than dropped:
+    a room in roughly the right place beats a missing one.
+    """
+    if bounds:
+        try:
+            x0 = max(0.0, min(1.0, float(bounds["xmin"]) / 1000.0))
+            y0 = max(0.0, min(1.0, float(bounds["ymin"]) / 1000.0))
+            x1 = max(0.0, min(1.0, float(bounds["xmax"]) / 1000.0))
+            y1 = max(0.0, min(1.0, float(bounds["ymax"]) / 1000.0))
+        except (KeyError, TypeError, ValueError):
+            x0 = y0 = 0.0
+            x1 = y1 = 1.0
+        span_x, span_y = x1 - x0, y1 - y0
+        # Ignore a nonsense outline rather than let it collapse the plan.
+        if span_x > 0.25 and span_y > 0.25:
+            for r in rooms:
+                bx0, by0, bx1, by1 = r["box"]
+                r["box"] = [(bx0 - x0) / span_x, (by0 - y0) / span_y,
+                            (bx1 - x0) / span_x, (by1 - y0) / span_y]
+
+    kept = []
+    for r in rooms:
+        bx0, by0, bx1, by1 = (max(0.0, min(1.0, v)) for v in r["box"])
+        if bx1 - bx0 < 0.02 or by1 - by0 < 0.02:
+            continue                      # clipped away to nothing
+        r["box"] = [bx0, by0, bx1, by1]
+        kept.append(r)
+    return kept
+
+
+# Edges within this share of the plan are the same wall. A wall is around one
+# to two percent of a plan's width, so anything closer than that is the model
+# placing the same wall twice rather than two real walls.
+TILE_TOLERANCE = 0.015
+
+
+# A gap no wider than this is the wall between two rooms, not a corridor. At
+# an eight-metre plan this is about 40 cm -- wider than any wall, narrower
+# than anything a person could walk down.
+WALL_GAP = 0.05
+
+
+def _close_wall_gaps(rooms: list[dict[str, Any]], bound: float = 0.045) -> None:
+    """Grow rooms until they meet, in place.
+
+    A vision model measures each room on its own, so two rooms either side of
+    one wall come back with a gap between them. Nothing owns that strip, so
+    the model builder fills it in as circulation and walls it -- which is how
+    a plan ends up with PASSAGE / UTILITY 4 and 5 covering a seventh of the
+    flat and partitions that are not on the drawing.
+
+    Each pair facing each other across a thin gap is pulled out to meet in the
+    middle, so the strip becomes the wall they share. A gap too wide to be a
+    wall is left alone, because that one really is a corridor. Rooms close to
+    the plan edge are pushed out to it for the same reason.
+    """
+    for i, a in enumerate(rooms):
+        for b in rooms[i + 1:]:
+            ax0, ay0, ax1, ay1 = a["box"]
+            bx0, by0, bx1, by1 = b["box"]
+            # Facing across a vertical gap, and overlapping vertically.
+            if min(ay1, by1) - max(ay0, by0) > 0.05:
+                for left, right in ((a, b), (b, a)):
+                    lx1, rx0 = left["box"][2], right["box"][0]
+                    gap = rx0 - lx1
+                    if 0 < gap <= WALL_GAP:
+                        mid = (lx1 + rx0) / 2
+                        left["box"][2] = right["box"][0] = round(mid, 4)
+            # Facing across a horizontal gap, and overlapping horizontally.
+            if min(ax1, bx1) - max(ax0, bx0) > 0.05:
+                for top, below in ((a, b), (b, a)):
+                    ty1, by_0 = top["box"][3], below["box"][1]
+                    gap = by_0 - ty1
+                    if 0 < gap <= WALL_GAP:
+                        mid = (ty1 + by_0) / 2
+                        top["box"][3] = below["box"][1] = round(mid, 4)
+
+    # And out to the edge of the plan, where a room is nearly there already.
+    for r in rooms:
+        if r["box"][0] <= bound:
+            r["box"][0] = 0.0
+        if r["box"][1] <= bound:
+            r["box"][1] = 0.0
+        if r["box"][2] >= 1.0 - bound:
+            r["box"][2] = 1.0
+        if r["box"][3] >= 1.0 - bound:
+            r["box"][3] = 1.0
+
+
+def _tile_rooms(rooms: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Make the rooms meet at their shared walls.
+
+    A vision model returns each room measured on its own, so two rooms either
+    side of one wall come back with edges a pixel or two apart -- close enough
+    to look right in the list and wrong in the model, where it becomes a sliver
+    of unnamed floor or a doubled wall. Clustering the edges snaps them onto
+    the same line, and the overlap pass stops a room that was read slightly too
+    large from eating its neighbour.
+
+    This is the same cleanup the traced path has always had; the vision path
+    was skipping it.
+    """
+    if not rooms:
+        return rooms
+    rooms = [{**r, "box": list(r["box"])} for r in rooms]
+    _close_wall_gaps(rooms)
+    rects = [tuple(r["box"]) for r in rooms]
+    snapped = _snap_rects_aligned(rects, TILE_TOLERANCE)
+    out = []
+    for room, rect in zip(rooms, snapped):
+        x0, y0, x1, y1 = rect
+        if x1 - x0 < 0.015 or y1 - y0 < 0.015:
+            continue                      # snapped away to nothing
+        out.append({**room, "box": [round(x0, 4), round(y0, 4),
+                                    round(x1, 4), round(y1, 4)]})
+    return out
+
+
+# A read costs thirty to sixty seconds and the answer depends only on the
+# image, so the same upload is never read twice. Bounded, because this lives
+# in a 512 MB process and a plan's rooms are small but not free.
+_VISION_CACHE: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+VISION_CACHE_SIZE = 64
+
+
+DEFAULT_DOOR_M = 0.90
+DEFAULT_WINDOW_M = 1.20
+
+
+def _marked_openings(rooms: list[dict[str, Any]], plan_width_m: float,
+                     aspect: float) -> list[dict[str, Any]]:
+    """The doors and windows the model marked, as gaps in the walls.
+
+    A room's wall is one edge of its box, so "north, 0.4 along, 0.9 m wide"
+    becomes a gap centred four tenths of the way across that edge. Without
+    these every room is a sealed box: the 3D model has no doorways to walk
+    through and the solver cannot tell which stretch of wall must stay clear.
+    """
+    out: list[dict[str, Any]] = []
+    for room in rooms:
+        x0, y0, x1, y1 = room["box"]
+        for kind, key, fallback in (("door", "_doors", DEFAULT_DOOR_M),
+                                    ("window", "_windows", DEFAULT_WINDOW_M)):
+            for entry in room.get(key) or []:
+                if not isinstance(entry, dict):
+                    continue
+                wall = str(entry.get("wall", "")).lower()
+                try:
+                    along = min(1.0, max(0.0, float(entry.get("along", 0.5))))
+                except (TypeError, ValueError):
+                    along = 0.5
+                try:
+                    metres = float(entry.get("width_m") or 0) or fallback
+                except (TypeError, ValueError):
+                    metres = fallback
+                if wall in ("north", "south"):
+                    half = (metres / max(plan_width_m, 0.1)) / 2
+                    centre = x0 + along * (x1 - x0)
+                    lo, hi = max(x0, centre - half), min(x1, centre + half)
+                    if hi - lo > 0.005:
+                        out.append({"axis": "x", "pos": round(y0 if wall == "north" else y1, 4),
+                                    "a": round(lo, 4), "b": round(hi, 4), "kind": kind})
+                elif wall in ("east", "west"):
+                    depth_m = max(plan_width_m * aspect, 0.1)
+                    half = (metres / depth_m) / 2
+                    centre = y0 + along * (y1 - y0)
+                    lo, hi = max(y0, centre - half), min(y1, centre + half)
+                    if hi - lo > 0.005:
+                        out.append({"axis": "y", "pos": round(x1 if wall == "east" else x0, 4),
+                                    "a": round(lo, 4), "b": round(hi, 4), "kind": kind})
+    return out[:80]
+
+
+def _open_plan_gaps(rooms: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Full-width openings where two spaces run into each other.
+
+    An open-plan kitchen shares a boundary with the living area and no wall.
+    Modelled as a room like any other it gets walled in, which is how a plan
+    with one continuous living-kitchen space came back with the kitchen shut
+    behind a partition that is not on the drawing. The shared edge becomes an
+    opening the full width of the overlap instead.
+    """
+    by_name = {}
+    for r in rooms:
+        if r.get("label"):
+            by_name[r["label"].strip().lower()] = r
+
+    gaps, seen = [], set()
+    for room in rooms:
+        for other_name in room.get("_open_to") or []:
+            other = by_name.get(other_name.strip().lower())
+            if other is None or other is room:
+                continue
+            pair = tuple(sorted((id(room), id(other))))
+            if pair in seen:
+                continue
+            seen.add(pair)
+
+            ax0, ay0, ax1, ay1 = room["box"]
+            bx0, by0, bx1, by1 = other["box"]
+            # A shared vertical edge, then a shared horizontal one.
+            for a_edge, b_edge in ((ax1, bx0), (bx1, ax0)):
+                if abs(a_edge - b_edge) < 0.03:
+                    lo, hi = max(ay0, by0), min(ay1, by1)
+                    if hi - lo > 0.04:
+                        gaps.append({"axis": "y", "pos": round((a_edge + b_edge) / 2, 4),
+                                     "a": round(lo, 4), "b": round(hi, 4), "kind": "door"})
+            for a_edge, b_edge in ((ay1, by0), (by1, ay0)):
+                if abs(a_edge - b_edge) < 0.03:
+                    lo, hi = max(ax0, bx0), min(ax1, bx1)
+                    if hi - lo > 0.04:
+                        gaps.append({"axis": "x", "pos": round((a_edge + b_edge) / 2, 4),
+                                     "a": round(lo, 4), "b": round(hi, 4), "kind": "door"})
+    return gaps
+
+
 def _detect_with_gemini(raw: bytes, mime: str, w: int, h: int, bhk_hint: int) -> dict[str, Any]:
     import requests
 
-    model = os.getenv("GEMINI_VISION_MODEL", "gemini-2.5-flash")
-    url = (f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-           f"?key={os.getenv('GEMINI_KEY')}")
-    prompt = (
-        "The image is a 2D architectural floor plan of one apartment. List every enclosed room or "
-        "space (living, dining, kitchen, bedrooms, bathrooms/WC, balconies, passages). For each give: "
-        f'"name" as printed; "type" — one of: {_GEMINI_TYPES} (use bathroom for WC/toilet, passage for '
-        'corridors, utility and wash areas, master_bedroom for the largest bedroom); "box_2d" — the room\'s '
-        "inner outline as [ymin, xmin, ymax, xmax] normalised to 0-1000 over the whole image; and, only when "
-        'dimensions are printed, "width_m" (horizontal extent in the image) and "depth_m" (vertical extent), '
-        "converted from feet-inches to metres. Ignore furniture, dimension lines, the compass and captions. "
-        'Reply with JSON only: {"rooms": [...]}'
-    )
+    key = hashlib.sha256(raw).hexdigest()
+    cached = _VISION_CACHE.get(key)
+    if cached is not None:
+        _VISION_CACHE.move_to_end(key)
+        return copy.deepcopy(cached)
+
+    prompt = _vision_prompt()
     payload = {
         "contents": [{"parts": [
             {"inlineData": {"mimeType": mime, "data": base64.b64encode(raw).decode()}},
             {"text": prompt},
         ]}],
-        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.1},
+        "generationConfig": {"responseMimeType": "application/json",
+                             "responseSchema": _VISION_SCHEMA,
+                             "temperature": 0.0},
     }
-    resp = requests.post(url, json=payload, timeout=45)
-    resp.raise_for_status()
+    # Google retires a model name without removing it from the listing, and a
+    # key minted today cannot call several that are still listed. A busy model
+    # answers 503 and a rationed one 429. So the names are tried in order and
+    # the first that answers is used, rather than one hard-coded name that
+    # works until the day it does not.
+    last = None
+    for name in _vision_models():
+        url = (f"https://generativelanguage.googleapis.com/v1beta/models/{name}"
+               ":generateContent")
+        try:
+            resp = requests.post(url, json=payload, timeout=90,
+                                 headers={"x-goog-api-key": os.getenv("GEMINI_KEY", "")})
+        except requests.RequestException as exc:
+            last = f"{name}: {type(exc).__name__}"
+            continue
+        if resp.status_code == 200:
+            break
+        # 404 retired, 503 busy, 429 out of quota -- all worth the next name.
+        last = f"{name}: HTTP {resp.status_code}"
+    else:
+        raise RuntimeError(f"no vision model answered ({last})")
+
     text = "".join(p.get("text", "") for c in resp.json().get("candidates", [])
                    for p in c.get("content", {}).get("parts", []))
     text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.M).strip()
     data = json.loads(text)
+    bounds = data.get("plan_bounds") if isinstance(data, dict) else None
+    overall_w = data.get("overall_width_m") if isinstance(data, dict) else None
     rooms, widths = [], []
     for item in data.get("rooms", []) if isinstance(data, dict) else []:
         box = item.get("box_2d") or []
@@ -1238,7 +1659,10 @@ def _detect_with_gemini(raw: bytes, mime: str, w: int, h: int, bhk_hint: int) ->
         if rtype not in ROOM_TYPES:
             rtype = "passage"
         name = str(item.get("name") or "").strip().title()[:40]
-        rooms.append({"box": [x0, y0, x1, y1], "room_type": rtype, "label": name or None})
+        rooms.append({"box": [x0, y0, x1, y1], "room_type": rtype, "label": name or None,
+                      "_open_to": [str(v) for v in (item.get("open_to") or []) if v],
+                      "_doors": item.get("doors") or [],
+                      "_windows": item.get("windows") or []})
         for key, span in (("width_m", x1 - x0), ("depth_m", (y1 - y0) * h / w)):
             try:
                 metres = float(item.get(key) or 0)
@@ -1249,15 +1673,37 @@ def _detect_with_gemini(raw: bytes, mime: str, w: int, h: int, bhk_hint: int) ->
     for r in rooms:
         if not r["label"]:
             r.pop("label")
-    plan_width = float(np.median(widths)) if len(widths) >= 2 else None
+    # Measured against the flat, not the sheet, and clipped to it.
+    rooms = _fit_inside(rooms, bounds)
+    rooms = _tile_rooms(rooms)
+    # A drawing that prints its overall width has told us the scale outright.
+    # Deriving it from a handful of room dimensions instead is how a 9.75 m
+    # flat came back as 11.91 m, with every room 22% too big.
+    printed_overall = None
+    try:
+        value = float(overall_w or 0)
+        if 3.0 <= value <= 60.0:
+            printed_overall = value
+    except (TypeError, ValueError):
+        pass
+
+    plan_width = printed_overall or (float(np.median(widths)) if len(widths) >= 2 else None)
     if plan_width is None or not 3 <= plan_width <= 60:
         n_bed = sum(1 for r in rooms if r["room_type"] in BEDROOM_TYPES)
         area_norm = sum((r["box"][2] - r["box"][0]) * (r["box"][3] - r["box"][1]) * h / w
                         for r in rooms if r["room_type"] != "balcony")
         plan_width = math.sqrt(_CARPET_M2.get(min(n_bed, 5), 58) / area_norm) if area_norm else _fallback_width(bhk_hint, w / h)
-    rooms = _label_rooms([{**r, "box": [round(v, 4) for v in r["box"]]} for r in rooms])
-    return {"rooms": rooms, "plan_width_m": round(plan_width, 2), "method": "gemini",
-            "notes": ["Rooms read from your plan by Gemini vision — check them before generating."]}
+    openings = _open_plan_gaps(rooms) + _marked_openings(rooms, plan_width, h / w if w else 1.0)
+    scratch = ("_open_to", "_doors", "_windows")
+    rooms = _label_rooms([{k: v for k, v in r.items() if k not in scratch} |
+                          {"box": [round(v, 4) for v in r["box"]]} for r in rooms])
+    result = {"rooms": rooms, "plan_width_m": round(plan_width, 2), "method": "gemini",
+              "door_gaps": openings,
+              "notes": ["Rooms read from your plan by Gemini vision — check them before generating."]}
+    _VISION_CACHE[key] = copy.deepcopy(result)
+    while len(_VISION_CACHE) > VISION_CACHE_SIZE:
+        _VISION_CACHE.popitem(last=False)
+    return result
 
 
 # ═══════════════════════════════════════════════════ validation (input) ══════
@@ -1466,7 +1912,12 @@ def _build(plan: dict[str, Any], tier: str, brief: dict[str, Any]) -> dict[str, 
     circulation += [[round(b.x0, 3), round(b.y0, 3), round(b.w, 3), round(b.d, 3)] for b in balconies[1:]]
     width = max(s.x1 for s in spaces)
     depth = max(s.y1 for s in spaces)
-    area = sum(s.w * s.d for s in spaces if s.kind != "balcony")
+    # A balcony is outside the flat and a staircase belongs to the building,
+    # so neither counts toward the floor the customer is buying. Both are
+    # still drawn and still modelled -- the stair is part of the plan, it is
+    # just not part of the area.
+    area = sum(s.w * s.d for s in spaces
+               if s.kind != "balcony" and s.kind not in UNUSABLE_TYPES)
 
     design = dict(tscene.get("design") or {})
     for field_name, brief_key in (("style", "style"), ("wood", "wood"), ("fabric", "fabric"),
