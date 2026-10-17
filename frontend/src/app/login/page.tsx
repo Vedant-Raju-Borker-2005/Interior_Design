@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { authAPI, enterpriseAPI } from '@/lib/api'
+import { authAPI, enterpriseAPI, projectsAPI } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useProjectStore } from '@/stores/projectStore'
 import toast from 'react-hot-toast'
@@ -165,6 +165,19 @@ export default function LoginPage() {
             console.error("Failed to accept invitation on login:", acceptErr)
           }
         }
+        // Direct first-time customer to onboarding if no active/existing projects
+        try {
+          const projRes = await projectsAPI.list()
+          const projects = Array.isArray(projRes.data?.projects)
+            ? projRes.data.projects
+            : (Array.isArray(projRes.data) ? projRes.data : [])
+          if (projects.length === 0) {
+            router.push('/onboarding')
+            return
+          }
+        } catch (projErr) {
+          console.error("Failed to check existing projects on login:", projErr)
+        }
         router.push('/dashboard')
       }
     } catch (err: any) {
@@ -175,18 +188,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-[#FAF6F0]">
       {/* Left panel – form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-white relative overflow-y-auto">
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-[#FAF6F0] border-r border-[#E8DFD1] relative overflow-y-auto">
         <div className="w-full max-w-md my-auto">
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-glow-indigo">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#b85d3b] to-[#9c4a2a] flex items-center justify-center shadow-sm">
               <Sparkles className="w-5 h-5 text-white animate-pulse" />
             </div>
-            <span className="font-extrabold text-2xl text-slate-800 tracking-tight">
-              Interior<span className="text-indigo-600">AI</span>
+            <span className="font-extrabold text-2xl text-stone-900 tracking-tight">
+              Interior<span className="text-[#b85d3b]">AI</span>
             </span>
           </Link>
 
@@ -201,28 +214,28 @@ export default function LoginPage() {
               >
                 {mode === 'signin' ? (
                   <>
-                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Welcome Back</h1>
-                    <p className="text-slate-500 mb-6">Enter your email or phone to sign in to your dashboard.</p>
+                    <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight mb-2">Welcome Back</h1>
+                    <p className="text-stone-500 mb-6">Enter your email or phone to sign in to your dashboard.</p>
                   </>
                 ) : (
                   <>
-                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Create Account</h1>
-                    <p className="text-slate-500 mb-6">Join InteriorAI to design, customize, and execute your home interiors.</p>
+                    <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight mb-2">Create Account</h1>
+                    <p className="text-stone-500 mb-6">Join InteriorAI to design, customize, and execute your home interiors.</p>
                   </>
                 )}
 
                 {/* Access Portal As Role Selector */}
                 <div className="mb-6">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-3">
                     Access Portal As
                   </label>
                   <div className="grid grid-cols-6 gap-2">
                     {([
-                      { id: 'client', label: 'Client', icon: User, bg: 'from-blue-500 to-indigo-600', colClass: 'col-span-2' },
-                      { id: 'vendor', label: 'Vendor', icon: Compass, bg: 'from-emerald-500 to-teal-600', colClass: 'col-span-2' },
-                      { id: 'team', label: 'Project Team', icon: Check, bg: 'from-amber-500 to-orange-600', colClass: 'col-span-2' },
-                      { id: 'consultant', label: 'Consultant', icon: Briefcase, bg: 'from-cyan-500 to-sky-600', colClass: 'col-span-2 col-start-2' },
-                      { id: 'admin', label: 'Admin', icon: Sparkles, bg: 'from-purple-500 to-pink-600', colClass: 'col-span-2 col-start-4' }
+                      { id: 'client', label: 'Client', icon: User, bg: 'from-[#b85d3b] to-[#9c4a2a]', colClass: 'col-span-2' },
+                      { id: 'vendor', label: 'Vendor', icon: Compass, bg: 'from-emerald-600 to-teal-700', colClass: 'col-span-2' },
+                      { id: 'team', label: 'Project Team', icon: Check, bg: 'from-amber-600 to-orange-700', colClass: 'col-span-2' },
+                      { id: 'consultant', label: 'Consultant', icon: Briefcase, bg: 'from-cyan-600 to-sky-700', colClass: 'col-span-2 col-start-2' },
+                      { id: 'admin', label: 'Admin', icon: Sparkles, bg: 'from-stone-700 to-stone-900', colClass: 'col-span-2 col-start-4' }
                     ] as const).map((item) => {
                       const Icon = item.icon
                       const isSelected = portalGroup === item.id
@@ -246,14 +259,14 @@ export default function LoginPage() {
                             'relative overflow-hidden px-2 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 transform min-w-0',
                             isSelected
                               ? `bg-gradient-to-r ${item.bg} text-white shadow-md scale-[1.02]`
-                              : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+                              : 'bg-white text-stone-600 hover:bg-[#F5EDE2] hover:text-stone-900 border border-[#E8DFD1]'
                           )}
                         >
                           <div className={clsx(
                             'p-1 rounded-lg shrink-0',
-                            isSelected ? 'bg-white/20' : 'bg-white shadow-xs'
+                            isSelected ? 'bg-white/20' : 'bg-[#FAF6F0] shadow-2xs'
                           )}>
-                            <Icon className={clsx("w-3.5 h-3.5", isSelected ? 'text-white' : 'text-slate-500')} />
+                            <Icon className={clsx("w-3.5 h-3.5", isSelected ? 'text-white' : 'text-stone-500')} />
                           </div>
                           <span className="font-bold text-xs tracking-tight truncate">{item.label}</span>
                         </button>
@@ -269,7 +282,7 @@ export default function LoginPage() {
                         exit={{ opacity: 0, height: 0 }}
                         className="mt-3 overflow-hidden"
                       >
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 mt-2">
+                        <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2 mt-2">
                           Select Client Type
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -288,7 +301,7 @@ export default function LoginPage() {
                                }}
                                className={clsx(
                                  'py-2.5 px-3 text-xs font-bold rounded-lg border transition-all text-center',
-                                 clientRole === item.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                 clientRole === item.id ? 'bg-[#b85d3b] border-[#b85d3b] text-white shadow-sm' : 'bg-white border-[#E8DFD1] text-stone-600 hover:bg-[#F5EDE2]'
                                )}
                              >
                                {item.label}
@@ -305,7 +318,7 @@ export default function LoginPage() {
                         exit={{ opacity: 0, height: 0 }}
                         className="mt-3 overflow-hidden"
                       >
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 mt-2">
+                        <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2 mt-2">
                           Select Team Role
                         </label>
                         <div className="grid grid-cols-3 gap-2">
@@ -325,7 +338,7 @@ export default function LoginPage() {
                                }}
                                className={clsx(
                                  'py-2 px-3 text-xs font-bold rounded-lg border transition-all text-center',
-                                 teamRole === item.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                 teamRole === item.id ? 'bg-[#b85d3b] border-[#b85d3b] text-white shadow-sm' : 'bg-white border-[#E8DFD1] text-stone-600 hover:bg-[#F5EDE2]'
                                )}
                              >
                                {item.label}
@@ -338,7 +351,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Method selector */}
-                <div className="flex gap-2 mb-4 bg-slate-100 p-1 rounded-xl">
+                <div className="flex gap-2 mb-4 bg-[#EFE8DD] p-1 rounded-xl border border-[#E8DFD1]">
                   <button
                     type="button"
                     onClick={() => {
@@ -346,8 +359,8 @@ export default function LoginPage() {
                       setContact(getPrefilledContact(portalGroup, clientRole, teamRole, 'phone'))
                     }}
                     className={clsx(
-                      'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all',
-                      method === 'phone' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                      'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all',
+                      method === 'phone' ? 'bg-white text-[#b85d3b] shadow-xs' : 'text-stone-600 hover:text-stone-900'
                     )}
                   >
                     <Phone className="w-3.5 h-3.5" /> Phone Number
@@ -359,8 +372,8 @@ export default function LoginPage() {
                       setContact(getPrefilledContact(portalGroup, clientRole, teamRole, 'email'))
                     }}
                     className={clsx(
-                      'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all',
-                      method === 'email' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                      'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all',
+                      method === 'email' ? 'bg-white text-[#b85d3b] shadow-xs' : 'text-stone-600 hover:text-stone-900'
                     )}
                   >
                     <Mail className="w-3.5 h-3.5" /> Email Address
@@ -377,27 +390,27 @@ export default function LoginPage() {
                     >
                       {/* Name */}
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                          <User className="w-3 h-3 text-indigo-500" /> Full Name
+                        <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                          <User className="w-3 h-3 text-[#b85d3b]" /> Full Name
                         </label>
                         <input
                           type="text"
                           placeholder="Amey Kulkarni"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          className="input w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-800 font-medium placeholder-slate-400"
+                          className="input w-full px-4 py-3 rounded-xl border border-[#E8DFD1] focus:border-[#b85d3b] focus:ring-1 focus:ring-[#b85d3b] transition-all text-stone-900 font-medium placeholder-stone-400 bg-white"
                         />
                       </div>
 
                       {/* City */}
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-indigo-500" /> Current City
+                        <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-[#b85d3b]" /> Current City
                         </label>
                         <select
                           value={city}
                           onChange={(e) => setCity(e.target.value)}
-                          className="input w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-800 font-semibold bg-white"
+                          className="input w-full px-4 py-3 rounded-xl border border-[#E8DFD1] focus:border-[#b85d3b] focus:ring-1 focus:ring-[#b85d3b] transition-all text-stone-900 font-semibold bg-white"
                         >
                           {CITIES.map((c) => (
                             <option key={c} value={c}>{c}</option>
@@ -407,8 +420,8 @@ export default function LoginPage() {
 
                       {/* Furnishing Preference */}
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1">
-                          <HelpCircle className="w-3 h-3 text-indigo-500" /> Project Scope
+                        <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                          <HelpCircle className="w-3 h-3 text-[#b85d3b]" /> Project Scope
                         </label>
                         <div className="grid grid-cols-2 gap-3">
                           <button
@@ -417,19 +430,19 @@ export default function LoginPage() {
                             className={clsx(
                               'p-3 rounded-xl border-2 text-left flex items-start gap-2.5 transition-all duration-200',
                               furnishingPreference === 'new'
-                                ? 'border-indigo-500 bg-indigo-50/60 shadow-sm'
-                                : 'border-slate-200 hover:border-slate-300'
+                                ? 'border-[#b85d3b] bg-[#FAF6F0] shadow-xs'
+                                : 'border-[#E8DFD1] bg-white hover:border-stone-400'
                             )}
                           >
                             <div className={clsx(
                               'w-4 h-4 rounded-full border flex items-center justify-center mt-0.5',
-                              furnishingPreference === 'new' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                              furnishingPreference === 'new' ? 'border-[#b85d3b] bg-[#b85d3b] text-white' : 'border-stone-300'
                             )}>
                               {furnishingPreference === 'new' && <Check className="w-2.5 h-2.5 stroke-[4px]" />}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-800 text-xs">Furnishing New Home</div>
-                              <div className="text-[10px] text-slate-500 mt-0.5">Brand new shell property</div>
+                              <div className="font-bold text-stone-900 text-xs">Furnishing New Home</div>
+                              <div className="text-[10px] text-stone-500 mt-0.5">Brand new shell property</div>
                             </div>
                           </button>
 
@@ -439,19 +452,19 @@ export default function LoginPage() {
                             className={clsx(
                               'p-3 rounded-xl border-2 text-left flex items-start gap-2.5 transition-all duration-200',
                               furnishingPreference === 'upgrade'
-                                ? 'border-indigo-500 bg-indigo-50/60 shadow-sm'
-                                : 'border-slate-200 hover:border-slate-300'
+                                ? 'border-[#b85d3b] bg-[#FAF6F0] shadow-xs'
+                                : 'border-[#E8DFD1] bg-white hover:border-stone-400'
                             )}
                           >
                             <div className={clsx(
                               'w-4 h-4 rounded-full border flex items-center justify-center mt-0.5',
-                              furnishingPreference === 'upgrade' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                              furnishingPreference === 'upgrade' ? 'border-[#b85d3b] bg-[#b85d3b] text-white' : 'border-stone-300'
                             )}>
                               {furnishingPreference === 'upgrade' && <Check className="w-2.5 h-2.5 stroke-[4px]" />}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-800 text-xs">Upgrading / Renovating</div>
-                              <div className="text-[10px] text-slate-500 mt-0.5">Renovate existing house</div>
+                              <div className="font-bold text-stone-900 text-xs">Upgrading / Renovating</div>
+                              <div className="text-[10px] text-stone-500 mt-0.5">Renovate existing house</div>
                             </div>
                           </button>
                         </div>
@@ -461,7 +474,7 @@ export default function LoginPage() {
 
                   {/* Main Contact Input */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1.5">
                       {method === 'phone' ? 'Phone Number' : 'Email Address'}
                     </label>
                     <input
@@ -470,7 +483,7 @@ export default function LoginPage() {
                       value={contact}
                       onChange={(e) => setContact(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
-                      className="input w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-800 font-medium placeholder-slate-400"
+                      className="input w-full px-4 py-3 rounded-xl border border-[#E8DFD1] focus:border-[#b85d3b] focus:ring-1 focus:ring-[#b85d3b] transition-all text-stone-900 font-medium placeholder-stone-400 bg-white"
                     />
                   </div>
                 </div>
@@ -478,13 +491,13 @@ export default function LoginPage() {
                 <button
                   onClick={handleSendOtp}
                   disabled={loading}
-                  className="btn-primary w-full justify-center py-3.5 text-base mt-6 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 shadow-glow-indigo"
+                  className="w-full justify-center py-3.5 text-base mt-6 rounded-xl font-bold bg-[#b85d3b] hover:bg-[#a34f30] text-white shadow-sm flex items-center gap-2 transition"
                 >
                   {loading ? (
-                    <div className="spinner w-5 h-5" />
+                    <div className="spinner w-5 h-5 border-white" />
                   ) : (
                     <>
-                      {mode === 'signin' ? 'Send OTP' : 'Register & Send OTP'}
+                      <span>{mode === 'signin' ? 'Send OTP' : 'Register & Send OTP'}</span>
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -493,21 +506,21 @@ export default function LoginPage() {
                 {/* Toggle between signin and signup */}
                 <div className="text-center mt-6">
                   {mode === 'signin' ? (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-stone-500">
                       Don't have an account?{' '}
                       <button
                         onClick={() => { setMode('signup'); setContact('') }}
-                        className="text-indigo-600 font-bold hover:underline"
+                        className="text-[#b85d3b] font-bold hover:underline"
                       >
                         Sign Up
                       </button>
                     </p>
                   ) : (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-stone-500">
                       Already have an account?{' '}
                       <button
                         onClick={() => { setMode('signin'); setContact('') }}
-                        className="text-indigo-600 font-bold hover:underline"
+                        className="text-[#b85d3b] font-bold hover:underline"
                       >
                         Sign In
                       </button>
@@ -523,22 +536,22 @@ export default function LoginPage() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="space-y-6"
               >
-                <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Verify Identity</h1>
-                <p className="text-slate-500">
-                  We sent a 6-digit code to <strong className="text-slate-800">{contact}</strong>
+                <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight">Verify Identity</h1>
+                <p className="text-stone-500">
+                  We sent a 6-digit code to <strong className="text-stone-900">{contact}</strong>
                 </p>
 
                 {/* Dev OTP Box */}
                 {devOtp && (
-                  <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-3">
-                    <Info className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-indigo-900">
+                  <div className="p-4 bg-[#faeae3] border border-[#f3d2c4] rounded-2xl flex items-start gap-3">
+                    <Info className="w-5 h-5 text-[#b85d3b] flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-[#8a3e23]">
                       <strong className="font-bold">🔐 Dev Mode OTP:</strong>
                       <div className="mt-1 flex items-center gap-2">
-                        <span className="font-mono bg-white px-2 py-0.5 rounded border border-indigo-200 font-extrabold tracking-widest text-indigo-700 text-lg">
+                        <span className="font-mono bg-white px-2 py-0.5 rounded border border-[#E8DFD1] font-extrabold tracking-widest text-[#b85d3b] text-lg">
                           {devOtp}
                         </span>
-                        <span className="text-xs text-indigo-500">(Use this code to verify)</span>
+                        <span className="text-xs text-stone-500">(Use this code to verify)</span>
                       </div>
                     </div>
                   </div>
@@ -552,7 +565,7 @@ export default function LoginPage() {
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                     onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
-                    className="input w-full text-center text-3xl py-3 rounded-2xl border-2 tracking-[0.4em] font-mono border-slate-200 focus:border-indigo-500 focus:ring-0 text-slate-900"
+                    className="input w-full text-center text-3xl py-3 rounded-2xl border-2 tracking-[0.4em] font-mono border-[#E8DFD1] focus:border-[#b85d3b] focus:ring-0 text-stone-900 bg-white"
                     autoFocus
                   />
                 </div>
@@ -560,14 +573,14 @@ export default function LoginPage() {
                 <button
                   onClick={handleVerify}
                   disabled={loading}
-                  className="btn-primary w-full justify-center py-3.5 text-base rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 shadow-glow-indigo"
+                  className="w-full justify-center py-3.5 text-base rounded-xl font-bold bg-[#b85d3b] hover:bg-[#a34f30] text-white shadow-sm flex items-center gap-2 transition"
                 >
-                  {loading ? <div className="spinner w-5 h-5" /> : <>Verify & Access Platform <ArrowRight className="w-5 h-5" /></>}
+                  {loading ? <div className="spinner w-5 h-5 border-white" /> : <><span>Verify & Access Platform</span><ArrowRight className="w-5 h-5" /></>}
                 </button>
 
                 <button
                   onClick={() => { setStep('form'); setOtp('') }}
-                  className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-indigo-600 transition mx-auto"
+                  className="flex items-center gap-1.5 text-sm font-semibold text-stone-500 hover:text-[#b85d3b] transition mx-auto"
                 >
                   <RefreshCw className="w-4 h-4" /> Go Back / Resend OTP
                 </button>
@@ -585,15 +598,15 @@ export default function LoginPage() {
           className="w-full h-full object-cover animate-fade-in"
           style={{ animationDuration: '2s' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-l from-indigo-950/60 via-indigo-950/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-l from-stone-950/75 via-stone-900/35 to-transparent" />
 
-        <div className="absolute bottom-12 left-8 right-8 glass rounded-2xl p-6 border border-white/20 shadow-glow-indigo">
+        <div className="absolute bottom-12 left-8 right-8 glass rounded-2xl p-6 border border-white/20 shadow-xl backdrop-blur-md">
           <p className="text-white font-medium text-lg leading-relaxed">&quot;Designed my entire 3BHK in under 20 minutes with InteriorAI. The renders and budget calculator were incredibly accurate!&quot;</p>
           <div className="flex items-center gap-3 mt-4">
-            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-extrabold shadow-inner border border-white/20">PM</div>
+            <div className="w-10 h-10 rounded-full bg-[#b85d3b] flex items-center justify-center text-white text-sm font-extrabold shadow-inner border border-white/20">PM</div>
             <div>
               <div className="text-white text-sm font-bold">Priya Mehta</div>
-              <div className="text-indigo-200 text-xs font-semibold">Homeowner, Bangalore</div>
+              <div className="text-stone-300 text-xs font-semibold">Homeowner, Bangalore</div>
             </div>
           </div>
         </div>

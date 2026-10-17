@@ -41,7 +41,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
 
   const handleLogout = () => {
     logout()
-    router.push('/')
+    window.location.href = '/'
   }
 
   if (!isLoggedIn) {

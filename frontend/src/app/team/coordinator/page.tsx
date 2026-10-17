@@ -114,7 +114,7 @@ export default function CoordinatorDashboardPage() {
               <div className="font-bold text-slate-100 leading-none">{user?.name || 'Coordinator'}</div>
               <div className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Coordinator</div>
             </div>
-            <button onClick={() => { logout(); router.push('/login'); }} className="ml-2 text-slate-400 hover:text-white transition-colors">
+            <button onClick={() => { logout(); window.location.href = '/'; }} className="ml-2 text-slate-400 hover:text-white transition-colors" title="Logout">
               <LogOut className="w-4 h-4" />
             </button>
           </div>

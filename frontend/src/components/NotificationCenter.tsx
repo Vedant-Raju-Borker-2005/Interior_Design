@@ -58,24 +58,24 @@ function NotificationCard({ n, onRead, onDelete }: NotificationCardProps) {
             onRead()
           }
         }}
-        className={`relative z-10 p-3 rounded-xl border border-white/5 border-l-4 cursor-grab active:cursor-grabbing select-none transition-colors duration-250 ${
+        className={`relative z-10 p-3 rounded-xl border border-[#E8DFD1] border-l-4 cursor-grab active:cursor-grabbing select-none transition-colors duration-200 ${
           n.read 
-            ? 'bg-[#0f1129]/95 border-l-indigo-950 text-indigo-300/80 hover:bg-[#131633]' 
-            : 'bg-[#14183d]/90 hover:bg-[#1a1f4e] border-l-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.06)]'
+            ? 'bg-stone-50 border-l-stone-300 text-stone-500 hover:bg-stone-100' 
+            : 'bg-white hover:bg-stone-50/80 border-l-[#b85d3b] shadow-xs text-stone-900'
         }`}
       >
         <div className="flex justify-between items-start gap-2">
-          <h4 className={`font-bold text-xs ${n.read ? 'text-indigo-300/70' : 'text-white'}`}>
+          <h4 className={`font-bold text-xs ${n.read ? 'text-stone-600' : 'text-stone-900'}`}>
             {n.title}
           </h4>
           {!n.read && (
-            <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full flex-shrink-0 mt-1 shadow-sm" />
+            <span className="w-2 h-2 bg-[#b85d3b] rounded-full flex-shrink-0 mt-1 shadow-xs" />
           )}
         </div>
-        <p className={`text-[11px] mt-1 leading-relaxed ${n.read ? 'text-indigo-300/50' : 'text-indigo-200'}`}>
+        <p className={`text-[11px] mt-1 leading-relaxed ${n.read ? 'text-stone-400' : 'text-stone-600'}`}>
           {n.message}
         </p>
-        <div className="text-[9px] text-indigo-400/80 mt-1.5 font-medium flex items-center justify-between">
+        <div className="text-[9px] text-stone-400 mt-1.5 font-medium flex items-center justify-between">
           <span>{new Date(n.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
         </div>
       </motion.div>
@@ -104,14 +104,16 @@ export default function NotificationCenter() {
   }, [fetchNotifications])
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
     }
   }, [])
 
@@ -121,23 +123,32 @@ export default function NotificationCenter() {
     <div className="relative" ref={containerRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-slate-400 hover:text-white transition-colors duration-250 focus:outline-none"
+        className="relative p-2 text-stone-600 hover:text-stone-900 transition-colors duration-200 focus:outline-none"
+        title="Notifications"
       >
-        <Bell className="w-6 h-6" />
+        <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-bounce shadow">
+          <span className="absolute top-1 right-1 bg-[#b85d3b] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-bounce shadow-xs">
             {unreadCount}
           </span>
         )}
       </button>
 
+      {/* Transparent Click-Outside Backdrop */}
       {isOpen && (
-        <div className="absolute top-full right-0 w-[340px] mt-3 bg-gradient-to-b from-[#0b0c1d]/95 to-[#070814]/95 backdrop-blur-md shadow-[0_20px_50px_rgba(5,7,18,0.9)] rounded-2xl border border-indigo-950/80 p-4 z-50 max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-950/70 scrollbar-track-transparent animate-in fade-in slide-in-from-top-2 duration-150 flex flex-col gap-3">
-          <div className="flex justify-between items-center pb-2 border-b border-indigo-900/40">
-            <h3 className="font-bold text-white text-sm flex items-center gap-1.5">
+        <div 
+          className="fixed inset-0 z-40 bg-transparent" 
+          onClick={() => setIsOpen(false)} 
+        />
+      )}
+
+      {isOpen && (
+        <div className="absolute top-full right-0 w-[340px] mt-2 bg-[#FAF6F0] backdrop-blur-md shadow-2xl rounded-2xl border-2 border-[#E8DFD1] p-4 z-50 max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-300 scrollbar-track-transparent animate-in fade-in slide-in-from-top-2 duration-150 flex flex-col gap-3">
+          <div className="flex justify-between items-center pb-2.5 border-b border-[#E8DFD1]">
+            <h3 className="font-extrabold text-stone-900 text-sm flex items-center gap-1.5">
               Notifications
               {unreadCount > 0 && (
-                <span className="px-1.5 py-0.5 text-[9px] font-extrabold bg-indigo-500/20 text-indigo-400 rounded-full">
+                <span className="px-1.5 py-0.5 text-[9px] font-extrabold bg-[#faeae3] text-[#b85d3b] border border-[#f3d2c4] rounded-full">
                   {unreadCount} New
                 </span>
               )}
@@ -145,7 +156,7 @@ export default function NotificationCenter() {
             {unreadCount > 0 && (
               <button
                 onClick={() => markAllNotificationsRead()}
-                className="text-[11px] font-semibold text-indigo-400 hover:text-white transition-colors"
+                className="text-[11px] font-bold text-[#b85d3b] hover:text-[#9c4b2c] transition-colors"
               >
                 Mark all as read
               </button>
@@ -153,9 +164,10 @@ export default function NotificationCenter() {
           </div>
 
           {notifications.length === 0 ? (
-            <div className="text-center py-8 text-indigo-400/40 text-xs">
-              <BellOff className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p>No notifications yet</p>
+            <div className="text-center py-8 text-stone-400 text-xs">
+              <BellOff className="w-8 h-8 mx-auto mb-2 opacity-40 text-stone-400" />
+              <p className="font-semibold text-stone-600">No notifications yet</p>
+              <p className="text-[10px] text-stone-400 mt-0.5">Project and execution updates will appear here</p>
             </div>
           ) : (
             <>
@@ -171,7 +183,7 @@ export default function NotificationCenter() {
                   ))}
                 </AnimatePresence>
               </div>
-              <div className="text-[10px] text-indigo-400/40 text-center pt-2 mt-1 border-t border-indigo-950/80 select-none font-medium">
+              <div className="text-[10px] text-stone-400 text-center pt-2 mt-1 border-t border-[#E8DFD1] select-none font-medium">
                 Swipe left on a card to delete
               </div>
             </>

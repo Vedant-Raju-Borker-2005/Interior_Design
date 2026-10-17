@@ -17,8 +17,8 @@
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: #f8fafc;
-  color: #1e293b;
+  background-color: #faf8f5;
+  color: #1c1917;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -49,27 +49,27 @@ body {
 
 /* ── Hero gradient ─────────────────────────────────────────────────────────── */
 .bg-hero-gradient {
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4f46e5 70%, #312e81 100%);
+  background: linear-gradient(145deg, #181614 0%, #25211e 40%, #352f2a 75%, #181614 100%);
 }
 
 /* ── Glassmorphism card ─────────────────────────────────────────────────────── */
 .glass {
-  @apply backdrop-blur-xl bg-white/10 border border-white/20;
+  @apply backdrop-blur-xl bg-white/10 border border-white/15;
 }
 
 .glass-dark {
-  @apply backdrop-blur-xl bg-black/20 border border-white/10;
+  @apply backdrop-blur-xl bg-black/35 border border-white/10;
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+::-webkit-scrollbar-thumb { background: #ded7ca; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #c5a059; }
 
 /* ── Shimmer skeleton loading ───────────────────────────────────────────────── */
 .shimmer {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, #f0ede6 25%, #e6e0d5 50%, #f0ede6 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -80,40 +80,45 @@ body {
 }
 .card-hover:hover {
   @apply -translate-y-1;
-  box-shadow: 0 20px 40px rgba(79, 70, 229, 0.15);
+  box-shadow: 0 16px 36px rgba(24, 22, 20, 0.08);
 }
 
 /* ── Gradient text ──────────────────────────────────────────────────────────── */
 .gradient-text {
   @apply bg-clip-text text-transparent;
-  background-image: linear-gradient(135deg, #818cf8 0%, #4f46e5 50%, #d97706 100%);
+  background-image: linear-gradient(135deg, #faf7f2 0%, #e6d8c3 40%, #c5a059 100%);
+}
+
+.gradient-text-warm {
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(135deg, #1c1917 0%, #b85d3b 60%, #c5a059 100%);
 }
 
 /* ── Button styles ──────────────────────────────────────────────────────────── */
 .btn-primary {
-  @apply inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl
-         hover:bg-indigo-700 active:scale-95 transition-all duration-200;
-  box-shadow: 0 0 20px rgba(79, 70, 229, 0.4);
+  @apply inline-flex items-center gap-2 px-6 py-3 bg-[#b85d3b] text-white font-semibold rounded-xl
+         hover:bg-[#a34f30] active:scale-95 transition-all duration-200;
+  box-shadow: 0 4px 20px rgba(184, 93, 59, 0.3);
 }
 .btn-primary:hover {
-  box-shadow: 0 0 30px rgba(79, 70, 229, 0.6);
+  box-shadow: 0 6px 28px rgba(184, 93, 59, 0.45);
 }
 
 .btn-secondary {
-  @apply inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 font-semibold rounded-xl
-         border-2 border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50
+  @apply inline-flex items-center gap-2 px-6 py-3 bg-white text-stone-800 font-semibold rounded-xl
+         border border-stone-300 hover:border-[#b85d3b] hover:bg-stone-50
          active:scale-95 transition-all duration-200;
 }
 
 .btn-ghost {
-  @apply inline-flex items-center gap-2 px-4 py-2 text-slate-600 font-medium rounded-lg
-         hover:bg-slate-100 active:scale-95 transition-all duration-200;
+  @apply inline-flex items-center gap-2 px-4 py-2 text-stone-600 font-medium rounded-lg
+         hover:bg-stone-100 active:scale-95 transition-all duration-200;
 }
 
 /* ── Input styles ───────────────────────────────────────────────────────────── */
 .input {
-  @apply w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800
-         placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+  @apply w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-800
+         placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#c5a059]
          focus:border-transparent transition-all duration-200;
 }
 
@@ -124,13 +129,13 @@ body {
 
 /* ── Step indicator ─────────────────────────────────────────────────────────── */
 .step-active {
-  @apply bg-indigo-600 text-white;
+  @apply bg-[#1c1917] text-white shadow-sm;
 }
 .step-done {
-  @apply bg-indigo-100 text-indigo-600;
+  @apply bg-[#b85d3b] text-white;
 }
 .step-pending {
-  @apply bg-slate-100 text-slate-400;
+  @apply bg-stone-200 text-stone-500;
 }
 
 /* ── Page transition ────────────────────────────────────────────────────────── */
