@@ -17,12 +17,12 @@ import Link from 'next/link'
 import clsx from 'clsx'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  draft:     { label: 'Draft',        color: 'bg-slate-100 text-slate-600',     icon: Edit3 },
-  quoted:    { label: 'Quoted',       color: 'bg-amber-100 text-amber-700',     icon: FileText },
-  ordered:   { label: 'In Progress',  color: 'bg-blue-100 text-blue-700',       icon: TrendingUp },
-  execution: { label: 'In Execution', color: 'bg-blue-100 text-blue-700',       icon: TrendingUp },
-  converted: { label: 'In Execution', color: 'bg-blue-100 text-blue-700',       icon: TrendingUp },
-  done:      { label: 'Completed',    color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 },
+  draft:     { label: 'Draft',        color: 'bg-stone-100 text-stone-700 border border-stone-200',  icon: Edit3 },
+  quoted:    { label: 'Quoted',       color: 'bg-[#faeae3] text-[#b85d3b] border border-[#f4d1c3]', icon: FileText },
+  ordered:   { label: 'In Progress',  color: 'bg-[#eef2ec] text-[#4E5B4B] border border-[#d8e0d6]', icon: TrendingUp },
+  execution: { label: 'In Execution', color: 'bg-[#faeae3] text-[#b85d3b] border border-[#f4d1c3]', icon: TrendingUp },
+  converted: { label: 'In Execution', color: 'bg-[#faeae3] text-[#b85d3b] border border-[#f4d1c3]', icon: TrendingUp },
+  done:      { label: 'Completed',    color: 'bg-[#eef2ec] text-[#4E5B4B] border border-[#d8e0d6]', icon: CheckCircle2 },
 }
 
 const CITIES = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Ahmedabad', 'Other']
@@ -37,51 +37,51 @@ const LEAD_STAGE_LABELS: Record<string, string> = {
   COMPLETED: 'Service Completed',
 }
 const LEAD_STATUS_COLOR: Record<string, string> = {
-  NEW: 'bg-slate-100 text-slate-600',
-  ASSIGNED: 'bg-blue-100 text-blue-700',
-  CONTACTED: 'bg-indigo-100 text-indigo-700',
-  IN_PROGRESS: 'bg-amber-100 text-amber-700',
-  COMPLETED: 'bg-emerald-100 text-emerald-700',
-  CANCELLED: 'bg-red-100 text-red-700',
+  NEW: 'bg-stone-100 text-stone-600 border border-stone-200',
+  ASSIGNED: 'bg-[#eef2ec] text-[#4E5B4B] border border-[#d8e0d6]',
+  CONTACTED: 'bg-[#faeae3] text-[#b85d3b] border border-[#f4d1c3]',
+  IN_PROGRESS: 'bg-amber-100 text-amber-800 border border-amber-200',
+  COMPLETED: 'bg-[#eef2ec] text-[#4E5B4B] border border-[#d8e0d6]',
+  CANCELLED: 'bg-rose-100 text-rose-700 border border-rose-200',
 }
 
 function ServiceLeadsTracking({ leads, loading }: { leads: any[]; loading: boolean }) {
   if (loading) return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
-      {[1,2].map(i => <div key={i} className="h-28 rounded-xl bg-slate-100 animate-pulse mb-4" />)}
+    <div className="bg-white/95 rounded-2xl border border-[#E8DFD1] p-8 shadow-xs">
+      {[1,2].map(i => <div key={i} className="h-28 rounded-xl bg-stone-100 animate-pulse mb-4" />)}
     </div>
   )
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4">
+    <div className="bg-white/95 rounded-2xl border border-[#E8DFD1] p-5 shadow-xs space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-extrabold text-slate-800 text-base">Special Services Tracking</h3>
-        <Link href="/services" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition">+ Request New</Link>
+        <h3 className="font-extrabold text-stone-800 text-base font-serif">Special Services Tracking</h3>
+        <Link href="/services" className="text-xs font-bold text-[#b85d3b] hover:text-[#9e4a2a] bg-[#faeae3] hover:bg-[#f4d1c3] px-3 py-1.5 rounded-xl transition">+ Request New</Link>
       </div>
       {leads.length === 0 ? (
         <div className="flex flex-col items-center py-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4"><Sparkles className="w-8 h-8 text-indigo-400" /></div>
-          <h4 className="font-bold text-slate-700 text-sm mb-1">No special services yet</h4>
-          <p className="text-slate-400 text-xs max-w-xs">Request a consultant for 3D walkthrough, Vastu, smart home planning or any premium service.</p>
+          <div className="w-16 h-16 rounded-2xl bg-[#faeae3] flex items-center justify-center mb-4"><Sparkles className="w-8 h-8 text-[#b85d3b]" /></div>
+          <h4 className="font-bold text-stone-700 text-sm mb-1">No special services yet</h4>
+          <p className="text-stone-400 text-xs max-w-xs">Request a consultant for 3D walkthrough, Vastu, smart home planning or any premium service.</p>
         </div>
       ) : (
         <div className="space-y-5">
           {leads.map((lead: any) => {
             const stageIdx = LEAD_STAGES.indexOf(lead.status)
             return (
-              <div key={lead.id} className="border border-slate-100 rounded-2xl overflow-hidden">
-                <div className="flex items-start justify-between p-4 bg-slate-50">
+              <div key={lead.id} className="border border-[#E8DFD1] rounded-2xl overflow-hidden bg-white">
+                <div className="flex items-start justify-between p-4 bg-[#FAF7F2]">
                   <div>
-                    <h4 className="font-bold text-slate-800 text-sm capitalize">{(lead.service_type || '').replace(/_/g, ' ')}</h4>
-                    {lead.lead_no && <p className="text-[10px] font-mono text-slate-400 mt-0.5">Ref: {lead.lead_no}</p>}
+                    <h4 className="font-bold text-stone-800 text-sm capitalize">{(lead.service_type || '').replace(/_/g, ' ')}</h4>
+                    {lead.lead_no && <p className="text-[10px] font-mono text-stone-400 mt-0.5">Ref: {lead.lead_no}</p>}
                     {lead.consultant_name && (
                       <div className="flex items-center gap-1.5 mt-1.5">
-                        <div className="w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 text-[10px] font-bold">{lead.consultant_name[0]}</div>
-                        <span className="text-xs text-slate-600 font-medium">{lead.consultant_name}</span>
-                        <span className="text-[10px] text-slate-400">(Consultant)</span>
+                        <div className="w-5 h-5 rounded-full bg-[#faeae3] flex items-center justify-center text-[#b85d3b] text-[10px] font-bold">{lead.consultant_name[0]}</div>
+                        <span className="text-xs text-stone-600 font-medium">{lead.consultant_name}</span>
+                        <span className="text-[10px] text-stone-400">(Consultant)</span>
                       </div>
                     )}
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${LEAD_STATUS_COLOR[lead.status] || 'bg-slate-100 text-slate-600'}`}>{lead.status}</span>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${LEAD_STATUS_COLOR[lead.status] || 'bg-stone-100 text-stone-600'}`}>{lead.status}</span>
                 </div>
                 <div className="px-4 py-3">
                   <div className="flex items-center overflow-x-auto">
@@ -91,24 +91,24 @@ function ServiceLeadsTracking({ leads, loading }: { leads: any[]; loading: boole
                       return (
                         <div key={stage} className="flex items-center flex-1 min-w-0">
                           <div className="flex flex-col items-center min-w-[60px]">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${done ? 'bg-indigo-600 text-white' : active ? 'bg-indigo-200 text-indigo-700 ring-2 ring-indigo-400' : 'bg-slate-100 text-slate-400'}`}>{done && !active ? '?' : idx+1}</div>
-                            <p className="text-[9px] text-center mt-1 text-slate-500 font-medium leading-tight">{LEAD_STAGE_LABELS[stage]}</p>
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${done ? 'bg-[#4E5B4B] text-white' : active ? 'bg-[#faeae3] text-[#b85d3b] ring-2 ring-[#b85d3b]' : 'bg-stone-100 text-stone-400'}`}>{done && !active ? '✓' : idx+1}</div>
+                            <p className="text-[9px] text-center mt-1 text-stone-500 font-medium leading-tight">{LEAD_STAGE_LABELS[stage]}</p>
                           </div>
-                          {idx < LEAD_STAGES.length - 1 && <div className={`h-0.5 flex-1 mx-1 ${idx < stageIdx ? 'bg-indigo-500' : 'bg-slate-200'}`} />}
+                          {idx < LEAD_STAGES.length - 1 && <div className={`h-0.5 flex-1 mx-1 ${idx < stageIdx ? 'bg-[#4E5B4B]' : 'bg-stone-200'}`} />}
                         </div>
                       )
                     })}
                   </div>
                 </div>
                 {lead.status_note && (
-                  <div className="mx-4 mb-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
-                    <p className="text-[10px] text-indigo-700 font-bold uppercase mb-1">Latest Update from Consultant</p>
-                    <p className="text-xs text-indigo-800 leading-relaxed">{lead.status_note}</p>
+                  <div className="mx-4 mb-3 p-3 bg-[#faeae3]/50 border border-[#f4d1c3] rounded-xl">
+                    <p className="text-[10px] text-[#b85d3b] font-bold uppercase mb-1">Latest Update from Consultant</p>
+                    <p className="text-xs text-stone-800 leading-relaxed">{lead.status_note}</p>
                   </div>
                 )}
                 <div className="flex items-center justify-between px-4 pb-3 pt-1">
-                  <p className="text-[10px] text-slate-400">Requested: {lead.created_at ? new Date(lead.created_at).toLocaleDateString('en-IN', { day:'numeric',month:'short',year:'2-digit' }) : '-'}</p>
-                  {lead.service_value > 0 && <p className="text-xs font-black text-slate-700">?{lead.service_value.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">service value</span></p>}
+                  <p className="text-[10px] text-stone-400">Requested: {lead.created_at ? new Date(lead.created_at).toLocaleDateString('en-IN', { day:'numeric',month:'short',year:'2-digit' }) : '-'}</p>
+                  {lead.service_value > 0 && <p className="text-xs font-black text-stone-700">₹{lead.service_value.toLocaleString()} <span className="text-[10px] text-stone-400 font-normal">service value</span></p>}
                 </div>
               </div>
             )
@@ -139,26 +139,26 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden card-hover"
+      className="bg-white/95 rounded-2xl shadow-xs border border-[#E8DFD1] hover:border-[#c5a059]/60 overflow-hidden transition-all duration-200"
     >
       {/* Color accent bar */}
       <div className={clsx(
         'h-1.5',
-        project.status === 'done'       ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' :
-        project.status === 'ordered'    ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
+        project.status === 'done'       ? 'bg-gradient-to-r from-[#4E5B4B] to-[#71826D]' :
+        isExecution                     ? 'bg-gradient-to-r from-[#b85d3b] to-[#c5a059]' :
         isOnboardingIncomplete          ? 'bg-gradient-to-r from-amber-400 to-amber-600' :
-        project.status === 'quoted'     ? 'bg-gradient-to-r from-indigo-400 to-indigo-600' :
-        'bg-gradient-to-r from-indigo-500 to-indigo-700'
+        project.status === 'quoted'     ? 'bg-gradient-to-r from-[#b85d3b] to-[#c5a059]' :
+        'bg-gradient-to-r from-stone-400 to-stone-500'
       )} />
 
       <div className="p-5">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-slate-800 text-lg leading-tight truncate">{cleanPropertyName || project.property_name}</h3>
-            <div className="flex items-center gap-1.5 text-sm text-slate-500 mt-0.5">
-              <span className="font-semibold text-indigo-600">{project.bhk_type}</span>
+            <h3 className="font-bold text-stone-900 text-lg leading-tight truncate font-serif">{cleanPropertyName || project.property_name}</h3>
+            <div className="flex items-center gap-1.5 text-sm text-stone-500 mt-1">
+              <span className="font-bold text-[#b85d3b] bg-[#faeae3] px-2 py-0.5 rounded-md text-xs">{project.bhk_type}</span>
               <span>•</span>
-              <MapPin className="w-3 h-3 text-slate-400" />
+              <MapPin className="w-3.5 h-3.5 text-stone-400" />
               <span>{project.city}</span>
             </div>
           </div>
@@ -170,17 +170,17 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
                   onDelete(project.id)
                 }}
                 title="Delete Project"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all"
+                className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
             {isOnboardingIncomplete ? (
-              <span className="badge flex-shrink-0 bg-amber-100 text-amber-700 font-bold border border-amber-200">
+              <span className="badge flex-shrink-0 bg-amber-50 text-amber-800 font-bold border border-amber-200 text-xs px-2.5 py-1 rounded-full">
                 <Clock className="w-3 h-3 inline mr-1" /> Onboarding In Progress
               </span>
             ) : (
-              <span className={clsx('badge flex-shrink-0', statusObj.color)}>
+              <span className={clsx('badge flex-shrink-0 text-xs px-2.5 py-1 rounded-full font-bold', statusObj.color)}>
                 <statusObj.icon className="w-3 h-3 inline mr-1" />{statusObj.label}
               </span>
             )}
@@ -188,8 +188,8 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
         </div>
 
         {project.floor_plan_name && (
-          <div className="mb-3 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg flex items-center gap-1.5 text-slate-500 text-xs">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+          <div className="mb-3 px-3 py-1.5 bg-[#FAF7F2] border border-[#E8DFD1]/80 rounded-lg flex items-center gap-1.5 text-stone-600 text-xs">
+            <Sparkles className="w-3.5 h-3.5 text-[#b85d3b]" />
             <span className="truncate font-medium">{project.floor_plan_name}</span>
           </div>
         )}
@@ -199,18 +199,18 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
             { label: 'Budget Cap', value: project.budget ? `₹${(project.budget / 100000).toFixed(1)}L` : 'Pending' },
             { label: 'Created', value: new Date(project.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) },
           ].map((s) => (
-            <div key={s.label} className="bg-slate-50 rounded-xl p-3">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">{s.label}</div>
-              <div className="font-extrabold text-slate-800 text-sm">{s.value}</div>
+            <div key={s.label} className="bg-[#FAF7F2] border border-[#E8DFD1]/70 rounded-xl p-3">
+              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mb-0.5">{s.label}</div>
+              <div className="font-extrabold text-stone-900 text-sm">{s.value}</div>
             </div>
           ))}
         </div>
 
         {/* Execution phase highlight */}
         {isExecution && (
-          <div className="mb-4 flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-xs font-bold text-blue-700">
+          <div className="mb-4 flex items-center gap-2 bg-[#eef2ec] border border-[#d8e0d6] rounded-xl px-3 py-2">
+            <div className="w-2 h-2 rounded-full bg-[#4E5B4B] animate-pulse" />
+            <span className="text-xs font-bold text-[#4E5B4B]">
               {project.status === 'done' ? '✅ Handover Complete' : '🔨 Execution In Progress'}
             </span>
           </div>
@@ -224,7 +224,7 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
                   ? `/packages?projectId=${project.id}&bhk=${project.bhk_type}&budget=${project.budget || 1000000}` 
                   : `/onboarding?projectId=${project.id}`
               }
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-xs font-extrabold shadow-sm hover:from-indigo-700 hover:to-indigo-800 transition transform hover:scale-[1.01]"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#b85d3b] hover:bg-[#9e4a2a] text-white text-xs font-extrabold shadow-xs transition"
             >
               <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
               <span>Continue Onboarding</span>
@@ -232,19 +232,19 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
             </Link>
           ) : isPendingAdminApproval ? (
             <div className="w-full flex flex-col gap-2">
-              <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold">
+              <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
                 <Clock className="w-3.5 h-3.5 animate-pulse" />
                 Quotation Under Admin Review
               </div>
               <Link href={`/visualize/${project.id}?from=dashboard`}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition">
-                <Sparkles className="w-3.5 h-3.5" /> View AI Renders
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#FAF7F2] text-stone-700 border border-[#E8DFD1] text-xs font-bold hover:bg-[#F5EDE2] transition">
+                <Sparkles className="w-3.5 h-3.5 text-[#b85d3b]" /> View AI Renders
               </Link>
             </div>
           ) : (isConverted || isExecution) ? (
             <Link
               href={`/track/${project.id}`}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-sm"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#4E5B4B] hover:bg-[#3D473B] text-white text-xs font-bold transition shadow-xs"
             >
               <Activity className="w-4 h-4 text-white" />
               <span>Project Progress</span>
@@ -253,11 +253,11 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
           ) : (
             <>
               <Link href={`/customize/${project.id}`}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition">
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#FAF7F2] text-stone-700 border border-[#E8DFD1] text-xs font-bold hover:bg-[#F5EDE2] transition">
                 <Edit3 className="w-3.5 h-3.5" /> Customise
               </Link>
               <Link href={`/visualize/${project.id}?from=dashboard`}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition">
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#b85d3b] hover:bg-[#9e4a2a] text-white text-xs font-bold transition shadow-xs">
                 <Sparkles className="w-3.5 h-3.5" /> AI View
               </Link>
             </>
@@ -265,13 +265,13 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
         </div>
 
         {isExecution && user?.role !== 'customer' && (
-          <div className="mt-3 pt-3 border-t border-slate-100 flex gap-2">
+          <div className="mt-3 pt-3 border-t border-stone-200 flex gap-2">
             <Link href={`/projects/${project.id}/team`}
-              className="flex-1 text-center py-2 bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 text-slate-600 text-[10px] font-bold rounded-lg transition-all">
+              className="flex-1 text-center py-2 bg-stone-50 border border-stone-200 hover:bg-[#faeae3] hover:text-[#b85d3b] text-stone-600 text-[10px] font-bold rounded-lg transition-all">
               Manage Team
             </Link>
             <Link href={`/projects/${project.id}/execution`}
-              className="flex-1 text-center py-2 bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 text-slate-600 text-[10px] font-bold rounded-lg transition-all">
+              className="flex-1 text-center py-2 bg-stone-50 border border-stone-200 hover:bg-[#faeae3] hover:text-[#b85d3b] text-stone-600 text-[10px] font-bold rounded-lg transition-all">
               Team Execution
             </Link>
           </div>
@@ -353,7 +353,20 @@ function DashboardContent() {
   const loadProjects = async () => {
     try {
       const res = await projectsAPI.list()
-      setProjects(res.data.projects || [])
+      const list = res.data?.projects || res.data || []
+      setProjects(list)
+
+      const active = list.filter((p: any) => {
+        const isSuperseded = list.some(
+          (other: any) => other.defaults?.converted_from_project_id === p.id
+        )
+        return p.status !== 'converted' && !isSuperseded
+      })
+
+      if (active.length === 0 && !searchParams.get('edit') && !searchParams.get('tab')) {
+        router.replace('/onboarding')
+        return
+      }
     } catch {
       toast.error('Failed to load projects')
     } finally {
@@ -426,35 +439,35 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#FAF7F2] via-[#F5EDE2]/60 to-[#FAF7F2] text-stone-800">
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight font-serif">
               {greeting()}, {user?.name?.split(' ')[0] || 'Designer'} 👋
             </h1>
             
             {/* User Meta Badges + Edit Profile Action */}
-            <div className="flex flex-wrap items-center gap-2.5 mt-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md flex items-center gap-1 border border-indigo-100">
+            <div className="flex flex-wrap items-center gap-2.5 mt-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-[#F0EAE1] text-[#7A664E] px-2.5 py-1 rounded-md flex items-center gap-1 border border-[#E3D9CC]">
                 <MapPin className="w-3 h-3" /> {user?.city || 'Bangalore'}
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md border border-slate-200">
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-[#F0EAE1] text-[#7A664E] px-2.5 py-1 rounded-md border border-[#E3D9CC]">
                 {(user?.furnishing_preference || user?.furnishing_type || 'new') === 'new' ? '🏠 Furnishing New Home' : '🔧 Upgrading Home'}
               </span>
               <button
                 onClick={() => setShowProfileModal(true)}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 py-1 px-2.5 rounded-md hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-all ml-1"
+                className="text-xs font-bold text-[#b85d3b] hover:text-[#9e4a2a] flex items-center gap-1.5 py-1 px-2.5 rounded-md hover:bg-[#faeae3]/50 border border-transparent hover:border-[#f4d1c3] transition-all ml-1"
               >
                 <Edit3 className="w-3.5 h-3.5" /> Edit Profile Details
               </button>
             </div>
           </div>
           
-          <Link href="/onboarding" className="btn-primary self-start sm:self-center shadow-glow-indigo rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-5 flex items-center gap-1.5">
+          <Link href="/onboarding" className="self-start sm:self-center shadow-xs rounded-xl bg-[#b85d3b] hover:bg-[#9e4a2a] text-white font-bold py-2.5 px-5 flex items-center gap-1.5 transition">
             <Plus className="w-4 h-4" /> New Project
           </Link>
         </div>
@@ -462,17 +475,17 @@ function DashboardContent() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
           {[
-            { icon: MessageSquare, label: 'Inquiries', value: stats?.totalInquiries ?? inquiries.length, color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
-            { icon: FileText,      label: 'Quotations', value: stats?.totalQuotations ?? 0, color: 'bg-amber-50 text-amber-700 border-amber-100' },
-            { icon: Home,          label: 'Active Projects', value: stats?.activeProjects ?? activeProjects.length, color: 'bg-blue-50 text-blue-600 border-blue-100' },
-            { icon: CreditCard,    label: 'Total Payments', value: stats?.totalPayments ?? 0, color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
+            { icon: MessageSquare, label: 'Inquiries', value: stats?.totalInquiries ?? inquiries.length, color: 'bg-[#f3ede4] text-[#7A664E] border-[#E8DFD1]' },
+            { icon: FileText,      label: 'Quotations', value: stats?.totalQuotations ?? 0, color: 'bg-[#faeae3] text-[#b85d3b] border-[#f4d1c3]' },
+            { icon: Home,          label: 'Active Projects', value: stats?.activeProjects ?? activeProjects.length, color: 'bg-[#eef2ec] text-[#4E5B4B] border-[#d8e0d6]' },
+            { icon: CreditCard,    label: 'Total Payments', value: stats?.totalPayments ?? 0, color: 'bg-[#fbf4eb] text-[#c5a059] border-[#eddccb]' },
           ].map((stat) => (
-            <div key={stat.label} className="bg-white rounded-2xl p-5 shadow-card border border-slate-100 text-center relative overflow-hidden card-hover">
+            <div key={stat.label} className="bg-white/95 rounded-2xl p-5 shadow-xs border border-[#E8DFD1] text-center relative overflow-hidden transition-all duration-200 hover:border-[#c5a059]/60">
               <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3 border', stat.color)}>
                 <stat.icon className="w-5 h-5" />
               </div>
-              <div className="text-2.5xl font-black text-slate-900 mb-1">{stat.value}</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</div>
+              <div className="text-2.5xl font-black text-stone-900 mb-1">{stat.value}</div>
+              <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -481,7 +494,7 @@ function DashboardContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             {/* Tabs */}
-            <div className="flex border-b border-slate-200 mb-6 gap-6">
+            <div className="flex border-b border-[#E8DFD1] mb-6 gap-6">
               {[
                 { id: 'projects', label: 'My Active Projects' },
                 { id: 'inquiries', label: 'My Inquiries' },
@@ -493,18 +506,18 @@ function DashboardContent() {
                   className={clsx(
                     'pb-3 text-sm font-bold border-b-2 transition-all relative outline-none',
                     activeTab === tab.id
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                      ? 'border-[#b85d3b] text-[#b85d3b]'
+                      : 'border-transparent text-stone-500 hover:text-stone-800'
                   )}
                 >
                   {tab.label}
                   {tab.id === 'inquiries' && inquiries.length > 0 && (
-                    <span className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-indigo-100 text-indigo-700 rounded-full font-bold">
+                    <span className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-[#faeae3] text-[#b85d3b] rounded-full font-bold">
                       {inquiries.length}
                     </span>
                   )}
                   {tab.id === 'services' && serviceLeads.length > 0 && (
-                    <span className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-700 rounded-full font-bold">
+                    <span className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-stone-100 text-stone-700 rounded-full font-bold">
                       {serviceLeads.length}
                     </span>
                   )}
@@ -516,24 +529,24 @@ function DashboardContent() {
               loading ? (
                 <div className="grid md:grid-cols-2 gap-6">
                   {[1, 2].map((i) => (
-                    <div key={i} className="bg-white rounded-2xl shadow-card h-60 shimmer" />
+                    <div key={i} className="bg-white/90 rounded-2xl shadow-xs border border-[#E8DFD1] h-60 animate-pulse" />
                   ))}
                 </div>
               ) : activeProjects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+                <div className="flex flex-col items-center justify-center py-20 text-center bg-white/95 rounded-2xl border border-[#E8DFD1] p-6 shadow-xs">
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 200 }}
-                    className="w-28 h-28 bg-indigo-50 rounded-3xl flex items-center justify-center mb-6 border border-indigo-100 shadow-inner"
+                    className="w-24 h-24 bg-[#faeae3] rounded-3xl flex items-center justify-center mb-6 border border-[#f4d1c3] shadow-inner"
                   >
-                    <Home className="w-12 h-12 text-indigo-400" />
+                    <Home className="w-10 h-10 text-[#b85d3b]" />
                   </motion.div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-2">No active projects yet</h3>
-                  <p className="text-slate-500 mb-6 max-w-sm text-sm leading-relaxed">
+                  <h3 className="text-xl font-bold text-stone-900 mb-2 font-serif">No active projects yet</h3>
+                  <p className="text-stone-500 mb-6 max-w-sm text-sm leading-relaxed">
                     Start your first interior design project and transform your home with AI — in under 10 minutes.
                   </p>
-                  <Link href="/onboarding" className="btn-primary text-base px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-glow-indigo">
+                  <Link href="/onboarding" className="text-base px-8 py-3.5 bg-[#b85d3b] hover:bg-[#9e4a2a] text-white font-bold rounded-xl shadow-xs transition inline-flex items-center gap-2">
                     <Plus className="w-5 h-5" /> Create Your First Project
                   </Link>
                 </div>
@@ -551,12 +564,12 @@ function DashboardContent() {
             )}
 
             {activeTab === 'inquiries' && (
-              <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4">
-                <h3 className="font-extrabold text-slate-800 text-base">Inquiries Log</h3>
+              <div className="bg-white/95 rounded-2xl border border-[#E8DFD1] p-5 shadow-xs space-y-4">
+                <h3 className="font-extrabold text-stone-900 text-base font-serif">Inquiries Log</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+                      <tr className="border-b border-stone-200 text-stone-400 font-bold uppercase tracking-wider">
                         <th className="pb-3">Inquiry ID</th>
                         <th className="pb-3">BHK</th>
                         <th className="pb-3">Source</th>
@@ -564,18 +577,18 @@ function DashboardContent() {
                         <th className="pb-3 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-stone-100">
                       {inquiries.map((inq) => (
-                        <tr key={inq.id} className="text-slate-700 font-semibold">
-                          <td className="py-4 font-mono text-[10px] text-slate-500 truncate max-w-[100px]">{inq.id}</td>
+                        <tr key={inq.id} className="text-stone-700 font-semibold">
+                          <td className="py-4 font-mono text-[10px] text-stone-500 truncate max-w-[100px]">{inq.id}</td>
                           <td className="py-4">{inq.bhk_type || 'Custom'}</td>
                           <td className="py-4 capitalize">{inq.source}</td>
                           <td className="py-4">
                             <span className={clsx(
                               'px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider',
-                              inq.status === 'closed' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                              inq.status === 'converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                              'bg-indigo-50 text-indigo-700 border-indigo-100'
+                              inq.status === 'closed' ? 'bg-stone-100 text-stone-600 border-stone-200' :
+                              inq.status === 'converted' ? 'bg-[#eef2ec] text-[#4E5B4B] border-[#d8e0d6]' :
+                              'bg-[#faeae3] text-[#b85d3b] border-[#f4d1c3]'
                             )}>
                               {inq.status}
                             </span>
@@ -583,21 +596,21 @@ function DashboardContent() {
                           <td className="py-4 text-right space-x-1.5">
                             <button
                               onClick={() => setSelectedInquiry(inq)}
-                              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition"
+                              className="text-[10px] font-bold text-[#b85d3b] hover:text-[#9e4a2a] bg-[#faeae3] hover:bg-[#f4d1c3] px-2.5 py-1.5 rounded-lg transition"
                             >
                               Details
                             </button>
                             {inq.status !== 'closed' && (
                               <button
                                 onClick={() => handleCloseInquiry(inq.id)}
-                                className="text-[10px] font-bold text-slate-600 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 transition"
+                                className="text-[10px] font-bold text-stone-600 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 px-2.5 py-1.5 rounded-lg border border-stone-200 transition"
                               >
                                 Close
                               </button>
                             )}
                             <Link
                               href="/support"
-                              className="text-[10px] font-bold text-slate-600 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-100 px-2.5 py-1.5 rounded-lg border border-slate-200 inline-block transition"
+                              className="text-[10px] font-bold text-stone-600 hover:text-[#b85d3b] bg-stone-50 hover:bg-[#faeae3] px-2.5 py-1.5 rounded-lg border border-stone-200 inline-block transition"
                             >
                               Support
                             </Link>
@@ -606,7 +619,7 @@ function DashboardContent() {
                       ))}
                       {inquiries.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="py-8 text-center text-slate-400 font-semibold">
+                          <td colSpan={5} className="py-8 text-center text-stone-400 font-semibold">
                             No inquiries registered. Use "New Project" to create an inquiry.
                           </td>
                         </tr>
@@ -643,38 +656,38 @@ function DashboardContent() {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden relative z-10 p-6 sm:p-8"
+              className="bg-[#FAF7F2] w-full max-w-2xl rounded-3xl shadow-2xl border border-[#E8DFD1] overflow-hidden relative z-10 p-6 sm:p-8"
             >
               <button
                 onClick={() => setSelectedInquiry(null)}
-                className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
+                className="absolute top-4 right-4 p-1.5 rounded-lg bg-[#F5EDE2] text-stone-500 hover:bg-[#E8DFD1] transition-all"
               >
                 <X className="w-4 h-4" />
               </button>
-              <h2 className="text-2xl font-black text-slate-950 tracking-tight mb-4">Inquiry Details</h2>
+              <h2 className="text-2xl font-black text-stone-900 tracking-tight mb-4 font-serif">Inquiry Details</h2>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">BHK Type</span>
-                    <span className="font-extrabold text-slate-800 text-sm">{selectedInquiry.bhk_type || 'Custom'}</span>
+                  <div className="bg-white/80 p-3.5 rounded-xl border border-[#E8DFD1]">
+                    <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider block">BHK Type</span>
+                    <span className="font-extrabold text-stone-800 text-sm">{selectedInquiry.bhk_type || 'Custom'}</span>
                   </div>
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Status</span>
-                    <span className="font-extrabold text-slate-800 text-sm uppercase">{selectedInquiry.status || 'New'}</span>
+                  <div className="bg-white/80 p-3.5 rounded-xl border border-[#E8DFD1]">
+                    <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider block">Status</span>
+                    <span className="font-extrabold text-[#b85d3b] text-sm uppercase">{selectedInquiry.status || 'New'}</span>
                   </div>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Requirements / Message</span>
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-slate-700 text-xs leading-relaxed font-medium">
+                  <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider block mb-1">Requirements / Message</span>
+                  <div className="bg-white/80 p-3.5 rounded-xl border border-[#E8DFD1] text-stone-700 text-xs leading-relaxed font-medium">
                     {selectedInquiry.message || 'No specific notes provided.'}
                   </div>
                 </div>
-                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-                  <span className="text-[10px] text-indigo-700 font-bold uppercase tracking-wider block mb-1">AI Design Suggestions</span>
-                  <ul className="text-xs text-indigo-900 space-y-1.5 list-disc list-inside font-medium leading-relaxed">
+                <div className="bg-[#faeae3]/50 border border-[#f4d1c3] rounded-xl p-4">
+                  <span className="text-[10px] text-[#b85d3b] font-bold uppercase tracking-wider block mb-1">AI Design Suggestions</span>
+                  <ul className="text-xs text-stone-800 space-y-1.5 list-disc list-inside font-medium leading-relaxed">
                     <li>Based on your {selectedInquiry.bhk_type || 'custom space'} layout, we suggest optimizing multi-functional zones.</li>
                     <li>Utilise space-saving designs like hidden storage drawers and pull-out wardrobe setups.</li>
-                    <li>We suggest HSL harmonious color options: Soft slate blue and warm ivory details.</li>
+                    <li>We suggest harmonious color options: Soft sandstone, warm beige, and subtle brass accents.</li>
                   </ul>
                 </div>
               </div>
@@ -693,7 +706,7 @@ function DashboardContent() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowProfileModal(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
             />
             
             {/* Modal Content */}
@@ -701,70 +714,70 @@ function DashboardContent() {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 overflow-hidden relative z-10 p-6 sm:p-8"
+              className="bg-[#FAF7F2] w-full max-w-lg rounded-3xl shadow-2xl border border-[#E8DFD1] overflow-hidden relative z-10 p-6 sm:p-8"
             >
               {/* Close Button */}
               <button
                 onClick={() => setShowProfileModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
+                className="absolute top-4 right-4 p-1.5 rounded-lg bg-[#F5EDE2] text-stone-500 hover:bg-[#E8DFD1] transition-all"
               >
                 <X className="w-4 h-4" />
               </button>
 
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2 mb-1">
-                <Settings className="w-5.5 h-5.5 text-indigo-600 animate-spin-slow" /> Edit Profile Details
+              <h2 className="text-2xl font-extrabold text-stone-900 tracking-tight flex items-center gap-2 mb-1 font-serif">
+                <Settings className="w-5.5 h-5.5 text-[#b85d3b]" /> Edit Profile Details
               </h2>
-              <p className="text-slate-400 text-xs mb-6">Manage your designer profile contact and city information.</p>
+              <p className="text-stone-500 text-xs mb-6">Manage your designer profile contact and city information.</p>
 
               <form onSubmit={handleSaveProfile} className="space-y-4">
                 {/* Name */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                    <User className="w-3.5 h-3.5 text-indigo-500" /> Full Name
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <User className="w-3.5 h-3.5 text-[#b85d3b]" /> Full Name
                   </label>
                   <input
                     type="text"
                     value={profileName}
                     onChange={(e) => setProfileName(e.target.value)}
-                    className="input w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium text-slate-800 text-sm"
+                    className="input w-full px-4 py-2.5 rounded-xl border border-[#E8DFD1] focus:border-[#b85d3b] focus:ring-1 focus:ring-[#b85d3b] transition-all font-medium text-stone-800 text-sm bg-white outline-none"
                   />
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                    <Mail className="w-3.5 h-3.5 text-indigo-500" /> Email Address
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <Mail className="w-3.5 h-3.5 text-[#b85d3b]" /> Email Address
                   </label>
                   <input
                     type="email"
                     value={profileEmail}
                     onChange={(e) => setProfileEmail(e.target.value)}
-                    className="input w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium text-slate-800 text-sm"
+                    className="input w-full px-4 py-2.5 rounded-xl border border-[#E8DFD1] focus:border-[#b85d3b] focus:ring-1 focus:ring-[#b85d3b] transition-all font-medium text-stone-800 text-sm bg-white outline-none"
                   />
                 </div>
 
                 {/* Phone */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5 text-indigo-500" /> Phone Number
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-[#b85d3b]" /> Phone Number
                   </label>
                   <input
                     type="tel"
                     value={profilePhone}
                     onChange={(e) => setProfilePhone(e.target.value)}
-                    className="input w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium text-slate-800 text-sm"
+                    className="input w-full px-4 py-2.5 rounded-xl border border-[#E8DFD1] focus:border-[#b85d3b] focus:ring-1 focus:ring-[#b85d3b] transition-all font-medium text-stone-800 text-sm bg-white outline-none"
                   />
                 </div>
 
                 {/* City */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-indigo-500" /> Location City
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-[#b85d3b]" /> Location City
                   </label>
                   <select
                     value={profileCity}
                     onChange={(e) => setProfileCity(e.target.value)}
-                    className="input w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-bold text-slate-800 text-sm bg-white"
+                    className="input w-full px-4 py-2.5 rounded-xl border border-[#E8DFD1] focus:border-[#b85d3b] focus:ring-1 focus:ring-[#b85d3b] transition-all font-bold text-stone-800 text-sm bg-white outline-none"
                   >
                     {CITIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -774,7 +787,7 @@ function DashboardContent() {
 
                 {/* Preference Q */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2 flex items-center gap-1">
                     Scope Preference
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -784,18 +797,18 @@ function DashboardContent() {
                       className={clsx(
                         'p-3 rounded-xl border-2 text-left flex items-start gap-2.5 transition-all duration-200',
                         profilePref === 'new'
-                          ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-[#b85d3b] bg-[#faeae3] shadow-xs'
+                          : 'border-[#E8DFD1] hover:border-stone-300 bg-white'
                       )}
                     >
                       <div className={clsx(
                         'w-4 h-4 rounded-full border flex items-center justify-center mt-0.5',
-                        profilePref === 'new' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                        profilePref === 'new' ? 'border-[#b85d3b] bg-[#b85d3b] text-white' : 'border-stone-300'
                       )}>
                         {profilePref === 'new' && <Check className="w-2.5 h-2.5 stroke-[4px]" />}
                       </div>
                       <div>
-                        <div className="font-bold text-slate-800 text-xs">Furnish New Home</div>
+                        <div className="font-bold text-stone-800 text-xs">Furnish New Home</div>
                       </div>
                     </button>
                     
@@ -805,36 +818,36 @@ function DashboardContent() {
                       className={clsx(
                         'p-3 rounded-xl border-2 text-left flex items-start gap-2.5 transition-all duration-200',
                         profilePref === 'upgrade'
-                          ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-[#b85d3b] bg-[#faeae3] shadow-xs'
+                          : 'border-[#E8DFD1] hover:border-stone-300 bg-white'
                       )}
                     >
                       <div className={clsx(
                         'w-4 h-4 rounded-full border flex items-center justify-center mt-0.5',
-                        profilePref === 'upgrade' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                        profilePref === 'upgrade' ? 'border-[#b85d3b] bg-[#b85d3b] text-white' : 'border-stone-300'
                       )}>
                         {profilePref === 'upgrade' && <Check className="w-2.5 h-2.5 stroke-[4px]" />}
                       </div>
                       <div>
-                        <div className="font-bold text-slate-800 text-xs">Upgrading Home</div>
+                        <div className="font-bold text-stone-800 text-xs">Upgrading Home</div>
                       </div>
                     </button>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-6">
+                <div className="flex gap-3 justify-end pt-4 border-t border-[#E8DFD1] mt-6">
                   <button
                     type="button"
                     onClick={() => setShowProfileModal(false)}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50 transition"
+                    className="px-4 py-2.5 rounded-xl border border-[#E8DFD1] text-stone-600 text-xs font-bold hover:bg-[#F5EDE2] transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={savingProfile}
-                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-glow-indigo flex items-center gap-1 transition"
+                    className="px-5 py-2.5 rounded-xl bg-[#b85d3b] hover:bg-[#9e4a2a] text-white text-xs font-bold shadow-xs flex items-center gap-1 transition"
                   >
                     {savingProfile ? <div className="spinner w-3.5 h-3.5" /> : <><Check className="w-4 h-4" /> Save Changes</>}
                   </button>
