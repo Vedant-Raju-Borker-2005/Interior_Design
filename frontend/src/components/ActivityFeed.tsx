@@ -63,21 +63,21 @@ export default function ActivityFeed() {
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-card space-y-4">
-      <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-        <Activity className="w-5 h-5 text-indigo-600" />
-        <h2 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Recent Activity</h2>
+    <div className="bg-white/95 rounded-2xl p-6 border border-[#E8DFD1] shadow-xs space-y-4">
+      <div className="flex items-center gap-2 pb-3 border-b border-[#E8DFD1]">
+        <Activity className="w-5 h-5 text-[#b85d3b]" />
+        <h2 className="font-bold text-stone-800 text-sm uppercase tracking-wider">Recent Activity</h2>
       </div>
 
       <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
         {activity.map((log) => (
           <div key={log.id} className="flex gap-3 text-xs">
-            <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-150 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <div className="w-7 h-7 rounded-lg bg-[#FAF7F2] border border-[#E8DFD1] flex items-center justify-center flex-shrink-0 mt-0.5">
               {getActionIcon(log.action)}
             </div>
             <div className="space-y-0.5">
-              <p className="font-semibold text-slate-700 leading-snug">{formatActionText(log)}</p>
-              <p className="text-[9px] text-slate-400 font-medium">
+              <p className="font-semibold text-stone-700 leading-snug">{formatActionText(log)}</p>
+              <p className="text-[9px] text-stone-400 font-medium">
                 {new Date(log.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
               </p>
             </div>
@@ -85,7 +85,7 @@ export default function ActivityFeed() {
         ))}
 
         {activity.length === 0 && (
-          <p className="text-center py-6 text-slate-400 text-xs font-semibold">No activity logs recorded yet.</p>
+          <p className="text-center py-6 text-stone-400 text-xs font-semibold">No activity logs recorded yet.</p>
         )}
       </div>
     </div>
