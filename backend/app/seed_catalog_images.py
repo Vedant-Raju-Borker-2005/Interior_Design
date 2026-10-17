@@ -107,7 +107,23 @@ def seed_images_to_db():
             "room_type": "living_room",
             "price": 6200.0,
             "vendor_name": "HomeCraft Carpentry Pvt Ltd",
-            "style_tags": ["modern", "contemporary", "scandinavian"]
+            "style_tags": ["modern", "contemporary", "scandinavian", "japandi", "indo-minimalistic"]
+        },
+        "shoe racks": {
+            "category": "shoe_racks",
+            "subcategory": "Shoe Rack",
+            "room_type": "living_room",
+            "price": 8500.0,
+            "vendor_name": "HomeCraft Carpentry Pvt Ltd",
+            "style_tags": ["modern", "contemporary", "scandinavian", "japandi", "indo-minimalistic"]
+        },
+        "shoe rack": {
+            "category": "shoe_racks",
+            "subcategory": "Shoe Rack",
+            "room_type": "living_room",
+            "price": 8500.0,
+            "vendor_name": "HomeCraft Carpentry Pvt Ltd",
+            "style_tags": ["modern", "contemporary", "scandinavian", "japandi", "indo-minimalistic"]
         },
         "sofa set": {
             "category": "sofas",
@@ -115,7 +131,7 @@ def seed_images_to_db():
             "room_type": "living_room",
             "price": 52000.0,
             "vendor_name": "HomeCraft Carpentry Pvt Ltd",
-            "style_tags": ["modern", "contemporary", "scandinavian", "luxury"]
+            "style_tags": ["modern", "contemporary", "scandinavian", "luxury", "japandi", "indo-minimalistic"]
         },
         "study desk": {
             "category": "Furniture",
@@ -178,19 +194,57 @@ def seed_images_to_db():
     for filename in files:
         if not filename.lower().endswith(('.webp', '.png', '.jpeg', '.jpg')):
             continue
+        if '_side.' in filename.lower() or '_top.' in filename.lower():
+            continue
 
         # Extract base name and color
         base_name = ""
         color = ""
-        for c in ["Royal Navy Blue", "Emerald Green", "Blush Pink", "Warm Beige", "Charcoal Grey", "Charcoal Gray"]:
-            if c.lower() in filename.lower():
-                color = "Charcoal Grey" if "charcoal" in c.lower() else c
-                # Remove color and extension
-                pattern = re.compile(re.escape(c), re.IGNORECASE)
-                base_name = pattern.sub("", filename)
-                base_name = base_name.rsplit('.', 1)[0].strip()
-                base_name = re.sub(r'\s+', ' ', base_name).strip()
-                break
+        name_no_ext = filename.rsplit('.', 1)[0]
+
+        # Handle hyphenated laminated files
+        if filename.startswith('shoe_racks-'):
+            base_name = "Shoe Rack"
+            if 'warm_beige' in filename: color = "Warm Beige"
+            elif 'golden_brown' in filename: color = "Warm Honey"
+            elif 'dark_brown' in filename: color = "Walnut"
+            else: color = "Oak"
+        elif filename.startswith('side_tables-'):
+            base_name = "Side Tables"
+            if 'warm_beige' in filename: color = "Warm Beige"
+            elif 'golden_brown' in filename: color = "Warm Honey"
+            elif 'dark_brown' in filename: color = "Walnut"
+            else: color = "Oak"
+        elif filename.startswith('desks-'):
+            base_name = "Study Desk"
+            if 'warm_beige' in filename: color = "Warm Beige"
+            elif 'golden_brown' in filename: color = "Warm Honey"
+            elif 'dark_brown' in filename: color = "Walnut"
+            else: color = "Oak"
+        elif filename.startswith('vanity-'):
+            base_name = "Vanity Counter"
+            if 'warm_beige' in filename: color = "Warm Beige"
+            elif 'golden_brown' in filename: color = "Warm Honey"
+            elif 'dark_brown' in filename: color = "Walnut"
+            else: color = "Oak"
+        elif filename.startswith('wardrobes-'):
+            if '_left_' in filename or '_side_' in filename:
+                continue
+            base_name = "Wardrobe Closet"
+            if 'warm_beige' in filename: color = "Warm Beige"
+            elif 'golden_brown' in filename: color = "Warm Honey"
+            elif 'dark_brown' in filename: color = "Walnut"
+            else: color = "Oak"
+        else:
+            for c in ["Royal Navy Blue", "Emerald Green", "Blush Pink", "Warm Beige", "Charcoal Grey", "Charcoal Gray"]:
+                if c.lower() in filename.lower():
+                    color = "Charcoal Grey" if "charcoal" in c.lower() else c
+                    # Remove color and extension
+                    pattern = re.compile(re.escape(c), re.IGNORECASE)
+                    base_name = pattern.sub("", filename)
+                    base_name = base_name.rsplit('.', 1)[0].strip()
+                    base_name = re.sub(r'\s+', ' ', base_name).strip()
+                    break
 
         if not base_name or not color:
             print(f"Could not parse filename: {filename}")
@@ -213,21 +267,30 @@ def seed_images_to_db():
 
         # Build properties
         prod_id = str(uuid.uuid4())
-        sku = f"CAT-{base_name.upper().replace(' ', '-')}-{color.upper().replace(' ', '-')}"
+        sku = f"CAT-{name_no_ext.upper().replace(' ', '-').replace('_', '-')}"
         prod_name = f"{color} {base_name}"
         base = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
         thumbnail_url = f"{base}/static/assets/catalog/{urllib.parse.quote(filename)}"
+
+        # Detect 3 perspective views if available
+        views = [thumbnail_url]
+        side_file = f"{name_no_ext}_side.webp"
+        top_file = f"{name_no_ext}_top.webp"
+        if os.path.exists(os.path.join(catalog_dir, side_file)):
+            views.append(f"{base}/static/assets/catalog/{urllib.parse.quote(side_file)}")
+        if os.path.exists(os.path.join(catalog_dir, top_file)):
+            views.append(f"{base}/static/assets/catalog/{urllib.parse.quote(top_file)}")
         
         # Color variants and dictionary
         color_variants = json.dumps([color])
         variants = json.dumps({
             "color": [color],
             "fabric": ["Velvet", "Cotton", "Leather"] if meta["category"] in ["sofas", "chairs"] else [],
-            "wood_finish": ["Matte", "Glossy", "Teak"] if meta["category"] in ["Furniture", "coffee_tables", "side_tables"] else [],
+            "wood_finish": ["Matte", "Glossy", "Teak"] if meta["category"] in ["Furniture", "coffee_tables", "side_tables", "shoe_racks"] else [],
             "size": ["Standard"],
             "texture": ["Matte"],
             "cushion_style": ["Tufted"] if meta["category"] == "sofas" else [],
-            "images": [thumbnail_url]
+            "images": views
         })
         style_tags = json.dumps(meta["style_tags"])
 
@@ -240,7 +303,7 @@ def seed_images_to_db():
         """, (
             prod_id, sku, prod_name, meta["category"], meta["subcategory"], vendor_id, meta["room_type"], meta["price"],
             color_variants, variants, thumbnail_url, style_tags, f"Premium {prod_name} designed for home renovations.",
-            json.dumps([thumbnail_url])
+            json.dumps(views)
         ))
         
         # 2. Insert into VendorProduct table (ONCE per unique item)
@@ -285,7 +348,7 @@ def seed_images_to_db():
                 cat = "Furniture"
             
             prod_id_2 = str(uuid.uuid4())
-            sku_2 = f"CAT-B2-{base_name.upper().replace(' ', '-')}-{color.upper().replace(' ', '-')}"
+            sku_2 = f"CAT-B2-{name_no_ext.upper().replace(' ', '-').replace('_', '-')}"
             
             # Customer product (Room Type: bedroom_2)
             cursor.execute("""

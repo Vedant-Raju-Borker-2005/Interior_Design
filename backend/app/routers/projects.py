@@ -17,11 +17,11 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 router = APIRouter()
 
 BHK_ROOMS = {
-    "1BHK": ["living_room", "bedroom_master", "kitchen", "bathroom", "balcony"],
-    "2BHK": ["living_room", "bedroom_master", "bedroom_2", "kitchen", "bathroom", "bathroom_2", "balcony"],
-    "3BHK": ["living_room", "bedroom_master", "bedroom_2", "bedroom_3", "kitchen", "bathroom", "bathroom_2", "balcony"],
-    "4BHK": ["living_room", "bedroom_master", "bedroom_2", "bedroom_3", "bedroom_4", "kitchen", "bathroom", "bathroom_2", "bathroom_3", "balcony"],
-    "5BHK": ["living_room", "bedroom_master", "bedroom_2", "bedroom_3", "bedroom_4", "bedroom_5", "kitchen", "bathroom", "bathroom_2", "bathroom_3", "bathroom_4", "balcony"],
+    "1BHK": ["living_room", "bedroom_master", "kitchen", "bathroom"],
+    "2BHK": ["living_room", "bedroom_master", "bedroom_2", "kitchen", "bathroom", "bathroom_2"],
+    "3BHK": ["living_room", "bedroom_master", "bedroom_2", "bedroom_3", "kitchen", "bathroom", "bathroom_2"],
+    "4BHK": ["living_room", "bedroom_master", "bedroom_2", "bedroom_3", "bedroom_4", "kitchen", "bathroom", "bathroom_2", "bathroom_3"],
+    "5BHK": ["living_room", "bedroom_master", "bedroom_2", "bedroom_3", "bedroom_4", "bedroom_5", "kitchen", "bathroom", "bathroom_2", "bathroom_3", "bathroom_4"],
 }
 
 ROOM_DEFAULTS = {

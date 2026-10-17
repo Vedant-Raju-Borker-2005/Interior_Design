@@ -255,7 +255,7 @@ def list_products(
         elif 'desk' in cat_raw or 'study' in cat_raw:
             q = q.filter(or_(Product.subcategory.ilike('%desk%'), Product.subcategory.ilike('%study%'), Product.name.ilike('%desk%'), Product.name.ilike('%study%')))
         elif 'shoe' in cat_raw:
-            q = q.filter(or_(Product.subcategory.ilike('%shoe%'), Product.name.ilike('%shoe%')))
+            q = q.filter(or_(Product.subcategory.ilike('%shoe%'), Product.category.ilike('%shoe%'), Product.name.ilike('%shoe%')))
         elif 'sofa' in cat_raw:
             q = q.filter(or_(Product.subcategory.ilike('%sofa%'), Product.category.ilike('%sofa%'), Product.name.ilike('%sofa%')))
         elif 'coffee' in cat_raw:
