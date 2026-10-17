@@ -20,8 +20,8 @@ The backend is built with Python 3.10+, FastAPI, SQLAlchemy ORM, and SQLite data
 ## API Router Directory (`app/routers`)
 
 1. **`auth.py`** (`/api/v1/auth`): OTP-based authentication, user registration, role detection (`customer`, `vendor`, `enterprise`, `admin`), and fallback credential generation to prevent `UNIQUE constraint` errors.
-2. **`projects.py`** (`/api/v1/projects`): Project CRUD, room generation via `BHK_ROOMS`, room item customization, room deletion, and floor plan PDF presentation export (`download_floor_plan_pdf`).
-3. **`catalog.py`** (`/api/v1/catalog`): Product catalog search with custom room category normalization, budget-aware scoring, real-time stock ledger calculation (`available_stock`), matching flags (`is_color_match`, `is_material_match`, `is_fabric_match`, `is_price_match`), master color family explorer, and out-of-stock suppression.
+2. **`projects.py`** (`/api/v1/projects`): Project CRUD, room generation via `BHK_ROOMS` (strictly excluding balconies across all BHKs 1BHK to 5BHK), room item customization, room deletion, and floor plan PDF presentation export (`download_floor_plan_pdf`).
+3. **`catalog.py`** (`/api/v1/catalog`): Product catalog search with custom room category normalization, budget-aware scoring, real-time stock ledger calculation (`available_stock`), matching flags (`is_color_match`, `is_material_match`, `is_fabric_match`, `is_price_match`), 4 signature design vibes (`modern`, `scandinavian`, `japandi`, `indo_minimalistic`), master color family explorer, and out-of-stock suppression.
 4. **`ai_render.py`** (`/api/v1/ai`): AI render generation trigger compiling prompts from project style, wood finish, fabric, colors, and 4-wall dimensions; status polling.
 5. **`quotations.py`** (`/api/v1/quotations`): Dynamic quotation generation, line item serialization, GST calculation, auto-regeneration when previous quote was revised/rejected, ReportLab PDF generation, and real-time inventory atomic reservations and payment commitments via `inventory_service.py`.
 6. **`vendors.py`** (`/api/v1/vendors`): Legacy vendor listing, pincode serviceability check, and vendor detail endpoints.

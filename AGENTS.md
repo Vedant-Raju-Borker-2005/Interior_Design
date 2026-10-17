@@ -38,17 +38,19 @@ graph TD
 ### 1. Customer (B2C) Onboarding & Design Flow
 1. **6-Step Onboarding**:
    * **Project Type**: New Home vs. Upgrade (renovation).
-   * **Scope & BHK**: Select house configuration (1 BHK to 5 BHK).
+   * **Scope & BHK**: Select house configuration (1 BHK to 5 BHK; all configurations exclude balconies).
    * **Budget & Timeline**: Select total budget limit and completion timeline.
-   * **Design Vibe**: Single-selection style cards (Modern, Scandinavian, Indian Contemporary, Luxury, Mediterranean, Boho).
+   * **Design Vibe**: Single-selection style cards with 4 signature design vibes (Modern, Scandinavian, Japandi, Indo-Minimalistic).
    * **Material & Fabric**: Select wood laminate finish (Oak, Teak, Walnut) and fabric preference (Linen, Velvet, Woven, Leatherette).
-   * **Colors Explorer**: Interactive color family selection.
+   * **Colors Explorer**: Interactive color explorer featuring pure 3D glossy liquid paint droplets with specular highlight sheen, pinpoint glints, organic cast shadows, and hover tooltips for shade names.
 2. **Dynamic Package Selection**:
    * Packages filter dynamically by BHK and budget limit (`Basic` = budget, `Premium` = budget + ₹2L, `Luxury` = budget + ₹5L).
-3. **Room Customization**:
-   * Customize individual products room-by-room.
-   * Live price tracking displays Base Price, Current Cost, and Variation in dual centered sub-boxes (*Remaining Budget* and *Variation Spent*).
-   * Mandatory product completeness checklist per room; Balcony rooms automatically bypass completeness checks.
+3. **Room Customization & Atelier Studio**:
+   * Customize individual products room-by-room across dedicated room spaces (Living Room, Bedrooms, Kitchen, Bathrooms — strictly zero balconies).
+   * Top Action Bar: Clean `←` back arrow, centered compact Budget & Variation sub-boxes, and `Proceed to AI Render →`.
+   * Full-Width Room Harmonization banner spanning 100% width with high-contrast category completion pills and live progress bar.
+   * Lower 2-column workspace: Room Spaces list on left; Collection Grid on right.
+   * Product Customization Floating Overlay Modal: Clicking "Choose" opens a centered floating overlay modal (`fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm`) with generous margins, dismissible via backdrop click, `← Back to Collection`, or `X`.
    * Switch to next room tab automatically upon selecting last category item.
    * Configuration Complete panel swaps product grid once all rooms are customized.
 4. **4-Wall AI Renders**:
@@ -110,9 +112,9 @@ graph TD
 * **Premium**: `budget + ₹2,00,000` (₹2L)
 * **Luxury**: `budget + ₹5,00,000` (₹5L)
 
-### 2. Custom BHK Mappings
-* **1 BHK**: Living Room, Bedroom Master (labeled "Bedroom"), Kitchen, Bathroom, Balcony
-* **2 BHK to 5 BHK**: Living Room, Bedroom Master, Bedroom 2–5, Kitchen, Bathroom, Bathroom 2–4, Balcony
+### 2. Custom BHK Mappings (Balconies Strictly Excluded)
+* **1 BHK**: Living Room, Bedroom Master (labeled "Bedroom"), Kitchen, Bathroom
+* **2 BHK to 5 BHK**: Living Room, Bedroom Master, Bedroom 2–5, Kitchen, Bathroom, Bathroom 2–4
 
 ### 3. Budget Recommendation Constraints
 * **₹3L – ₹5L Budget**: Max product price cap = **₹75,000**
@@ -128,10 +130,10 @@ graph TD
 * **Net Formula**: `Net Contract Value = Base Units + Customization Upgrades - Volume Discount`
 
 ### 5. Customizer & Navigation Rules
-* **Single-Select Design Vibe**: Selecting a new style card in onboarding replaces the previous selection.
+* **4 Signature Design Vibes**: `Modern`, `Scandinavian`, `Japandi`, `Indo-Minimalistic`. Single-selection style card replaces the previous selection.
+* **PIN Code Dynamic Lookup (Step 0)**: Uses India Post API (`https://api.postalpincode.in/pincode/{PINCODE}`) to dynamically generate city chips for valid 6-digit postal codes, with `+ Other` button for manual entry. Goa regional hubs retain Panjim, Margao, Vasco, Mapusa, and Ponda.
 * **Onboarding Draft Auto-Save & Step Tracking**: B2C onboarding creates a draft project at Step 1 and updates preferences on every step transition (`projectsAPI.update`). Clicking *Continue Onboarding* on `/dashboard` resumes at the exact incomplete step without creating duplicate projects.
 * **Enterprise Locked Onboarding Steps & Typology Inheritance**: For Enterprise Child Projects (`parent_project_id != null`), Steps 0–2 (Property Details, BHK, Budget, Timeline) are strictly locked. Homebuyers resume directly at Step 3 (Design Vibe) inheriting the flat's assigned typology BHK and blueprint layout.
-* **Preference Legend & Indicator Dots UI**: Customizer section header features a Preference Legend Card. Product cards display compact indicator dots for preference mismatches: 🟡 Material/Fabric, 🔵 Color, and 🔴 Budget Cap limit.
 * **Real-Time Stock Badges & Out-of-Stock Suppression**: Catalog products display live availability badges ("In Stock (X left)", "Low Stock", "Out of Stock"). Items with zero available stock (`available_stock <= 0`) are suppressed from room customizer selection grids.
 * **Real-Time Inventory Reservation Lifecycle**: Creating a quotation reserves item stock atomically via `inventory_service.py`. Quote expiration or cancellation auto-releases stock. Making quotation payment commits stock permanently.
 * **Customer Progress Zero-Date Policy**: Progress tracking across all 6 milestone stages displays pure completion percentages (0–100%) with strictly no estimated completion dates or remaining days shown.
@@ -139,7 +141,8 @@ graph TD
 * **Vendor Portal Auto-Approval**: Accessing the Vendor Portal (`/vendor/dashboard`) still marks the seeded vendor `APPROVED` and `active = True`, but orders only appear once an admin allocates a project to that vendor.
 * **BHK Format**: The canonical form is `3BHK` (packages, room templates, onboarding). Use `normalize_bhk()` from `services/business_rules.py` for any lookup — the IDS 3D engine and some callers send `3 BHK`.
 * **Converted Projects**: A project created from a paid quotation is linked via `defaults.converted_from_project_id`, never `parent_project_id` (which marks an enterprise flat and locks onboarding steps).
-* **Balcony Auto-Complete**: `checkRoomCompleteness` automatically returns `true` for balcony rooms.
+* **Universal Logout Redirect to Homepage (`/`)**: Logout from any platform portal (Customer, Vendor, Enterprise, Team, Admin) redirects to the homepage (`/`), never `/login`.
+* **Smart First-Project Routing on Login**: If a customer has 0 active projects upon login, they are routed directly to `/onboarding`; if projects exist, they are routed to `/dashboard`.
 * **Auto Tab Progression**: Completing product selection for the last category in a room automatically switches to the next room tab.
 * **Configuration Complete Panel**: When all rooms are complete, the product selection area swaps to a green-accented prompt to proceed to AI Render.
 

@@ -102,13 +102,13 @@ graph TD
     subgraph CustomizerLoop ["Room Customization & Inventory Engine"]
         Step4 --> StockCheck{Stock Available?}
         StockCheck -->|No: available_stock <= 0| Suppress[Suppress Item from Room View]
-        StockCheck -->|Yes| DisplayStock[Show In-Stock Badge & Compatibility Dots]
-        DisplayStock --> ChecklistCheck{Category Checklist Complete?}
-        ChecklistCheck -->|No| SelectProduct[Select Product & Wood/Fabric/Color Finish]
+        StockCheck -->|Yes| DisplayStock[Show In-Stock Badge & Category Options]
+        DisplayStock --> OpenModal[Click Choose: Open Floating Overlay Modal]
+        OpenModal --> SelectProduct[Select Product & Finish Variant]
         SelectProduct --> BudgetUpdate[Update Dual Budget Sub-Boxes: Remaining & Variation]
-        BudgetUpdate --> AutoTab[Auto Tab Progression to Next Room]
+        BudgetUpdate --> ChecklistCheck{Room Categories Complete?}
+        ChecklistCheck -->|No| AutoTab[Next Category / Space]
         AutoTab --> Step4
-        ChecklistCheck -->|Balcony Room| AutoPass[Auto-Pass Completeness Check]
         ChecklistCheck -->|All Rooms Complete| ConfigDone[Configuration Complete Banner]
     end
     

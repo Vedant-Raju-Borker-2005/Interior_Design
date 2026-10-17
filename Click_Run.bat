@@ -189,11 +189,14 @@ timeout /t 4 /nobreak >nul 2>&1
 if /i "%MODE%"=="dev" (
     start "InteriorAI - Frontend (port 3000)" /d "!FRONTEND!" cmd /k "chcp 65001 >nul && echo Frontend starting in dev mode... && npm run dev"
 ) else (
-    rem Rebuild only when the code changed since the last build (or never built).
+    rem Rebuild when git commit changed, uncommitted edits exist, or never built.
     set "HEAD=nobuild"
     for /f %%i in ('git rev-parse HEAD 2^>nul') do set "HEAD=%%i"
+    set "DIRTY=0"
+    for /f "tokens=*" %%s in ('git status --porcelain 2^>nul') do set "DIRTY=1"
     set "BUILT="
     if exist "!FRONTEND!\.next\BUILD_ID" if exist "!FRONTEND!\.next\BUILT_FROM" set /p BUILT=<"!FRONTEND!\.next\BUILT_FROM"
+    if "!DIRTY!"=="1" set "BUILT=dirty_rebuild"
     if not "!BUILT!"=="!HEAD!" (
         echo   Building the frontend once for fast page loads. This takes a few minutes...
         pushd "!FRONTEND!"
@@ -204,7 +207,8 @@ if /i "%MODE%"=="dev" (
             start "InteriorAI - Frontend (port 3000)" /d "!FRONTEND!" cmd /k "chcp 65001 >nul && npm run dev"
             goto :frontend_started
         )
-        >"!FRONTEND!\.next\BUILT_FROM" echo !HEAD!
+        if "!DIRTY!"=="0" >"!FRONTEND!\.next\BUILT_FROM" echo !HEAD!
+        if "!DIRTY!"=="1" if exist "!FRONTEND!\.next\BUILT_FROM" del /f /q "!FRONTEND!\.next\BUILT_FROM"
         popd
     )
     start "InteriorAI - Frontend (port 3000)" /d "!FRONTEND!" cmd /k "chcp 65001 >nul && echo Frontend starting... && npm run start"

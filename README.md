@@ -23,13 +23,18 @@
 ## 🌟 Key Features Across 5 Stakeholder Portals
 
 ### 1. Customer (Homeowner B2C) Portal
-* **6-Step Interactive Onboarding Wizard**: Guided flow capturing project type (New Home vs. Renovation), BHK scope (1BHK to 5BHK), budget limit, completion timeline, single-select design vibe, wood laminate finish, fabric preference, and color explorer. Auto-saves draft project at Step 1 to track progress on the dashboard and resume exact steps without duplicate projects.
+* **6-Step Interactive Onboarding Wizard**: Guided flow capturing project type (New Home vs. Renovation), BHK scope (1BHK to 5BHK; strictly excluding balconies), budget limit, completion timeline, 4 signature design vibes (`Modern`, `Scandinavian`, `Japandi`, `Indo-Minimalistic`), wood laminate finish, fabric preference, and color explorer.
+  * **Dynamic PIN Code Auto-Lookup (Step 0)**: Powered by India Post API (`https://api.postalpincode.in/pincode/{PINCODE}`), dynamically populating locality/city chips upon entering 6-digit postal codes, with `+ Other` manual entry support. Goa regional hubs feature Panjim, Margao, Vasco, Mapusa, and Ponda.
+  * **Pure 3D Glossy Liquid Paint Droplets (Step 5)**: Specular highlight sheen, pinpoint glints, organic drop shadows, and hover tooltips displaying shade names (zero rigid cards or groove lines).
+  * **Ambient Architectural Scrim Overlay**: Transparent scrim overlay (15–20% opacity) keeping architectural backdrop 75–80% visible.
+  * Auto-saves draft project at Step 1 to track progress on the dashboard and resume exact steps without duplicate projects.
 * **Dynamic Package Pricing & Strict Budget Bracket Scaling**: Packages compute tier prices anchored to the user's budget bracket (`Basic` = budget minimum, `Premium` = budget + ₹2L, `Luxury` = budget + ₹5L). Strictly enforces linear product catalog price caps across tiers (₹3L–₹5L: max ₹75k; ₹5L–₹8L: max ₹1.25L; ₹8L–₹12L: max ₹2L; ₹12L–₹20L: max ₹3.5L; ₹20L+: max ₹5L).
 * **Interactive 3D Room Canvas & 4-Wall AI Studio**: Powered by Three.js, `@react-three/fiber`, and Gemini / Imagen 3 AI. View Wall A, B, C, D perspectives, test blueprint templates, upload photo layouts, and input room dimensions with automatic pillar clearance.
-* **Redesigned Customizer Studio & Real-Time Stock Status**:
-  * **Cohesive Header & Base Price Alignment**: Prominent Base Price pill placed directly beside the product title with zero wasted layout space.
-  * **Interactive About $\leftrightarrow$ Variants Flip Toggle**: Seamless toggle between technical product specifications (`Dimensions`, `Material`, `Mounting`, `Assembly`) and custom styling variants (`Colors`, `Fabrics`, `Textures`).
-  * **Full-Width Curated Pairings Grid**: "Complete the Room" AI pairings rendered in an expansive 2-column responsive layout with real-time remaining room budget buffer tracking and side-by-side single vs. bundle save buttons.
+* **Redesigned Atelier Customizer Studio & Floating Overlay Modal**:
+  * **Streamlined Top Action Bar**: Minimalist `←` back arrow, compact centered Remaining Budget and Variation Spent sub-boxes, and prominent `Proceed to AI Render →`.
+  * **Full-Width Room Harmonization Banner**: 100% width banner spanning across the layout with high-contrast category completion pills and live progress bar.
+  * **Room Spaces Workspace**: Clean accordion sidebar covering Living Room, Bedrooms, Kitchen, Bathrooms (strictly zero balconies across all BHKs).
+  * **Floating Product Customization Overlay Modal**: Selecting a product opens a centered floating overlay modal (`fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm p-4 sm:p-8`) with generous margins on all sides, dismissible via backdrop click, `← Back to Collection`, or `X`.
   * **Real-Time Stock Status**: Real-time stock availability badges (In Stock, Low Stock ≤ 5, Out of Stock) with automatic suppression of depleted SKUs from customizer room grids.
 * **ReportLab PDF Quotation Generator**: Generates professional, bank-compliant PDF quotes with detailed room line items, GST breakdown, terms, and bank details. Automatically reserves inventory upon quote creation and regenerates quotes if revised after customer review.
 * **Multi-Channel Milestone Payments Hub (`/track/[projectId]/payments`)**: Structured payment disbursements aligned with execution milestones (e.g. Booking Advance, Production Start, Dispatch, Installation Completion). Supports 4 payment modes: Card, UPI, Netbanking, and **Offline / Bank Transfer (NEFT/RTGS/IMPS)** with UTR reference validation and transaction confirmation.

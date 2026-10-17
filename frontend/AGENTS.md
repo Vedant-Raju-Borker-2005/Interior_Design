@@ -7,12 +7,12 @@ The frontend is a single-page application built with Next.js 14 (App Router), Re
 ## Directory & Page Routes Index (`src/app`)
 
 ### 1. Customer (B2C) Portal Routes
-* [`src/app/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/page.tsx): High-conversion landing page (Headline: *"Designed & Delivered Starting Under ₹3 Lakhs"*, CTA: *"Design My Home Free"*).
-* [`src/app/login/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/login/page.tsx): Unified OTP login portal for Customer, Vendor, Enterprise, Site Team, and Admin roles with contextual reviewer test account auto-fill.
-* [`src/app/onboarding/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/onboarding/page.tsx): 6-step customer wizard (Property Details $\rightarrow$ Scope & BHK $\rightarrow$ Budget & Timeline $\rightarrow$ Design Vibe $\rightarrow$ Material & Fabric $\rightarrow$ Colors Explorer). Automatically locks Steps 0–2 for Enterprise child projects.
+* [`src/app/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/page.tsx): Atelier landing page featuring a full-width 4-vibe carousel (`Modern`, `Scandinavian`, `Japandi`, `Indo-Minimalistic`), centralized headline (*"Transform Your Home with Handcrafted Interiors & Master Artisans"*), stats bar (50K+ Homes, 500+ Elements, 4.9★), and dark charcoal footer.
+* [`src/app/login/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/login/page.tsx): Unified OTP login portal for Customer, Vendor, Enterprise, Site Team, and Admin roles with smart customer routing (0 projects $\rightarrow$ `/onboarding`, >0 projects $\rightarrow$ `/dashboard`).
+* [`src/app/onboarding/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/onboarding/page.tsx): 6-step customer wizard with Step 0 PIN code auto-lookup (India Post API), 4 signature design vibes (`Modern`, `Scandinavian`, `Japandi`, `Indo-Minimalistic`), and Step 5 pure 3D glossy liquid paint droplets with hover shade tooltips. Scrim overlay reduced to 15-20% for background architectural visibility.
 * [`src/app/packages/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/packages/page.tsx): Design package catalogue with dynamic pricing (`Basic` = budget, `Premium` = budget + ₹2L, `Luxury` = budget + ₹5L).
 * [`src/app/floor-layout/[projectId]/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/floor-layout/[projectId]/page.tsx): Layout blueprint selector / custom floor plan file uploader.
-* [`src/app/customize/[projectId]/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/customize/[projectId]/page.tsx): Live room product customizer with accordion room list, dual budget tracking sub-boxes, category checklist, real-time stock availability badges ("In Stock", "Low Stock", "Out of Stock"), out-of-stock suppression, auto tab progression, and all-complete panel.
+* [`src/app/customize/[projectId]/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/customize/[projectId]/page.tsx): Atelier customizer studio with top action bar (`←` back arrow, compact budget/variation sub-boxes, `Proceed to AI Render →`), full-width harmonization banner, room spaces list (strictly zero balconies across all BHKs), collection grid, and floating product customizer overlay modal.
 * [`src/app/visualize/[projectId]/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/visualize/[projectId]/page.tsx): 4-wall AI Render Studio (Wall A, B, C, D perspectives) supporting blueprint templates, photo uploads, room dimension inputs, and Gemini render triggers.
 * [`src/app/quotation/[projectId]/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/quotation/[projectId]/page.tsx): PDF quotation view, line item breakdown, GST breakdown, auto-regeneration trigger, atomic stock reservation, and PDF download.
 * [`src/app/dashboard/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/dashboard/page.tsx): Customer active projects dashboard.
@@ -74,7 +74,7 @@ The frontend is a single-page application built with Next.js 14 (App Router), Re
 
 ## UI Components (`src/components`)
 
-* `Navbar.tsx`: Role-aware header navigation displaying contextual links based on active user role.
+* `Navbar.tsx`: Atelier header navigation featuring a sliding drawer trigger (Home, Customer Portal, Support), notifications bell, and circular profile avatar with initial and deterministic background color hash. Dropdown includes Name (Seeded), Edit Profile, and Logout (redirects to `/`).
 * `NotificationCenter.tsx`: Header notification bell with swipe-left-to-delete cards and click-outside dismissal.
 * `CategoryDropdown.tsx`: Single-category selector with bounded height (`max-h-48`), downward drop (`top-full mt-1`), subcategory grouping, and click-outside auto-close.
 * `BhkSelector.tsx`: Interactive BHK scope selector card grid.
@@ -87,15 +87,18 @@ The frontend is a single-page application built with Next.js 14 (App Router), Re
 
 * **Styling**: Always use vanilla Tailwind CSS. Active selection styling uses `border-indigo-600` or `border-indigo-500` with subtle shadows. Dark navy containers use `bg-[#0f1129]` or `bg-slate-950/40`.
 * **API Base URL**: All API calls construct backend endpoints via `lib/api.ts` utilizing `process.env.NEXT_PUBLIC_API_URL` or `http://localhost:8000`.
-* **Single-Select Design Vibe**: Choosing a new style card in onboarding replaces the active choice (`toggleStyle`).
+* **4 Signature Design Vibes**: `Modern`, `Scandinavian`, `Japandi`, `Indo-Minimalistic`. Choosing a new style card in onboarding replaces the active choice (`toggleStyle`).
 * **Onboarding Draft Tracking**: Auto-saves B2C draft project at Step 1 and updates preferences on every `handleNext`. Submitting Step 6 updates the existing draft (`projectsAPI.update`) to prevent duplicate project errors.
+* **Universal Logout Redirect to Homepage (`/`)**: All portals and navigations redirect to `/` on logout, never `/login`.
+* **Smart First-Project Routing on Login**: If a customer has 0 active projects upon login, they are routed directly to `/onboarding`; if projects exist, they are routed to `/dashboard`.
+* **Balconies Strictly Excluded**: Balconies are excluded across all BHK configurations (1BHK to 5BHK) in backend and frontend. `getSortedRoomsList()` filters out `balcony` types.
+* **Product Customization Floating Overlay Modal**: In `customize/[projectId]/page.tsx`, selecting a product opens a centered floating overlay modal (`fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm p-3 sm:p-6 lg:p-10`) with generous margins on all sides.
 * **Enterprise Locked Onboarding & Typology Inheritance**: Enterprise Child Projects (`isB2B2C`) lock Steps 0–2. Back button and step loading enforce a minimum step of Step 3 (Design Vibe). Homebuyers automatically inherit the assigned flat's typology BHK and floor plan.
 * **Enterprise Typology Setup & Multi-Column Allocation**: Step 1 captures typology definitions with custom cards. The units view renders the Project Typologies shelf and launches the multi-column BHK allocation modal where developers assign flats to typologies with a single click.
 * **Bulk Volume Discount Calculations**: Portfolio summaries calculate volume discounts (5% for 5–9 units, 10% for 10–19 units, 15% for 20+ units). Displays Net Contract Value (`Net = Base Units + Customization Upgrades - Volume Discount`) and unit-level customization upgrade tables.
 * **Real-Time Stock Badges & Out-of-Stock Suppression**: Catalog cards display availability indicators ("In Stock (X left)", "Low Stock", "Out of Stock"). Items with `available_stock <= 0` are suppressed from customer customizer selection grids.
 * **Unified Customer Progress Cockpit Zero Dates**: The `/track/[projectId]` hub computes circular progress (0–100%) and displays 6 milestone stages with strictly zero date or remaining day forecasts. Includes dual-track status bars, proof photo lightbox, and multi-photo snag submission.
 * **Vendor Portal Order Tracking**: Vendor dashboard (`/vendor/dashboard`) loads assignments for approved vendor accounts. If a newly logged-in vendor user arrives, status is set to `APPROVED` and `sync_project_vendor_assignments` links orders.
-* **Balcony Auto-Complete**: `checkRoomCompleteness` treats `room_type === 'balcony'` as complete automatically.
 * **Auto Tab Progression**: Saving selection for the last category of a room automatically shifts tabs to the next room.
 * **Dual Budget Sub-Boxes**: Budget tracker bar renders two centered inner boxes (*Remaining Budget* and *Variation Spent*).
 
