@@ -4,7 +4,7 @@ from typing import List
 import os, shutil
 
 from ..db import get_db
-from ..models import Project, Room, RoomItem, Product, User, Flat
+from ..models import Project, Room, RoomItem, Product, User, Flat, Package
 from ..schemas import CreateProjectReq, UpdateRoomReq, AddRoomItemReq, AddRoomReq, AddRoomItemBundleReq
 from ..auth_utils import current_user
 import uuid
@@ -104,6 +104,15 @@ def create_project(
     rooms_out = []
     from ..services.business_rules import normalize_bhk
 
+    if req.package_id:
+        from ..services.package_mapping import provision_package_defaults_for_project
+        package = db.query(Package).filter(Package.id == req.package_id).first()
+        if package:
+            provision_package_defaults_for_project(project, package, db, target_budget=req.budget or package.base_price)
+            db.commit()
+            all_rooms = db.query(Room).filter(Room.project_id == pid).all()
+            return {"project_id": pid, "rooms": [{"id": r.id, "type": r.room_type} for r in all_rooms]}
+
     for rtype in BHK_ROOMS.get(normalize_bhk(req.bhk_type), []):
         defaults = ROOM_DEFAULTS.get(rtype, {})
         room = Room(
@@ -165,6 +174,13 @@ def update_project(
     for field in updatable_fields:
         if field in payload and payload[field] is not None:
             setattr(project, field, payload[field])
+
+    if payload.get("package_id"):
+        pkg = db.query(Package).filter(Package.id == payload["package_id"]).first()
+        if pkg:
+            from ..services.package_mapping import provision_package_defaults_for_project
+            target_budget = payload.get("budget") or pkg.base_price
+            provision_package_defaults_for_project(project, pkg, db, target_budget=target_budget)
             
     flat = db.query(Flat).filter(Flat.customer_project_id == project.id).first()
     if flat:
@@ -224,13 +240,26 @@ def add_room_item(
         **{key: getattr(req, column) for key, column in LEGACY_COLUMNS.items()},
         **(req.custom_attributes or {}),
     })
+    if req.is_package_default:
+        attributes["is_package_default"] = True
+        if req.package_allowance is not None:
+            attributes["package_allowance"] = req.package_allowance
+    else:
+        attributes.pop("is_package_default", None)
+        attributes.pop("package_allowance", None)
 
     # Check if already added
     existing = db.query(RoomItem).filter(RoomItem.room_id == room_id, RoomItem.product_id == req.product_id).first()
     if existing:
         existing.qty = req.qty
         apply_attributes(existing, attributes)
-        existing.unit_price = product.price
+        if not existing.is_package_default and req.is_package_default:
+            existing.is_package_default = True
+            existing.package_allowance = req.package_allowance or 0.0
+            if req.unit_price is not None:
+                existing.unit_price = req.unit_price
+        elif not existing.is_package_default:
+            existing.unit_price = product.price
         _design_changed(project)
         db.commit()
         return {"message": "item updated", "item_id": existing.id, "custom_attributes": attributes}
@@ -240,7 +269,9 @@ def add_room_item(
         room_id=room_id,
         product_id=req.product_id,
         qty=req.qty,
-        unit_price=product.price,
+        unit_price=req.unit_price if (req.is_package_default and req.unit_price is not None) else product.price,
+        is_package_default=req.is_package_default or False,
+        package_allowance=req.package_allowance or 0.0,
     )
     apply_attributes(item, attributes)
     db.add(item)
@@ -272,18 +303,34 @@ def add_room_item_bundle(
             **{key: getattr(item_req, column) for key, column in LEGACY_COLUMNS.items()},
             **(item_req.custom_attributes or {}),
         })
+        if item_req.is_package_default:
+            attributes["is_package_default"] = True
+            if item_req.package_allowance is not None:
+                attributes["package_allowance"] = item_req.package_allowance
+        else:
+            attributes.pop("is_package_default", None)
+            attributes.pop("package_allowance", None)
+
         existing = db.query(RoomItem).filter(RoomItem.room_id == room_id, RoomItem.product_id == item_req.product_id).first()
         if existing:
             existing.qty = item_req.qty
             apply_attributes(existing, attributes)
-            existing.unit_price = product.price
+            if item_req.is_package_default:
+                existing.is_package_default = True
+                existing.package_allowance = item_req.package_allowance or 0.0
+                if item_req.unit_price is not None:
+                    existing.unit_price = item_req.unit_price
+            elif not existing.is_package_default:
+                existing.unit_price = product.price
         else:
             item = RoomItem(
                 id=str(uuid.uuid4()),
                 room_id=room_id,
                 product_id=item_req.product_id,
                 qty=item_req.qty,
-                unit_price=product.price,
+                unit_price=item_req.unit_price if (item_req.is_package_default and item_req.unit_price is not None) else product.price,
+                is_package_default=item_req.is_package_default or False,
+                package_allowance=item_req.package_allowance or 0.0,
             )
             apply_attributes(item, attributes)
             db.add(item)
@@ -513,6 +560,23 @@ def _project_summary(p: Project) -> dict:
     }
 
 
+def _is_default_flag(val) -> bool:
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, (int, float)):
+        return bool(val)
+    if isinstance(val, str):
+        return val.strip().lower() in ("true", "1", "yes")
+    return False
+
+
+def _parse_float(val, fallback=0.0) -> float:
+    try:
+        return float(val) if val is not None else fallback
+    except (ValueError, TypeError):
+        return fallback
+
+
 def _room_detail(r: Room, db: Session, items: list | None = None) -> dict:
     # A caller rendering every room passes the items it has already loaded, so a
     # project costs one item query instead of one per room.
@@ -542,6 +606,8 @@ def _room_detail(r: Room, db: Session, items: list | None = None) -> dict:
                 "custom_cushion_style": it.custom_cushion_style,
                 "custom_attributes": item_attributes(it),
                 "unit_price": it.unit_price,
+                "is_package_default": bool(getattr(it, "is_package_default", False)) or _is_default_flag((it.custom_attributes or {}).get("is_package_default", False)),
+                "package_allowance": getattr(it, "package_allowance", 0.0) or (_parse_float((it.custom_attributes or {}).get("package_allowance", 0.0)) if _is_default_flag((it.custom_attributes or {}).get("is_package_default", False)) else 0.0),
                 "product": {
                     "id": it.product.id,
                     "sku": it.product.sku,
