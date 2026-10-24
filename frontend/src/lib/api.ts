@@ -134,6 +134,8 @@ export const projectsAPI = {
     custom_wood_finish?: string;
     custom_texture?: string;
     custom_cushion_style?: string;
+    is_package_default?: boolean;
+    package_allowance?: number;
   }) =>
     axiosInstance.post(`/api/v1/projects/${projectId}/rooms/${roomId}/items`, data),
 
@@ -145,6 +147,8 @@ export const projectsAPI = {
     qty?: number;
     custom_attributes?: any;
     unit_price?: number;
+    is_package_default?: boolean;
+    package_allowance?: number;
   }>) =>
     axiosInstance.post(`/api/v1/projects/${projectId}/rooms/${roomId}/items/bundle`, { items }),
 

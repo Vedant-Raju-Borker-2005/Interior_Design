@@ -240,7 +240,18 @@ def list_products(
         cat_raw = category.lower().replace("_", " ").strip()
         
         if 'bedside' in cat_raw:
-            q = q.filter(or_(Product.subcategory.ilike('%bedside%'), Product.name.ilike('%bedside%')))
+            q = q.filter(
+                or_(
+                    Product.subcategory.ilike('%bedside%'),
+                    Product.name.ilike('%bedside%'),
+                    Product.name.ilike('%nightstand%')
+                )
+            ).filter(
+                ~Product.category.ilike('%light%'),
+                ~Product.subcategory.ilike('%light%'),
+                ~Product.name.ilike('%light%'),
+                ~Product.name.ilike('%lamp%')
+            )
         elif 'bed' in cat_raw:
             q = q.filter(
                 or_(
@@ -261,17 +272,64 @@ def list_products(
         elif 'coffee' in cat_raw:
             q = q.filter(or_(Product.subcategory.ilike('%coffee%'), Product.category.ilike('%coffee%'), Product.name.ilike('%coffee%')))
         elif 'side' in cat_raw:
-            q = q.filter(or_(Product.subcategory.ilike('%side%'), Product.category.ilike('%side%'), Product.name.ilike('%side%'))).filter(~Product.name.ilike('%bedside%'))
+            q = q.filter(
+                or_(
+                    Product.subcategory.ilike('%side%'),
+                    Product.category.ilike('%side%'),
+                    Product.name.ilike('%side%')
+                )
+            ).filter(
+                ~Product.name.ilike('%bedside%'),
+                ~Product.category.ilike('%light%'),
+                ~Product.subcategory.ilike('%light%'),
+                ~Product.name.ilike('%light%'),
+                ~Product.name.ilike('%lamp%')
+            )
         elif 'chair' in cat_raw:
             q = q.filter(or_(Product.subcategory.ilike('%chair%'), Product.category.ilike('%chair%'), Product.name.ilike('%chair%')))
         elif 'rug' in cat_raw:
             q = q.filter(or_(Product.subcategory.ilike('%rug%'), Product.category.ilike('%rug%'), Product.name.ilike('%rug%')))
         elif 'light' in cat_raw:
-            q = q.filter(or_(Product.subcategory.ilike('%light%'), Product.category.ilike('%light%'), Product.name.ilike('%light%')))
+            q = q.filter(
+                or_(
+                    Product.subcategory.ilike('%light%'),
+                    Product.category.ilike('%light%'),
+                    Product.name.ilike('%light%'),
+                    Product.name.ilike('%lamp%')
+                )
+            ).filter(
+                ~Product.name.ilike('%table%'),
+                ~Product.subcategory.ilike('%table%')
+            )
         elif 'vanity' in cat_raw:
             q = q.filter(or_(Product.subcategory.ilike('%vanity%'), Product.name.ilike('%vanity%')))
         elif 'fixture' in cat_raw or 'decor' in cat_raw:
             q = q.filter(or_(Product.subcategory.ilike('%fixture%'), Product.category.ilike('%decor%'), Product.name.ilike('%fixture%'), Product.name.ilike('%towel%')))
+        elif 'addon' in cat_raw or 'extra' in cat_raw:
+            q = q.filter(
+                or_(
+                    Product.subcategory.ilike('%chair%'),
+                    Product.subcategory.ilike('%rug%'),
+                    Product.subcategory.ilike('%side%'),
+                    Product.subcategory.ilike('%light%'),
+                    Product.subcategory.ilike('%desk%'),
+                    Product.subcategory.ilike('%fixture%'),
+                    Product.subcategory.ilike('%cabinet%'),
+                    Product.category.ilike('%chair%'),
+                    Product.category.ilike('%rug%'),
+                    Product.category.ilike('%side%'),
+                    Product.category.ilike('%light%'),
+                    Product.category.ilike('%decor%'),
+                    Product.name.ilike('%accent%'),
+                    Product.name.ilike('%rug%'),
+                    Product.name.ilike('%desk%'),
+                    Product.name.ilike('%lamp%'),
+                    Product.name.ilike('%light%'),
+                    Product.name.ilike('%side%'),
+                    Product.name.ilike('%towel%'),
+                    Product.name.ilike('%cabinet%')
+                )
+            )
         else:
             q = q.filter(
                 or_(
@@ -458,6 +516,20 @@ def list_products(
     # Style tag filtering
     if style:
         products_with_flags = [item for item in products_with_flags if style.lower() in (item["product"].style_tags or [])]
+
+    # Curate addons to max 6 diverse items so users are not overwhelmed with scrolling
+    if category and any(k in category.lower() for k in ('addon', 'extra')):
+        seen_types = set()
+        curated_addons = []
+        for item in products_with_flags:
+            p = item["product"]
+            t_key = (p.subcategory or p.category or p.name.split()[-1]).lower()
+            if t_key not in seen_types:
+                seen_types.add(t_key)
+                curated_addons.append(item)
+            if len(curated_addons) >= 6:
+                break
+        products_with_flags = curated_addons
 
     # Helper for label
     def tier_label(p: Product):

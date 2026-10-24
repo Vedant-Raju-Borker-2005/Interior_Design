@@ -334,10 +334,14 @@ export default function GuidedCustomizePage() {
       return pCat.includes('coffee') || pSubCat.includes('coffee') || pName.includes('coffee')
     }
     if (cleanCat.includes('bedside')) {
+      const isLighting = pCat.includes('light') || pSubCat.includes('light') || pName.includes('light') || pName.includes('lamp')
+      if (isLighting) return false
       return pCat.includes('bedside') || pSubCat.includes('bedside') || pName.includes('bedside') || pName.includes('nightstand')
     }
-    if (cleanCat.includes('side table')) {
-      return (pCat.includes('side') || pSubCat.includes('side') || pName.includes('side table')) && !pName.includes('bedside')
+    if (cleanCat.includes('side table') || cleanCat.includes('side_table') || cleanCat === 'side_tables') {
+      const isLighting = pCat.includes('light') || pSubCat.includes('light') || pName.includes('light') || pName.includes('lamp')
+      if (isLighting) return false
+      return (pCat.includes('side') || pSubCat.includes('side') || pName.includes('side table') || pName.includes('side_table')) && !pName.includes('bedside')
     }
     if (cleanCat.includes('desk') || cleanCat.includes('study')) {
       return pCat.includes('desk') || pSubCat.includes('desk') || pName.includes('desk') || pName.includes('study')
@@ -348,8 +352,10 @@ export default function GuidedCustomizePage() {
     if (cleanCat.includes('rug')) {
       return pCat.includes('rug') || pSubCat.includes('rug') || pName.includes('rug') || pName.includes('carpet')
     }
-    if (cleanCat.includes('lighting') || cleanCat.includes('lamp')) {
-      return pCat.includes('lighting') || pSubCat.includes('lamp') || pName.includes('light') || pName.includes('lamp')
+    if (cleanCat.includes('lighting') || cleanCat.includes('lamp') || cleanCat === 'light') {
+      const isTable = (pName.includes('table') || pSubCat.includes('table')) && !pName.includes('lighting') && !pName.includes('lamp')
+      if (isTable) return false
+      return pCat.includes('light') || pSubCat.includes('light') || pSubCat.includes('lamp') || pName.includes('light') || pName.includes('lamp')
     }
     if (cleanCat.includes('bed')) {
       return (pCat.includes('bed') || pName.includes('bed')) && !pName.includes('bedside') && !pName.includes('side table') && !pName.includes('desk')
@@ -504,12 +510,41 @@ export default function GuidedCustomizePage() {
         if (value && values.includes(value)) customAttributes[key] = value
       }
 
+      // Check if this product or its category is covered by package default
+      const isAddonsTab = selectedCategory === 'addons'
+      const existingInCat = isAddonsTab ? null : activeRoomItems.find((it: any) => matchCategory(selectedCategory || customizingProduct.category, it.product))
+      const existingInRoom = activeRoomItems.find((it: any) => it.product_id === customizingProduct.id)
+      
+      const isDefault = isAddonsTab ? false : Boolean(
+        existingInRoom?.is_package_default || 
+        existingInRoom?.custom_attributes?.is_package_default ||
+        existingInCat?.is_package_default || 
+        existingInCat?.custom_attributes?.is_package_default
+      )
+      
+      const inheritedAllowance = Number(
+        existingInRoom?.package_allowance || 
+        existingInCat?.package_allowance || 
+        existingInRoom?.unit_price || 
+        existingInCat?.unit_price || 
+        customizingProduct.price
+      )
+
       const itemsToSave: any[] = [
         {
           product_id: customizingProduct.id,
           qty: 1,
-          unit_price: customizingProduct.price,
-          custom_attributes: customAttributes,
+          unit_price: isDefault ? inheritedAllowance : customizingProduct.price,
+          is_package_default: isDefault,
+          package_allowance: isDefault ? inheritedAllowance : 0,
+          custom_attributes: {
+            ...customAttributes,
+            ...(isDefault ? {
+              is_package_default: true,
+              package_allowance: inheritedAllowance,
+              locked_tier: project?.package?.tier || 'basic'
+            } : {})
+          },
         }
       ]
 
@@ -529,11 +564,17 @@ export default function GuidedCustomizePage() {
     }
 
       if (itemsToSave.length > 1) {
+        if (existingInCat && existingInCat.product_id !== customizingProduct.id) {
+          try {
+            await projectsAPI.removeRoomItem(projectId, activeRoomId, existingInCat.id)
+          } catch (e) {
+            console.error('Failed to remove previous item in category', e)
+          }
+        }
         await projectsAPI.addRoomItemBundle(projectId, activeRoomId, itemsToSave)
         toast.success(`Saved ${customizingProduct.name} + ${itemsToSave.length - 1} coordinated add-ons!`)
       } else {
         // Delete any previously saved item in the SAME category for this room to enforce 1 item per category
-        const existingInCat = activeRoomItems.find((it: any) => matchCategory(selectedCategory, it.product))
         if (existingInCat && existingInCat.product_id !== customizingProduct.id) {
           try {
             await projectsAPI.removeRoomItem(projectId, activeRoomId, existingInCat.id)
@@ -547,7 +588,6 @@ export default function GuidedCustomizePage() {
       }
 
       const updatedProj = await loadProject()
-      toast.success(`${customizingProduct.name} saved to ${getRoomLabelAndIcon(activeRoom.room_type, project?.bhk_type).label}!`)
 
       setCustomizingProduct(null)
       setUserEditingCategory(false)
@@ -646,6 +686,55 @@ export default function GuidedCustomizePage() {
     }
   }
 
+  const handleAddExtraAddon = async (product: any) => {
+    if (!activeRoomId) return
+    setSavingItem(true)
+    try {
+      const bestColor = (project?.color_preferences?.length > 0 && product.variants?.color?.length > 0)
+        ? getBestColorMatch(product.variants.color, project.color_preferences).color
+        : product.variants?.color?.[0] || ''
+
+      const itemsToSave = [{
+        product_id: product.id,
+        qty: 1,
+        unit_price: product.price,
+        is_package_default: false,
+        package_allowance: 0,
+        custom_attributes: {
+          is_package_default: false,
+          package_allowance: 0,
+          ...(bestColor ? { color: bestColor } : {}),
+          ...(product.variants?.wood_finish?.[0] ? { wood_finish: product.variants.wood_finish[0] } : {}),
+          ...(product.variants?.fabric?.[0] ? { fabric: product.variants.fabric[0] } : {}),
+        }
+      }]
+
+      await projectsAPI.addRoomItem(projectId, activeRoomId, itemsToSave[0])
+      toast.success(`Added ${product.name} (+₹${product.price.toLocaleString('en-IN')}) as extra add-on!`)
+      await loadProject()
+    } catch (e) {
+      console.error('Failed to add extra add-on', e)
+      toast.error('Failed to add add-on to room')
+    } finally {
+      setSavingItem(false)
+    }
+  }
+
+  const handleRemoveExtraAddon = async (itemId: string, productName: string) => {
+    if (!activeRoomId) return
+    setSavingItem(true)
+    try {
+      await projectsAPI.removeRoomItem(projectId, activeRoomId, itemId)
+      toast.success(`Removed ${productName} from add-ons`)
+      await loadProject()
+    } catch (e) {
+      console.error('Failed to remove add-on', e)
+      toast.error('Failed to remove add-on')
+    } finally {
+      setSavingItem(false)
+    }
+  }
+
   // The uploaded plan is traced into rooms and drives the studio's 2D plan and
   // 3D model: upload → check the detected rooms → see the design.
   const handleFloorPlanUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -694,17 +783,28 @@ export default function GuidedCustomizePage() {
   const anyItemAdded = project?.rooms?.some((r: any) => r.items && r.items.length > 0)
   const allRoomsComplete = checkAllRoomsComplete()
 
-  const initialBudget = project?.budget || 300000
-  let totalCustomizedCost = 0
+  const basePackagePrice = Number(project?.budget || project?.package?.base_price || 300000)
+  let packageItemsCost = 0
+  let addonsCost = 0
+  let totalItemsCount = 0
+  let packageItemsCount = 0
+
   project?.rooms?.forEach((room: any) => {
     (room.items || []).forEach((item: any) => {
-      const price = item.unit_price || item.product?.price || 0
-      const qty = item.qty || 1
-      totalCustomizedCost += price * qty
+      const price = Number(item.unit_price || item.product?.price || 0)
+      const qty = Number(item.qty || 1)
+      totalItemsCount += qty
+      const isPkgDefault = Boolean(item.is_package_default || item.custom_attributes?.is_package_default)
+      if (isPkgDefault) {
+        packageItemsCost += price * qty
+        packageItemsCount += qty
+      } else {
+        addonsCost += price * qty
+      }
     })
   })
-  const remainingBudget = Math.max(0, initialBudget - totalCustomizedCost)
 
+  const finalTotalCost = basePackagePrice + addonsCost
 
   const galleryImages = customizingProduct
     ? (customizingProduct.images?.length
@@ -732,18 +832,50 @@ export default function GuidedCustomizePage() {
             <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
           </button>
 
-          {/* Centered Enlarged Budget & Variation Sub-Boxes */}
-          <div className="flex items-center gap-4 sm:gap-6">
-            <div className="text-center px-6 py-2.5 sm:px-7 sm:py-3 bg-white rounded-2xl border-2 border-[#E8DFD1] shadow-sm">
-              <span className="text-[10px] sm:text-xs font-bold text-stone-500 uppercase tracking-wider block">Remaining Budget</span>
-              <span className="text-xl sm:text-2xl font-black text-stone-900 block leading-tight mt-0.5">
-                ₹{remainingBudget.toLocaleString('en-IN')}
+          {/* Centered Enlarged Budget & Package Sub-Boxes */}
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            {/* Box 1: Base Package Price */}
+            <div className="px-5 py-2.5 bg-white rounded-2xl border-2 border-emerald-200/80 shadow-xs flex flex-col items-center">
+              <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1">
+                <span>🔒</span> {project?.package?.name || `${project?.bhk_type || '1BHK'} Package`}
+              </span>
+              <span className="text-lg sm:text-xl font-black text-stone-900 block leading-tight mt-0.5">
+                ₹{basePackagePrice.toLocaleString('en-IN')}
+              </span>
+              <span className="text-[9px] font-bold text-emerald-600 mt-0.5">
+                {packageItemsCount} Items Included (100% Covered)
               </span>
             </div>
-            <div className="text-center px-6 py-2.5 sm:px-7 sm:py-3 bg-white rounded-2xl border-2 border-[#E8DFD1] shadow-sm">
-              <span className="text-[10px] sm:text-xs font-bold text-stone-500 uppercase tracking-wider block">Variation (Spent)</span>
-              <span className="text-xl sm:text-2xl font-black text-[#b85d3b] block leading-tight mt-0.5">
-                ₹{totalCustomizedCost.toLocaleString('en-IN')}
+
+            {/* Box 2: Extra Add-ons */}
+            <div className={clsx(
+              "px-5 py-2.5 bg-white rounded-2xl border-2 shadow-xs flex flex-col items-center transition-colors",
+              addonsCost > 0 ? "border-[#b85d3b] bg-[#faeae3]/30" : "border-[#E8DFD1]"
+            )}>
+              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                Upgrades & Add-ons
+              </span>
+              <span className={clsx(
+                "text-lg sm:text-xl font-black block leading-tight mt-0.5",
+                addonsCost > 0 ? "text-[#b85d3b]" : "text-stone-400"
+              )}>
+                {addonsCost > 0 ? `+₹${addonsCost.toLocaleString('en-IN')}` : '₹0'}
+              </span>
+              <span className="text-[9px] font-bold text-stone-500 mt-0.5">
+                {addonsCost > 0 ? 'Extra items outside package' : 'No extra charges'}
+              </span>
+            </div>
+
+            {/* Box 3: Total Investment */}
+            <div className="px-6 py-2.5 bg-gradient-to-r from-stone-900 to-stone-800 text-white rounded-2xl shadow-md flex flex-col items-center">
+              <span className="text-[10px] font-bold text-stone-300 uppercase tracking-wider">
+                Total Project Value
+              </span>
+              <span className="text-lg sm:text-xl font-black text-amber-200 block leading-tight mt-0.5">
+                ₹{finalTotalCost.toLocaleString('en-IN')}
+              </span>
+              <span className="text-[9px] font-semibold text-stone-300 mt-0.5">
+                Turnkey with Delivery & Setup
               </span>
             </div>
           </div>
@@ -826,6 +958,42 @@ export default function GuidedCustomizePage() {
                         </button>
                       )
                     })}
+
+                    {/* Dedicated Extra Add-ons Tab */}
+                    {(() => {
+                      const addonsInRoom = activeRoomItems.filter(
+                        (it: any) => !it.is_package_default && !(it.custom_attributes?.is_package_default)
+                      )
+                      const isAddonsCurrent = selectedCategory === 'addons'
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategory('addons')
+                            setUserEditingCategory(true)
+                            setCustomizingProduct(null)
+                          }}
+                          className={clsx(
+                            "text-xs font-bold px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 border shadow-2xs",
+                            isAddonsCurrent
+                              ? "bg-amber-600 text-white border-amber-600 ring-2 ring-amber-400/30 shadow-xs"
+                              : addonsInRoom.length > 0
+                              ? "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+                              : "bg-white text-amber-700 border-amber-200 hover:border-amber-400 hover:bg-amber-50/50"
+                          )}
+                        >
+                          <span>✨ Extra Add-ons</span>
+                          {addonsInRoom.length > 0 && (
+                            <span className={clsx(
+                              "text-[9px] font-extrabold px-1.5 py-0.2 rounded-full",
+                              isAddonsCurrent ? "bg-white text-amber-700" : "bg-amber-200 text-amber-900"
+                            )}>
+                              +{addonsInRoom.length}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })()}
                   </div>
                 )}
               </div>
@@ -995,26 +1163,94 @@ export default function GuidedCustomizePage() {
                     </div>
                   </div>
 
-                  {loadingProducts ? (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 py-8">
-                      {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <div key={i} className="h-32 rounded-2xl bg-white/60 border border-[#E8DFD1] animate-pulse" />
-                      ))}
+                  {/* Optional Add-ons Collection Banner */}
+                  {selectedCategory === 'addons' && (
+                    <div className="bg-gradient-to-r from-amber-50 via-[#faeae3] to-amber-50 border-2 border-amber-300/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs mb-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">✨</span>
+                        <div>
+                          <h3 className="text-xs font-black text-stone-900 uppercase tracking-wider">
+                            Curated Extra Add-ons (Outside Package)
+                          </h3>
+                          <p className="text-[11px] text-stone-600 mt-0.5">
+                            Hand-picked upgrade accents for your {activeRoom?.room_type?.replace(/_/g, ' ')}. Adding any piece here is optional and adds to your Total Project Value above ₹{basePackagePrice.toLocaleString('en-IN')}.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  ) : (Array.isArray(products) ? products : []).length === 0 ? (
-                    <div className="text-center py-20 text-stone-500 text-xs">
-                      No products catalogued for this room style category yet.
-                    </div>
-                  ) : (
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                      {(Array.isArray(products) ? products : []).map((p) => {
-                        const isChosen = activeRoomItems.some((it: any) => it.product_id === p.id)
-                        const isOutOfStock = p.is_available === false || p.is_in_stock === false || (p.available_qty !== undefined && p.available_qty <= 0)
-                        const isLowStock = !isOutOfStock && p.available_qty !== undefined && p.available_qty > 0 && p.available_qty < 5
-                        const isExpanded = inlinePreviewProductId === p.id
-                        const inlinePairings = inlinePreviewData[p.id]?.recommended_items?.slice(0, 3) || []
+                  )}
 
-                        return (
+                  {(() => {
+                    const isAddonsTab = selectedCategory === 'addons'
+                    
+                    // Filter and curate display products
+                    const displayProducts = (() => {
+                      const list = Array.isArray(products) ? products : []
+                      if (!isAddonsTab) return list
+
+                      // In Add-ons tab:
+                      // 1. Never show products that are already included as package defaults in the active room!
+                      // 2. Curate to top 4-6 distinct items by type so user does not need to scroll excessively.
+                      const seenTypes = new Set<string>()
+                      const filtered = list.filter((p: any) => {
+                        // Do not show an item if it's already an active package default item in the room
+                        const isExistingDefault = activeRoomItems.some((it: any) =>
+                          it.product_id === p.id && (it.is_package_default || it.custom_attributes?.is_package_default)
+                        )
+                        if (isExistingDefault) return false
+
+                        // Filter by broad subcategory / product title type to avoid duplicate color variants
+                        const groupKey = (p.subcategory || p.category || p.name.split(' ').slice(1).join(' ')).toLowerCase()
+                        if (seenTypes.has(groupKey)) return false
+                        seenTypes.add(groupKey)
+                        return true
+                      })
+
+                      return filtered.slice(0, 6)
+                    })()
+
+                    if (loadingProducts) {
+                      return (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 py-8">
+                          {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={i} className="h-32 rounded-2xl bg-white/60 border border-[#E8DFD1] animate-pulse" />
+                          ))}
+                        </div>
+                      )
+                    }
+
+                    if (displayProducts.length === 0) {
+                      return (
+                        <div className="text-center py-20 text-stone-500 text-xs">
+                          {isAddonsTab
+                            ? "All optional upgrade pieces for this space are already part of your package."
+                            : "No products catalogued for this room style category yet."}
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {displayProducts.map((p) => {
+                          const chosenItem = activeRoomItems.find((it: any) => it.product_id === p.id)
+                          const isChosen = !!chosenItem
+                          const existingInCat = isAddonsTab ? null : activeRoomItems.find((it: any) => matchCategory(selectedCategory, it.product))
+                          const isCategoryDefault = isAddonsTab ? false : Boolean(
+                            existingInCat?.is_package_default || existingInCat?.custom_attributes?.is_package_default
+                          )
+                          const isPackageDefault = isAddonsTab ? false : Boolean(
+                            chosenItem?.is_package_default || 
+                            chosenItem?.custom_attributes?.is_package_default ||
+                            (isChosen && isCategoryDefault)
+                          )
+                          const isOutOfStock = p.is_available === false || p.is_in_stock === false || (p.available_qty !== undefined && p.available_qty <= 0)
+                          const isLowStock = !isOutOfStock && p.available_qty !== undefined && p.available_qty > 0 && p.available_qty < 5
+                          const isExpanded = inlinePreviewProductId === p.id
+                          const inlinePairings = inlinePreviewData[p.id]?.recommended_items?.slice(0, 3) || []
+
+                          const isAddedAsAddon = Boolean(chosenItem && !chosenItem.is_package_default && !chosenItem.custom_attributes?.is_package_default)
+
+                          return (
                           <div key={p.id} className="flex flex-col">
                             {/* Product Card */}
                             <div
@@ -1028,7 +1264,9 @@ export default function GuidedCustomizePage() {
                               className={clsx(
                                 'p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 group',
                                 isChosen
-                                  ? 'bg-white border-[#b85d3b] shadow-md ring-2 ring-[#b85d3b]/20'
+                                  ? (isPackageDefault 
+                                      ? 'bg-emerald-50/40 border-emerald-500 shadow-md ring-2 ring-emerald-500/20'
+                                      : 'bg-amber-50/50 border-amber-500 shadow-md ring-2 ring-amber-500/20')
                                   : isOutOfStock
                                   ? 'bg-stone-100/70 border-stone-200 opacity-70 cursor-not-allowed'
                                   : 'bg-white/80 hover:bg-white border-[#E8DFD1] hover:border-[#b85d3b] hover:shadow-md'
@@ -1063,7 +1301,18 @@ export default function GuidedCustomizePage() {
                                       "text-xs font-black mt-0.5 flex flex-wrap items-center gap-1.5",
                                       isOutOfStock ? "text-stone-400" : "text-[#b85d3b]"
                                     )}>
-                                      <span>₹{p.price.toLocaleString('en-IN')}</span>
+                                      {isCategoryDefault ? (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-emerald-700 font-extrabold">Included in Package</span>
+                                          <span className="text-[10px] text-stone-400 font-medium line-through">₹{p.price.toLocaleString('en-IN')}</span>
+                                        </div>
+                                      ) : isAddonsTab ? (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-amber-700 font-black">+₹{p.price.toLocaleString('en-IN')} Extra</span>
+                                        </div>
+                                      ) : (
+                                        <span>₹{p.price.toLocaleString('en-IN')}</span>
+                                      )}
                                       {isOutOfStock && (
                                         <span className="text-[9px] font-bold px-1.5 py-0.2 text-rose-600 bg-rose-50 border border-rose-200 rounded-md">
                                           {p.unavailable_reason || 'Out of Stock'}
@@ -1075,41 +1324,92 @@ export default function GuidedCustomizePage() {
                                         </span>
                                       )}
                                     </div>
-                                    <span className={clsx(
-                                      'inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border',
-                                      p.availability_tier === 'local'
-                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                        : p.availability_tier === 'nearby'
-                                        ? 'bg-[#faeae3] text-[#b85d3b] border-[#f3d2c4]'
-                                        : 'bg-stone-100 text-stone-600 border-[#E8DFD1]'
-                                    )}>
-                                      {p.availability_tier === 'local' ? '📍 Your Area' : p.availability_tier === 'nearby' ? '🏙️ Nearby' : '🌐 National'}
-                                    </span>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {isChosen && isPackageDefault && (
+                                        <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                          🔒 Included in Package
+                                        </span>
+                                      )}
+                                      {isAddedAsAddon && (
+                                        <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                                          🏷️ Custom Add-on (+₹{p.price.toLocaleString('en-IN')})
+                                        </span>
+                                      )}
+                                      {!isChosen && isAddonsTab && (
+                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                                          ✨ Optional Upgrade
+                                        </span>
+                                      )}
+                                      <span className={clsx(
+                                        'text-[9px] font-bold px-1.5 py-0.5 rounded-full border',
+                                        p.availability_tier === 'local'
+                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                          : p.availability_tier === 'nearby'
+                                          ? 'bg-[#faeae3] text-[#b85d3b] border-[#f3d2c4]'
+                                          : 'bg-stone-100 text-stone-600 border-[#E8DFD1]'
+                                      )}>
+                                        {p.availability_tier === 'local' ? '📍 Your Area' : p.availability_tier === 'nearby' ? '🏙️ Nearby' : '🌐 National'}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                  {/* Customize button — opens detail panel */}
-                                  <button
-                                    disabled={isOutOfStock}
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      if (isOutOfStock) {
-                                        toast.error(`"${p.name}" is currently out of stock.`)
-                                        return
-                                      }
-                                      handleSelectProduct(p)
-                                    }}
-                                    className={clsx(
-                                      'py-1.5 px-3 text-[10px] font-bold rounded-xl transition shrink-0',
-                                      isChosen
-                                        ? 'bg-emerald-600 text-white shadow-xs'
-                                        : isOutOfStock
-                                        ? 'bg-stone-100 border border-stone-200 text-stone-400 cursor-not-allowed'
-                                        : 'bg-white border border-[#b85d3b] text-[#b85d3b] hover:bg-[#b85d3b] hover:text-white'
-                                    )}
-                                  >
-                                    {isChosen ? 'Configured ✓' : isOutOfStock ? 'Out of Stock' : 'Choose'}
-                                  </button>
+                                  {/* Action button */}
+                                  {isAddonsTab ? (
+                                    isAddedAsAddon ? (
+                                      <button
+                                        type="button"
+                                        disabled={savingItem}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          if (chosenItem) handleRemoveExtraAddon(chosenItem.id, p.name)
+                                        }}
+                                        className="py-1.5 px-3 text-[10px] font-bold rounded-xl transition shrink-0 bg-rose-50 border border-rose-300 text-rose-700 hover:bg-rose-100"
+                                      >
+                                        Remove ✕
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled={isOutOfStock || savingItem}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          if (isOutOfStock) {
+                                            toast.error(`"${p.name}" is currently out of stock.`)
+                                            return
+                                          }
+                                          handleAddExtraAddon(p)
+                                        }}
+                                        className="py-1.5 px-3 text-[10px] font-bold rounded-xl transition shrink-0 bg-amber-600 text-white hover:bg-amber-700 shadow-xs"
+                                      >
+                                        + Add (+₹{p.price.toLocaleString('en-IN')})
+                                      </button>
+                                    )
+                                  ) : (
+                                    <button
+                                      disabled={isOutOfStock}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (isOutOfStock) {
+                                          toast.error(`"${p.name}" is currently out of stock.`)
+                                          return
+                                        }
+                                        handleSelectProduct(p)
+                                      }}
+                                      className={clsx(
+                                        'py-1.5 px-3 text-[10px] font-bold rounded-xl transition shrink-0',
+                                        isChosen
+                                          ? (isPackageDefault ? 'bg-emerald-600 text-white shadow-xs' : 'bg-[#b85d3b] text-white shadow-xs')
+                                          : isOutOfStock
+                                          ? 'bg-stone-100 border border-stone-200 text-stone-400 cursor-not-allowed'
+                                          : (isCategoryDefault
+                                              ? 'bg-white border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white'
+                                              : 'bg-white border border-[#b85d3b] text-[#b85d3b] hover:bg-[#b85d3b] hover:text-white')
+                                      )}
+                                    >
+                                      {isChosen ? (isPackageDefault ? '🔒 Included ✓' : 'Configured ✓') : isOutOfStock ? 'Out of Stock' : (isCategoryDefault ? 'Select Color' : 'Choose')}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1117,7 +1417,7 @@ export default function GuidedCustomizePage() {
                         )
                       })}
                     </div>
-                  )}
+                  )})()}
                 </div>
 
                 <div className="text-stone-500 text-[10px] mt-6 flex items-center gap-1.5 bg-[#FAF6F0] p-3.5 rounded-2xl border border-[#E8DFD1]">
@@ -1153,39 +1453,80 @@ export default function GuidedCustomizePage() {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header: Title and Price at the Top */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E8DFD1] pb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setCustomizingProduct(null)}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-[#b85d3b] hover:text-[#a34f30] transition bg-white px-2.5 py-1 rounded-lg border border-[#E8DFD1]"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                      <span>Back to Collection</span>
-                    </button>
-                    <span className="text-stone-300">/</span>
-                    <span className="text-xs font-bold text-stone-500 capitalize">{customizingProduct.category?.replace(/_/g, ' ')}</span>
-                  </div>
-                  <h2 className="text-2xl font-black text-stone-900 tracking-tight">{customizingProduct.name}</h2>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-left sm:text-right shrink-0">
-                    <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block">Base Price</span>
-                    <span className="text-2xl font-black text-[#b85d3b]">
-                      ₹{customizingProduct.price.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setCustomizingProduct(null)}
-                    className="w-9 h-9 rounded-full bg-stone-200/60 hover:bg-stone-300 text-stone-600 flex items-center justify-center transition"
-                    title="Close"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+              {(() => {
+                const existingInCat = activeRoomItems.find((it: any) => matchCategory(selectedCategory || customizingProduct.category, it.product))
+                const existingInRoom = activeRoomItems.find((it: any) => it.product_id === customizingProduct.id)
+                const isCustomizingItemDefault = Boolean(
+                  existingInRoom?.is_package_default || 
+                  existingInRoom?.custom_attributes?.is_package_default ||
+                  existingInCat?.is_package_default || 
+                  existingInCat?.custom_attributes?.is_package_default
+                )
+
+                return (
+                  <>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E8DFD1] pb-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setCustomizingProduct(null)}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-[#b85d3b] hover:text-[#a34f30] transition bg-white px-2.5 py-1 rounded-lg border border-[#E8DFD1]"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            <span>Back to Collection</span>
+                          </button>
+                          <span className="text-stone-300">/</span>
+                          <span className="text-xs font-bold text-stone-500 capitalize">{customizingProduct.category?.replace(/_/g, ' ')}</span>
+                        </div>
+                        <h2 className="text-2xl font-black text-stone-900 tracking-tight">{customizingProduct.name}</h2>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-left sm:text-right shrink-0">
+                          {isCustomizingItemDefault ? (
+                            <div>
+                              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 uppercase tracking-wider mb-1">
+                                🔒 Included in Package
+                              </span>
+                              <div className="flex items-baseline gap-1.5 sm:justify-end">
+                                <span className="text-xl font-black text-emerald-700">₹0 Extra</span>
+                                <span className="text-xs text-stone-400 line-through">₹{customizingProduct.price.toLocaleString('en-IN')}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block">Base Price</span>
+                              <span className="text-2xl font-black text-[#b85d3b]">
+                                ₹{customizingProduct.price.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCustomizingProduct(null)}
+                          className="w-9 h-9 rounded-full bg-stone-200/60 hover:bg-stone-300 text-stone-600 flex items-center justify-center transition"
+                          title="Close"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {isCustomizingItemDefault && (
+                      <div className="bg-emerald-50 border border-emerald-200/90 rounded-2xl p-3.5 flex items-center gap-3 text-xs text-emerald-950 font-medium shadow-xs">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                          <ShieldCheck className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-emerald-900">Pre-included Package Essential: </span>
+                          This item is standard and pre-budgeted in your <strong>{project?.package?.name || 'Selected Package'}</strong>. Feel free to choose colors, textures, fabrics, and wood finishes at <strong>₹0 extra charge</strong>!
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
 
                 {/* Studio Grid: Image & Variants on Left/Center, Specifications on Right */}
                 <div className="grid md:grid-cols-12 gap-6 items-start">
@@ -1395,26 +1736,49 @@ export default function GuidedCustomizePage() {
                     </div>
 
                     {/* Direct Save Action in Right Panel */}
-                    <div className="pt-4 border-t border-[#E8DFD1] space-y-2">
-                      <button
-                        type="button"
-                        onClick={() => handleSaveSelection(false)}
-                        disabled={savingItem}
-                        className="w-full py-3.5 px-4 bg-[#b85d3b] hover:bg-[#a34f30] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition"
-                      >
-                        {savingItem && selectedAddonIds.length === 0 ? (
-                          <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-4 h-4 text-amber-200" />
-                            <span>Save {customizingProduct.name} (₹{customizingProduct.price.toLocaleString('en-IN')})</span>
-                          </>
-                        )}
-                      </button>
-                      <p className="text-[10px] text-stone-500 text-center">
-                        Selected specifications are linked to your 2D plan and photorealistic render.
-                      </p>
-                    </div>
+                    {(() => {
+                      const existingInCat = activeRoomItems.find((it: any) => matchCategory(selectedCategory || customizingProduct.category, it.product))
+                      const existingInRoom = activeRoomItems.find((it: any) => it.product_id === customizingProduct.id)
+                      const isCustomizingItemDefault = Boolean(
+                        existingInRoom?.is_package_default || 
+                        existingInRoom?.custom_attributes?.is_package_default ||
+                        existingInCat?.is_package_default || 
+                        existingInCat?.custom_attributes?.is_package_default
+                      )
+
+                      return (
+                        <div className="pt-4 border-t border-[#E8DFD1] space-y-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSaveSelection(false)}
+                            disabled={savingItem}
+                            className={clsx(
+                              "w-full py-3.5 px-4 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition",
+                              isCustomizingItemDefault
+                                ? "bg-emerald-700 hover:bg-emerald-800"
+                                : "bg-[#b85d3b] hover:bg-[#a34f30]"
+                            )}
+                          >
+                            {savingItem && selectedAddonIds.length === 0 ? (
+                              <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            ) : isCustomizingItemDefault ? (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                                <span>Save Custom Specifications • Included in Package (₹0 Extra)</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 text-amber-200" />
+                                <span>Save {customizingProduct.name} (₹{customizingProduct.price.toLocaleString('en-IN')})</span>
+                              </>
+                            )}
+                          </button>
+                          <p className="text-[10px] text-stone-500 text-center">
+                            Selected specifications are linked to your 2D plan and photorealistic render.
+                          </p>
+                        </div>
+                      )
+                    })()}
                   </div>
 
                 </div>

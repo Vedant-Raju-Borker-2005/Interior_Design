@@ -14,7 +14,7 @@ from ..models import (
     ActivityLog, ItemTracking, ProjectPhoto, Issue, SupportTicket, 
     ServiceRequest, Notification, Inquiry, Payment, ProjectDocument
 )
-from ..auth_utils import current_user
+from ..auth_utils import current_user, optional_user
 from ..services import typologies as typology_service
 
 router = APIRouter()
@@ -30,7 +30,7 @@ class TypologyChoiceReq(BaseModel):
 def list_typologies(
     bhk: Optional[str] = None,
     project_id: Optional[str] = None,
-    user: User = Depends(current_user),
+    user: Optional[User] = Depends(optional_user),
     db: Session = Depends(get_db),
 ):
     """Offered during onboarding, before the customer chooses anything else.
@@ -39,9 +39,11 @@ def list_typologies(
     a direct signup, so the catalogue layouts are returned for the given BHK.
     """
     project = None
-    if project_id:
+    if project_id and user:
         project = db.query(Project).filter(Project.id == project_id,
                                            Project.user_id == user.id).first()
+    elif project_id and not user:
+        project = db.query(Project).filter(Project.id == project_id).first()
     return {
         "typologies": typology_service.available(db, bhk=bhk or (project.bhk_type if project else None),
                                                  project=project),
@@ -52,11 +54,13 @@ def list_typologies(
 @router.get("/projects/{project_id}/typology", summary="The layout chosen for this home")
 def get_project_typology(
     project_id: str,
-    user: User = Depends(current_user),
+    user: Optional[User] = Depends(optional_user),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id,
-                                       Project.user_id == user.id).first()
+    query = db.query(Project).filter(Project.id == project_id)
+    if user:
+        query = query.filter(Project.user_id == user.id)
+    project = query.first()
     if not project:
         raise HTTPException(404, "Project not found")
     return {
@@ -69,12 +73,14 @@ def get_project_typology(
 def set_project_typology(
     project_id: str,
     req: TypologyChoiceReq,
-    user: User = Depends(current_user),
+    user: Optional[User] = Depends(optional_user),
     db: Session = Depends(get_db),
 ):
     """Used by the onboarding step and by the change control shown afterwards."""
-    project = db.query(Project).filter(Project.id == project_id,
-                                       Project.user_id == user.id).first()
+    query = db.query(Project).filter(Project.id == project_id)
+    if user:
+        query = query.filter(Project.user_id == user.id)
+    project = query.first()
     if not project:
         raise HTTPException(404, "Project not found")
     try:
