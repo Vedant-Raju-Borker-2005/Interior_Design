@@ -30,24 +30,34 @@ function PackagesContent() {
   const budget = Number(searchParams.get('budget') || '1000000')
   const styleTags = searchParams.get('style') || ''
 
+  const minBudgetParam = searchParams.get('minBudget') ? Number(searchParams.get('minBudget')) : null
+
   const getDynamicPrice = (pkg: any) => {
-    if (!budget) return pkg.base_price
-    
-    let minBudget = 300000;
-    let maxBudget = 500000;
-    
-    if (budget <= 500000) { minBudget = 300000; maxBudget = 500000; }
-    else if (budget <= 800000) { minBudget = 500000; maxBudget = 800000; }
-    else if (budget <= 1200000) { minBudget = 800000; maxBudget = 1200000; }
-    else if (budget <= 2000000) { minBudget = 1200000; maxBudget = 2000000; }
-    else { minBudget = 2000000; maxBudget = 3000000; }
+    const tier = (pkg.tier || 'basic').toLowerCase()
+    const normBhk = (bhk || '1BHK').replace(/\s+/g, '').toUpperCase()
 
-    const step = (maxBudget - minBudget) / 2;
+    // Minimum realistic baseline packages per BHK
+    const BHK_DEFAULTS: Record<string, { basic: number; premium: number; luxury: number }> = {
+      '1BHK': { basic: 300000, premium: 400000, luxury: 500000 },
+      '2BHK': { basic: 480000, premium: 640000, luxury: 800000 },
+      '3BHK': { basic: 680000, premium: 840000, luxury: 1000000 },
+      '4BHK': { basic: 950000, premium: 1225000, luxury: 1500000 },
+      '5BHK': { basic: 1400000, premium: 1700000, luxury: 2000000 },
+    }
 
-    if (pkg.tier === 'basic') return minBudget
-    if (pkg.tier === 'premium') return minBudget + step
-    if (pkg.tier === 'luxury') return maxBudget
-    return pkg.base_price
+    const defaultPrices = BHK_DEFAULTS[normBhk] || BHK_DEFAULTS['1BHK']
+
+    if (minBudgetParam && budget && budget > minBudgetParam) {
+      const step = (budget - minBudgetParam) / 2
+      if (tier === 'basic') return Math.round(minBudgetParam)
+      if (tier === 'premium') return Math.round(minBudgetParam + step)
+      if (tier === 'luxury') return Math.round(budget)
+    }
+
+    if (tier === 'basic') return defaultPrices.basic
+    if (tier === 'premium') return defaultPrices.premium
+    if (tier === 'luxury') return defaultPrices.luxury
+    return pkg.base_price || defaultPrices.basic
   }
 
   const [packages, setPackages] = useState<any[]>([])
@@ -89,15 +99,47 @@ function PackagesContent() {
     setSelecting(pkg.id)
     try {
       const finalBudget = getDynamicPrice(pkg)
-      await projectsAPI.update(projectId, { package_id: pkg.id, budget: finalBudget })
+      let targetProjectId = projectId || useProjectStore.getState().currentProject?.id
+
+      if (!targetProjectId) {
+        try {
+          const listRes = await projectsAPI.list()
+          const projs = listRes.data?.projects || []
+          if (projs.length > 0) {
+            targetProjectId = projs[0].id
+          }
+        } catch (e) {
+          console.warn('Could not fetch projects list', e)
+        }
+      }
+
+      if (!targetProjectId) {
+        const createRes = await projectsAPI.create({
+          bhk_type: bhk || pkg.bhk || '1BHK',
+          property_name: `${bhk || pkg.bhk || '1BHK'} Design Project`,
+          city: searchParams.get('city') || 'Mumbai',
+          budget: finalBudget,
+          package_id: pkg.id,
+        })
+        targetProjectId = createRes.data?.project_id
+      } else {
+        await projectsAPI.update(targetProjectId, { package_id: pkg.id, budget: finalBudget })
+      }
+
+      if (!targetProjectId) {
+        throw new Error('Could not establish active project')
+      }
+
       setSelectedPackage(pkg.id)
-      const projRes = await projectsAPI.get(projectId)
+      const projRes = await projectsAPI.get(targetProjectId)
       const { setCurrentProject } = useProjectStore.getState()
       setCurrentProject(projRes.data)
       toast.success(`${pkg.name} selected! Let's customise.`)
-      router.push(`/customize/${projectId}`)
-    } catch {
-      toast.error('Failed to select package')
+      router.push(`/customize/${targetProjectId}`)
+    } catch (err: any) {
+      console.error('Failed to select package', err)
+      const msg = err?.response?.data?.detail || err?.message || 'Failed to select package'
+      toast.error(`Failed to select package: ${msg}`)
     } finally {
       setSelecting(null)
     }
@@ -191,13 +233,6 @@ function PackagesContent() {
                   {pkg.featured && (
                     <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-[#c5a059] text-white text-[10px] font-bold flex items-center gap-1 shadow-sm">
                       <Star className="w-3 h-3 fill-white" /> Featured
-                    </div>
-                  )}
-
-                  {/* AI match score */}
-                  {isAIRanked && pkg._match_pct !== undefined && (
-                    <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full bg-stone-900/75 backdrop-blur text-white text-[10px] font-bold flex items-center gap-1.5 border border-white/20">
-                      <Brain className="w-3 h-3 text-[#c5a059]" /> {pkg._match_pct}% Match
                     </div>
                   )}
                 </div>
