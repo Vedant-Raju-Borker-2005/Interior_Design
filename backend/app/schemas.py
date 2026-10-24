@@ -18,6 +18,13 @@ class VerifyOTPReq(BaseModel):
     role: Optional[str] = None
 
 
+class SupabaseSyncReq(BaseModel):
+    supabase_id: str
+    email: str
+    name: Optional[str] = None
+    role: Optional[str] = "customer"
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

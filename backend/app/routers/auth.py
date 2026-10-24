@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import User
-from ..schemas import SignupReq, VerifyOTPReq, TokenResponse
+from ..schemas import SignupReq, VerifyOTPReq, TokenResponse, SupabaseSyncReq
 from ..auth_utils import create_access_token, current_user
 
 router = APIRouter()
@@ -197,6 +197,40 @@ def verify_otp(req: VerifyOTPReq, db: Session = Depends(get_db)):
 
     token = create_access_token(user.id)
     return {"access_token": token, "token_type": "bearer", "user_id": user.id, "role": req.role or user.role or "customer"}
+
+
+@router.post("/supabase-sync", response_model=TokenResponse, summary="Sync Supabase user and issue platform JWT")
+def supabase_sync(req: SupabaseSyncReq, db: Session = Depends(get_db)):
+    clean_email = req.email.strip().lower()
+    user = db.query(User).filter(User.email == clean_email).first()
+
+    if not user:
+        clean_name = req.name.strip() if req.name else clean_email.split("@")[0]
+        user = User(
+            id=req.supabase_id,
+            email=clean_email,
+            name=clean_name,
+            role=req.role or "customer",
+            status="active"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        if req.name and (not user.name or user.name == "User" or user.name == "Seeded Customer"):
+            user.name = req.name.strip()
+            db.commit()
+
+    from ..db import sync_demo_data
+    sync_demo_data(db)
+
+    token = create_access_token(user.id)
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user_id": user.id,
+        "role": user.role or "customer"
+    }
 
 
 @router.get("/me", summary="Get current user profile")

@@ -15,7 +15,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./interior_ai.db")
 # second, so a connection is only tested when it has actually been sitting idle.
 PING_AFTER_IDLE_SECONDS = 60.0
 
-if "sqlite" in DATABASE_URL:
+if "sqlite" in DATABASE_URL or "[YOUR" in DATABASE_URL or "YOUR_" in DATABASE_URL:
+    DATABASE_URL = "sqlite:///./interior_ai.db"
     engine = create_engine(
         DATABASE_URL, connect_args={"check_same_thread": False, "timeout": 30})
 else:
