@@ -187,6 +187,7 @@ timeout /t 4 /nobreak >nul 2>&1
 
 :: Launch Frontend
 if /i "%MODE%"=="dev" (
+    if exist "!FRONTEND!\.next" rmdir /s /q "!FRONTEND!\.next" >nul 2>&1
     start "InteriorAI - Frontend (port 3000)" /d "!FRONTEND!" cmd /k "chcp 65001 >nul && echo Frontend starting in dev mode... && npm run dev"
 ) else (
     rem Rebuild when git commit changed, uncommitted edits exist, or never built.
