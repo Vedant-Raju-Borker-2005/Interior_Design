@@ -38,12 +38,45 @@ const FABRIC_OPTIONS = [
   { id: 'Leatherette', name: 'Leatherette', emoji: '🛋️', desc: 'Sleek, spill-resistant leather finish.', img: `${BACKEND_URL}/static/assets/catalog/fabric_preference/Leatherette.webp` },
 ]
 
+const BHK_BUDGET_RANGES: Record<string, { id: string; label: string; min: number; max: number; desc: string }[]> = {
+  '1BHK': [
+    { id: '300000', label: '₹3L – ₹5L', min: 300000, max: 500000, desc: 'Essential & compact modular living' },
+    { id: '500000', label: '₹5L – ₹8L', min: 500000, max: 800000, desc: 'Enhanced finishes & built-in storage' },
+    { id: '800000', label: '₹8L – ₹12L', min: 800000, max: 1200000, desc: 'Premium luxury designer specifications' },
+  ],
+  '2BHK': [
+    { id: '480000', label: '₹4.8L – ₹8L', min: 480000, max: 800000, desc: 'Essential 2-bedroom baseline' },
+    { id: '800000', label: '₹8L – ₹12L', min: 800000, max: 1200000, desc: 'Premium design with upgraded master suite' },
+    { id: '1200000', label: '₹12L – ₹18L', min: 1200000, max: 1800000, desc: 'Turnkey luxury with customized finishes' },
+  ],
+  '3BHK': [
+    { id: '680000', label: '₹6.8L – ₹10L', min: 680000, max: 1000000, desc: 'Spacious family essentials' },
+    { id: '1000000', label: '₹10L – ₹15L', min: 1000000, max: 1500000, desc: 'Complete premium family interior' },
+    { id: '1500000', label: '₹15L – ₹25L', min: 1500000, max: 2500000, desc: 'Architectural luxury & bespoke accents' },
+  ],
+  '4BHK': [
+    { id: '950000', label: '₹9.5L – ₹15L', min: 950000, max: 1500000, desc: 'Full 4-bedroom baseline setup' },
+    { id: '1500000', label: '₹15L – ₹22L', min: 1500000, max: 2200000, desc: 'Superior materials & master craftsmanship' },
+    { id: '2200000', label: '₹22L – ₹35L', min: 2200000, max: 3500000, desc: 'Bespoke grand residence finish' },
+  ],
+  '5BHK': [
+    { id: '1400000', label: '₹14L – ₹20L', min: 1400000, max: 2000000, desc: 'Full villa/penthouse baseline (11+ rooms)' },
+    { id: '2000000', label: '₹20L – ₹30L', min: 2000000, max: 3000000, desc: 'Signature executive villa interiors' },
+    { id: '3000000', label: '₹30L – ₹50L', min: 3000000, max: 5000000, desc: 'Ultra-luxury bespoke estate architecture' },
+  ],
+}
+
+const getBudgetRangesForBhk = (bhk?: string) => {
+  const norm = (bhk || '1BHK').replace(/\s+/g, '').toUpperCase()
+  return BHK_BUDGET_RANGES[norm] || BHK_BUDGET_RANGES['1BHK']
+}
+
 const BUDGET_RANGES = [
-  { id: '300000',  label: '₹3L – ₹5L',   min: 300000,  max: 500000 },
-  { id: '500000',  label: '₹5L – ₹8L',   min: 500000,  max: 800000 },
-  { id: '800000',  label: '₹8L – ₹12L',  min: 800000,  max: 1200000 },
-  { id: '1200000', label: '₹12L – ₹20L', min: 1200000, max: 2000000 },
-  { id: '2000000', label: '₹20L+',        min: 2000000, max: 9999999 },
+  ...BHK_BUDGET_RANGES['1BHK'],
+  ...BHK_BUDGET_RANGES['2BHK'],
+  ...BHK_BUDGET_RANGES['3BHK'],
+  ...BHK_BUDGET_RANGES['4BHK'],
+  ...BHK_BUDGET_RANGES['5BHK'],
 ]
 
 const TIMELINE_OPTIONS = [
@@ -473,11 +506,14 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const budgetObj = BUDGET_RANGES.find((b) => b.id === local.budget)
+      const validRanges = getBudgetRangesForBhk(local.bhk)
+      const budgetObj = validRanges.find((b) => b.id === local.budget) || validRanges[0]
+      const minBudget = budgetObj?.min || 300000
+      const maxBudget = budgetObj?.max || 500000
 
       if (isB2B2C && childProjectId) {
         await enterpriseAPI.updateOnboarding(childProjectId, {
-          budget: budgetObj?.max || 1000000,
+          budget: maxBudget,
           material_preference: local.material_preference,
           style_tags: local.style_tags,
           interior_material_preference: local.interior_material_preference,
@@ -494,18 +530,18 @@ export default function OnboardingPage() {
           style_tags: local.style_tags,
           interior_material_preference: local.interior_material_preference,
           color_preferences: local.color_preferences,
-          budget: budgetObj?.max,
+          budget: maxBudget,
           city: local.city,
         })
 
         toast.success('Preferences saved successfully! 🎉')
-        router.push(`/packages?projectId=${childProjectId}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
+        router.push(`/packages?projectId=${childProjectId}&bhk=${local.bhk}&budget=${maxBudget}&minBudget=${minBudget}&style=${local.style_tags.join(',')}`)
       } else if (childProjectId) {
         await projectsAPI.update(childProjectId, {
           bhk_type: local.bhk,
           property_name: local.property_name,
           city: local.city,
-          budget: budgetObj?.max || 1000000,
+          budget: maxBudget,
           material_preference: local.material_preference,
           interior_material_preference: local.interior_material_preference,
           fabric_preference: local.fabric_preference,
@@ -524,18 +560,18 @@ export default function OnboardingPage() {
           style_tags: local.style_tags,
           interior_material_preference: local.interior_material_preference,
           color_preferences: local.color_preferences,
-          budget: budgetObj?.max,
+          budget: maxBudget,
           city: local.city,
         })
 
         toast.success("Home preferences finalized! Loading your curated packages. 🛋️")
-        router.push(`/packages?projectId=${childProjectId}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
+        router.push(`/packages?projectId=${childProjectId}&bhk=${local.bhk}&budget=${maxBudget}&minBudget=${minBudget}&style=${local.style_tags.join(',')}`)
       } else {
         const res = await projectsAPI.create({
           bhk_type: local.bhk,
           property_name: local.property_name,
           city: local.city,
-          budget: budgetObj?.max || 1000000,
+          budget: maxBudget,
           material_preference: local.material_preference,
           interior_material_preference: local.interior_material_preference,
           fabric_preference: local.fabric_preference,
@@ -555,12 +591,12 @@ export default function OnboardingPage() {
           style_tags: local.style_tags,
           interior_material_preference: local.interior_material_preference,
           color_preferences: local.color_preferences,
-          budget: budgetObj?.max,
+          budget: maxBudget,
           city: local.city,
         })
 
         toast.success("Home preferences finalized! Loading your curated packages. 🛋️")
-        router.push(`/packages?projectId=${createdProjId}&bhk=${local.bhk}&budget=${budgetObj?.max || 1000000}&style=${local.style_tags.join(',')}`)
+        router.push(`/packages?projectId=${createdProjId}&bhk=${local.bhk}&budget=${maxBudget}&minBudget=${minBudget}&style=${local.style_tags.join(',')}`)
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Failed to submit onboarding details')
@@ -742,7 +778,18 @@ export default function OnboardingPage() {
               <div>
                 <h2 className="text-3xl font-extrabold text-stone-900 mb-2 tracking-tight font-serif">Scope & Home Configuration</h2>
                 <p className="text-stone-600 mb-4">Select your BHK structure and floor plan. We will calibrate room dimensions and modular designs accordingly.</p>
-                <BhkSelector selected={local.bhk} onSelect={(bhk) => setLocal((s) => ({ ...s, bhk, typology_id: '' }))} />
+                <BhkSelector 
+                  selected={local.bhk} 
+                  onSelect={(bhk) => {
+                    const validRanges = getBudgetRangesForBhk(bhk)
+                    setLocal((s) => ({ 
+                      ...s, 
+                      bhk, 
+                      typology_id: '',
+                      budget: validRanges.some((r) => r.id === s.budget) ? s.budget : validRanges[0].id
+                    }))
+                  }} 
+                />
               </div>
 
               {/* Integrated "Your Plan" Floor Plan Selection */}
@@ -926,15 +973,23 @@ export default function OnboardingPage() {
 
               {/* Total Interior Budget */}
               <div className="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-card">
-                <div className="text-xs font-bold text-stone-700 mb-3.5 uppercase tracking-wider">Total Interior Budget</div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {BUDGET_RANGES.map((b) => (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
+                  <div className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                    Total Interior Budget — {local.bhk || '1 BHK'}
+                  </div>
+                  <span className="text-[11px] font-bold text-[#b85d3b] bg-[#faeae3] px-3 py-1 rounded-full border border-[#b85d3b]/20 w-fit">
+                    Full-home packages start from {getBudgetRangesForBhk(local.bhk)[0]?.label.split('–')[0]?.trim()}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  {getBudgetRangesForBhk(local.bhk).map((b) => (
                     <button key={b.id} onClick={() => setLocal((s) => ({ ...s, budget: b.id }))}
-                      className={clsx('p-3 rounded-xl border-2 text-xs font-bold transition-all text-center',
+                      className={clsx('p-4 rounded-xl border-2 text-left transition-all relative flex flex-col justify-between',
                         local.budget === b.id
-                          ? 'border-[#b85d3b] bg-[#faeae3] text-[#b85d3b] font-black shadow-sm'
+                          ? 'border-[#b85d3b] bg-[#faeae3] text-[#b85d3b] shadow-sm ring-1 ring-[#b85d3b]/30'
                           : 'border-stone-200 text-stone-700 hover:border-[#c5a059] bg-white')}>
-                      {b.label}
+                      <div className="text-base font-extrabold">{b.label}</div>
+                      <div className="text-[11px] text-stone-500 mt-1 leading-snug">{b.desc}</div>
                     </button>
                   ))}
                 </div>
