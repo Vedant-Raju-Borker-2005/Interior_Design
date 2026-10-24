@@ -270,6 +270,8 @@ class RoomItem(Base):
     # beyond the columns above: {"color": "Blush Pink", "wood_finish": "Matte", ...}
     custom_attributes = Column(JSON, nullable=True)
     unit_price = Column(Float)
+    is_package_default = Column(Boolean, default=False)
+    package_allowance = Column(Float, default=0.0)
 
     room = relationship("Room", back_populates="items")
     product = relationship("Product")
@@ -976,6 +978,8 @@ class PackageItems(Base):
     id = Column(String, primary_key=True, default=gen_uuid)
     package_id = Column(String, ForeignKey("package_configurations.id", ondelete="CASCADE"), nullable=False)
     product_id = Column(String, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    room_type = Column(String, nullable=True)
+    qty = Column(Integer, default=1)
 
     package = relationship("PackageConfiguration", backref=backref("items", cascade="all, delete-orphan"))
     product = relationship("Product")

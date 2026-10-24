@@ -95,6 +95,8 @@ class AddRoomItemReq(BaseModel):
     # The Customize step sends every chosen option here, keyed by option group.
     custom_attributes: Optional[dict] = None
     unit_price: Optional[float] = None       # ignored: the catalogue price is authoritative
+    is_package_default: Optional[bool] = None
+    package_allowance: Optional[float] = None
 
 
 class AddRoomItemBundleReq(BaseModel):
