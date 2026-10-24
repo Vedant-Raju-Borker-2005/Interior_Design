@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { useProjectStore } from '@/stores/projectStore'
+import { getSupabase } from '@/lib/supabase'
 import {
   Home, LayoutDashboard, LogOut, Menu, X, Sparkles, BarChart3,
   User, Briefcase, HelpCircle, ChevronRight, ChevronDown
@@ -47,7 +48,17 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      const supabase = getSupabase()
+      if (supabase) {
+        await supabase.auth.signOut()
+      }
+    } catch (err) {
+      console.error('Supabase signOut error:', err)
+    }
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('active_role')
     logout()
     useProjectStore.getState().clearProject()
     window.location.href = '/'
@@ -97,16 +108,24 @@ export default function Navbar() {
 
           {/* Left: Brand Logo & Sliding Navigation Drawer */}
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 group shrink-0">
-              <img
-                src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/static/assets/catalog/logo/Logo.webp`}
-                alt="InteriorAI Logo"
-                className="w-8 h-8 object-contain transition-transform group-hover:scale-105"
-                onError={(e) => {
-                  // Fallback icon if static asset is not served
-                  e.currentTarget.style.display = 'none'
-                }}
-              />
+            <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+              <div className="relative w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform">
+                <img
+                  src="/Logo.webp"
+                  alt="InteriorAI Logo"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                    const fb = e.currentTarget.parentElement?.querySelector('.logo-fallback') as HTMLElement
+                    if (fb) fb.style.display = 'flex'
+                  }}
+                />
+                <div
+                  className="logo-fallback hidden w-full h-full rounded-lg bg-gradient-to-br from-[#b85d3b] to-[#9c4a2a] items-center justify-center text-white shadow-xs"
+                >
+                  <Sparkles className="w-4 h-4" />
+                </div>
+              </div>
               <span className="text-stone-900 font-bold text-xl tracking-tight font-serif">
                 Interior<span className="text-[#b85d3b]">AI</span>
               </span>

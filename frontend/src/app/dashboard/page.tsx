@@ -467,7 +467,7 @@ function DashboardContent() {
             </div>
           </div>
           
-          <Link href="/onboarding" className="self-start sm:self-center shadow-xs rounded-xl bg-[#b85d3b] hover:bg-[#9e4a2a] text-white font-bold py-2.5 px-5 flex items-center gap-1.5 transition">
+          <Link href="/onboarding" className="btn-terracotta self-start sm:self-center rounded-xl font-bold py-2.5 px-5 flex items-center gap-1.5 transition">
             <Plus className="w-4 h-4" /> New Project
           </Link>
         </div>
@@ -546,7 +546,7 @@ function DashboardContent() {
                   <p className="text-stone-500 mb-6 max-w-sm text-sm leading-relaxed">
                     Start your first interior design project and transform your home with AI — in under 10 minutes.
                   </p>
-                  <Link href="/onboarding" className="text-base px-8 py-3.5 bg-[#b85d3b] hover:bg-[#9e4a2a] text-white font-bold rounded-xl shadow-xs transition inline-flex items-center gap-2">
+                  <Link href="/onboarding" className="btn-terracotta text-base px-8 py-3.5 font-bold rounded-xl transition inline-flex items-center gap-2">
                     <Plus className="w-5 h-5" /> Create Your First Project
                   </Link>
                 </div>

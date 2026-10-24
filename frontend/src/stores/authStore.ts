@@ -43,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         localStorage.removeItem('access_token')
+        localStorage.removeItem('active_role')
         set({ user: null, token: null, isLoggedIn: false })
       },
 

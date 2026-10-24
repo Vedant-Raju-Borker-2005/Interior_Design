@@ -94,14 +94,54 @@ body {
   background-image: linear-gradient(135deg, #1c1917 0%, #b85d3b 60%, #c5a059 100%);
 }
 
-/* ── Button styles ──────────────────────────────────────────────────────────── */
-.btn-primary {
-  @apply inline-flex items-center gap-2 px-6 py-3 bg-[#b85d3b] text-white font-semibold rounded-xl
-         hover:bg-[#a34f30] active:scale-95 transition-all duration-200;
-  box-shadow: 0 4px 20px rgba(184, 93, 59, 0.3);
+/* ── Button styles: Interior Design Tactile Craft & Architectural Terracotta ── */
+.btn-primary,
+.btn-terracotta,
+button.bg-\[\#b85d3b\],
+a.bg-\[\#b85d3b\] {
+  position: relative;
+  overflow: hidden;
+  background-color: #b85d3b !important;
+  background-image: 
+    radial-gradient(ellipse at 25% 0%, rgba(255, 255, 255, 0.22), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(0, 0, 0, 0.12) 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.09'/%3E%3C/svg%3E"),
+    linear-gradient(135deg, #c46843 0%, #b85d3b 50%, #9e4828 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(138, 59, 31, 0.45) !important;
+  box-shadow: 
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.38),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.28),
+    0 4px 14px -2px rgba(184, 93, 59, 0.42);
+  text-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.35);
+  letter-spacing: 0.01em;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.btn-primary:hover {
-  box-shadow: 0 6px 28px rgba(184, 93, 59, 0.45);
+
+.btn-primary:hover,
+.btn-terracotta:hover,
+button.bg-\[\#b85d3b\]:hover,
+a.bg-\[\#b85d3b\]:hover {
+  background-image: 
+    radial-gradient(ellipse at 25% 0%, rgba(255, 255, 255, 0.32), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(0, 0, 0, 0.08) 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.09'/%3E%3C/svg%3E"),
+    linear-gradient(135deg, #ce704a 0%, #be623f 50%, #a44d2d 100%) !important;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.5),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.32),
+    0 6px 20px -2px rgba(184, 93, 59, 0.55) !important;
+  transform: translateY(-1px);
+}
+
+.btn-primary:active,
+.btn-terracotta:active,
+button.bg-\[\#b85d3b\]:active,
+a.bg-\[\#b85d3b\]:active {
+  transform: translateY(1px);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.15) !important;
 }
 
 .btn-secondary {

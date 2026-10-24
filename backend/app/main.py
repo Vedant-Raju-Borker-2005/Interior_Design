@@ -41,7 +41,7 @@ CORS_ORIGINS = [
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    os.makedirs("assets", exist_ok=True)
+    os.makedirs(ASSETS_DIR, exist_ok=True)
     os.makedirs("assets/floor_plans", exist_ok=True)
     # Only what a request cannot be answered without: the schema has to exist,
     # and an empty database needs its catalogue. Both are a handful of queries.
@@ -128,7 +128,9 @@ app.add_middleware(
 )
 
 # Static files (for serving catalog assets, floor plans, proof images, and generated PDFs)
-os.makedirs("assets", exist_ok=True)
+from pathlib import Path
+ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+os.makedirs(ASSETS_DIR, exist_ok=True)
 # Windows' MIME registry often lacks .webp, which makes StaticFiles label the
 # catalog images text/plain. Register it explicitly so browsers and image
 # loaders are handed the right type on every platform.
@@ -149,18 +151,18 @@ async def legacy_catalog_image_fallback(request, call_next):
     if path.startswith("/static/assets/catalog/") and path.lower().endswith(_LEGACY_IMAGE_EXTS):
         from urllib.parse import unquote
         rel = unquote(path[len("/static/assets/"):])
-        original = os.path.join("assets", rel)
+        original = os.path.join(str(ASSETS_DIR), rel)
         if not os.path.exists(original):
             webp_rel = os.path.splitext(rel)[0] + ".webp"
-            if os.path.exists(os.path.join("assets", webp_rel)):
+            if os.path.exists(os.path.join(str(ASSETS_DIR), webp_rel)):
                 new_path = "/static/assets/" + webp_rel
                 request.scope["path"] = new_path
                 request.scope["raw_path"] = new_path.encode("utf-8")
     return await call_next(request)
 
 
-app.mount("/static/assets", StaticFiles(directory="assets"), name="assets")
-app.mount("/static/pdfs", StaticFiles(directory="assets"), name="assets_legacy")
+app.mount("/static/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
+app.mount("/static/pdfs", StaticFiles(directory=str(ASSETS_DIR)), name="assets_legacy")
 
 # Mount Backend-AI interactive studio & rendered assets
 from pathlib import Path

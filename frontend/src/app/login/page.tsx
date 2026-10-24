@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { authAPI, enterpriseAPI, projectsAPI } from '@/lib/api'
@@ -41,6 +41,9 @@ export default function LoginPage() {
   const router = useRouter()
   const { setToken } = useAuthStore()
 
+  // Prevent duplicate concurrent Supabase session sync calls and stacked toasts
+  const isSyncingRef = useRef(false)
+
   // Developer Mode toggle: false by default for clean user experience
   const [isDevMode, setIsDevMode] = useState(false)
 
@@ -76,7 +79,8 @@ export default function LoginPage() {
     if (!supabase) return
 
     const handleSession = async (session: any) => {
-      if (!session?.user) return
+      if (!session?.user || isSyncingRef.current) return
+      isSyncingRef.current = true
       try {
         setLoading(true)
         const userEmail = session.user.email || ''
@@ -98,10 +102,11 @@ export default function LoginPage() {
         useProjectStore.getState().clearProject()
         await useAuthStore.getState().fetchMe()
 
-        toast.success(`Welcome to InteriorAI, ${userName}! 👋`)
+        toast.success(`Welcome to InteriorAI, ${userName}! 👋`, { id: 'supabase-welcome' })
         await navigateAfterLogin(res.data.role)
       } catch (err: any) {
         console.error('Supabase session sync error:', err)
+        isSyncingRef.current = false
         toast.error('Failed to sync session with platform')
       } finally {
         setLoading(false)
@@ -302,7 +307,7 @@ export default function LoginPage() {
           redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'select_account',
           },
         },
       })
@@ -456,8 +461,20 @@ export default function LoginPage() {
         {/* Top Bar: Brand Logo & Developer Mode Switch */}
         <div className="flex items-center justify-between w-full max-w-md mx-auto mb-6">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#b85d3b] to-[#9c4a2a] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-              <Sparkles className="w-5 h-5 text-white animate-pulse" />
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform">
+              <img
+                src="/Logo.webp"
+                alt="InteriorAI Logo"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  const fb = e.currentTarget.parentElement?.querySelector('.login-logo-fallback') as HTMLElement
+                  if (fb) fb.style.display = 'flex'
+                }}
+              />
+              <div className="login-logo-fallback hidden w-full h-full rounded-xl bg-gradient-to-br from-[#b85d3b] to-[#9c4a2a] items-center justify-center shadow-sm">
+                <Sparkles className="w-5 h-5 text-white animate-pulse" />
+              </div>
             </div>
             <span className="font-extrabold text-2xl text-stone-900 tracking-tight">
               Interior<span className="text-[#b85d3b]">AI</span>
