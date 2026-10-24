@@ -47,6 +47,9 @@ export const authAPI = {
   verifyOtp: (data: { email?: string; phone?: string; otp: string; role?: string }) =>
     axiosInstance.post('/api/v1/auth/verify-otp', data),
   
+  supabaseSync: (data: { supabase_id: string; email: string; name?: string; role?: string }) =>
+    axiosInstance.post('/api/v1/auth/supabase-sync', data),
+
   me: () =>
     axiosInstance.get('/api/v1/auth/me'),
 
