@@ -436,10 +436,8 @@ export default function GuidedCustomizePage() {
           style: project?.style_vibe || 'Modern',
           budget: project?.budget || 500000,
           project_id: projectId,
-          // With the room known, the catalogue leaves out anything that cannot
-          // physically stand in it — measured from the customer's floor plan
-          // once they have confirmed one.
-          room_id: activeRoomId || undefined
+          room_id: activeRoomId || undefined,
+          room_type: activeRoom?.room_type || undefined,
         })
         const raw = res.data
         const items = Array.isArray(raw) 
@@ -1188,9 +1186,7 @@ export default function GuidedCustomizePage() {
                       const list = Array.isArray(products) ? products : []
                       if (!isAddonsTab) return list
 
-                      // In Add-ons tab:
-                      // 1. Never show products that are already included as package defaults in the active room!
-                      // 2. Curate to top 4-6 distinct items by type so user does not need to scroll excessively.
+                      const currentRoomType = (activeRoom?.room_type || '').toLowerCase()
                       const seenTypes = new Set<string>()
                       const filtered = list.filter((p: any) => {
                         // Do not show an item if it's already an active package default item in the room
@@ -1198,6 +1194,47 @@ export default function GuidedCustomizePage() {
                           it.product_id === p.id && (it.is_package_default || it.custom_attributes?.is_package_default)
                         )
                         if (isExistingDefault) return false
+
+                        // Strict room-appropriateness filter for add-ons
+                        const pName = (p.name || '').toLowerCase()
+                        const pCat = (p.category || '').toLowerCase()
+                        const pSub = (p.subcategory || '').toLowerCase()
+                        const pRoom = (p.room_type || '').toLowerCase()
+                        const combined = `${pName} ${pCat} ${pSub} ${pRoom}`
+
+                        if (currentRoomType.includes('kitchen')) {
+                          if (combined.includes('bed') || combined.includes('nightstand') || combined.includes('sofa') || 
+                              combined.includes('couch') || combined.includes('wardrobe') || combined.includes('vanity') || 
+                              combined.includes('bath') || combined.includes('towel') || combined.includes('shower')) {
+                            return false
+                          }
+                          const isKitchenFit = combined.includes('kitchen') || combined.includes('dining') || combined.includes('stool') || 
+                            combined.includes('rack') || combined.includes('shelf') || combined.includes('cabinet') || 
+                            combined.includes('light') || combined.includes('pendant') || combined.includes('appliance') ||
+                            pRoom.includes('kitchen')
+                          if (!isKitchenFit) return false
+                        } else if (currentRoomType.includes('living')) {
+                          if (combined.includes('bed') || combined.includes('nightstand') || combined.includes('bath') || 
+                              combined.includes('towel') || combined.includes('vanity') || combined.includes('shower') ||
+                              combined.includes('kitchen') || combined.includes('chimney')) {
+                            return false
+                          }
+                        } else if (currentRoomType.includes('bed')) {
+                          if (combined.includes('kitchen') || combined.includes('chimney') || combined.includes('dining') || 
+                              combined.includes('bath') || combined.includes('towel') || combined.includes('shower') || 
+                              combined.includes('sofa')) {
+                            return false
+                          }
+                        } else if (currentRoomType.includes('bath')) {
+                          if (combined.includes('bed') || combined.includes('sofa') || combined.includes('kitchen') || 
+                              combined.includes('dining') || combined.includes('couch')) {
+                            return false
+                          }
+                          const isBathFit = combined.includes('bath') || combined.includes('vanity') || combined.includes('towel') || 
+                            combined.includes('mirror') || combined.includes('fixture') || combined.includes('light') ||
+                            pRoom.includes('bath')
+                          if (!isBathFit) return false
+                        }
 
                         // Filter by broad subcategory / product title type to avoid duplicate color variants
                         const groupKey = (p.subcategory || p.category || p.name.split(' ').slice(1).join(' ')).toLowerCase()

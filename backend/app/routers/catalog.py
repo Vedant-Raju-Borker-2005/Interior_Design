@@ -219,13 +219,22 @@ def list_products(
     from ..models import Vendor
 
     # Normalize room_type for custom BHK types
-    target_room_type = room_type if isinstance(room_type, str) else None
-    if isinstance(room_type, str) and room_type:
-        if room_type.startswith("bedroom_") and room_type != "bedroom_master":
+    target_room_type = room_type if isinstance(room_type, str) and room_type else None
+    if not target_room_type and room_id:
+        try:
+            from ..models import Room
+            rm = db.query(Room).filter(Room.id == room_id).first()
+            if rm and rm.room_type:
+                target_room_type = rm.room_type
+        except Exception:
+            pass
+
+    if isinstance(target_room_type, str) and target_room_type:
+        if target_room_type.startswith("bedroom_") and target_room_type != "bedroom_master":
             target_room_type = "bedroom_2"
-        elif room_type.startswith("bathroom_") and room_type != "bathroom":
+        elif target_room_type.startswith("bathroom_") and target_room_type != "bathroom":
             target_room_type = "bathroom"
-        elif room_type == "balcony":
+        elif target_room_type == "balcony":
             target_room_type = "living_room"
 
     # ── Base query ─────────────────────────────────────────────────────────────
@@ -306,30 +315,93 @@ def list_products(
         elif 'fixture' in cat_raw or 'decor' in cat_raw:
             q = q.filter(or_(Product.subcategory.ilike('%fixture%'), Product.category.ilike('%decor%'), Product.name.ilike('%fixture%'), Product.name.ilike('%towel%')))
         elif 'addon' in cat_raw or 'extra' in cat_raw:
-            q = q.filter(
-                or_(
-                    Product.subcategory.ilike('%chair%'),
-                    Product.subcategory.ilike('%rug%'),
-                    Product.subcategory.ilike('%side%'),
-                    Product.subcategory.ilike('%light%'),
-                    Product.subcategory.ilike('%desk%'),
-                    Product.subcategory.ilike('%fixture%'),
-                    Product.subcategory.ilike('%cabinet%'),
-                    Product.category.ilike('%chair%'),
-                    Product.category.ilike('%rug%'),
-                    Product.category.ilike('%side%'),
-                    Product.category.ilike('%light%'),
-                    Product.category.ilike('%decor%'),
-                    Product.name.ilike('%accent%'),
-                    Product.name.ilike('%rug%'),
-                    Product.name.ilike('%desk%'),
-                    Product.name.ilike('%lamp%'),
-                    Product.name.ilike('%light%'),
-                    Product.name.ilike('%side%'),
-                    Product.name.ilike('%towel%'),
-                    Product.name.ilike('%cabinet%')
+            rt_lower = (target_room_type or "").lower()
+            if 'kitchen' in rt_lower:
+                q = q.filter(
+                    or_(
+                        Product.room_type.ilike('%kitchen%'),
+                        Product.subcategory.ilike('%kitchen%'),
+                        Product.subcategory.ilike('%dining%'),
+                        Product.subcategory.ilike('%stool%'),
+                        Product.subcategory.ilike('%storage%'),
+                        Product.subcategory.ilike('%rack%'),
+                        Product.name.ilike('%kitchen%'),
+                        Product.name.ilike('%stool%'),
+                        Product.name.ilike('%rack%'),
+                        Product.name.ilike('%shelf%'),
+                        Product.name.ilike('%cabinet%')
+                    )
+                ).filter(
+                    ~Product.name.ilike('%bed%'),
+                    ~Product.name.ilike('%sofa%'),
+                    ~Product.name.ilike('%towel%'),
+                    ~Product.name.ilike('%vanity%'),
+                    ~Product.subcategory.ilike('%bed%'),
+                    ~Product.subcategory.ilike('%sofa%')
                 )
-            )
+            elif 'bed' in rt_lower:
+                q = q.filter(
+                    or_(
+                        Product.room_type.ilike('%bed%'),
+                        Product.subcategory.ilike('%lamp%'),
+                        Product.subcategory.ilike('%light%'),
+                        Product.subcategory.ilike('%rug%'),
+                        Product.subcategory.ilike('%chair%'),
+                        Product.subcategory.ilike('%vanity%'),
+                        Product.name.ilike('%lamp%'),
+                        Product.name.ilike('%rug%'),
+                        Product.name.ilike('%armchair%'),
+                        Product.name.ilike('%accent chair%'),
+                        Product.name.ilike('%mirror%')
+                    )
+                ).filter(
+                    ~Product.name.ilike('%kitchen%'),
+                    ~Product.name.ilike('%towel%'),
+                    ~Product.name.ilike('%sofa%'),
+                    ~Product.name.ilike('%chimney%'),
+                    ~Product.subcategory.ilike('%kitchen%')
+                )
+            elif 'bath' in rt_lower:
+                q = q.filter(
+                    or_(
+                        Product.room_type.ilike('%bath%'),
+                        Product.subcategory.ilike('%fixture%'),
+                        Product.subcategory.ilike('%vanity%'),
+                        Product.name.ilike('%towel%'),
+                        Product.name.ilike('%mirror%'),
+                        Product.name.ilike('%fixture%'),
+                        Product.name.ilike('%bath%')
+                    )
+                ).filter(
+                    ~Product.name.ilike('%bed%'),
+                    ~Product.name.ilike('%sofa%'),
+                    ~Product.name.ilike('%kitchen%'),
+                    ~Product.name.ilike('%dining%')
+                )
+            else:
+                # Living room, dining, foyer, balcony
+                q = q.filter(
+                    or_(
+                        Product.room_type.ilike('%living%'),
+                        Product.subcategory.ilike('%chair%'),
+                        Product.subcategory.ilike('%rug%'),
+                        Product.subcategory.ilike('%lamp%'),
+                        Product.subcategory.ilike('%light%'),
+                        Product.subcategory.ilike('%side%'),
+                        Product.name.ilike('%accent%'),
+                        Product.name.ilike('%rug%'),
+                        Product.name.ilike('%lamp%'),
+                        Product.name.ilike('%side table%'),
+                        Product.name.ilike('%decor%')
+                    )
+                ).filter(
+                    ~Product.name.ilike('%bed%'),
+                    ~Product.name.ilike('%towel%'),
+                    ~Product.name.ilike('%kitchen%'),
+                    ~Product.name.ilike('%vanity%'),
+                    ~Product.name.ilike('%shower%'),
+                    ~Product.subcategory.ilike('%bed%')
+                )
         else:
             q = q.filter(
                 or_(
