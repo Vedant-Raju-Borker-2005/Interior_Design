@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Dynamic Island & Cloudlet Notification Hub Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* CSS Reset & Variables */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    :root {
+      --bg-dark: #07090C;
+      --surface-glass: rgba(15, 18, 24, 0.88);
+      --surface-glass-border: rgba(255, 255, 255, 0.12);
+      --surface-glass-border-top: rgba(255, 255, 255, 0.22);
+      --surface-glass-hover: rgba(24, 29, 38, 0.94);
+      --lime-accent: #84CC16;
+      --lime-glow: rgba(132, 204, 22, 0.45);
+      --sky-accent: #38BDF8;
+      --sky-glow: rgba(56, 189, 248, 0.4);
+      --text-primary: #F8FAF8;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --spring-physics: cubic-bezier(0.16, 1, 0.3, 1);
+      --spring-bounce: cubic-bezier(0.34, 1.45, 0.64, 1);
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 0%, #151B26 0%, #080A0E 75%, #050608 100%);
+      color: var(--text-primary);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: clip;
+      max-width: 100%;
+    }
+
+    /* Ambient Lighting effect on top header */
+    .ambient-glow {
+      position: fixed;
+      top: -160px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 320px;
+      background: radial-gradient(circle, rgba(132, 204, 22, 0.14) 0%, rgba(56, 189, 248, 0.08) 40%, transparent 70%);
+      pointer-events: none;
+      z-index: 10;
+      filter: blur(40px);
+    }
+
+    /* Demo Navigation Bar */
+    .demo-navbar {
+      width: 100%;
+      height: 72px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(11, 15, 21, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      position: relative;
+      z-index: 100;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #84CC16 0%, #4D7C0F 100%);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(132, 204, 22, 0.3);
+    }
+
+    .brand-logo-icon svg {
+      width: 18px;
+      height: 18px;
+      color: #07090C;
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #F8FAF8;
+    }
+
+    .brand-portal-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: rgba(132, 204, 22, 0.15);
+      color: #84CC16;
+      border: 1px solid rgba(132, 204, 22, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Bell Icon Trigger Button */
+    .bell-btn {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .bell-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .bell-btn:active {
+      transform: scale(0.95);
+    }
+
+    .bell-btn:focus-visible {
+      outline: 2px solid var(--lime-accent);
+      outline-offset: 2px;
+    }
+
+    .bell-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      border-radius: 9999px;
+      background: var(--lime-accent);
+      color: #07090C;
+      font-size: 10px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 10px var(--lime-glow);
+      transition: transform 0.25s var(--spring-bounce), opacity 0.2s ease;
+    }
+
+    .bell-badge.hidden {
+      transform: scale(0);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ============================================================
+       DYNAMIC ISLAND & CLOUDLET NOTIFICATION CONTAINER
+       ============================================================ */
+    .island-container {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none; /* Children opt-in */
+      width: auto;
+      max-width: calc(100vw - 32px);
+    }
+
+    /* Stack Layer Wrapper for 3D Underlay Cards */
+    .island-stack-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      perspective: 1000px;
+    }
+
+    /* Active Foreground Island */
+    .island-pill {
+      pointer-events: auto;
+      position: relative;
+      background: var(--surface-glass);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      border: 1px solid var(--surface-glass-border);
+      border-top: 1px solid var(--surface-glass-border-top);
+      box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 0, 0, 0.4);
+      border-radius: 9999px;
+      color: var(--text-primary);
+      cursor: pointer;
+      user-select: none;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      transition: 
+        transform 0.45s var(--spring-physics),
+        opacity 0.3s ease,
+        border-radius 0.4s var(--spring-physics),
+        box-shadow 0.35s ease,
+        background-color 0.25s ease;
+      will-change: transform, opacity;
+      z-index: 30;
+    }
+
+    .island-pill:hover {
+      background: var(--surface-glass-hover);
+      box-shadow: 0 24px 55px -12px rgba(0, 0, 0, 0.85), 0 0 20px rgba(132, 204, 22, 0.15);
+    }
+
+    .island-pill:focus-visible {
+      outline: 2px solid var(--lime-accent);
+      outline-offset: 3px;
+    }
+
+    /* Stacked Background Cards (Layer 1 & Layer 2) */
+    .island-stack-card {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      height: 44px;
+      border-radius: 9999px;
+      background: rgba(18, 22, 30, 0.75);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+      transition: transform 0.45s var(--spring-physics), opacity 0.35s ease;
+      will-change: transform, opacity;
+    }
+
+    .island-stack-card.layer-1 {
+      width: 90%;
+      transform: translateX(-50%) translateY(9px) scale(0.94);
+      opacity: 0.72;
+      z-index: 20;
+      box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
+    }
+
+    .island-stack-card.layer-2 {
+      width: 82%;
+      transform: translateX(-50%) translateY(17px) scale(0.88);
+      opacity: 0.45;
+      z-index: 10;
+      box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.5);
+    }
+
+    /* ------------------------------------------------------------
+       STATE 1: COMPACT VIEW (Minimal Pill Banner)
+       ------------------------------------------------------------ */
+    .island-compact {
+      height: 44px;
+      padding: 0 16px;
+      gap: 12px;
+      border-radius: 9999px;
+    }
+
+    .compact-icon-box {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .compact-text-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .compact-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .compact-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .compact-pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--lime-accent);
+      box-shadow: 0 0 8px var(--lime-glow);
+      animation: pulseGlow 1.8s infinite ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.5; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+
+    .compact-expand-hint {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      margin-left: 2px;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .island-pill:hover .compact-expand-hint {
+      color: var(--text-primary);
+      transform: translateY(1px);
+    }
+
+    /* ------------------------------------------------------------
+       STATE 2: EXPANDED VIEW (Rich Tray with Dismiss Action)
+       ------------------------------------------------------------ */
+    .island-expanded {
+      width: 410px;
+      max-width: calc(100vw - 32px);
+      border-radius: 22px;
+      padding: 16px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+      cursor: default;
+    }
+
+    .expanded-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .expanded-app-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .expanded-app-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .expanded-app-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .expanded-time-badge {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .expanded-body-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .expanded-message {
+      font-size: 12px;
+      line-height: 1.5;
+      color: #CBD5E1;
+      font-weight: 450;
+    }
+
+    /* Micro-Interaction Progress Bar (Apex CloudSync) */
+    .progress-bar-wrap {
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+      position: relative;
+      margin-top: 4px;
+    }
+
+    .progress-bar-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 65%;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, #38BDF8 0%, #84CC16 100%);
+      box-shadow: 0 0 10px var(--sky-glow);
+      animation: progressPulse 2s infinite ease-in-out;
+    }
+
+    @keyframes progressPulse {
+      0% { width: 35%; opacity: 0.8; }
+      50% { width: 78%; opacity: 1; }
+      100% { width: 35%; opacity: 0.8; }
+    }
+
+    /* Action Controls Row (Strictly Dismiss Button Only) */
+    .expanded-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .dismiss-btn {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text-primary);
+      padding: 7px 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .dismiss-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+
+    .dismiss-btn:active {
+      transform: scale(0.96);
+    }
+
+    .dismiss-btn:focus-visible {
+      outline: 2px solid var(--lime-accent);
+      outline-offset: 2px;
+    }
+
+    /* Close / Collapse Toggle icon in top-right */
+    .collapse-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .collapse-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* ============================================================
+       PERSISTENT BELL NOTIFICATION DRAWER
+       ============================================================ */
+    .bell-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 6, 9, 0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .bell-drawer-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .bell-drawer {
+      position: fixed;
+      top: 80px;
+      right: 24px;
+      width: 380px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 110px);
+      background: rgba(14, 17, 24, 0.94);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85);
+      z-index: 210;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(-12px) scale(0.97);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.35s var(--spring-physics), opacity 0.25s ease;
+    }
+
+    .bell-drawer.active {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .drawer-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .drawer-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .drawer-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .drawer-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      background: rgba(132, 204, 22, 0.18);
+      color: #84CC16;
+      border: 1px solid rgba(132, 204, 22, 0.35);
+    }
+
+    .drawer-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .drawer-clear-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .drawer-clear-btn:hover {
+      color: #F87171;
+    }
+
+    .drawer-list {
+      padding: 12px 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .drawer-item {
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .drawer-item:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .drawer-item-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .drawer-item-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .drawer-item-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .drawer-item-msg {
+      font-size: 11.5px;
+      color: #94A3B8;
+      line-height: 1.4;
+    }
+
+    .drawer-item-time {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .drawer-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .drawer-empty svg {
+      opacity: 0.35;
+    }
+
+    /* ============================================================
+       SIMULATION TESTBED HERO & CONTROLS DOCK
+       ============================================================ */
+    .preview-canvas {
+      width: 100%;
+      max-width: 900px;
+      margin: 90px auto 140px;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .preview-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: rgba(132, 204, 22, 0.12);
+      border: 1px solid rgba(132, 204, 22, 0.28);
+      color: #84CC16;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .preview-hero-badge svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .preview-title {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #CBD5E1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .preview-subtitle {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 580px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    /* Architecture Highlights Pill Grid */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      width: 100%;
+      margin-top: 10px;
+      text-align: left;
+    }
+
+    .feature-card {
+      background: rgba(18, 22, 30, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .feature-card-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-card-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Fixed Simulation Control Dock at Bottom */
+    .control-dock {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 150;
+      background: rgba(14, 18, 25, 0.92);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 10px 14px;
+      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: calc(100vw - 32px);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .control-dock::-webkit-scrollbar {
+      display: none;
+    }
+
+    .dock-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0 6px;
+      white-space: nowrap;
+    }
+
+    .dock-btn {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .dock-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    .dock-btn:active {
+      transform: scale(0.96);
+    }
+
+    .dock-btn:focus-visible {
+      outline: 2px solid var(--lime-accent);
+      outline-offset: 2px;
+    }
+
+    .dock-btn.highlight {
+      background: rgba(132, 204, 22, 0.15);
+      border-color: rgba(132, 204, 22, 0.4);
+      color: #A3E635;
+    }
+
+    .dock-btn.highlight:hover {
+      background: rgba(132, 204, 22, 0.25);
+      border-color: rgba(132, 204, 22, 0.6);
+    }
+
+    /* Mobile Responsive Optimizations */
+    @media (max-width: 640px) {
+      .demo-navbar {
+        padding: 0 16px;
+      }
+      .brand-title {
+        display: none;
+      }
+      .control-dock {
+        bottom: 12px;
+        padding: 8px 10px;
+        gap: 6px;
+      }
+      .dock-btn {
+        padding: 7px 11px;
+        font-size: 11px;
+      }
+      .island-expanded {
+        width: calc(100vw - 32px);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Lighting Effect -->
+  <div class="ambient-glow"></div>
+
+  <!-- Header Navigation -->
+  <header class="demo-navbar">
+    <div class="brand-group">
+      <div class="brand-logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+      <span class="brand-title">InteriorAI</span>
+      <span class="brand-portal-pill">Customer & Enterprise Hub</span>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Persistent Bell Icon with Live Count -->
+      <button id="bellTriggerBtn" class="bell-btn" title="View Notification History" aria-label="Notifications">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span id="bellBadge" class="bell-badge">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       DYNAMIC ISLAND FLOATING CONTAINER
+       ============================================================ -->
+  <div class="island-container" id="islandContainer" role="region" aria-label="Dynamic Notification Island">
+    <div class="island-stack-wrapper" id="islandStackWrapper">
+      
+      <!-- Background Stack Underlay Cards -->
+      <div class="island-stack-card layer-2" id="stackLayer2" style="display: none;"></div>
+      <div class="island-stack-card layer-1" id="stackLayer1" style="display: none;"></div>
+
+      <!-- Foreground Active Island Pill -->
+      <div class="island-pill island-compact" id="activeIsland" style="display: none;" tabindex="0" role="alert">
+        <!-- Rendered dynamically by JavaScript -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PERSISTENT BELL NOTIFICATION DRAWER
+       ============================================================ -->
+  <div class="bell-drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="bell-drawer" id="bellDrawer" aria-label="Notification Center Drawer">
+    <div class="drawer-header">
+      <div class="drawer-title-group">
+        <h2 class="drawer-title">Notifications</h2>
+        <span class="drawer-badge" id="drawerCountBadge">0 New</span>
+      </div>
+      <div class="drawer-actions">
+        <button class="drawer-clear-btn" id="drawerClearBtn">Clear All</button>
+      </div>
+    </div>
+    <div class="drawer-list" id="drawerList">
+      <!-- Items dynamically injected -->
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       SIMULATION TESTBED & DOCUMENTATION
+       ============================================================ -->
+  <main class="preview-canvas">
+    <div class="preview-hero-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Dynamic Island & Cloudlet Hub
+    </div>
+    <h1 class="preview-title">Adaptive Notification Stack</h1>
+    <p class="preview-subtitle">
+      Experience Apple Dynamic Island fluid morphing, layered background stacking, and live micro-interactions—scaffolded exclusively for Customer & Enterprise portals with zero disruption to existing components.
+    </p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#84CC16" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Dual-Layer Synchronization
+        </div>
+        <p class="feature-card-desc">
+          Floating Dynamic Island handles live in-flight alerts and progress pulses; the navbar Bell Icon retains full unread history for offline or later review.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          3-Card Visual Stacking
+        </div>
+        <p class="feature-card-desc">
+          Multiple concurrent notifications cascade into background physical layers with calibrated scale (0.94, 0.88), downward offset, and depth shadows.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12h6"/></svg>
+          Dismiss-Only Action Flow
+        </div>
+        <p class="feature-card-desc">
+          Streamlined action controls retain only a crisp "Dismiss" button, removing superfluous verify/approve toggles for instant, friction-free clearing.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================
+       SIMULATION CONTROLS DOCK (INTERACTIVE TRIGGER BENCH)
+       ============================================================ -->
+  <nav class="control-dock" aria-label="Simulation Controls">
+    <span class="dock-label">Triggers:</span>
+
+    <!-- 1. Apex CloudSync Processing -->
+    <button class="dock-btn" id="btnTriggerCloudSync">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+      CloudSync (Progress)
+    </button>
+
+    <!-- 2. Workspace Card (Sarah / Slack) -->
+    <button class="dock-btn" id="btnTriggerSlack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
+      Workspace Card (Sarah)
+    </button>
+
+    <!-- 3. Alert Capsule (Acme Corp) -->
+    <button class="dock-btn" id="btnTriggerLead">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#84CC16" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+      New Lead (Acme)
+    </button>
+
+    <!-- 4. Push All (Stack Demo) -->
+    <button class="dock-btn highlight" id="btnPushAll">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="12" height="12" rx="2"/></svg>
+      Push All (Stacking)
+    </button>
+
+    <!-- 5. Clear Active Stack -->
+    <button class="dock-btn" id="btnClearIsland">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Clear
+    </button>
+  </nav>
+
+  <!-- ============================================================
+       DYNAMIC ISLAND CONTROLLER (VANILLA JS)
+       ============================================================ -->
+  <script>
+    (function () {
+      'use strict';
+
+      // Notification Data Store
+      const state = {
+        queue: [],          // Active stack displayed in Dynamic Island (0 = foreground)
+        history: [],        // Permanent history displayed in Bell Drawer
+        isExpanded: false,  // Active island state (compact vs expanded)
+        isDrawerOpen: false // Bell drawer state
+      };
+
+      // DOM Elements
+      const activeIsland = document.getElementById('activeIsland');
+      const stackLayer1 = document.getElementById('stackLayer1');
+      const stackLayer2 = document.getElementById('stackLayer2');
+      const bellTriggerBtn = document.getElementById('bellTriggerBtn');
+      const bellBadge = document.getElementById('bellBadge');
+      const bellDrawer = document.getElementById('bellDrawer');
+      const drawerBackdrop = document.getElementById('drawerBackdrop');
+      const drawerList = document.getElementById('drawerList');
+      const drawerCountBadge = document.getElementById('drawerCountBadge');
+      const drawerClearBtn = document.getElementById('drawerClearBtn');
+
+      // Trigger Dock Buttons
+      const btnTriggerCloudSync = document.getElementById('btnTriggerCloudSync');
+      const btnTriggerSlack = document.getElementById('btnTriggerSlack');
+      const btnTriggerLead = document.getElementById('btnTriggerLead');
+      const btnPushAll = document.getElementById('btnPushAll');
+      const btnClearIsland = document.getElementById('btnClearIsland');
+
+      // SVG Icon Templates
+      const ICONS = {
+        cloudsync: `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+        `,
+        slack: `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E2E8F0">
+            <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+          </svg>
+        `,
+        lead: `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#84CC16" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+        `,
+        dismiss: `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        `,
+        chevron: `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        `
+      };
+
+      /**
+       * Push a new notification into the system
+       */
+      function pushNotification(notif) {
+        const item = {
+          id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          time: 'Just now',
+          timestamp: Date.now(),
+          ...notif
+        };
+
+        // Add to active island queue (push to foreground)
+        state.queue.unshift(item);
+
+        // Add to persistent drawer history (if not duplicate ID)
+        state.history.unshift(item);
+
+        // Reset to expanded or compact depending on item type
+        state.isExpanded = notif.autoExpand ?? false;
+
+        renderIsland();
+        renderDrawer();
+      }
+
+      /**
+       * Dismiss active foreground notification
+       */
+      function dismissActiveNotification(e) {
+        if (e) e.stopPropagation();
+
+        if (state.queue.length === 0) return;
+
+        // Animate exit
+        activeIsland.style.transform = 'translateY(-20px) scale(0.85)';
+        activeIsland.style.opacity = '0';
+
+        setTimeout(() => {
+          // Remove top item
+          state.queue.shift();
+          state.isExpanded = false;
+
+          activeIsland.style.transform = '';
+          activeIsland.style.opacity = '';
+
+          renderIsland();
+          renderDrawer();
+        }, 280);
+      }
+
+      /**
+       * Render the Dynamic Island & its Stacked Layers
+       */
+      function renderIsland() {
+        if (state.queue.length === 0) {
+          activeIsland.style.display = 'none';
+          stackLayer1.style.display = 'none';
+          stackLayer2.style.display = 'none';
+          return;
+        }
+
+        const topItem = state.queue[0];
+        const stackCount = state.queue.length;
+
+        activeIsland.style.display = 'flex';
+
+        // Render Stack Underlay Cards
+        if (stackCount >= 3) {
+          stackLayer1.style.display = 'block';
+          stackLayer2.style.display = 'block';
+        } else if (stackCount === 2) {
+          stackLayer1.style.display = 'block';
+          stackLayer2.style.display = 'none';
+        } else {
+          stackLayer1.style.display = 'none';
+          stackLayer2.style.display = 'none';
+        }
+
+        // Render Active Foreground View
+        if (state.isExpanded) {
+          activeIsland.className = 'island-pill island-expanded';
+          activeIsland.innerHTML = `
+            <div class="expanded-header-row">
+              <div class="expanded-app-meta">
+                <div class="expanded-app-icon">
+                  ${ICONS[topItem.iconKey] || ICONS.cloudsync}
+                </div>
+                <div>
+                  <div class="expanded-app-name">${topItem.appName || topItem.title}</div>
+                  <div class="expanded-time-badge">${topItem.time}</div>
+                </div>
+              </div>
+              <button class="collapse-btn" id="islandCollapseBtn" title="Minimize" aria-label="Minimize">
+                ${ICONS.chevron}
+              </button>
+            </div>
+
+            <div class="expanded-body-box">
+              <p class="expanded-message">${topItem.message || topItem.subtitle}</p>
+              ${topItem.hasProgress ? `
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar-fill"></div>
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="expanded-action-row">
+              <button class="dismiss-btn" id="islandDismissBtn">
+                ${ICONS.dismiss}
+                Dismiss
+              </button>
+            </div>
+          `;
+
+          // Event bindings for expanded view
+          const collapseBtn = document.getElementById('islandCollapseBtn');
+          if (collapseBtn) {
+            collapseBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              state.isExpanded = false;
+              renderIsland();
+            });
+          }
+
+          const dismissBtn = document.getElementById('islandDismissBtn');
+          if (dismissBtn) {
+            dismissBtn.addEventListener('click', dismissActiveNotification);
+          }
+
+        } else {
+          // Render Compact View
+          activeIsland.className = 'island-pill island-compact';
+          activeIsland.innerHTML = `
+            <div class="compact-icon-box">
+              ${ICONS[topItem.iconKey] || ICONS.cloudsync}
+            </div>
+            <div class="compact-text-group">
+              <span class="compact-title">${topItem.compactTitle || topItem.title}</span>
+              <span class="compact-badge">
+                <span class="compact-pulse-dot"></span>
+                ${topItem.compactStatus || 'Active'}
+              </span>
+            </div>
+            <span class="compact-expand-hint" title="Expand Details">
+              ${ICONS.chevron}
+            </span>
+          `;
+        }
+      }
+
+      /**
+       * Toggle or Expand Island on click
+       */
+      activeIsland.addEventListener('click', () => {
+        if (!state.isExpanded) {
+          state.isExpanded = true;
+          renderIsland();
+        }
+      });
+
+      /**
+       * Render the Persistent Drawer & Bell Badge
+       */
+      function renderDrawer() {
+        const count = state.history.length;
+        bellBadge.textContent = count;
+
+        if (count > 0) {
+          bellBadge.classList.remove('hidden');
+          drawerCountBadge.textContent = count + ' New';
+        } else {
+          bellBadge.classList.add('hidden');
+          drawerCountBadge.textContent = '0 New';
+        }
+
+        if (count === 0) {
+          drawerList.innerHTML = `
+            <div class="drawer-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              <span>No notifications in history</span>
+            </div>
+          `;
+          return;
+        }
+
+        drawerList.innerHTML = state.history.map(item => `
+          <div class="drawer-item">
+            <div class="drawer-item-icon">
+              ${ICONS[item.iconKey] || ICONS.cloudsync}
+            </div>
+            <div class="drawer-item-content">
+              <div class="drawer-item-title">${item.title}</div>
+              <div class="drawer-item-msg">${item.message || item.subtitle}</div>
+              <div class="drawer-item-time">${item.time}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      /**
+       * Toggle Bell Drawer Open / Closed
+       */
+      function toggleBellDrawer() {
+        state.isDrawerOpen = !state.isDrawerOpen;
+        if (state.isDrawerOpen) {
+          bellDrawer.classList.add('active');
+          drawerBackdrop.classList.add('active');
+        } else {
+          bellDrawer.classList.remove('active');
+          drawerBackdrop.classList.remove('active');
+        }
+      }
+
+      bellTriggerBtn.addEventListener('click', toggleBellDrawer);
+      drawerBackdrop.addEventListener('click', toggleBellDrawer);
+
+      // Clear all drawer history
+      drawerClearBtn.addEventListener('click', () => {
+        state.history = [];
+        renderDrawer();
+      });
+
+      // Clear all active island stack
+      btnClearIsland.addEventListener('click', () => {
+        state.queue = [];
+        state.isExpanded = false;
+        renderIsland();
+      });
+
+      /* ============================================================
+         INTERACTIVE TRIGGER PRESETS
+         ============================================================ */
+
+      // 1. Apex CloudSync Processing
+      btnTriggerCloudSync.addEventListener('click', () => {
+        pushNotification({
+          iconKey: 'cloudsync',
+          title: 'Apex CloudSync',
+          appName: 'Apex CloudSync',
+          compactTitle: 'CloudSync',
+          compactStatus: 'Processing: Verifying...',
+          message: 'Processing: Verifying blueprint telemetry and 3D geometric constraints...',
+          hasProgress: true,
+          autoExpand: true
+        });
+      });
+
+      // 2. Workspace Card (Sarah / Slack)
+      btnTriggerSlack.addEventListener('click', () => {
+        pushNotification({
+          iconKey: 'slack',
+          title: 'Design Team',
+          appName: 'Design Team (14px)',
+          compactTitle: 'Design Team',
+          compactStatus: 'Sarah: Ready for review?',
+          message: 'Sarah: Ready for review? (12px) The latest living room 4-wall renders have been generated.',
+          hasProgress: false,
+          autoExpand: true
+        });
+      });
+
+      // 3. Compact Alert Capsule (Acme Corp)
+      btnTriggerLead.addEventListener('click', () => {
+        pushNotification({
+          iconKey: 'lead',
+          title: 'New Lead: Acme Corp',
+          appName: 'Enterprise Leads',
+          compactTitle: 'New Lead: Acme Corp',
+          compactStatus: 'Inquiry received',
+          message: 'Acme Corp submitted a 40-unit typology allocation inquiry for Tower B.',
+          hasProgress: false,
+          autoExpand: false
+        });
+      });
+
+      // 4. Push All (Stacking Demonstration)
+      btnPushAll.addEventListener('click', () => {
+        // Push 3 alerts sequentially with slight staggered delays to demonstrate fluid stacking
+        btnTriggerLead.click();
+        setTimeout(() => {
+          btnTriggerCloudSync.click();
+        }, 120);
+        setTimeout(() => {
+          btnTriggerSlack.click();
+        }, 240);
+      });
+
+      // Boot: Pre-seed with the initial processing banner to greet the user
+      setTimeout(() => {
+        btnTriggerCloudSync.click();
+      }, 400);
+
+    })();
+  </script>
+</body>
+</html>

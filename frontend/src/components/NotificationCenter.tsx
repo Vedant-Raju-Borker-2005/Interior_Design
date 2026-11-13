@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useCustomerStore } from '@/stores/customerStore'
-import { Bell, BellOff, Trash2 } from 'lucide-react'
+import { Bell, BellOff, Trash2, X } from 'lucide-react'
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
 
 interface NotificationCardProps {
@@ -75,8 +75,20 @@ function NotificationCard({ n, onRead, onDelete }: NotificationCardProps) {
         <p className={`text-[11px] mt-1 leading-relaxed ${n.read ? 'text-stone-400' : 'text-stone-600 font-medium'}`}>
           {n.message}
         </p>
-        <div className="text-[9px] text-stone-400 mt-1.5 font-medium flex items-center justify-between">
+        <div className="mt-2.5 pt-1.5 border-t border-stone-100/90 flex items-center justify-between text-[9px] text-stone-400 font-medium">
           <span>{new Date(n.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete()
+            }}
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-[10px] font-bold rounded-md transition-colors cursor-pointer"
+            title="Dismiss notification"
+          >
+            <X className="w-2.5 h-2.5" />
+            Dismiss
+          </button>
         </div>
       </motion.div>
     </motion.div>
@@ -89,7 +101,9 @@ export default function NotificationCenter() {
     fetchNotifications, 
     markNotificationRead, 
     markAllNotificationsRead,
-    deleteNotification
+    deleteNotification,
+    stats,
+    fetchStats
   } = useCustomerStore()
   const [isOpen, setIsOpen] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
@@ -98,11 +112,12 @@ export default function NotificationCenter() {
 
   useEffect(() => {
     fetchNotifications()
+    fetchStats()
     const timer = setInterval(() => {
       fetchNotifications()
     }, 15000) // poll every 15s
     return () => clearInterval(timer)
-  }, [fetchNotifications])
+  }, [fetchNotifications, fetchStats])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent | TouchEvent) {
@@ -118,13 +133,33 @@ export default function NotificationCenter() {
     }
   }, [])
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  // Gating: only quotation generation and post-quotation project updates qualify for the persistent bell tray
+  const hasGeneratedQuotation = Boolean((stats?.totalQuotations ?? 0) > 0)
+  
+  const postQuotationNotifications = notifications.filter((n) => {
+    if (hasGeneratedQuotation) return true
+    const text = `${n.title || ''} ${n.message || ''}`.toLowerCase()
+    return (
+      text.includes('quotation') ||
+      text.includes('quote') ||
+      text.includes('payment') ||
+      text.includes('order') ||
+      text.includes('milestone') ||
+      text.includes('dispatch') ||
+      text.includes('installed')
+    )
+  })
+
+  // Bell alert counter is strictly gated to post-quotation generation
+  const unreadCount = hasGeneratedQuotation 
+    ? postQuotationNotifications.filter((n) => !n.read).length 
+    : 0
 
   const handleClearAll = async () => {
-    if (isClearing || notifications.length === 0) return
+    if (isClearing || postQuotationNotifications.length === 0) return
     setIsClearing(true)
     try {
-      await Promise.all(notifications.map((n) => deleteNotification(n.id)))
+      await Promise.all(postQuotationNotifications.map((n) => deleteNotification(n.id)))
     } catch (e) {
       console.error('Failed to clear notifications:', e)
     } finally {
@@ -136,7 +171,7 @@ export default function NotificationCenter() {
     <div className="relative" ref={containerRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-stone-600 hover:text-stone-900 transition-colors duration-200 focus:outline-none"
+        className="relative p-2 text-stone-600 hover:text-stone-900 transition-colors duration-200 focus:outline-none cursor-pointer"
         title="Notifications"
       >
         <Bell className="w-5 h-5" />
@@ -170,16 +205,16 @@ export default function NotificationCenter() {
               {unreadCount > 0 && (
                 <button
                   onClick={() => markAllNotificationsRead()}
-                  className="text-[11px] font-bold text-[#4D7C0F] hover:text-[#365314] transition-colors"
+                  className="text-[11px] font-bold text-[#4D7C0F] hover:text-[#365314] transition-colors cursor-pointer"
                 >
                   Mark read
                 </button>
               )}
-              {notifications.length > 0 && (
+              {postQuotationNotifications.length > 0 && (
                 <button
                   onClick={handleClearAll}
                   disabled={isClearing}
-                  className="text-[11px] font-bold text-stone-500 hover:text-red-600 transition-colors flex items-center gap-1"
+                  className="text-[11px] font-bold text-stone-500 hover:text-red-600 transition-colors flex items-center gap-1 cursor-pointer"
                   title="Clear all notifications"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -189,17 +224,19 @@ export default function NotificationCenter() {
             </div>
           </div>
 
-          {notifications.length === 0 ? (
+          {postQuotationNotifications.length === 0 ? (
             <div className="text-center py-8 text-stone-400 text-xs">
               <BellOff className="w-8 h-8 mx-auto mb-2 opacity-40 text-stone-400" />
-              <p className="font-semibold text-stone-600">No notifications yet</p>
-              <p className="text-[10px] text-stone-400 mt-0.5">Project and execution updates will appear here</p>
+              <p className="font-semibold text-stone-600">No quotation notifications yet</p>
+              <p className="text-[10px] text-stone-400 mt-0.5">
+                Quotation and execution milestones will appear here once generated
+              </p>
             </div>
           ) : (
             <>
               <div className="space-y-2 flex-1 max-h-[300px] overflow-y-auto pr-1">
                 <AnimatePresence initial={false}>
-                  {notifications.map((n) => (
+                  {postQuotationNotifications.map((n) => (
                     <NotificationCard
                       key={n.id}
                       n={n}
@@ -210,7 +247,7 @@ export default function NotificationCenter() {
                 </AnimatePresence>
               </div>
               <div className="text-[10px] text-stone-400 text-center pt-2 mt-1 border-t border-stone-100 select-none font-medium">
-                Swipe left on a card to delete
+                Click Dismiss or swipe left to remove
               </div>
             </>
           )}

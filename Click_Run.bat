@@ -205,7 +205,7 @@ if /i "%MODE%"=="dev" (
 
     if "!NEED_BUILD!"=="1" (
         echo   Building the frontend for fast page loads. This takes a few minutes...
-        echo   (Tip: You can cancel and run 'Click_Run.bat dev' for instant start)
+        echo   [Tip] You can cancel and run 'Click_Run.bat dev' for instant start
         pushd "!FRONTEND!"
         call npm run build
         popd
@@ -219,7 +219,7 @@ if /i "%MODE%"=="dev" (
     ) else (
         echo.
         echo   [NOTICE] Production build not found or incomplete.
-        echo   Automatically falling back to Development mode (instant start)...
+        echo   Automatically falling back to Development mode [instant start]...
         echo.
         start "InteriorAI - Frontend (port 3000)" /d "!FRONTEND!" cmd /k "chcp 65001 >nul && echo Frontend starting in dev mode... && npm run dev"
     )

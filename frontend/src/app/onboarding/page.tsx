@@ -658,12 +658,12 @@ export default function OnboardingPage() {
                   <div className={clsx(
                     'w-6 h-6 md:w-8 h-8 rounded-full flex items-center justify-center text-[10px] md:text-sm font-bold transition-all flex-shrink-0',
                     isCompleted ? 'bg-[#4e5b4b] text-white' :
-                    isActive ? 'bg-[#b85d3b] text-white ring-4 ring-[#faeae3]' :
+                    isActive ? 'bg-[#84CC16] text-[#0B0F0D] ring-4 ring-[#84CC16]/20' :
                     'bg-stone-200 text-stone-500'
                   )}>
                     {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : (isB2B2C ? i - 1 : i + 1)}
                   </div>
-                  <span className={clsx('text-[9px] md:text-xs font-bold leading-none hidden xs:inline', (i <= step || isCompleted) ? 'text-[#b85d3b]' : 'text-stone-400')}>
+                  <span className={clsx('text-[9px] md:text-xs font-bold leading-none hidden xs:inline', (i <= step || isCompleted) ? 'text-[#365314]' : 'text-stone-400')}>
                     {s}
                   </span>
                 </div>
@@ -687,7 +687,7 @@ export default function OnboardingPage() {
                   <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Property Name</label>
                   <input id="property-name" type="text" placeholder="e.g. Prestige Lakeside"
                     value={local.property_name} onChange={(e) => setLocal((s) => ({ ...s, property_name: e.target.value }))}
-                    className="input w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#b85d3b] focus:ring-1 focus:ring-[#b85d3b] transition-all font-medium text-stone-800 outline-none" />
+                    className="input w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20 transition-all font-medium text-stone-800 outline-none" />
                 </div>
 
                 <div>
@@ -696,14 +696,14 @@ export default function OnboardingPage() {
                       Pincode
                     </label>
                     {pincodeLoading && (
-                      <span className="text-[11px] font-semibold text-[#b85d3b] animate-pulse">
+                      <span className="text-[11px] font-semibold text-[#4D7C0F] animate-pulse">
                         Searching India Post...
                       </span>
                     )}
                   </div>
                   <input id="pincode" type="text" placeholder="e.g. 403001"
                     value={local.pincode} onChange={(e) => { const numericVal = e.target.value.replace(/\D/g, ''); setLocal((s) => ({ ...s, pincode: numericVal })); }}
-                    className="input w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#b85d3b] focus:ring-1 focus:ring-[#b85d3b] transition-all font-medium text-stone-800 outline-none" maxLength={6} />
+                    className="input w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20 transition-all font-medium text-stone-800 outline-none" maxLength={6} />
                   {discoveredCities.length > 0 && (
                     <p className="text-[11px] text-[#4e5b4b] font-medium mt-1.5 flex items-center gap-1">
                       <Check className="w-3.5 h-3.5 stroke-[3px]" /> Auto-detected {discoveredCities.length} postal zones for PIN {local.pincode}
@@ -729,8 +729,8 @@ export default function OnboardingPage() {
                       <button key={city} onClick={() => { setIsCustomCity(false); setLocal((s) => ({ ...s, city })); addRecentCity(city); }}
                         className={clsx('p-3 rounded-xl border-2 text-xs font-bold transition-all text-center truncate',
                           local.city === city && !isCustomCity
-                            ? 'border-[#b85d3b] bg-[#faeae3] text-[#b85d3b] font-black shadow-sm'
-                            : 'border-stone-200 text-stone-700 hover:border-[#c5a059] bg-white')}
+                            ? 'border-[#84CC16] bg-[#FAFBF9] text-[#132A1C] font-black shadow-sm ring-2 ring-[#84CC16]/20'
+                            : 'border-stone-200 text-stone-700 hover:border-[#84CC16]/50 bg-white')}
                         title={city}
                       >
                         {city}
@@ -741,8 +741,8 @@ export default function OnboardingPage() {
                       onClick={() => setIsCustomCity(!isCustomCity)}
                       className={clsx('p-3 rounded-xl border-2 text-xs font-bold transition-all text-center',
                         isCustomCity || (!recentCities.includes(local.city) && !discoveredCities.includes(local.city) && local.city)
-                          ? 'border-[#b85d3b] bg-[#faeae3] text-[#b85d3b] font-black shadow-sm'
-                          : 'border-stone-200 text-stone-500 hover:border-[#c5a059] bg-stone-50')}
+                          ? 'border-[#84CC16] bg-[#FAFBF9] text-[#132A1C] font-black shadow-sm ring-2 ring-[#84CC16]/20'
+                          : 'border-stone-200 text-stone-500 hover:border-[#84CC16]/50 bg-stone-50')}
                     >
                       + Other
                     </button>
@@ -764,7 +764,7 @@ export default function OnboardingPage() {
                         onBlur={() => {
                           if (local.city) addRecentCity(local.city)
                         }}
-                        className="input w-full px-4 py-2.5 rounded-xl border border-stone-200 focus:border-[#b85d3b] focus:ring-1 focus:ring-[#b85d3b] font-medium text-stone-800 outline-none"
+                        className="input w-full px-4 py-2.5 rounded-xl border border-stone-200 focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20 font-medium text-stone-800 outline-none"
                       />
                     </motion.div>
                   )}
@@ -797,12 +797,12 @@ export default function OnboardingPage() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2">
-                    <Layout className="w-4 h-4 text-[#b85d3b]" />
+                    <Layout className="w-4 h-4 text-[#84CC16]" />
                     <span>Your Plan</span>
-                    <span className="text-[#b85d3b] text-xs font-bold">*</span>
+                    <span className="text-[#84CC16] text-xs font-bold">*</span>
                   </div>
                   {local.bhk && (
-                    <span className="text-[11px] text-[#b85d3b] font-semibold bg-[#faeae3] px-2.5 py-1 rounded-md">
+                    <span className="text-[11px] text-[#365314] font-semibold bg-[#84CC16]/20 px-2.5 py-1 rounded-md border border-[#84CC16]/30">
                       Showing plans for {local.bhk}
                     </span>
                   )}
@@ -846,8 +846,8 @@ export default function OnboardingPage() {
                           className={clsx(
                             'group cursor-pointer rounded-2xl border-2 p-3.5 transition-all duration-200 bg-white relative flex flex-col justify-between shadow-sm hover:shadow-md',
                             isSelected
-                              ? 'border-[#b85d3b] ring-2 ring-[#b85d3b]/20 bg-[#faeae3]/15'
-                              : 'border-stone-200 hover:border-[#c5a059]/60'
+                              ? 'border-[#84CC16] ring-2 ring-[#84CC16]/25 bg-[#FAFBF9] shadow-[0_10px_28px_-4px_rgba(132,204,22,0.25)]'
+                              : 'border-stone-200 hover:border-[#84CC16]/50'
                           )}
                         >
                           <div className="relative h-44 rounded-xl overflow-hidden bg-stone-50 border border-stone-100 mb-3 flex items-center justify-center">
@@ -879,7 +879,7 @@ export default function OnboardingPage() {
                             )}
 
                             {isSelected && (
-                              <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#b85d3b] text-white flex items-center justify-center shadow">
+                              <span className="absolute top-2.5 right-2.5 bg-[#161D1A]/90 backdrop-blur-md text-[#A3E635] p-1 rounded-full shadow-md border border-[#A3E635]/40 flex items-center justify-center">
                                 <Check className="w-3.5 h-3.5 stroke-[3]" />
                               </span>
                             )}
@@ -889,7 +889,7 @@ export default function OnboardingPage() {
                             <div className="flex items-start justify-between gap-1 mb-1">
                               <span className="font-bold text-stone-900 text-sm leading-tight">{planLabel}</span>
                               {t.bhk_type && (
-                                <span className="text-[10px] font-bold text-[#b85d3b] bg-[#faeae3] px-2 py-0.5 rounded-md whitespace-nowrap">
+                                <span className="text-[10px] font-bold text-[#365314] bg-[#84CC16]/20 px-2 py-0.5 rounded-md whitespace-nowrap border border-[#84CC16]/30">
                                   {t.bhk_type}
                                 </span>
                               )}
@@ -920,7 +920,7 @@ export default function OnboardingPage() {
                             </button>
                             <span className={clsx(
                               "text-xs font-bold",
-                              isSelected ? "text-[#b85d3b]" : "text-stone-400 group-hover:text-stone-600"
+                              isSelected ? "text-[#4D7C0F]" : "text-stone-400 group-hover:text-stone-600"
                             )}>
                               {isSelected ? "Selected ✓" : "Select Plan"}
                             </span>
@@ -938,12 +938,12 @@ export default function OnboardingPage() {
                 <div className="grid grid-cols-2 gap-4">
                   {FURNISHING_OPTIONS.map((f) => (
                     <button key={f.id} onClick={() => setLocal((s) => ({ ...s, furnishing_type: f.id }))}
-                      className={clsx('p-4 rounded-2xl border-2 text-left transition-all flex items-center gap-4 bg-white card-hover',
+                      className={clsx('p-4 rounded-2xl border-2 text-left transition-all flex items-center gap-4 bg-white card-hover cursor-pointer',
                         local.furnishing_type === f.id
-                          ? 'border-[#b85d3b] bg-[#faeae3]/30 shadow-sm'
-                          : 'border-stone-200 hover:border-[#c5a059]/60')}>
-                      <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-                        local.furnishing_type === f.id ? 'bg-[#b85d3b] text-white' : 'bg-stone-100 text-stone-500')}>
+                          ? 'border-[#84CC16] bg-[#FAFBF9] ring-2 ring-[#84CC16]/25 shadow-[0_10px_28px_-4px_rgba(132,204,22,0.2)]'
+                          : 'border-stone-200 hover:border-[#84CC16]/50')}>
+                      <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors',
+                        local.furnishing_type === f.id ? 'bg-[#84CC16] text-[#0B0F0D]' : 'bg-stone-100 text-stone-500')}>
                         <f.icon className="w-5 h-5" />
                       </div>
                       <div>
@@ -964,8 +964,8 @@ export default function OnboardingPage() {
               <p className="text-stone-600 mb-4">Helps us curate modular package price tiers and delivery schedules aligned with your preference.</p>
 
               {isB2B2C && earliestStartDate && (
-                <div className="flex gap-3 bg-[#faeae3]/50 border border-[#b85d3b]/20 p-4 rounded-xl text-stone-800 text-xs font-semibold items-start leading-relaxed shadow-sm">
-                  <ShieldAlert className="w-4 h-4 mt-0.5 text-[#b85d3b] flex-shrink-0" />
+                <div className="flex gap-3 bg-[#84CC16]/10 border border-[#84CC16]/25 p-4 rounded-xl text-stone-800 text-xs font-semibold items-start leading-relaxed shadow-sm">
+                  <ShieldAlert className="w-4 h-4 mt-0.5 text-[#4D7C0F] flex-shrink-0" />
                   <div>
                     <span>Project Readiness Constraint: The property <strong>{local.property_name}</strong> will be available for interior execution starting from <strong>{earliestStartDate}</strong>. Timeline selections are constrained accordingly.</span>
                   </div>
@@ -978,17 +978,17 @@ export default function OnboardingPage() {
                   <div className="text-xs font-bold text-stone-700 uppercase tracking-wider">
                     Total Interior Budget — {local.bhk || '1 BHK'}
                   </div>
-                  <span className="text-[11px] font-bold text-[#b85d3b] bg-[#faeae3] px-3 py-1 rounded-full border border-[#b85d3b]/20 w-fit">
+                  <span className="text-[11px] font-bold text-[#365314] bg-[#84CC16]/20 px-3 py-1 rounded-full border border-[#84CC16]/30 w-fit">
                     Full-home packages start from {getBudgetRangesForBhk(local.bhk)[0]?.label.split('–')[0]?.trim()}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                   {getBudgetRangesForBhk(local.bhk).map((b) => (
                     <button key={b.id} onClick={() => setLocal((s) => ({ ...s, budget: b.id }))}
-                      className={clsx('p-4 rounded-xl border-2 text-left transition-all relative flex flex-col justify-between',
+                      className={clsx('p-4 rounded-xl border-2 text-left transition-all relative flex flex-col justify-between cursor-pointer',
                         local.budget === b.id
-                          ? 'border-[#b85d3b] bg-[#faeae3] text-[#b85d3b] shadow-sm ring-1 ring-[#b85d3b]/30'
-                          : 'border-stone-200 text-stone-700 hover:border-[#c5a059] bg-white')}>
+                          ? 'border-[#84CC16] bg-[#FAFBF9] text-[#132A1C] shadow-[0_10px_28px_-4px_rgba(132,204,22,0.2)] ring-2 ring-[#84CC16]/25 font-bold'
+                          : 'border-stone-200 text-stone-700 hover:border-[#84CC16]/50 bg-white')}>
                       <div className="text-base font-extrabold">{b.label}</div>
                       <div className="text-[11px] text-stone-500 mt-1 leading-snug">{b.desc}</div>
                     </button>
@@ -1012,10 +1012,10 @@ export default function OnboardingPage() {
                           }
                         }}
                         className={clsx(
-                          'p-3.5 rounded-xl border-2 text-sm font-bold transition-all relative',
-                          local.timeline === t.id && !isChoiceDisabled ? 'border-[#b85d3b] bg-[#faeae3] text-[#b85d3b] shadow-sm' :
+                          'p-3.5 rounded-xl border-2 text-sm font-bold transition-all relative cursor-pointer',
+                          local.timeline === t.id && !isChoiceDisabled ? 'border-[#84CC16] bg-[#FAFBF9] text-[#132A1C] shadow-[0_10px_28px_-4px_rgba(132,204,22,0.2)] ring-2 ring-[#84CC16]/25' :
                           isChoiceDisabled ? 'border-stone-100 bg-stone-50 text-stone-300 cursor-not-allowed opacity-40' :
-                          'border-stone-200 text-stone-700 hover:border-[#c5a059] bg-white'
+                          'border-stone-200 text-stone-700 hover:border-[#84CC16]/50 bg-white'
                         )}
                       >
                         <span>{t.label}</span>
@@ -1045,10 +1045,10 @@ export default function OnboardingPage() {
                       type="button"
                       onClick={() => toggleStyle(opt.id)}
                       className={clsx(
-                        'group rounded-2xl border-2 bg-white overflow-hidden text-left transition-all duration-200 shadow-sm hover:shadow-md flex flex-col h-full relative',
+                        'group rounded-2xl border-2 bg-white overflow-hidden text-left transition-all duration-200 shadow-sm hover:shadow-md flex flex-col h-full relative cursor-pointer',
                         isSelected
-                          ? 'border-[#b85d3b] ring-2 ring-[#b85d3b]/20 shadow-md'
-                          : 'border-stone-200 hover:border-[#c5a059]/60'
+                          ? 'border-[#84CC16] ring-2 ring-[#84CC16]/25 shadow-[0_10px_28px_-4px_rgba(132,204,22,0.25)]'
+                          : 'border-stone-200 hover:border-[#84CC16]/50'
                       )}
                     >
                       <div className="h-44 w-full overflow-hidden relative bg-stone-100 flex-shrink-0">
@@ -1058,7 +1058,7 @@ export default function OnboardingPage() {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                         {isSelected && (
-                          <div className="absolute top-3 right-3 bg-[#b85d3b] text-white rounded-full p-1 shadow-md z-10">
+                          <div className="absolute top-3 right-3 bg-[#161D1A]/90 backdrop-blur-md text-[#A3E635] rounded-full p-1 shadow-md border border-[#A3E635]/40 z-10 flex items-center justify-center">
                             <Check className="w-4 h-4 stroke-[3px]" />
                           </div>
                         )}
@@ -1083,7 +1083,7 @@ export default function OnboardingPage() {
                 <h2 className="text-3xl font-extrabold text-stone-900 mb-2 tracking-tight font-serif">Material & Fabric Preferences</h2>
                 <p className="text-stone-600 mb-6">Select your preferred interior wood laminate finish and upholstery fabric texture.</p>
 
-                <h3 className="text-xs font-extrabold text-[#b85d3b] uppercase tracking-wider mb-3">🪵 INTERIOR WOOD LAMINATE FINISH</h3>
+                <h3 className="text-xs font-extrabold text-[#365314] uppercase tracking-wider mb-3">🪵 INTERIOR WOOD LAMINATE FINISH</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   {(availableMaterials.length > 0 ? availableMaterials : ['Oak Laminate', 'Teak Laminate', 'Walnut Laminate']).map((m) => {
                     const descriptions: Record<string, string> = {
@@ -1099,10 +1099,10 @@ export default function OnboardingPage() {
                         type="button"
                         onClick={() => setLocal((s) => ({ ...s, interior_material_preference: m }))}
                         className={clsx(
-                          'group rounded-2xl border-2 bg-white overflow-hidden text-left transition-all duration-200 shadow-sm hover:shadow-md flex flex-col h-full relative',
+                          'group rounded-2xl border-2 bg-white overflow-hidden text-left transition-all duration-200 shadow-sm hover:shadow-md flex flex-col h-full relative cursor-pointer',
                           isSelected
-                            ? 'border-[#b85d3b] ring-2 ring-[#b85d3b]/20 shadow-md'
-                            : 'border-stone-200 hover:border-[#c5a059]/60'
+                            ? 'border-[#84CC16] ring-2 ring-[#84CC16]/25 shadow-[0_10px_28px_-4px_rgba(132,204,22,0.25)]'
+                            : 'border-stone-200 hover:border-[#84CC16]/50'
                         )}
                       >
                         <div className="h-36 w-full overflow-hidden relative bg-stone-100 flex-shrink-0">
@@ -1112,7 +1112,7 @@ export default function OnboardingPage() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                           {isSelected && (
-                            <div className="absolute top-3 right-3 bg-[#b85d3b] text-white rounded-full p-1 shadow-md z-10">
+                            <div className="absolute top-3 right-3 bg-[#161D1A]/90 backdrop-blur-md text-[#A3E635] rounded-full p-1 shadow-md border border-[#A3E635]/40 z-10 flex items-center justify-center">
                               <Check className="w-3.5 h-3.5 stroke-[3px]" />
                             </div>
                           )}
@@ -1130,7 +1130,7 @@ export default function OnboardingPage() {
               </div>
 
               <div>
-                <h3 className="text-xs font-extrabold text-[#b85d3b] uppercase tracking-wider mb-3">🪡 UPHOLSTERY & FABRIC PREFERENCE</h3>
+                <h3 className="text-xs font-extrabold text-[#365314] uppercase tracking-wider mb-3">🪡 UPHOLSTERY & FABRIC PREFERENCE</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                   {FABRIC_OPTIONS.map((f) => {
                     const isSelected = local.fabric_preference === f.name
@@ -1140,10 +1140,10 @@ export default function OnboardingPage() {
                         type="button"
                         onClick={() => setLocal((s) => ({ ...s, fabric_preference: f.name }))}
                         className={clsx(
-                          'group rounded-2xl border-2 bg-white overflow-hidden text-left transition-all duration-200 shadow-sm hover:shadow-md flex flex-col h-full relative',
+                          'group rounded-2xl border-2 bg-white overflow-hidden text-left transition-all duration-200 shadow-sm hover:shadow-md flex flex-col h-full relative cursor-pointer',
                           isSelected
-                            ? 'border-[#b85d3b] ring-2 ring-[#b85d3b]/20 shadow-md'
-                            : 'border-stone-200 hover:border-[#c5a059]/60'
+                            ? 'border-[#84CC16] ring-2 ring-[#84CC16]/25 shadow-[0_10px_28px_-4px_rgba(132,204,22,0.25)]'
+                            : 'border-stone-200 hover:border-[#84CC16]/50'
                         )}
                       >
                         <div className="h-32 w-full overflow-hidden relative bg-stone-100 flex-shrink-0">
@@ -1153,7 +1153,7 @@ export default function OnboardingPage() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                           {isSelected && (
-                            <div className="absolute top-3 right-3 bg-[#b85d3b] text-white rounded-full p-1 shadow-md z-10">
+                            <div className="absolute top-3 right-3 bg-[#161D1A]/90 backdrop-blur-md text-[#A3E635] rounded-full p-1 shadow-md border border-[#A3E635]/40 z-10 flex items-center justify-center">
                               <Check className="w-3.5 h-3.5 stroke-[3px]" />
                             </div>
                           )}
