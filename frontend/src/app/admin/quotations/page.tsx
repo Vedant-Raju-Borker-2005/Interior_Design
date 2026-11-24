@@ -16,11 +16,11 @@ import { quotationAdminAPI } from '@/lib/api';
 
 const STATUS_STYLES: Record<string, string> = {
   generated: 'bg-slate-100 text-slate-700',
-  approved: 'bg-blue-50 text-blue-700',
+  approved: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
   under_revision: 'bg-amber-50 text-amber-700',
   rejected: 'bg-rose-50 text-rose-700',
   paid: 'bg-emerald-50 text-emerald-700',
-  converted: 'bg-violet-50 text-violet-700',
+  converted: 'bg-lime-50 text-[#65A30D] border border-lime-200',
 };
 
 const MODE_LABELS: Record<string, string> = {
@@ -106,27 +106,27 @@ export default function AdminQuotationsPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full text-[#161D1A]">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Quotations</h1>
-        <p className="text-slate-500 mt-1">Search every quotation, record offline payments and convert paid quotations into projects.</p>
+        <h1 className="text-2xl font-black text-[#161D1A] tracking-tight">Quotations</h1>
+        <p className="text-stone-500 mt-1 text-xs">Search every quotation, record offline payments and convert paid quotations into projects.</p>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-slate-200 flex flex-wrap gap-3 bg-slate-50">
+      <div className="bg-white border border-[#E5ECE7] rounded-2xl overflow-hidden shadow-xs">
+        <div className="p-4 border-b border-[#E5ECE7] flex flex-wrap gap-3 bg-[#FAFBF9]">
           <div className="relative flex-1 min-w-[260px]">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
             <input
               autoFocus
               type="text"
               placeholder="Quotation no. (QT-2026-00012), customer, phone, email, project or GSTIN"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-[#E5ECE7] rounded-xl text-sm focus:outline-none focus:border-[#84CC16] text-[#161D1A]"
             />
           </div>
           <select value={status} onChange={(e) => setStatus(e.target.value)}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+            className="px-3 py-2 bg-white border border-[#E5ECE7] rounded-xl text-sm text-[#161D1A] outline-none">
             <option value="">All statuses</option>
             {Object.keys(STATUS_STYLES).map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
           </select>
@@ -134,7 +134,7 @@ export default function AdminQuotationsPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+            <thead className="bg-[#F4F6F4] border-b border-[#E5ECE7] text-stone-500 font-bold text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-5 py-4 font-medium">Quotation</th>
                 <th className="px-5 py-4 font-medium">Customer</th>
@@ -153,7 +153,7 @@ export default function AdminQuotationsPage() {
                 <tr key={q.id} className="hover:bg-slate-50/50 align-top">
                   <td className="px-5 py-4">
                     <div className="font-mono font-semibold text-slate-900 flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-indigo-500" /> {q.quotation_no || q.id.slice(0, 8).toUpperCase()}
+                      <FileText className="w-3.5 h-3.5 text-[#65A30D]" /> {q.quotation_no || q.id.slice(0, 8).toUpperCase()}
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5">{q.created_at ? new Date(q.created_at).toLocaleDateString('en-IN') : ''}</div>
                     {q.gst_number && <div className="text-[11px] text-slate-500 font-mono mt-0.5">GSTIN {q.gst_number}</div>}
@@ -161,7 +161,7 @@ export default function AdminQuotationsPage() {
                   <td className="px-5 py-4">
                     {q.customer?.id ? (
                       <Link href={`/admin/customers?q=${encodeURIComponent(q.customer.email || q.customer.phone || q.customer.name || '')}`}
-                        className="text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1">
+                        className="text-stone-800 hover:text-[#65A30D] font-bold inline-flex items-center gap-1">
                         <User className="w-3.5 h-3.5" /> {q.customer.name || q.customer.email}
                       </Link>
                     ) : '—'}
@@ -171,13 +171,13 @@ export default function AdminQuotationsPage() {
                   <td className="px-5 py-4">
                     {q.project?.id ? (
                       <Link href={`/admin/projects?q=${encodeURIComponent(q.project.property_name || '')}`}
-                        className="text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1">
+                        className="text-stone-800 hover:text-[#65A30D] font-bold inline-flex items-center gap-1">
                         <FolderOpen className="w-3.5 h-3.5" /> {q.project.property_name}
                       </Link>
                     ) : '—'}
                     <div className="text-xs text-slate-400">{q.project?.bhk_type} · {q.project?.city}</div>
                     {q.converted_project_id && (
-                      <Link href={`/admin/approvals?project=${q.converted_project_id}`} className="text-[11px] text-violet-600 hover:underline">
+                      <Link href={`/admin/approvals?project=${q.converted_project_id}`} className="text-[11px] text-[#059669] font-bold hover:underline">
                         → execution project
                       </Link>
                     )}
@@ -199,21 +199,21 @@ export default function AdminQuotationsPage() {
                     )}
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex gap-3 justify-end items-center text-sm font-medium">
+                    <div className="flex gap-2 justify-end items-center text-sm font-medium">
                       {q.pdf_url && (
-                        <a href={q.pdf_url} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-slate-700" title="Open PDF">
+                        <a href={q.pdf_url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" title="Open PDF">
                           <Download className="w-4 h-4" />
                         </a>
                       )}
                       {!['paid', 'converted'].includes(q.status) && (
                         <button onClick={() => { setPaying(q); setPayment({ payment_mode: 'BANK_TRANSFER', payment_reference: '', amount: String(Math.round(q.total)), notes: '' }); }}
-                          className="text-emerald-600 hover:text-emerald-800 inline-flex items-center gap-1">
+                          className="text-[#059669] hover:text-emerald-900 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-xs font-black transition border border-emerald-200/60">
                           <BadgeCheck className="w-4 h-4" /> Mark paid
                         </button>
                       )}
                       {q.status === 'paid' && !q.converted_project_id && (
                         <button onClick={() => { setConverting(q); setPropertyName(''); }}
-                          className="text-violet-600 hover:text-violet-800 inline-flex items-center gap-1">
+                          className="text-[#0B0F0D] hover:text-[#65A30D] inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#84CC16]/20 hover:bg-[#84CC16]/40 rounded-lg text-xs font-black transition">
                           <ArrowRightLeft className="w-4 h-4" /> Convert to project
                         </button>
                       )}

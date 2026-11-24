@@ -26,9 +26,9 @@ import { specialServicesAPI } from '@/lib/api';
 /* ─── constants ────────────────────────────────────────────────────────────── */
 const STATUS_META: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   NEW:        { label: 'New',         color: 'text-amber-700',   bg: 'bg-amber-50 border-amber-200',    icon: Clock },
-  ASSIGNED:   { label: 'Assigned',    color: 'text-indigo-700',  bg: 'bg-indigo-50 border-indigo-200',  icon: Send },
-  CONTACTED:  { label: 'Contacted',   color: 'text-sky-700',     bg: 'bg-sky-50 border-sky-200',        icon: Phone },
-  IN_PROGRESS:{ label: 'In Progress', color: 'text-violet-700',  bg: 'bg-violet-50 border-violet-200',  icon: TrendingUp },
+  ASSIGNED:   { label: 'Assigned',    color: 'text-[#65A30D]',  bg: 'bg-lime-50 border-lime-200',      icon: Send },
+  CONTACTED:  { label: 'Contacted',   color: 'text-stone-800',   bg: 'bg-stone-100 border-stone-200',   icon: Phone },
+  IN_PROGRESS:{ label: 'In Progress', color: 'text-teal-700',    bg: 'bg-teal-50 border-teal-200',      icon: TrendingUp },
   COMPLETED:  { label: 'Completed',   color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200',icon: CheckCircle },
   CANCELLED:  { label: 'Cancelled',   color: 'text-slate-500',   bg: 'bg-slate-100 border-slate-200',   icon: XCircle },
 };
@@ -252,11 +252,11 @@ export default function AdminSpecialServicesPage() {
       <div className="flex flex-wrap justify-between items-start gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-              <Handshake className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-[#161D1A] border border-[#161D1A] flex items-center justify-center shadow-sm">
+              <Handshake className="w-5 h-5 text-[#A3E635]" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Special Services</h1>
+              <h1 className="text-2xl font-black text-[#161D1A] tracking-tight">Special Services</h1>
               <p className="text-sm text-slate-500 mt-0.5">Refer, track, and earn commission on partner-delivered services</p>
             </div>
           </div>
@@ -264,19 +264,19 @@ export default function AdminSpecialServicesPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => loadAll(true)}
-            className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-500 transition-colors"
+            className="p-2 border border-[#E5ECE7] rounded-lg hover:bg-[#F4F6F4] text-slate-500 transition-colors"
           >
             <RefreshCw className={clsx('w-4 h-4', refreshing && 'animate-spin')} />
           </button>
           <button
             onClick={() => { setCreatingLead(true); setLeadForm(EMPTY_LEAD); }}
-            className="px-4 py-2 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900 flex items-center gap-2 text-sm transition-colors"
+            className="px-4 py-2 bg-[#161D1A] text-white rounded-lg font-medium hover:bg-black flex items-center gap-2 text-sm transition-colors"
           >
             <Plus className="w-4 h-4" /> New Lead
           </button>
           <button
             onClick={() => { setEditingConsultant('new'); setConsultantForm(EMPTY_CONSULTANT); }}
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 flex items-center gap-2 text-sm shadow-sm shadow-indigo-500/20 transition-all"
+            className="px-4 py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] rounded-lg font-semibold flex items-center gap-2 text-sm transition-all"
           >
             <UserPlus className="w-4 h-4" /> Onboard Consultant
           </button>
@@ -284,11 +284,11 @@ export default function AdminSpecialServicesPage() {
       </div>
 
       {/* 5.8 Partner-led services banner */}
-      <div className="flex items-start gap-3 bg-gradient-to-r from-violet-50 to-indigo-50 border border-indigo-100 rounded-2xl px-5 py-3.5">
-        <Layers className="w-5 h-5 text-indigo-500 mt-0.5 flex-shrink-0" />
+      <div className="flex items-start gap-3 bg-emerald-50/50 border border-emerald-200/60 rounded-2xl px-5 py-3.5">
+        <Layers className="w-5 h-5 text-[#059669] mt-0.5 flex-shrink-0" />
         <div className="text-sm">
-          <span className="font-bold text-indigo-800">Partner-led Referral Model (5.8) — </span>
-          <span className="text-indigo-600">
+          <span className="font-bold text-[#161D1A]">Partner-led Referral Model (5.8) — </span>
+          <span className="text-[#059669]">
             InteriorAI does <em>not</em> deliver these services directly. The platform acts as a
             lead-generation / referral layer, passing inquiries to registered partner consultants
             and retaining a commission on each completed engagement.
@@ -311,7 +311,7 @@ export default function AdminSpecialServicesPage() {
         <KpiCard
           label="Platform Commission" value={inr(s.platform_earning ?? 0)}
           sub="Earned by InteriorAI"
-          icon={DollarSign} gradient="from-indigo-500 to-purple-500"
+          icon={DollarSign} gradient="from-[#161D1A] to-[#0B0F0D]"
         />
         <KpiCard
           label="Owed to Consultants" value={inr(s.unpaid_payout ?? 0)}
@@ -321,7 +321,7 @@ export default function AdminSpecialServicesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-[#F4F6F4] border border-[#E5ECE7] p-1 rounded-xl w-fit">
         {[
           { id: 'leads', label: `Leads`, count: leads.length, icon: Inbox },
           { id: 'consultants', label: 'Consultants', count: consultants.length, icon: Users },
@@ -333,7 +333,7 @@ export default function AdminSpecialServicesPage() {
             className={clsx(
               'px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all',
               tab === id
-                ? 'bg-white text-slate-900 shadow-sm'
+                ? 'bg-[#161D1A] text-[#A3E635] shadow-sm'
                 : 'text-slate-500 hover:text-slate-700',
             )}
           >
@@ -342,7 +342,7 @@ export default function AdminSpecialServicesPage() {
             {count !== undefined && (
               <span className={clsx(
                 'text-[11px] font-bold px-1.5 py-0.5 rounded-full',
-                tab === id ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'
+                tab === id ? 'bg-white/20 text-[#A3E635]' : 'bg-[#E5ECE7] text-slate-600'
               )}>{count}</span>
             )}
           </button>
@@ -1227,11 +1227,11 @@ function LeadDetailModal({ lead, onClose }: { lead: any; onClose: () => void }) 
 /* ═══════════════════════════════════════ Shared Components ═════════════════ */
 function KpiCard({ label, value, sub, icon: Icon, gradient }: any) {
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
-          <p className="text-2xl font-black text-slate-900 mt-1">{value}</p>
+          <p className="text-2xl font-black text-[#161D1A] mt-1">{value}</p>
           {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
         </div>
         <div className={clsx('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-sm', gradient)}>
@@ -1244,9 +1244,9 @@ function KpiCard({ label, value, sub, icon: Icon, gradient }: any) {
 
 function MiniStat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <div className="bg-slate-50 rounded-xl p-3 text-center border border-slate-100">
+    <div className="bg-[#FAFBF9] rounded-xl p-3 text-center border border-[#E5ECE7]">
       <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{label}</div>
-      <div className={clsx('text-sm font-black mt-0.5', accent || 'text-slate-800')}>{value}</div>
+      <div className={clsx('text-sm font-black mt-0.5', accent || 'text-[#161D1A]')}>{value}</div>
     </div>
   );
 }
@@ -1259,7 +1259,7 @@ function FormField({ label, value, onChange, type = 'text', className = '' }: an
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent transition-all"
+        className="w-full border border-[#E5ECE7] bg-white rounded-xl px-3 py-2.5 text-sm text-[#161D1A] focus:outline-none focus:ring-2 focus:ring-[#A3E635]/20 focus:border-[#A3E635] transition-all"
       />
     </label>
   );
@@ -1267,17 +1267,17 @@ function FormField({ label, value, onChange, type = 'text', className = '' }: an
 
 function Modal({ title, subtitle, onClose, children, wide }: any) {
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className={clsx('bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto', wide ? 'w-full max-w-2xl' : 'w-full max-w-md')}
+        className={clsx('bg-[#FAFBF9] border border-[#E5ECE7] rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto', wide ? 'w-full max-w-2xl' : 'w-full max-w-md')}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-white px-6 pt-6 pb-4 border-b border-slate-100 flex justify-between items-start z-10">
+        <div className="sticky top-0 bg-[#FAFBF9] px-6 pt-6 pb-4 border-b border-[#E5ECE7] flex justify-between items-start z-10">
           <div>
-            <h2 className="text-lg font-black text-slate-900">{title}</h2>
+            <h2 className="text-lg font-black text-[#161D1A]">{title}</h2>
             {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors ml-4">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F4F6F4] text-slate-400 hover:text-slate-600 transition-colors ml-4">
             <X className="w-4 h-4" />
           </button>
         </div>

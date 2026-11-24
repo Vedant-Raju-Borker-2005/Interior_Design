@@ -73,53 +73,53 @@ export default function AdminVendorsPage() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full relative">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Vendor Management</h1>
+        <h1 className="text-2xl font-bold text-[#161D1A] tracking-tight">Vendor Management</h1>
         <p className="text-slate-500 mt-1">Approve and monitor vendor performance</p>
       </div>
 
       {/* Stats row */}
       <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
-        <div className="bg-white border border-slate-200 rounded-xl p-4 min-w-[160px] flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+        <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 min-w-[160px] flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-[#161D1A] text-[#A3E635] flex items-center justify-center">
             <Building2 className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{totalCount}</div>
+            <div className="text-2xl font-bold text-[#161D1A]">{totalCount}</div>
             <div className="text-xs text-slate-500 font-medium">Total Vendors</div>
           </div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 min-w-[160px] flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+        <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 min-w-[160px] flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-emerald-50 text-[#059669] flex items-center justify-center">
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{approvedCount}</div>
+            <div className="text-2xl font-bold text-[#161D1A]">{approvedCount}</div>
             <div className="text-xs text-slate-500 font-medium">Approved</div>
           </div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 min-w-[160px] flex items-center gap-4">
+        <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 min-w-[160px] flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{pendingCount}</div>
+            <div className="text-2xl font-bold text-[#161D1A]">{pendingCount}</div>
             <div className="text-xs text-slate-500 font-medium">Pending</div>
           </div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 min-w-[160px] flex items-center gap-4">
+        <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 min-w-[160px] flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
             <XCircle className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{blockedCount}</div>
+            <div className="text-2xl font-bold text-[#161D1A]">{blockedCount}</div>
             <div className="text-xs text-slate-500 font-medium">Blocked</div>
           </div>
         </div>
       </div>
 
       {/* Table Section */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50">
+      <div className="bg-white border border-[#E5ECE7] rounded-2xl overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-[#E5ECE7] flex flex-col sm:flex-row gap-4 justify-between items-center bg-[#FAFBF9]">
           <div className="relative w-full sm:w-96">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
@@ -127,14 +127,14 @@ export default function AdminVendorsPage() {
               placeholder="Search vendors..." 
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-[#E5ECE7] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A3E635]/20 focus:border-[#A3E635] transition-all text-[#161D1A]"
             />
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
+            <button className="px-4 py-2 bg-white border border-[#E5ECE7] text-[#161D1A] rounded-lg text-sm font-medium hover:bg-[#F4F6F4] transition-colors flex items-center gap-2">
               <Filter className="w-4 h-4" /> Filter
             </button>
-            <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 whitespace-nowrap">
+            <button className="px-4 py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 whitespace-nowrap">
               <Plus className="w-4 h-4" /> Add Vendor
             </button>
           </div>
@@ -142,7 +142,7 @@ export default function AdminVendorsPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+            <thead className="bg-[#F4F6F4] text-slate-500 border-b border-[#E5ECE7]">
               <tr>
                 <th className="px-6 py-4 font-medium">Vendor Name</th>
                 <th className="px-6 py-4 font-medium">Category</th>
@@ -159,13 +159,13 @@ export default function AdminVendorsPage() {
                 <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-500">No vendors found.</td></tr>
               ) : (
                 filtered.map(v => (
-                  <tr key={v.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4 font-medium text-slate-900">{v.name}</td>
+                  <tr key={v.id} className="hover:bg-[#FAFBF9]/80 transition-colors group">
+                    <td className="px-6 py-4 font-medium text-[#161D1A]">{v.name}</td>
                     <td className="px-6 py-4 text-slate-600">{v.category || '-'}</td>
                     <td className="px-6 py-4 text-slate-600">{v.city || '-'}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        v.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700' : 
+                        v.status === 'APPROVED' ? 'bg-emerald-50 text-[#059669]' : 
                         v.status === 'PENDING' ? 'bg-amber-50 text-amber-700' :
                         'bg-red-50 text-red-700'
                       }`}>
@@ -176,11 +176,11 @@ export default function AdminVendorsPage() {
                       {v.rating ? `${v.rating}/5` : 'N/A'}
                     </td>
                     <td className="px-6 py-4 flex gap-3 items-center">
-                      <button onClick={() => openVendorDetail(v)} className="text-indigo-600 hover:text-indigo-800 font-medium text-sm transition-colors">View / Pricing</button>
+                      <button onClick={() => openVendorDetail(v)} className="text-[#059669] hover:text-[#047857] font-medium text-sm transition-colors">View / Pricing</button>
                       
                       {v.status === 'PENDING' && (
                         <>
-                          <button onClick={() => handleAction(v.id, 'approve')} className="text-emerald-600 hover:text-emerald-800 font-medium text-sm transition-colors">Approve</button>
+                          <button onClick={() => handleAction(v.id, 'approve')} className="text-[#059669] hover:text-[#047857] font-medium text-sm transition-colors">Approve</button>
                           <button onClick={() => handleAction(v.id, 'reject')} className="text-red-600 hover:text-red-800 font-medium text-sm transition-colors">Reject</button>
                         </>
                       )}
@@ -190,7 +190,7 @@ export default function AdminVendorsPage() {
                       )}
 
                       {v.status === 'SUSPENDED' && (
-                        <button onClick={() => handleAction(v.id, 'reactivate')} className="text-emerald-600 hover:text-emerald-800 font-medium text-sm transition-colors">Reactivate</button>
+                        <button onClick={() => handleAction(v.id, 'reactivate')} className="text-[#059669] hover:text-[#047857] font-medium text-sm transition-colors">Reactivate</button>
                       )}
                     </td>
                   </tr>
@@ -203,14 +203,14 @@ export default function AdminVendorsPage() {
 
       {/* Vendor Detail Modal */}
       {selectedVendor && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex justify-end">
-          <div className="bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex justify-end">
+          <div className="bg-[#FAFBF9] w-full max-w-2xl h-full shadow-2xl flex flex-col border-l border-[#E5ECE7] animate-in slide-in-from-right duration-300">
+            <div className="p-6 border-b border-[#E5ECE7] flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Vendor Profile & Products</h2>
+                <h2 className="text-lg font-bold text-[#161D1A]">Vendor Profile & Products</h2>
                 <p className="text-sm text-slate-500 mt-1">{selectedVendor.business_name}</p>
               </div>
-              <button onClick={() => setSelectedVendor(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors">
+              <button onClick={() => setSelectedVendor(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -226,23 +226,23 @@ export default function AdminVendorsPage() {
                 </div>
               </div>
 
-              <h4 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <Tag className="w-5 h-5 text-indigo-500" />
+              <h4 className="font-semibold text-[#161D1A] mb-4 flex items-center gap-2">
+                <Tag className="w-5 h-5 text-[#059669]" />
                 Vendor Product Catalog
               </h4>
               
               <div className="space-y-4">
                 {vendorProducts.map(product => (
-                  <div key={product.id} className="border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50">
+                  <div key={product.id} className="border border-[#E5ECE7] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
                     <div>
-                      <div className="font-semibold text-slate-900">{product.name}</div>
+                      <div className="font-semibold text-[#161D1A]">{product.name}</div>
                       <div className="text-sm text-slate-500 mt-1">Vendor Proposed Base Price: ₹{product.base_price.toLocaleString()}</div>
                       {product.status === 'pending_review' ? (
                         <span className="inline-flex mt-2 items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
                           Pending Admin Pricing
                         </span>
                       ) : (
-                        <span className="inline-flex mt-2 items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">
+                        <span className="inline-flex mt-2 items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-[#059669]">
                           Priced & Approved
                         </span>
                       )}
@@ -253,7 +253,7 @@ export default function AdminVendorsPage() {
                         <input 
                           type="number" 
                           defaultValue={product.seller_price || ''}
-                          className="w-32 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                          className="w-32 px-3 py-2 bg-white border border-[#E5ECE7] rounded-lg text-sm text-[#161D1A] focus:outline-none focus:ring-2 focus:ring-[#A3E635]/20 focus:border-[#A3E635]"
                           id={`price-${product.id}`}
                         />
                       </div>
@@ -264,7 +264,7 @@ export default function AdminVendorsPage() {
                             handleSetSellerPrice(product.id, Number(input.value));
                           }
                         }}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors whitespace-nowrap"
+                        className="px-4 py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
                       >
                         Set Price
                       </button>
