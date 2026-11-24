@@ -65,63 +65,66 @@ export default function TechnicianDashboardPage() {
   const stats = dashboard?.technician || { assignedInstallations: 0, pendingTasks: 0 };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
+    <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A] flex flex-col">
       <Navbar />
 
       <div className="flex-1 flex pt-20 max-w-[1600px] w-full mx-auto">
         {/* Sidebar */}
-        <aside className="w-72 bg-white border-r border-slate-200 hidden md:flex flex-col p-6 h-[calc(100vh-80px)] sticky top-20 overflow-y-auto">
+        <aside className="w-72 bg-white border-r border-[#E5ECE7] hidden md:flex flex-col p-6 h-[calc(100vh-80px)] sticky top-20 overflow-y-auto">
           <button
             onClick={() => router.push('/team')}
-            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition mb-8"
+            className="flex items-center gap-2 text-sm font-bold text-stone-500 hover:text-[#161D1A] transition mb-8"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Welcome Portal
           </button>
           
           <div className="mb-10">
-            <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-emerald-50 text-[#059669] border border-emerald-200/60 rounded-xl flex items-center justify-center mb-4">
               <Wrench className="w-6 h-6" />
             </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Technician</h1>
-            <p className="text-xs text-slate-500 mt-1 font-medium">Technician / Installer Workspace</p>
+            <h1 className="text-2xl font-black text-[#161D1A] tracking-tight">Technician</h1>
+            <p className="text-xs text-stone-500 mt-1 font-medium">Technician / Installer Workspace</p>
           </div>
 
           <nav className="space-y-2">
             <button
               onClick={() => setActiveTab('kpi')}
               className={clsx(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-                activeTab === 'kpi' ? "bg-indigo-500 text-white shadow-md shadow-indigo-200" : "text-slate-600 hover:bg-slate-100"
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all relative",
+                activeTab === 'kpi' ? "bg-[#F4F6F4] text-[#161D1A] font-extrabold shadow-xs" : "text-stone-600 hover:bg-[#F4F6F4]"
               )}
             >
-              <LayoutDashboard className="w-5 h-5" /> Performance
+              <LayoutDashboard className={clsx("w-5 h-5", activeTab === 'kpi' ? "text-[#65A30D]" : "text-stone-400")} /> Performance
+              {activeTab === 'kpi' && <div className="absolute left-0 w-1.5 h-7 bg-[#84CC16] rounded-r-md"></div>}
             </button>
             <button
               onClick={() => setActiveTab('projects')}
               className={clsx(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-                activeTab === 'projects' ? "bg-indigo-500 text-white shadow-md shadow-indigo-200" : "text-slate-600 hover:bg-slate-100"
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all relative",
+                activeTab === 'projects' ? "bg-[#F4F6F4] text-[#161D1A] font-extrabold shadow-xs" : "text-stone-600 hover:bg-[#F4F6F4]"
               )}
             >
-              <FolderKanban className="w-5 h-5" /> My Assignments
+              <FolderKanban className={clsx("w-5 h-5", activeTab === 'projects' ? "text-[#65A30D]" : "text-stone-400")} /> My Assignments
+              {activeTab === 'projects' && <div className="absolute left-0 w-1.5 h-7 bg-[#84CC16] rounded-r-md"></div>}
             </button>
             <button
               onClick={() => setActiveTab('installations')}
               className={clsx(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-                activeTab === 'installations' ? "bg-indigo-500 text-white shadow-md shadow-indigo-200" : "text-slate-600 hover:bg-slate-100"
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all relative",
+                activeTab === 'installations' ? "bg-[#F4F6F4] text-[#161D1A] font-extrabold shadow-xs" : "text-stone-600 hover:bg-[#F4F6F4]"
               )}
             >
-              <Wrench className="w-5 h-5" /> Installation Items
+              <Wrench className={clsx("w-5 h-5", activeTab === 'installations' ? "text-[#65A30D]" : "text-stone-400")} /> Installation Items
+              {activeTab === 'installations' && <div className="absolute left-0 w-1.5 h-7 bg-[#84CC16] rounded-r-md"></div>}
             </button>
           </nav>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6 md:p-10 bg-slate-50/50 min-h-[calc(100vh-80px)] overflow-y-auto">
+        <main className="flex-1 p-6 md:p-10 bg-[#FAFBF9] min-h-[calc(100vh-80px)] overflow-y-auto">
           {error && (
-            <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-bold flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-500"></span> {error}
+            <div className="p-4 mb-6 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700 font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-500"></span> {error}
             </div>
           )}
 
@@ -129,23 +132,21 @@ export default function TechnicianDashboardPage() {
           {activeTab === 'kpi' && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Performance Overview</h2>
-                <p className="text-slate-500 font-medium mt-1">Check your installation targets and pending field tasks.</p>
+                <h2 className="text-3xl font-black text-[#161D1A] tracking-tight">Performance Overview</h2>
+                <p className="text-stone-500 font-medium mt-1">Check your installation targets and pending field tasks.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white border-none p-6 rounded-3xl shadow-sm shadow-indigo-200/50 relative overflow-hidden group">
-                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full group-hover:scale-150 transition-transform duration-500 z-0"></div>
+                <div className="bg-white border border-[#E5ECE7] p-6 rounded-3xl shadow-xs relative overflow-hidden group">
                   <div className="relative z-10">
-                    <span className="text-xs uppercase font-extrabold text-indigo-500 tracking-wider">Assigned Installations</span>
-                    <div className="text-5xl font-black text-indigo-600 mt-2">{stats.assignedInstallations}</div>
+                    <span className="text-xs uppercase font-extrabold text-[#059669] tracking-wider">Assigned Installations</span>
+                    <div className="text-5xl font-black text-[#059669] mt-2">{stats.assignedInstallations}</div>
                   </div>
                 </div>
-                <div className="bg-white border-none p-6 rounded-3xl shadow-sm shadow-slate-200/50 relative overflow-hidden group">
-                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-slate-50 rounded-full group-hover:scale-150 transition-transform duration-500 z-0"></div>
+                <div className="bg-white border border-[#E5ECE7] p-6 rounded-3xl shadow-xs relative overflow-hidden group">
                   <div className="relative z-10">
-                    <span className="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Pending Tasks</span>
-                    <div className="text-5xl font-black text-slate-800 mt-2">{stats.pendingTasks}</div>
+                    <span className="text-xs uppercase font-extrabold text-stone-500 tracking-wider">Pending Tasks</span>
+                    <div className="text-5xl font-black text-[#161D1A] mt-2">{stats.pendingTasks}</div>
                   </div>
                 </div>
               </div>
@@ -156,46 +157,46 @@ export default function TechnicianDashboardPage() {
           {activeTab === 'projects' && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">My Active Assignments</h2>
-                <p className="text-slate-500 font-medium mt-1">Select a project to update your assigned items and upload proofs.</p>
+                <h2 className="text-3xl font-black text-[#161D1A] tracking-tight">My Active Assignments</h2>
+                <p className="text-stone-500 font-medium mt-1">Select a project to update your assigned items and upload proofs.</p>
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 {projects?.map((proj) => (
-                  <div key={proj.id} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                  <div key={proj.id} className="bg-white rounded-3xl p-6 shadow-xs border border-[#E5ECE7] hover:border-stone-400 transition-shadow">
                     <div className="flex justify-between items-start mb-6">
                       <div>
-                        <h3 className="text-xl font-bold text-slate-900">{proj.propertyName || "Untitled Project"}</h3>
-                        <p className="text-sm font-semibold text-slate-500 mt-1 flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {proj.locality || "No location provided"}</p>
+                        <h3 className="text-xl font-bold text-[#161D1A]">{proj.propertyName || "Untitled Project"}</h3>
+                        <p className="text-sm font-semibold text-stone-500 mt-1 flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {proj.locality || "No location provided"}</p>
                       </div>
                       <span className={clsx("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider", 
-                        proj.status === 'ordered' ? 'bg-blue-100 text-blue-800' : 'bg-indigo-100 text-indigo-800'
+                        proj.status === 'ordered' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/60' : 'bg-stone-100 text-stone-800'
                       )}>
                         {proj.status}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-slate-50 rounded-2xl p-4">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Customer</span>
-                        <span className="font-bold text-slate-700 text-sm">{proj.customerName || "N/A"}</span>
+                      <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-2xl p-4">
+                        <span className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Customer</span>
+                        <span className="font-bold text-stone-700 text-sm">{proj.customerName || "N/A"}</span>
                       </div>
-                      <div className="bg-slate-50 rounded-2xl p-4">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Start Date</span>
-                        <span className="font-bold text-slate-700 text-sm">{proj.startDate || "N/A"}</span>
+                      <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-2xl p-4">
+                        <span className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Start Date</span>
+                        <span className="font-bold text-stone-700 text-sm">{proj.startDate || "N/A"}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-slate-100 pt-6">
+                    <div className="flex items-center justify-between border-t border-[#E5ECE7] pt-6">
                       <div className="flex items-center gap-3 w-1/2">
-                        <span className="text-sm font-black text-slate-700">{proj.progress}%</span>
-                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                          <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${proj.progress}%` }} />
+                        <span className="text-sm font-black text-stone-700">{proj.progress}%</span>
+                        <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden">
+                          <div className="bg-[#84CC16] h-full rounded-full" style={{ width: `${proj.progress}%` }} />
                         </div>
                       </div>
                       <button
                         onClick={() => router.push(`/projects/${proj.id}/execution`)}
-                        className="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-black rounded-xl uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm shadow-indigo-200"
+                        className="px-5 py-2.5 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] text-xs font-black rounded-xl uppercase tracking-wider flex items-center gap-2 transition-all shadow-xs"
                       >
                         Open Execution <Play className="w-3.5 h-3.5 fill-current" />
                       </button>

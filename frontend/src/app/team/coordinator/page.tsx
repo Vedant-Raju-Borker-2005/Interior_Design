@@ -88,33 +88,31 @@ export default function CoordinatorDashboardPage() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* Top Navbar - Dark */}
-      <header className="h-16 bg-[#0a0f1d] text-white flex items-center justify-between px-6 shrink-0 shadow-md relative z-20">
+    <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A] flex flex-col font-sans">
+      {/* Top Navbar - Editorial Alabaster Glass */}
+      <header className="h-16 bg-white/95 backdrop-blur-md border-b border-[#E5ECE7] text-[#161D1A] flex items-center justify-between px-6 shrink-0 shadow-xs relative z-20">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2">
             <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/static/assets/catalog/logo/Logo.webp`} alt="Logo" className="w-8 h-8 object-contain" />
-            <span className="font-bold text-xl tracking-tight hidden sm:block">InteriorAI</span>
+            <span className="font-black text-xl tracking-tight hidden sm:block">InteriorAI</span>
           </Link>
-          <div className="h-5 w-px bg-slate-700 mx-2 hidden sm:block"></div>
-          <span className="text-sm font-medium text-slate-300">Project Team</span>
         </div>
         
         <div className="flex items-center gap-5">
-          <button className="text-slate-400 hover:text-white transition-colors relative">
+          <button className="text-stone-400 hover:text-stone-700 transition-colors relative">
             <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full"></span>
           </button>
           
-          <div className="flex items-center gap-3 pl-5 border-l border-slate-700">
-            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold border border-emerald-500/30">
+          <div className="flex items-center gap-3 pl-5 border-l border-[#E5ECE7]">
+            <div className="w-8 h-8 rounded-full bg-[#84CC16] text-[#0B0F0D] flex items-center justify-center text-xs font-black">
               {user?.name?.substring(0, 2).toUpperCase() || 'CO'}
             </div>
             <div className="hidden md:block text-sm">
-              <div className="font-bold text-slate-100 leading-none">{user?.name || 'Coordinator'}</div>
-              <div className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Coordinator</div>
+              <div className="font-bold text-stone-900 leading-none">{user?.name || 'Coordinator'}</div>
+              <div className="text-[10px] text-stone-500 font-medium mt-1 uppercase tracking-wider">Coordinator</div>
             </div>
-            <button onClick={() => { logout(); window.location.href = '/'; }} className="ml-2 text-slate-400 hover:text-white transition-colors" title="Logout">
+            <button onClick={() => { logout(); window.location.href = '/'; }} className="ml-2 text-stone-400 hover:text-rose-600 transition-colors" title="Logout">
               <LogOut className="w-4 h-4" />
             </button>
           </div>
@@ -122,8 +120,8 @@ export default function CoordinatorDashboardPage() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Dark */}
-        <aside className="w-64 bg-[#0d1425] shrink-0 border-r border-[#1e293b] flex flex-col">
+        {/* Sidebar - White Editorial Theme */}
+        <aside className="w-64 bg-white shrink-0 border-r border-[#E5ECE7] flex flex-col">
           <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -133,16 +131,16 @@ export default function CoordinatorDashboardPage() {
                   key={item.id}
                   onClick={() => setActiveTab(item.id as any)}
                   className={clsx(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 relative",
                     isActive 
-                      ? "bg-emerald-600/10 text-emerald-400" 
-                      : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                      ? "bg-[#F4F6F4] text-[#161D1A] font-extrabold shadow-xs" 
+                      : "text-stone-600 hover:bg-[#F4F6F4] hover:text-[#161D1A]"
                   )}
                 >
-                  <Icon className={clsx("w-5 h-5", isActive ? "text-emerald-500" : "text-slate-500")} />
+                  <Icon className={clsx("w-5 h-5", isActive ? "text-[#65A30D]" : "text-stone-400")} />
                   {item.label}
                   {isActive && (
-                    <div className="absolute left-0 w-1 h-8 bg-emerald-500 rounded-r-md"></div>
+                    <div className="absolute left-0 w-1.5 h-7 bg-[#84CC16] rounded-r-md"></div>
                   )}
                 </button>
               );
@@ -151,9 +149,9 @@ export default function CoordinatorDashboardPage() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-8">
+        <main className="flex-1 overflow-y-auto bg-[#FAFBF9] text-[#161D1A] p-8">
           {error && (
-            <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-bold flex items-center gap-2">
+            <div className="p-4 mb-6 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700 font-bold flex items-center gap-2">
               <AlertCircle className="w-4 h-4" /> {error}
             </div>
           )}
@@ -163,40 +161,40 @@ export default function CoordinatorDashboardPage() {
             <div className="animate-in fade-in duration-300 max-w-7xl mx-auto space-y-8">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900">Coordinator Dashboard</h1>
-                  <p className="text-slate-500 text-sm mt-1">Manage your pending tasks and assigned project status.</p>
+                  <h1 className="text-2xl font-black text-[#161D1A]">Coordinator Dashboard</h1>
+                  <p className="text-stone-500 text-sm mt-1">Manage your pending tasks and assigned project status.</p>
                 </div>
               </div>
 
               {/* KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                    <FolderKanban className="w-5 h-5 text-emerald-600" />
+                <div className="bg-white rounded-2xl p-5 border border-[#E5ECE7] shadow-xs flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0 border border-emerald-200/60">
+                    <FolderKanban className="w-5 h-5 text-[#059669]" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned Projects</p>
-                    <div className="text-2xl font-bold text-slate-900">{stats.assignedProjects}</div>
+                    <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">Assigned Projects</p>
+                    <div className="text-2xl font-black text-[#059669]">{stats.assignedProjects}</div>
                   </div>
                 </div>
                 
-                <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
-                    <CheckSquare className="w-5 h-5 text-indigo-600" />
+                <div className="bg-white rounded-2xl p-5 border border-[#E5ECE7] shadow-xs flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#F4F6F4] flex items-center justify-center shrink-0">
+                    <CheckSquare className="w-5 h-5 text-[#161D1A]" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending Tasks</p>
-                    <div className="text-2xl font-bold text-slate-900">{stats.pendingTasks}</div>
+                    <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">Pending Tasks</p>
+                    <div className="text-2xl font-black text-[#161D1A]">{stats.pendingTasks}</div>
                   </div>
                 </div>
                 
-                <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center shrink-0">
-                    <AlertCircle className="w-5 h-5 text-red-600" />
+                <div className="bg-white rounded-2xl p-5 border border-[#E5ECE7] shadow-xs flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center shrink-0 border border-rose-200">
+                    <AlertCircle className="w-5 h-5 text-rose-600" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Open Issues</p>
-                    <div className="text-2xl font-bold text-slate-900">{stats.vendorDelays}</div>
+                    <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">Open Issues</p>
+                    <div className="text-2xl font-black text-rose-700">{stats.vendorDelays}</div>
                   </div>
                 </div>
               </div>
@@ -282,12 +280,12 @@ export default function CoordinatorDashboardPage() {
                       <div className="flex items-center gap-3 w-1/2">
                         <span className="text-xs font-black text-slate-700">{proj.progress}%</span>
                         <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${proj.progress}%` }} />
+                          <div className="bg-[#84CC16] h-full rounded-full" style={{ width: `${proj.progress}%` }} />
                         </div>
                       </div>
                       <button
                         onClick={() => router.push(`/projects/${proj.id}/execution`)}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2"
+                        className="px-4 py-2 bg-[#84CC16] hover:bg-[#A3E635] text-[#0B0F0D] text-xs font-black rounded-lg transition-colors flex items-center gap-2 shadow-xs"
                       >
                         Open Execution <Play className="w-3 h-3 fill-current" />
                       </button>
@@ -318,7 +316,7 @@ export default function CoordinatorDashboardPage() {
                     <button
                       key={f}
                       onClick={() => setIssueFilter(f)}
-                      className={clsx('px-3 py-1.5 text-xs font-bold rounded-lg border transition-all', issueFilter === f ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300')}
+                      className={clsx('px-3 py-1.5 text-xs font-bold rounded-lg border transition-all', issueFilter === f ? 'bg-[#84CC16] text-[#0B0F0D] border-[#84CC16]' : 'bg-white text-slate-600 border-slate-200 hover:border-lime-300')}
                     >{f}</button>
                   ))}
                 </div>

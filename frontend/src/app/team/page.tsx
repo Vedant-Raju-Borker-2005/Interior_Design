@@ -14,7 +14,16 @@ export default function TeamWelcomePortal() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    const actRole = typeof window !== 'undefined' ? localStorage.getItem('active_role') || '' : '';
+    const currentRole = actRole || user?.role || '';
+    if (currentRole === 'team_manager') {
+      router.replace('/team/manager');
+    } else if (currentRole === 'team_coordinator') {
+      router.replace('/team/coordinator');
+    } else if (currentRole === 'team_technician') {
+      router.replace('/team/technician');
+    }
+  }, [user, router]);
 
   if (!mounted) return null;
 
@@ -52,25 +61,25 @@ export default function TeamWelcomePortal() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-16 relative overflow-hidden">
+    <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A] pb-16 relative overflow-hidden">
       {/* Decorative background elements */}
-      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-indigo-900 via-indigo-800 to-transparent opacity-90 z-0"></div>
-      <div className="absolute -top-24 -right-24 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse"></div>
-      <div className="absolute top-32 -left-24 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-[#0B0F0D] via-[#161D1A] to-transparent opacity-95 z-0"></div>
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-pulse"></div>
+      <div className="absolute top-32 -left-24 w-72 h-72 bg-lime-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-pulse" style={{ animationDelay: '2s' }}></div>
       
       <div className="relative z-10">
         <Navbar />
 
         <div className="max-w-6xl mx-auto px-4 pt-32 space-y-12">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-100 text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-md shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-[#A3E635] text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-md shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span>
               Workspace Access Control
             </div>
             <h1 className="text-5xl font-black text-white tracking-tight mb-6 drop-shadow-md">
               Welcome to the Team Portal
             </h1>
-            <p className="text-indigo-100 text-lg font-medium max-w-2xl mx-auto drop-shadow-sm leading-relaxed">
+            <p className="text-stone-300 text-lg font-medium max-w-2xl mx-auto drop-shadow-sm leading-relaxed">
               Select your assigned role to access your dedicated execution center. Your permissions determine which workspaces you can enter.
             </p>
           </div>
@@ -95,32 +104,31 @@ export default function TeamWelcomePortal() {
                 <div 
                   key={card.id}
                   className={clsx(
-                    'relative overflow-hidden rounded-3xl p-1 transition-all duration-500 flex flex-col h-full transform',
+                    'relative overflow-hidden rounded-3xl p-1 transition-all duration-300 flex flex-col h-full transform shadow-sm',
                     isEnabled 
-                      ? `bg-gradient-to-br from-${card.color}-400 to-${card.color}-600 shadow-xl shadow-${card.color}-500/20 hover:-translate-y-2 hover:shadow-2xl hover:shadow-${card.color}-500/30 group`
-                      : 'bg-slate-200 opacity-80 grayscale-[0.5]'
+                      ? 'bg-gradient-to-br from-[#161D1A] to-[#0B0F0D] hover:-translate-y-2 hover:shadow-xl group'
+                      : 'bg-stone-200 opacity-80 grayscale-[0.5]'
                   )}
                 >
-                  <div className="absolute inset-0 bg-white/40 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <div className="relative h-full bg-white rounded-[22px] p-8 flex flex-col items-center text-center z-10">
+                  <div className="relative h-full bg-white rounded-[22px] p-8 flex flex-col items-center text-center z-10 border border-[#E5ECE7]">
                     <div className={clsx(
-                      'w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-inner transition-transform duration-500',
-                      isEnabled ? `bg-gradient-to-br from-${card.color}-50 to-${card.color}-100 text-${card.color}-600 group-hover:scale-110` : 'bg-slate-100 text-slate-400'
+                      'w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-inner transition-transform duration-300',
+                      isEnabled ? 'bg-[#F4F6F4] text-[#161D1A] group-hover:scale-110 group-hover:text-[#059669]' : 'bg-stone-100 text-stone-400'
                     )}>
                       <Icon className="w-10 h-10" />
                     </div>
                     
-                    <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">{card.title}</h3>
-                    <p className="text-sm text-slate-500 flex-grow mb-10 leading-relaxed font-medium">{card.description}</p>
+                    <h3 className="text-2xl font-black text-[#161D1A] mb-3 tracking-tight">{card.title}</h3>
+                    <p className="text-sm text-stone-500 flex-grow mb-10 leading-relaxed font-medium">{card.description}</p>
                     
                     <button
                       onClick={() => isEnabled && router.push(card.route)}
                       disabled={!isEnabled}
                       className={clsx(
-                        'w-full py-4 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all mt-auto shadow-sm',
+                        'w-full py-4 px-6 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all mt-auto shadow-xs',
                         isEnabled 
-                          ? `bg-${card.color}-600 hover:bg-${card.color}-700 text-white hover:shadow-lg hover:shadow-${card.color}-500/30`
-                          : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                          ? 'bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D]'
+                          : 'bg-stone-100 text-stone-400 cursor-not-allowed border border-stone-200'
                       )}
                     >
                       {isEnabled ? (
