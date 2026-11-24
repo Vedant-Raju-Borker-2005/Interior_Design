@@ -2,7 +2,7 @@
 
 
 
-**InteriorAI** is an end-to-end AI-powered interior design and modular execution platform. It unifies 5 distinct stakeholder portals into a single web platform: Homeowners (B2C), Real-Estate Builders (B2B2C Enterprise), Furniture & Decor Vendors (B2B), Site Operations & Execution Teams, and Platform Administrators.
+**InteriorAI** is an end-to-end AI-powered interior design and modular execution platform. It unifies 6 distinct stakeholder portals into a single web platform: Homeowners (B2C), Real-Estate Builders (B2B2C Enterprise), Furniture & Decor Vendors (B2B), Site Operations & Execution Teams, Design Consultants, and Platform Administrators.
 
 
 
@@ -186,9 +186,15 @@ graph TD
 
 
 
-### 5. Admin Portal Flow
+### 5. Design Consultant Portal Flow
 
-1. **Admin Control Hub & Layout**: Main dashboard at `/admin` with unified sidebar navigation across 11 specialized sub-routes.
+1. **Dedicated Consultant Workspace (`/consultant`)**: Consultation desk designed in Editorial Alabaster with active leads queue, one-click Call/WhatsApp customer communication, quotation review link, and 4-stage lead progression (`ASSIGNED` $\rightarrow$ `CONTACTED` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `COMPLETED`).
+2. **Design Vibe & Material Reference Guide**: Built-in interactive drawer providing quick reference across all 4 signature vibes (`Modern`, `Scandinavian`, `Japandi`, `Indo-Minimalistic`) with wood laminate and upholstery recommendations.
+3. **Commission & Payout Transparency**: Real-time earnings summary, platform commission breakdown, and payout release tracking.
+
+### 6. Admin Portal Flow
+
+1. **Admin Control Hub & Layout**: Main dashboard at `/admin` featuring an Option B High-Density Executive Grid with tactile hover elevation across 10 functional modules, paired with an isolated, white contextual sidebar and an arrow-only (`←`) return button.
 
 2. **Modular Admin Sub-Pages**:
 

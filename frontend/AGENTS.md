@@ -34,7 +34,7 @@ The frontend is a single-page application built with Next.js 14 (App Router), Re
 
 * [`src/app/dashboard/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/dashboard/page.tsx): Customer active projects dashboard.
 
-* [`src/app/track/[projectId]/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/track/[projectId]/page.tsx): Consolidated customer progress cockpit with circular hero progress gauge (0–100%, 6 milestone stages with strictly zero dates/days), 7-stage item filter chips, dual-track status bars (Sourcing vs Site Installation), photo proof gallery with full-screen lightbox modal, and multi-photo snag reporting form.
+* [`src/app/track/[projectId]/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/track/[projectId]/page.tsx): Consolidated customer progress cockpit with circular hero progress gauge (0–100%, 6 milestone stages with strictly zero dates/days), 7-stage item filter chips, dual-track status bars (Sourcing vs Site Installation), 2-column balanced component technical specifications table, photo proof gallery with full-screen lightbox modal, and multi-photo snag reporting form.
 
 * [`src/app/track/[projectId]/execution/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/track/[projectId]/execution/page.tsx): Seamlessly redirects to the consolidated `/track/[projectId]` progress cockpit.
 

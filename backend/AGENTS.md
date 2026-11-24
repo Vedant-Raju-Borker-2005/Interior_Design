@@ -90,6 +90,7 @@ The backend is built with Python 3.10+, FastAPI, SQLAlchemy ORM, and SQLite data
   * Custom room types (`bedroom_3`–`bedroom_5`, `bathroom_2`–`bathroom_4`, `balcony`) map to normalized base categories (`bedroom_2`, `bathroom`, `living_room`) when querying products.
   * Products return individual compatibility flags: `is_color_match`, `is_material_match`, `is_fabric_match`, `is_price_match`.
   * Sorting ranks items by match quality first (Perfect Match $\rightarrow$ Exceeds Budget $\rightarrow$ Mismatched Material $\rightarrow$ Mismatched Color), then vendor pincode tier (local $\rightarrow$ nearby $\rightarrow$ national).
+* **Launcher**: Sole sanctioned developer batch launcher is `Click_Run.bat` in the workspace root. Legacy `run.bat` has been deprecated and permanently removed.
 * **Static Asset Pathing**:
   * Product images and floor plans are served under `/static/assets/`. Construct paths using `BACKEND_URL` environment variable.
 

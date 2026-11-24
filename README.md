@@ -14,7 +14,7 @@
 
   <strong>End-to-End AI-Powered Modular Interior Design & Execution Platform</strong><br>
 
-  <em>Unifying Homeowners (B2C), Enterprise Builders (B2B2C), Furniture Vendors (B2B), Site Operations & Admins</em>
+  <em>Unifying Homeowners (B2C), Enterprise Builders (B2B2C), Furniture Vendors (B2B), Site Operations, Design Consultants & Admins</em>
 
 </p>
 
@@ -42,7 +42,7 @@
 
 
 
-## 🌟 Key Features Across 5 Stakeholder Portals
+## 🌟 Key Features Across 6 Stakeholder Portals
 
 
 
@@ -176,9 +176,15 @@
 
 
 
-### 5. Admin Control Center
+### 5. Design Consultant Portal (`/consultant`)
 
-* **Unified Admin Portal Layout**: Super Admin console at `/admin` with persistent sidebar navigation across 12 specialized sub-routes.
+* **Consultation Desk & Inquiries Queue**: Dedicated consultation portal matching the Editorial Alabaster luxury aesthetic. Allows partner consultants to track incoming homeowner design requests, call clients, launch WhatsApp chats, and review live quotations.
+* **4 Signature Vibes Reference & Material Cheat Sheet**: Quick-access drawer providing clear specifications across Modern, Scandinavian, Japandi, and Indo-Minimalistic styles with wood laminate and upholstery recommendations.
+* **Performance & Payout Transparency**: Real-time commission ledger tracking earnings per completed consultation, platform share, and payout status.
+
+### 6. Admin Control Center
+
+* **Unified Admin Portal Layout & High-Density Grid**: Super Admin console at `/admin` featuring an Option B High-Density Executive Grid with tactile hover elevation across 10 core administrative modules, coupled with an isolated white contextual sidebar and arrow-only navigation return button.
 
 * **Dedicated Admin Control Sub-Pages**:
 
