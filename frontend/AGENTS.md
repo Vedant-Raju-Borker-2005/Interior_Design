@@ -118,6 +118,8 @@ The frontend is a single-page application built with Next.js 14 (App Router), Re
 
 * [`src/app/services/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/services/page.tsx): Special services checkout portal.
 
+* [`src/app/consultant/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/consultant/page.tsx): Consultant Partner workspace & consultation desk featuring homeowner leads queue, quick Call/WhatsApp links, quotation review links, lead progress stepper, and 4-vibe/materials reference cheat sheet.
+
 * [`src/app/support/page.tsx`](file:///d:/MyFiles/Interior_Design/frontend/src/app/support/page.tsx): Customer support tickets portal.
 
 

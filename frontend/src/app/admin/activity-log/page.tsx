@@ -6,20 +6,20 @@ import toast from 'react-hot-toast';
 import { Activity, RefreshCw } from 'lucide-react';
 
 const ACTION_COLOR: Record<string, string> = {
-  VENDOR_APPROVED: 'bg-emerald-50 text-emerald-700',
+  VENDOR_APPROVED: 'bg-emerald-50 text-[#059669]',
   VENDOR_REJECTED: 'bg-red-50 text-red-700',
   VENDOR_SUSPENDED: 'bg-orange-50 text-orange-700',
-  VENDOR_REACTIVATED: 'bg-blue-50 text-blue-700',
-  TEAM_MEMBER_APPROVED: 'bg-emerald-50 text-emerald-700',
+  VENDOR_REACTIVATED: 'bg-emerald-50 text-[#059669]',
+  TEAM_MEMBER_APPROVED: 'bg-emerald-50 text-[#059669]',
   TEAM_MEMBER_REJECTED: 'bg-red-50 text-red-700',
-  PROJECT_CREATED: 'bg-indigo-50 text-indigo-700',
-  PROJECT_CLOSED: 'bg-emerald-50 text-emerald-700',
+  PROJECT_CREATED: 'bg-[#161D1A] text-[#A3E635]',
+  PROJECT_CLOSED: 'bg-emerald-50 text-[#059669]',
   PROJECT_CANCELLED: 'bg-red-50 text-red-700',
-  PROJECT_EDITED: 'bg-blue-50 text-blue-700',
-  QUOTE_CREATED: 'bg-indigo-50 text-indigo-700',
-  QUOTE_APPROVED: 'bg-emerald-50 text-emerald-700',
+  PROJECT_EDITED: 'bg-slate-100 text-slate-700',
+  QUOTE_CREATED: 'bg-[#161D1A] text-[#A3E635]',
+  QUOTE_APPROVED: 'bg-emerald-50 text-[#059669]',
   CUSTOMER_SUSPENDED: 'bg-red-50 text-red-700',
-  CUSTOMER_REACTIVATED: 'bg-emerald-50 text-emerald-700',
+  CUSTOMER_REACTIVATED: 'bg-emerald-50 text-[#059669]',
 };
 
 export default function AdminActivityLogPage() {
@@ -44,18 +44,18 @@ export default function AdminActivityLogPage() {
     <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Activity Log</h1>
+          <h1 className="text-2xl font-bold text-[#161D1A] tracking-tight">Activity Log</h1>
           <p className="text-slate-500 mt-1">All admin actions across the platform</p>
         </div>
-        <button onClick={load} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+        <button onClick={load} className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E5ECE7] text-[#161D1A] rounded-lg text-sm font-semibold hover:bg-[#F4F6F4] transition-colors">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-[#E5ECE7] rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+            <thead className="bg-[#F4F6F4] border-b border-[#E5ECE7] text-slate-500">
               <tr>
                 <th className="px-5 py-4 font-medium">Action</th>
                 <th className="px-5 py-4 font-medium">Entity Type</th>
@@ -74,7 +74,7 @@ export default function AdminActivityLogPage() {
                 </td></tr>
               ) : (
                 logs.slice(0, 200).map((log: any) => (
-                  <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={log.id} className="hover:bg-[#FAFBF9]/80 transition-colors">
                     <td className="px-5 py-3">
                       <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium font-mono ${ACTION_COLOR[log.action] || 'bg-slate-100 text-slate-600'}`}>
                         {log.action}
@@ -84,7 +84,7 @@ export default function AdminActivityLogPage() {
                     <td className="px-5 py-3 font-mono text-xs text-slate-400">{log.entity_id?.substring(0, 12)}...</td>
                     <td className="px-5 py-3 text-xs">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold">{(log.user_name || 'S')[0]}</div>
+                        <div className="w-6 h-6 rounded-full bg-[#161D1A] flex items-center justify-center text-[#A3E635] text-xs font-bold">{(log.user_name || 'S')[0]}</div>
                         <span className="text-slate-700 font-medium">{log.user_name || 'System'}</span>
                       </div>
                     </td>

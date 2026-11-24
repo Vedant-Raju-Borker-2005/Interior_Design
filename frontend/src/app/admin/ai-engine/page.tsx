@@ -21,8 +21,8 @@ export default function AdminAIEnginePage() {
       subtitle: 'SC106-SC108',
       desc: 'Product recommendation engine using customer preference vectors and project context. Suggests furniture, finishes and packages based on historical data.',
       icon: Sparkles,
-      gradient: 'from-indigo-900 to-indigo-950',
-      accent: 'text-indigo-400',
+      gradient: 'from-[#0B0F0D] to-[#161D1A]',
+      accent: 'text-[#A3E635]',
       status: 'active',
       metrics: [
         { label: 'Total Products Indexed', value: loading ? '...' : (stats?.total_projects || 0) * 3 },
@@ -34,8 +34,8 @@ export default function AdminAIEnginePage() {
       subtitle: 'SC109-SC111',
       desc: 'Autonomous layout planning and space optimization agent. Generates room configurations from floor plan inputs and customer style preferences.',
       icon: Brain,
-      gradient: 'from-purple-900 to-purple-950',
-      accent: 'text-purple-400',
+      gradient: 'from-[#161D1A] to-[#1E2923]',
+      accent: 'text-[#10B981]',
       status: 'active',
       metrics: [
         { label: 'Spatial Solver', value: aiHealth?.status === 'healthy' ? 'IDS CP-SAT / Sweep' : 'On-demand' },
@@ -47,8 +47,8 @@ export default function AdminAIEnginePage() {
       subtitle: 'SC112-SC114',
       desc: 'Photorealistic AI engine using Gemini / Imagen 3 / SDXL simulation to generate 4-Wall studio renders based on floor plans and room dimensions.',
       icon: Cpu,
-      gradient: 'from-slate-800 to-slate-900',
-      accent: 'text-slate-400',
+      gradient: 'from-[#1C2621] to-[#0B0F0D]',
+      accent: 'text-[#E2B870]',
       status: 'active',
       metrics: [
         { label: 'Delayed Projects', value: loading ? '...' : stats?.delayed_projects || 0 },
@@ -69,8 +69,8 @@ export default function AdminAIEnginePage() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-          <Bot className="w-7 h-7 text-indigo-600" />
+        <h1 className="text-2xl font-bold text-[#161D1A] tracking-tight flex items-center gap-3">
+          <Bot className="w-7 h-7 text-[#059669]" />
           AI Engine
         </h1>
         <p className="text-slate-500 mt-1">Manage AI models, rules and intelligent workflows</p>
@@ -90,8 +90,8 @@ export default function AdminAIEnginePage() {
                   <h3 className="text-lg font-bold">{mod.title}</h3>
                   <span className="text-xs text-white/50 font-mono">{mod.subtitle}</span>
                 </div>
-                <span className="flex items-center gap-1.5 text-xs font-medium bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="flex items-center gap-1.5 text-xs font-medium bg-emerald-500/20 text-[#A3E635] px-2 py-1 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#A3E635] animate-pulse" />
                   Active
                 </span>
               </div>
@@ -111,14 +111,14 @@ export default function AdminAIEnginePage() {
 
       {/* Guardrails & Safety */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+        <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-2xl p-6 shadow-sm">
+          <h3 className="font-semibold text-[#161D1A] mb-4 flex items-center gap-2">
             <Zap className="w-5 h-5 text-amber-500" />
             AI Safety Guardrails
           </h3>
           <div className="space-y-3">
             {GUARDRAILS.map(g => (
-              <div key={g.label} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+              <div key={g.label} className="flex items-center justify-between py-2 border-b border-[#E5ECE7] last:border-0">
                 <span className="text-sm text-slate-700">{g.label}</span>
                 <div className={`flex items-center gap-1.5 text-xs font-medium ${g.color}`}>
                   {g.status === 'enforced' ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
@@ -129,9 +129,9 @@ export default function AdminAIEnginePage() {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <Brain className="w-5 h-5 text-indigo-500" />
+        <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-2xl p-6 shadow-sm">
+          <h3 className="font-semibold text-[#161D1A] mb-4 flex items-center gap-2">
+            <Brain className="w-5 h-5 text-[#059669]" />
             Model Configuration
           </h3>
           <div className="space-y-4">
@@ -145,7 +145,7 @@ export default function AdminAIEnginePage() {
             ].map(cfg => (
               <div key={cfg.label} className="flex items-center justify-between">
                 <span className="text-sm text-slate-500">{cfg.label}</span>
-                <span className="text-sm font-mono text-slate-800 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{cfg.value}</span>
+                <span className="text-sm font-mono text-slate-800 bg-white px-2 py-0.5 rounded border border-[#E5ECE7]">{cfg.value}</span>
               </div>
             ))}
           </div>
