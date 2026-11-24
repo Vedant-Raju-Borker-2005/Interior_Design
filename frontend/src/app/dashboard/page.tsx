@@ -139,15 +139,15 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white/95 rounded-2xl shadow-xs border border-[#E5ECE7] hover:border-[#c5a059]/60 overflow-hidden transition-all duration-200"
+      className="bg-white/95 rounded-2xl shadow-xs border border-[#E5ECE7] hover:border-[#84CC16]/60 overflow-hidden transition-all duration-200"
     >
       {/* Color accent bar */}
       <div className={clsx(
         'h-1.5',
-        project.status === 'done'       ? 'bg-gradient-to-r from-[#4E5B4B] to-[#71826D]' :
-        isExecution                     ? 'bg-gradient-to-r from-[#b85d3b] to-[#c5a059]' :
+        project.status === 'done'       ? 'bg-gradient-to-r from-[#A3E635] to-[#84CC16]' :
+        isExecution                     ? 'bg-gradient-to-r from-[#A3E635] to-[#84CC16]' :
         isOnboardingIncomplete          ? 'bg-gradient-to-r from-amber-400 to-amber-600' :
-        project.status === 'quoted'     ? 'bg-gradient-to-r from-[#b85d3b] to-[#c5a059]' :
+        project.status === 'quoted'     ? 'bg-gradient-to-r from-[#A3E635] to-[#84CC16]' :
         'bg-gradient-to-r from-stone-400 to-stone-500'
       )} />
 
@@ -208,9 +208,9 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
 
         {/* Execution phase highlight */}
         {isExecution && (
-          <div className="mb-4 flex items-center gap-2 bg-[#eef2ec] border border-[#d8e0d6] rounded-xl px-3 py-2">
-            <div className="w-2 h-2 rounded-full bg-[#4E5B4B] animate-pulse" />
-            <span className="text-xs font-bold text-[#4E5B4B]">
+          <div className="mb-4 flex items-center gap-2 bg-[#F7FEE7] border border-[#D9F99D] rounded-xl px-3 py-2">
+            <div className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse" />
+            <span className="text-xs bg-gradient-to-r from-stone-800 to-lime-700 bg-clip-text text-transparent font-black">
               {project.status === 'done' ? '✅ Handover Complete' : '🔨 Execution In Progress'}
             </span>
           </div>
@@ -244,9 +244,14 @@ function ProjectCard({ project, onDelete }: { project: any; onDelete: (id: strin
           ) : (isConverted || isExecution) ? (
             <Link
               href={`/track/${project.id}`}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#4E5B4B] hover:bg-[#3D473B] text-white text-xs font-bold transition shadow-xs"
+              className={clsx(
+                "w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition shadow-xs",
+                project.status === 'done'
+                  ? "bg-[#84CC16] hover:bg-[#A3E635] text-[#0B0F0D]"
+                  : "bg-gradient-to-r from-white via-lime-50 to-[#A3E635] text-[#0B0F0D] border border-[#84CC16]/50 hover:from-white hover:to-[#B5F442]"
+              )}
             >
-              <Activity className="w-4 h-4 text-white" />
+              <Activity className="w-4 h-4 text-[#0B0F0D]" />
               <span>Project Progress</span>
               <ArrowRight className="w-4 h-4" />
             </Link>

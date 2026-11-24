@@ -535,7 +535,7 @@ function PlanTraceContent() {
 
               <div className="flex flex-col gap-2">
                 <button type="button" onClick={generate} disabled={saving || !rooms.length}
-                  className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-extrabold flex items-center justify-center gap-2 disabled:opacity-50 shadow-md">
+                  className="w-full py-3 rounded-xl bg-[#84CC16] hover:bg-[#A3E635] text-[#0B0F0D] text-sm font-extrabold flex items-center justify-center gap-2 disabled:opacity-50 shadow-md">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                   {saving ? 'Building your 2D plan and 3D model…' : 'Generate 2D plan & 3D model'}
                 </button>

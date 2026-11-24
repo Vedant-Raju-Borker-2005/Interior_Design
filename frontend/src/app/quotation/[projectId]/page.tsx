@@ -177,43 +177,43 @@ export default function QuotationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A]">
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 pt-24 pb-16">
 
         {/* Back button */}
         {quotation?.status === 'approved' ? (
-          <button onClick={() => router.push(`/track/${projectId}`)} className="btn-ghost mb-6">
+          <button onClick={() => router.push(`/track/${projectId}`)} className="btn-ghost mb-6 text-stone-600 hover:text-stone-900">
             <ArrowLeft className="w-4 h-4" /> Back to Project Progress
           </button>
         ) : (
-          <button onClick={() => router.back()} className="btn-ghost mb-6">
+          <button onClick={() => router.back()} className="btn-ghost mb-6 text-stone-600 hover:text-stone-900">
             <ArrowLeft className="w-4 h-4" /> Back to Customise
           </button>
         )}
 
         {/* Project header */}
-        <div className="bg-gradient-to-r from-indigo-700 to-indigo-900 rounded-2xl p-8 text-white mb-6">
+        <div className="bg-gradient-to-r from-white via-[#F7FEE7]/90 to-[#A3E635] border border-[#E5ECE7] rounded-3xl p-8 text-[#161D1A] mb-6 shadow-sm">
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
-              <div className="flex items-center gap-2 text-indigo-300 text-sm mb-2">
-                <Building2 className="w-4 h-4" /> {project?.bhk_type}
-                <span className="mx-1">•</span>
-                <MapPin className="w-4 h-4" /> {project?.city}
+              <div className="inline-flex items-center gap-2 bg-[#161D1A]/5 backdrop-blur-xs px-3 py-1 rounded-full text-[#161D1A] text-xs font-bold mb-2">
+                <Building2 className="w-4 h-4 text-[#059669]" /> {project?.bhk_type}
+                <span className="mx-1 text-stone-400">•</span>
+                <MapPin className="w-4 h-4 text-[#059669]" /> {project?.city}
               </div>
-              <h1 className="text-3xl font-bold mb-1">{project?.property_name}</h1>
-              <p className="text-indigo-200 text-sm">Budget: {formatINR(project?.budget || 0)}</p>
+              <h1 className="text-3xl font-bold mb-1 font-serif tracking-tight text-[#161D1A]">{project?.property_name}</h1>
+              <p className="text-stone-600 text-sm font-semibold">Budget: {formatINR(project?.budget || 0)}</p>
             </div>
             <div className="text-right flex flex-col items-end gap-3">
               <div>
-                <div className="text-4xl font-black">{project?.rooms?.length || 0}</div>
-                <div className="text-indigo-300 text-sm">Rooms</div>
+                <div className="text-4xl font-black text-[#161D1A]">{project?.rooms?.length || 0}</div>
+                <div className="text-stone-600 text-sm font-bold">Rooms</div>
               </div>
               <button
                 onClick={() => setInquiryOpen(true)}
-                className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl transition border border-white/25 text-xs shadow-sm"
+                className="flex items-center gap-1.5 bg-[#161D1A] hover:bg-stone-800 text-white font-bold px-4 py-2.5 rounded-xl transition text-xs shadow-md"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" /> Talk to a Design Expert
+                <Sparkles className="w-3.5 h-3.5 text-[#FDE047] animate-pulse" /> Talk to a Design Expert
               </button>
             </div>
           </div>
@@ -224,13 +224,13 @@ export default function QuotationPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-card p-10 text-center"
+            className="bg-white rounded-3xl border border-[#E5ECE7] shadow-sm p-10 text-center"
           >
-            <div className="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <FileText className="w-10 h-10 text-indigo-600" />
+            <div className="w-20 h-20 bg-emerald-50 border border-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <FileText className="w-10 h-10 text-[#059669]" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-3">Generate Your Quotation</h2>
-            <p className="text-slate-500 mb-6 max-w-md mx-auto leading-relaxed">
+            <h2 className="text-2xl font-bold text-stone-900 mb-3 font-serif">Generate Your Quotation</h2>
+            <p className="text-stone-600 mb-6 max-w-md mx-auto leading-relaxed text-sm">
               We'll calculate the total cost including all your selected products,
               GST (18%), and generate a professional PDF you can download and share.
             </p>
@@ -242,8 +242,8 @@ export default function QuotationPage() {
                 { icon: CheckCircle2, text: 'Download as PDF' },
                 { icon: CheckCircle2, text: 'Share via WhatsApp' },
               ].map((f) => (
-                <div key={f.text} className="flex items-center gap-1.5 text-sm text-slate-600">
-                  <f.icon className="w-4 h-4 text-indigo-500" /> {f.text}
+                <div key={f.text} className="flex items-center gap-1.5 text-sm text-stone-600 font-medium">
+                  <f.icon className="w-4 h-4 text-[#059669]" /> {f.text}
                 </div>
               ))}
             </div>
@@ -252,12 +252,12 @@ export default function QuotationPage() {
               id="generate-quote-btn"
               onClick={handleGenerate}
               disabled={generating}
-              className="btn-primary text-base px-10 py-4"
+              className="inline-flex items-center justify-center gap-2.5 bg-[#84CC16] hover:bg-[#A3E635] text-[#0B0F0D] text-sm font-black px-8 py-3.5 rounded-full shadow-[0_4px_16px_rgba(132,204,22,0.3)] transition-all hover:scale-102 active:scale-98 disabled:opacity-60"
             >
               {generating ? (
                 <><div className="spinner w-5 h-5" /> Generating…</>
               ) : (
-                <><Sparkles className="w-5 h-5" /> Generate Instant Quotation</>
+                <><Sparkles className="w-5 h-5 text-[#0B0F0D]" /> Generate Instant Quotation</>
               )}
             </button>
           </motion.div>
@@ -265,29 +265,29 @@ export default function QuotationPage() {
           /* Quotation display */
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
 
-            {/* Summary cards — original vs discounted when a bulk discount applies (feedback 2.2) */}
+            {/* Summary cards */}
             <div className={`grid gap-4 mb-5 ${quotation.discount_amount > 0 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'}`}>
               {[
                 ...(quotation.discount_amount > 0 ? [
-                  { label: 'Original price', value: formatINR(quotation.original_total), color: 'text-slate-400 line-through' },
+                  { label: 'Original price', value: formatINR(quotation.original_total), color: 'text-stone-400 line-through' },
                   { label: 'Discount',       value: `− ${formatINR(quotation.discount_amount)}`, color: 'text-emerald-600' },
                 ] : []),
-                { label: quotation.discount_amount > 0 ? 'Taxable value' : 'Subtotal', value: formatINR(quotation.subtotal), color: 'text-slate-700' },
-                { label: 'GST (18%)', value: formatINR(quotation.gst),      color: 'text-amber-600' },
-                { label: 'TOTAL',     value: formatINR(quotation.total),    color: 'text-indigo-600' },
+                { label: quotation.discount_amount > 0 ? 'Taxable value' : 'Subtotal', value: formatINR(quotation.subtotal), color: 'text-stone-700' },
+                { label: 'GST (18%)', value: formatINR(quotation.gst),      color: 'text-amber-700' },
+                { label: 'TOTAL',     value: formatINR(quotation.total),    color: 'text-[#059669]' },
               ].map((card) => (
-                <div key={card.label} className="bg-white rounded-2xl p-5 shadow-card text-center">
-                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{card.label}</div>
-                  <div className={`text-2xl font-black ${card.color}`}>{card.value}</div>
+                <div key={card.label} className="bg-white rounded-2xl p-5 border border-[#E5ECE7] shadow-xs text-center">
+                  <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">{card.label}</div>
+                  <div className={`text-2xl font-black font-serif ${card.color}`}>{card.value}</div>
                 </div>
               ))}
             </div>
 
-            {/* Billed to — GST & customer details on the quotation (feedback 1.3) */}
-            <div className="bg-white rounded-2xl shadow-card px-5 py-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="text-xs text-slate-600 leading-relaxed">
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Billed to</span>
-                <span className="font-bold text-slate-800">
+            {/* Billed to */}
+            <div className="bg-white rounded-2xl border border-[#E5ECE7] shadow-xs px-5 py-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs text-stone-600 leading-relaxed">
+                <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-0.5">Billed to</span>
+                <span className="font-bold text-stone-900 text-sm">
                   {quotation.billing?.company_name || quotation.billing?.name || user?.name || 'Customer'}
                 </span>
                 {quotation.billing?.billing_address && <span className="block">{quotation.billing.billing_address}</span>}
@@ -297,23 +297,23 @@ export default function QuotationPage() {
                   </span>
                 )}
                 {quotation.gst_number ? (
-                  <span className="block font-mono font-semibold text-slate-700 mt-0.5">GSTIN {quotation.gst_number}</span>
+                  <span className="block font-mono font-semibold text-stone-700 mt-0.5">GSTIN {quotation.gst_number}</span>
                 ) : (
-                  <span className="block text-slate-400 mt-0.5">No GSTIN on this quotation</span>
+                  <span className="block text-stone-400 mt-0.5">No GSTIN on this quotation</span>
                 )}
               </div>
               {!['paid', 'converted'].includes(quotation.status) && (
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href={`/profile/billing?next=${encodeURIComponent(`/quotation/${projectId}`)}`}
-                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs"
+                    className="px-4 py-2 rounded-xl border border-stone-200 text-stone-700 hover:border-[#84CC16] hover:bg-stone-50 font-bold text-xs transition"
                   >
                     {quotation.gst_number ? 'Edit billing details' : 'Add GST details'}
                   </Link>
                   <button
                     onClick={handleGenerate}
                     disabled={generating}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs disabled:opacity-60"
+                    className="px-4 py-2 rounded-xl bg-[#161D1A] hover:bg-stone-800 text-white font-bold text-xs disabled:opacity-60 transition"
                     title="Billing details are frozen when a quotation is issued; regenerate to apply changes"
                   >
                     {generating ? 'Regenerating…' : 'Regenerate quotation'}
@@ -323,18 +323,18 @@ export default function QuotationPage() {
             </div>
 
             {/* ── Top Action Bar: Download + Share + Meta ── */}
-            <div className="bg-white rounded-2xl shadow-card px-5 py-4 mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="bg-white rounded-2xl border border-[#E5ECE7] shadow-xs px-5 py-4 mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               {/* Quotation metadata */}
-              <div className="flex items-center gap-4 text-xs text-slate-500">
+              <div className="flex items-center gap-4 text-xs text-stone-500">
                 <span>
-                  <span className="font-semibold text-slate-700">Quotation No:</span>{' '}
-                  <span className="font-mono font-bold text-indigo-700">
+                  <span className="font-semibold text-stone-700">Quotation No:</span>{' '}
+                  <span className="font-mono font-bold text-[#059669]">
                     {quotation.quotation_no || (quotation.quotation_id || quotation.id)?.substring(0, 8)?.toUpperCase()}
                   </span>
                 </span>
-                <span className="text-slate-300">|</span>
+                <span className="text-stone-300">|</span>
                 <span>
-                  <span className="font-semibold text-slate-700">Valid until:</span>{' '}
+                  <span className="font-semibold text-stone-700">Valid until:</span>{' '}
                   {quotation.valid_until}
                 </span>
               </div>
@@ -342,21 +342,21 @@ export default function QuotationPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleDownloadPDF}
-                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs"
+                  className="flex items-center gap-1.5 bg-[#161D1A] hover:bg-stone-800 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs"
                 >
                   <Download className="w-3.5 h-3.5" /> Download PDF
                 </button>
                 <button
                   onClick={handleWhatsAppShare}
-                  className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs"
+                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs"
                 >
                   <Share2 className="w-3.5 h-3.5" /> WhatsApp
                 </button>
                 <a
                   href={`mailto:?subject=Interior Design Quotation&body=${emailBody()}`}
-                  className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold px-4 py-2 rounded-xl transition border border-slate-200 shadow-sm text-xs"
+                  className="flex items-center gap-1.5 bg-white hover:bg-stone-50 text-stone-700 font-bold px-4 py-2 rounded-xl transition border border-[#E5ECE7] hover:border-[#84CC16] shadow-sm text-xs"
                 >
-                  <Mail className="w-3.5 h-3.5 text-indigo-600" /> Share via Email
+                  <Mail className="w-3.5 h-3.5 text-[#059669]" /> Share via Email
                 </a>
                 {quotation.status === 'approved' && (
                   <a
@@ -364,7 +364,7 @@ export default function QuotationPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     id="download-floorplan-btn"
-                    className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2 rounded-xl transition border border-indigo-200 text-xs"
+                    className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-[#059669] font-bold px-4 py-2 rounded-xl transition border border-emerald-200/80 text-xs"
                   >
                     <FileText className="w-3.5 h-3.5" /> Floor Plan PDF
                   </a>
@@ -373,13 +373,13 @@ export default function QuotationPage() {
             </div>
 
             {/* Line items table */}
-            <div className="bg-white rounded-2xl shadow-card overflow-hidden mb-6">
-              <div className="px-6 py-4 border-b border-slate-100">
-                <h3 className="font-bold text-slate-900">Scope of Work — Line Items</h3>
+            <div className="bg-white rounded-3xl border border-[#E5ECE7] shadow-xs overflow-hidden mb-6">
+              <div className="px-6 py-4 border-b border-[#E5ECE7]">
+                <h3 className="font-bold text-stone-900 font-serif">Scope of Work — Line Items</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <thead className="bg-[#F4F6F4] text-xs font-bold text-stone-600 uppercase tracking-wider border-b border-[#E5ECE7]">
                     <tr>
                       <th className="px-6 py-3 text-left">Room</th>
                       <th className="px-6 py-3 text-left">Item</th>
@@ -389,65 +389,65 @@ export default function QuotationPage() {
                       <th className="px-6 py-3 text-right">Total</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-stone-100">
                     {(quotation.line_items || []).length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-slate-400 text-sm">
+                        <td colSpan={6} className="px-6 py-8 text-center text-stone-400 text-sm">
                           No line items found. Please regenerate the quotation.
                         </td>
                       </tr>
                     ) : (
                       (quotation.line_items || []).map((item: any, i: number) => (
-                        <tr key={i} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 text-slate-600 whitespace-nowrap">{item.room}</td>
-                          <td className="px-6 py-4 font-medium text-slate-800">{item.name}</td>
-                          <td className="px-6 py-4 text-slate-500 capitalize">{item.category?.replace(/_/g, ' ')}</td>
-                          <td className="px-6 py-4 text-right text-slate-600">{item.qty}</td>
-                          <td className="px-6 py-4 text-right text-slate-600">₹{item.unit_price?.toLocaleString('en-IN')}</td>
-                          <td className="px-6 py-4 text-right font-semibold text-indigo-600">₹{item.total?.toLocaleString('en-IN')}</td>
+                        <tr key={i} className="hover:bg-[#FAFBF9] transition-colors">
+                          <td className="px-6 py-4 text-stone-600 whitespace-nowrap">{item.room}</td>
+                          <td className="px-6 py-4 font-semibold text-stone-800">{item.name}</td>
+                          <td className="px-6 py-4 text-stone-500 capitalize">{item.category?.replace(/_/g, ' ')}</td>
+                          <td className="px-6 py-4 text-right text-stone-600">{item.qty}</td>
+                          <td className="px-6 py-4 text-right text-stone-600">₹{item.unit_price?.toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4 text-right font-extrabold text-[#059669]">₹{item.total?.toLocaleString('en-IN')}</td>
                         </tr>
                       ))
                     )}
                   </tbody>
-                  <tfoot className="bg-indigo-50">
+                  <tfoot className="bg-emerald-50/70 border-t-2 border-[#E5ECE7]">
                     <tr>
-                      <td colSpan={5} className="px-6 py-4 font-bold text-slate-700 text-right">TOTAL (incl. 18% GST)</td>
-                      <td className="px-6 py-4 text-right font-black text-xl text-indigo-600">{formatINR(quotation.total)}</td>
+                      <td colSpan={5} className="px-6 py-4 font-extrabold text-stone-800 text-right">TOTAL (incl. 18% GST)</td>
+                      <td className="px-6 py-4 text-right font-black text-xl text-[#059669] font-serif">{formatINR(quotation.total)}</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
             </div>
 
-            {/* Approved / paid — next step is checkout, then full payment (feedback 1.11, 1.12) */}
+            {/* Approved / paid */}
             {['approved', 'paid', 'converted'].includes(quotation.status) && (
-              <div className={`rounded-2xl p-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                quotation.status === 'approved' ? 'bg-gradient-to-r from-indigo-600 to-indigo-800 text-white' : 'bg-emerald-50 border border-emerald-200'
+              <div className={`rounded-3xl p-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border ${
+                quotation.status === 'approved' ? 'bg-gradient-to-r from-[#0B0F0D] via-[#161D1A] to-[#1B2923] text-white border-emerald-950/20' : 'bg-emerald-50 border-emerald-200'
               }`}>
                 {quotation.status === 'approved' ? (
                   <>
                     <div>
-                      <h3 className="font-bold text-lg">Quotation approved</h3>
-                      <p className="text-indigo-200 text-sm">
-                        Confirm any special services, then pay {formatINR(quotation.total)} in full quoting <span className="font-mono font-bold text-white">{quotation.quotation_no}</span>.
+                      <h3 className="font-bold text-lg font-serif">Quotation approved</h3>
+                      <p className="text-stone-300 text-sm mt-0.5">
+                        Confirm any special services, then pay {formatINR(quotation.total)} in full quoting <span className="font-mono font-bold text-[#A3E635]">{quotation.quotation_no}</span>.
                       </p>
                     </div>
                     <Link href={`/checkout/${projectId}`}
-                      className="bg-white text-indigo-700 font-bold px-5 py-3 rounded-xl hover:bg-indigo-50 transition flex items-center gap-2 whitespace-nowrap text-sm">
+                      className="btn-lime px-6 py-3 font-extrabold text-xs flex items-center gap-2 whitespace-nowrap shadow-md">
                       <CreditCard className="w-4 h-4" /> Proceed to Checkout
                     </Link>
                   </>
                 ) : (
                   <>
                     <div>
-                      <h3 className="font-bold text-lg text-emerald-800 flex items-center gap-2"><CheckCircle2 className="w-5 h-5" /> Payment received</h3>
+                      <h3 className="font-bold text-lg text-emerald-900 font-serif flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-emerald-600" /> Payment received</h3>
                       <p className="text-emerald-700 text-sm">
                         {quotation.paid_at ? `Recorded on ${new Date(quotation.paid_at).toLocaleDateString('en-IN')}. ` : ''}
                         Your project is with our team for approval and supplier allocation.
                       </p>
                     </div>
                     <Link href={`/track/${projectId}`}
-                      className="bg-emerald-600 text-white font-bold px-5 py-3 rounded-xl hover:bg-emerald-700 transition whitespace-nowrap text-sm">
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-3 rounded-xl transition whitespace-nowrap text-sm shadow-sm">
                       Track project
                     </Link>
                   </>
@@ -458,14 +458,14 @@ export default function QuotationPage() {
             {/* Quotation Status & Approval Actions */}
             {!['approved', 'paid', 'converted'].includes(quotation.status) && (
               <>
-                <div className="bg-white rounded-2xl shadow-card p-6 mb-6 space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider">Quotation Decision</h3>
+                <div className="bg-white rounded-3xl border border-[#E5ECE7] shadow-xs p-6 mb-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#E5ECE7] pb-3">
+                    <h3 className="font-bold text-stone-900 text-xs uppercase tracking-wider">Quotation Decision</h3>
                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                      quotation.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                      quotation.status === 'approved' ? 'bg-emerald-100 text-emerald-800' :
                       quotation.status === 'rejected' ? 'bg-rose-100 text-rose-700' :
-                      quotation.status === 'under_revision' ? 'bg-amber-100 text-amber-700' :
-                      'bg-slate-100 text-slate-650'
+                      quotation.status === 'under_revision' ? 'bg-amber-100 text-amber-800' :
+                      'bg-stone-100 text-stone-700'
                     }`}>
                       Status: {quotation.status?.replace('_', ' ')}
                     </span>
@@ -487,20 +487,20 @@ export default function QuotationPage() {
                       </button>
                       <button
                         onClick={() => setShowRevModal(true)}
-                        className="px-6 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-150 font-bold rounded-xl text-xs transition"
+                        className="px-6 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 font-bold rounded-xl text-xs transition"
                       >
                         ✎ Request Changes / Revision
                       </button>
                     </div>
                   ) : (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <p className="text-xs text-slate-500 font-semibold">
-                        This quotation has been <span className="font-bold text-slate-700 uppercase">{quotation.status}</span>. Continue to checkout to confirm any special services and pay in full.
+                      <p className="text-xs text-stone-600 font-semibold">
+                        This quotation has been <span className="font-bold text-stone-900 uppercase">{quotation.status}</span>. Continue to checkout to confirm any special services and pay in full.
                       </p>
                       {quotation.status === 'approved' && (
                         <Link
                           href={`/checkout/${projectId}`}
-                          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white font-bold rounded-xl text-xs transition shadow-glow-indigo flex items-center gap-1.5 whitespace-nowrap"
+                          className="btn-lime px-5 py-2.5 font-bold text-xs flex items-center gap-1.5 whitespace-nowrap shadow-sm"
                         >
                           <CreditCard className="w-3.5 h-3.5" /> Proceed to Checkout
                         </Link>
@@ -511,17 +511,17 @@ export default function QuotationPage() {
 
                 {/* Revision History timeline */}
                 {revisions.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-card p-6 mb-6 space-y-4">
-                    <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider border-b border-slate-100 pb-3">Revision History</h3>
+                  <div className="bg-white rounded-3xl border border-[#E5ECE7] shadow-xs p-6 mb-6 space-y-4">
+                    <h3 className="font-bold text-stone-900 text-xs uppercase tracking-wider border-b border-[#E5ECE7] pb-3">Revision History</h3>
                     <div className="space-y-4 relative">
                       {revisions.map((rev: any, idx: number) => (
-                        <div key={rev.id} className="p-4 bg-slate-50 border border-slate-150 rounded-xl flex justify-between items-start text-xs shadow-sm">
+                        <div key={rev.id} className="p-4 bg-[#FAFBF9] border border-[#E5ECE7] rounded-2xl flex justify-between items-start text-xs shadow-2xs">
                           <div className="space-y-1">
-                            <div className="font-bold text-slate-800">Revision #{rev.revision_number}</div>
-                            <p className="text-slate-600 leading-relaxed italic">"Notes: {rev.customer_notes}"</p>
-                            <p className="text-[10px] text-slate-400 font-medium">Requested: {new Date(rev.created_at).toLocaleString()}</p>
+                            <div className="font-bold text-stone-900">Revision #{rev.revision_number}</div>
+                            <p className="text-stone-600 leading-relaxed italic">"Notes: {rev.customer_notes}"</p>
+                            <p className="text-[10px] text-stone-400 font-medium">Requested: {new Date(rev.created_at).toLocaleString()}</p>
                           </div>
-                          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 border border-indigo-200">
+                          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
                             {rev.status}
                           </span>
                         </div>
@@ -531,9 +531,9 @@ export default function QuotationPage() {
                 )}
 
                 {/* Inquiry CTA */}
-                <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white">
-                  <h3 className="font-bold text-xl mb-2">Ready to Proceed?</h3>
-                  <p className="text-indigo-200 text-sm mb-5">
+                <div className="bg-gradient-to-r from-white via-[#F7FEE7]/90 to-[#84CC16]/90 border border-[#E5ECE7] rounded-3xl p-6 text-[#161D1A] shadow-sm">
+                  <h3 className="font-bold text-xl mb-2 font-serif text-[#161D1A]">Ready to Proceed?</h3>
+                  <p className="text-stone-600 text-sm mb-5 font-medium">
                     Our design consultants will get in touch within 2 hours to walk you through the execution plan.
                   </p>
                   <div className="flex flex-wrap gap-3">
@@ -546,18 +546,18 @@ export default function QuotationPage() {
                         }
                       }}
                       id="proceed-inquiry-btn"
-                      className="flex items-center gap-2 bg-white text-indigo-600 font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition"
+                      className="flex items-center gap-2 bg-[#161D1A] text-white font-extrabold px-5 py-2.5 rounded-xl hover:bg-stone-800 transition shadow-md"
                     >
-                      <Sparkles className="w-4 h-4" /> Proceed to Execution
+                      <Sparkles className="w-4 h-4 text-[#FDE047]" /> Proceed to Execution
                     </button>
-                    <a href="tel:+919876543210" className="flex items-center gap-2 bg-white/20 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-white/30 transition">
-                      <Phone className="w-4 h-4" /> Call Us
+                    <a href="tel:+919876543210" className="flex items-center gap-2 bg-white hover:bg-stone-50 text-[#161D1A] font-extrabold px-5 py-2.5 rounded-xl transition border border-[#E5ECE7] shadow-xs">
+                      <Phone className="w-4 h-4 text-[#161D1A]" /> Call Us
                     </a>
-                    <a href="https://wa.me/919876543210" target="_blank" className="flex items-center gap-2 bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-green-600 transition">
-                      <MessageCircle className="w-4 h-4" /> WhatsApp
+                    <a href="https://wa.me/919876543210" target="_blank" className="flex items-center gap-2 bg-[#15803D] hover:bg-[#166534] text-white font-extrabold px-5 py-2.5 rounded-xl transition border border-emerald-600 shadow-xs">
+                      <MessageCircle className="w-4 h-4 text-white" /> WhatsApp
                     </a>
-                    <a href="mailto:hello@interiorai.in" className="flex items-center gap-2 bg-white/10 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-white/20 transition">
-                      <Mail className="w-4 h-4" /> Email
+                    <a href="mailto:hello@interiorai.in" className="flex items-center gap-2 bg-[#0F766E] hover:bg-[#115E59] text-white font-extrabold px-5 py-2.5 rounded-xl transition border border-teal-600 shadow-xs">
+                      <Mail className="w-4 h-4 text-white" /> Email
                     </a>
                   </div>
                 </div>
@@ -577,7 +577,7 @@ export default function QuotationPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowRevModal(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
             />
             
             {/* Modal */}
@@ -585,45 +585,45 @@ export default function QuotationPage() {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative z-10 p-6"
+              className="bg-[#FAFBF9] w-full max-w-md rounded-3xl border border-[#E5ECE7] shadow-2xl overflow-hidden relative z-10 p-6 text-stone-900"
             >
               <button
                 onClick={() => setShowRevModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+                className="absolute top-4 right-4 p-1.5 rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 transition"
               >
                 <X className="w-4 h-4" />
               </button>
 
-              <h2 className="text-xl font-extrabold text-slate-900 mb-2 flex items-center gap-2">
+              <h2 className="text-xl font-extrabold text-stone-900 mb-2 flex items-center gap-2 font-serif">
                 Request Quote Revision
               </h2>
-              <p className="text-slate-400 text-xs mb-4">Provide detailed feedback or changes needed in your furniture catalog rates.</p>
+              <p className="text-stone-500 text-xs mb-4">Provide detailed feedback or changes needed in your furniture catalog rates.</p>
 
               <form onSubmit={handleRevSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Revision Notes</label>
+                  <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">Revision Notes</label>
                   <textarea
                     required
                     placeholder="e.g. Please swap the velvet sofa for oak fabric, and reduce bedroom wardrobe quantity to 1."
                     value={revNotes}
                     onChange={(e) => setRevNotes(e.target.value)}
                     rows={4}
-                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 outline-none text-slate-800 focus:ring-1 focus:ring-indigo-500 resize-none font-medium"
+                    className="w-full text-xs border border-stone-200 rounded-xl p-2.5 outline-none text-stone-800 focus:border-[#84CC16] focus:ring-1 focus:ring-[#84CC16] resize-none font-medium bg-white"
                   />
                 </div>
 
-                <div className="flex gap-2 justify-end border-t border-slate-100 pt-3">
+                <div className="flex gap-2 justify-end border-t border-[#E5ECE7] pt-3">
                   <button
                     type="button"
                     onClick={() => setShowRevModal(false)}
-                    className="px-4 py-2 rounded-lg border border-slate-250 text-slate-500 text-xs font-bold hover:bg-slate-50 transition"
+                    className="px-4 py-2 rounded-xl border border-stone-200 text-stone-600 text-xs font-bold hover:bg-stone-100 transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submittingRev}
-                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-850 text-white text-xs font-bold rounded-lg transition"
+                    className="px-5 py-2 bg-[#161D1A] hover:bg-stone-800 disabled:opacity-60 text-white text-xs font-bold rounded-xl transition"
                   >
                     {submittingRev ? 'Submitting...' : 'Submit Request'}
                   </button>
@@ -638,11 +638,11 @@ export default function QuotationPage() {
       {quotation && (
         <button
           onClick={() => setInquiryOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center border border-white/10 group"
+          className="fixed bottom-6 right-6 z-40 bg-[#161D1A] hover:bg-stone-800 text-white p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center border border-[#A3E635]/40 group"
           title="Talk to a Design Expert"
         >
-          <Sparkles className="w-6 h-6 text-amber-400" />
-          <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-350 ease-out text-xs font-bold whitespace-nowrap">
+          <Sparkles className="w-6 h-6 text-[#FDE047]" />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-350 ease-out text-xs font-bold whitespace-nowrap text-[#A3E635]">
             Talk to Expert
           </span>
         </button>

@@ -566,9 +566,9 @@ export default function ControlledVisualizePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #dfd9d4 0%, #bed4e3 20%, #6062ed 60%, #322e6b 100%)' }}>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#FAFBF9] via-[#F4F6F4] to-[#ECFCCB]/30">
         <div className="text-center space-y-4 bg-white/40 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-xl">
-          <div className="w-16 h-16 border-4 border-indigo-600/10 border-t-indigo-600 rounded-full animate-spin mx-auto" />
+          <div className="w-16 h-16 border-4 border-[#84CC16]/20 border-t-[#84CC16] rounded-full animate-spin mx-auto" />
           <p className="text-slate-800 text-sm font-extrabold animate-pulse">Loading visualization studio…</p>
         </div>
       </div>
@@ -767,7 +767,7 @@ export default function ControlledVisualizePage() {
       <div className="flex-1 relative bg-[#F7F5F1] min-h-0">
         {!viewerReady && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#F7F5F1] text-slate-500 pointer-events-none">
-            <div className="w-12 h-12 border-4 border-indigo-600/10 border-t-indigo-600 rounded-full animate-spin" />
+            <div className="w-12 h-12 border-4 border-[#84CC16]/20 border-t-[#84CC16] rounded-full animate-spin" />
             <p className="text-sm font-bold">Building your 2D plan and 3D model…</p>
           </div>
         )}
