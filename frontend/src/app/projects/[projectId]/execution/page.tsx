@@ -500,26 +500,26 @@ export default function ProjectExecutionPage() {
   const coordinators = members.filter(m => m.role === 'COORDINATOR');
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">
+    <div className="min-h-screen bg-[#FAFBF9] text-slate-800 pb-16">
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 pt-24 space-y-8">
         {/* Back Button */}
         <button
           onClick={() => router.push(`/team`)}
-          className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 transition-colors text-sm font-semibold"
+          className="flex items-center gap-2 text-[#161D1A] hover:text-[#059669] transition-colors text-sm font-semibold"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </button>
 
         {/* Header */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Project Execution Center</span>
+              <span className="bg-[#161D1A] text-[#A3E635] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Project Execution Center</span>
               <span className="text-xs font-mono text-slate-500">ID: {projectId}</span>
             </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Project Execution Workspace</h1>
+            <h1 className="text-2xl font-black text-[#161D1A] tracking-tight">Project Execution Workspace</h1>
             <p className="text-xs text-slate-400">
               Coordinated workspace for site operations, sourcing milestones, and task checklists.
             </p>
@@ -528,22 +528,22 @@ export default function ProjectExecutionPage() {
           <div className="grid grid-cols-2 md:flex md:items-center gap-x-8 gap-y-2 text-xs">
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Customer</span>
-              <span className="font-extrabold text-slate-700">{customerDetail?.name || 'N/A'}</span>
+              <span className="font-extrabold text-[#161D1A]">{customerDetail?.name || 'N/A'}</span>
             </div>
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Location</span>
-              <span className="font-extrabold text-slate-700">{projectDetail?.city || 'N/A'} ({projectDetail?.pincode || 'N/A'})</span>
+              <span className="font-extrabold text-[#161D1A]">{projectDetail?.city || 'N/A'} ({projectDetail?.pincode || 'N/A'})</span>
             </div>
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Start Date</span>
-              <span className="font-extrabold text-slate-700">{projectDetail?.startDate || 'N/A'}</span>
+              <span className="font-extrabold text-[#161D1A]">{projectDetail?.startDate || 'N/A'}</span>
             </div>
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Project Status</span>
               <span className={`px-2.5 py-0.5 text-[10px] font-black rounded-full uppercase inline-block border mt-0.5 ${
-                projectDetail?.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                projectDetail?.status === 'Completed' ? 'bg-emerald-50 text-[#059669] border-emerald-200' :
                 projectDetail?.status === 'Delayed' ? 'bg-red-50 text-red-700 border-red-100' :
-                'bg-indigo-50 text-indigo-700 border-indigo-100'
+                'bg-emerald-50 text-[#059669] border-emerald-200'
               }`}>
                 {projectDetail?.status || 'On Track'}
               </span>
@@ -552,7 +552,7 @@ export default function ProjectExecutionPage() {
         </div>
 
         {/* Tab Controls */}
-        <div className="flex border-b border-slate-200 overflow-x-auto gap-6 whitespace-nowrap bg-white p-2.5 rounded-2xl shadow-sm border border-slate-100">
+        <div className="flex border-b border-[#E5ECE7] overflow-x-auto gap-3 whitespace-nowrap bg-[#FAFBF9] p-2.5 rounded-2xl shadow-sm border border-[#E5ECE7]">
           {[
             { id: 'sourcing', label: '📦 Sourcing & Milestones' },
             { id: 'tasks', label: '📝 Tasks & Checklists' },
@@ -566,10 +566,10 @@ export default function ProjectExecutionPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`pb-2.5 pt-1.5 px-3 text-xs font-extrabold border-b-2 transition-all outline-none rounded-lg ${
+                className={`py-2 px-3 text-xs font-extrabold transition-all outline-none rounded-xl ${
                   activeTab === tab.id
-                    ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                    ? 'bg-[#161D1A] text-[#A3E635] shadow-sm'
+                    : 'text-slate-500 hover:text-[#161D1A]'
                 }`}
               >
                 {tab.label}
@@ -587,35 +587,35 @@ export default function ProjectExecutionPage() {
             {activeTab === 'sourcing' && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 {/* ── TOP FULL-WIDTH HERO PROGRESS BANNER (NO DATES) ── */}
-                <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-50/60 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+                <div className="bg-white border border-[#E5ECE7] rounded-3xl p-6 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-50/40 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
                   <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-[#161D1A] text-[#A3E635] border border-[#161D1A]">
                           Real-Time Execution Tracker
                         </span>
-                        <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-100">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-emerald-50 text-[#059669] border border-emerald-200">
                           {progressMetrics.activeStage.label}
                         </span>
                       </div>
-                      <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                      <h2 className="text-xl font-black text-[#161D1A] tracking-tight">
                         {projectDetail?.property_name || 'Project Execution Milestones'}
                       </h2>
                     </div>
 
                     {/* Overall Progress Gauge */}
-                    <div className="flex items-center gap-4 bg-slate-50/80 border border-slate-100 p-3.5 rounded-2xl">
+                    <div className="flex items-center gap-4 bg-[#FAFBF9] border border-[#E5ECE7] p-3.5 rounded-2xl">
                       <div className="text-right">
                         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                           Overall Completion
                         </span>
-                        <span className="text-2xl font-black text-indigo-650 tracking-tight">
+                        <span className="text-2xl font-black text-[#059669] tracking-tight">
                           {progressMetrics.progressPct}%
                         </span>
                       </div>
-                      <div className="w-14 h-14 rounded-full border-4 border-slate-200 border-t-indigo-600 border-r-indigo-600 flex items-center justify-center font-black text-xs text-indigo-700 bg-white shadow-2xs">
+                      <div className="w-14 h-14 rounded-full border-4 border-slate-200 border-t-[#059669] border-r-[#059669] flex items-center justify-center font-black text-xs text-[#059669] bg-white shadow-2xs">
                         {progressMetrics.progressPct}%
                       </div>
                     </div>
@@ -623,12 +623,12 @@ export default function ProjectExecutionPage() {
 
                   {/* Progress Bar */}
                   <div className="mt-4 space-y-2">
-                    <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5">
+                    <div className="w-full bg-[#F4F6F4] h-3 rounded-full overflow-hidden p-0.5">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${progressMetrics.progressPct}%` }}
                         transition={{ duration: 0.8, ease: 'easeOut' }}
-                        className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-emerald-500 h-full rounded-full"
+                        className="bg-gradient-to-r from-[#161D1A] via-[#059669] to-[#A3E635] h-full rounded-full"
                       />
                     </div>
                     <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
@@ -636,7 +636,7 @@ export default function ProjectExecutionPage() {
                       <button
                         type="button"
                         onClick={() => setIsStagesExpanded(!isStagesExpanded)}
-                        className="text-indigo-600 hover:text-indigo-800 transition flex items-center gap-1 underline"
+                        className="text-[#059669] hover:text-[#047857] transition flex items-center gap-1 underline"
                       >
                         {isStagesExpanded ? 'Collapse Stages ▲' : 'View All 6 Stages ▼'}
                       </button>
@@ -650,7 +650,7 @@ export default function ProjectExecutionPage() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-6 pt-6 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
+                        className="mt-6 pt-6 border-t border-[#E5ECE7] grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
                       >
                         {progressMetrics.stages.map((stg, idx) => {
                           const isDone = stg.state === 'completed';
@@ -664,7 +664,7 @@ export default function ProjectExecutionPage() {
                                 isDone
                                   ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
                                   : isActive
-                                  ? 'bg-indigo-50/70 border-indigo-200 text-indigo-950 shadow-2xs'
+                                  ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950 shadow-2xs'
                                   : 'bg-slate-50/50 border-slate-200/60 text-slate-400'
                               )}
                             >
@@ -673,9 +673,9 @@ export default function ProjectExecutionPage() {
                                   0{idx + 1}
                                 </span>
                                 {isDone ? (
-                                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                  <CheckCircle2 className="w-4 h-4 text-[#059669]" />
                                 ) : isActive ? (
-                                  <Clock className="w-4 h-4 text-indigo-600 animate-spin-slow" />
+                                  <Clock className="w-4 h-4 text-[#059669] animate-spin-slow" />
                                 ) : (
                                   <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-300" />
                                 )}
@@ -724,10 +724,10 @@ export default function ProjectExecutionPage() {
                           <button onClick={() => setAssigningItem(null)} className="p-1 bg-red-400 text-white rounded"><X className="w-3.5 h-3.5" /></button>
                         </div>
                       ) : (
-                        <span className="font-bold text-indigo-650 flex items-center gap-1 xl:justify-end">
+                        <span className="font-bold text-[#059669] flex items-center gap-1 xl:justify-end">
                           {members.find(m => m.user.id === assignmentHistory.find(h => h.role === 'TECHNICIAN' && h.target_item_id === item.id)?.assignee?.id)?.user.name || 'Unassigned'}
                           {isManager && (
-                            <button onClick={() => { setAssigningItem(item.id); setAssigneeTechId(''); }} className="text-[10px] text-slate-400 hover:text-indigo-600 ml-1">✎</button>
+                            <button onClick={() => { setAssigningItem(item.id); setAssigneeTechId(''); }} className="text-[10px] text-slate-400 hover:text-[#059669] ml-1">✎</button>
                           )}
                         </span>
                       )}
@@ -742,7 +742,7 @@ export default function ProjectExecutionPage() {
                           fetchTrackingHistory(projectId, item.id);
                         }
                       }}
-                      className="text-[10px] text-indigo-600 hover:underline font-bold whitespace-nowrap"
+                      className="text-[10px] text-[#059669] hover:underline font-bold whitespace-nowrap"
                     >
                       {selectedItemHistory === item.id ? 'Hide History' : 'View History'}
                     </button>
@@ -752,13 +752,13 @@ export default function ProjectExecutionPage() {
                 <div className="space-y-4">
                   {/* History Logs panel */}
                   {selectedItemHistory && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 animate-in slide-in-from-top-2 duration-150">
-                      <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5"><Clock className="w-4 h-4 text-indigo-600" /> Sourcing Status History Log</h4>
+                    <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 space-y-2 animate-in slide-in-from-top-2 duration-150">
+                      <h4 className="text-xs font-bold text-[#161D1A] flex items-center gap-1.5"><Clock className="w-4 h-4 text-[#059669]" /> Sourcing Status History Log</h4>
                       <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
                         {(trackingHistory[selectedItemHistory] || []).map((h: any) => (
-                          <div key={h.id} className="text-[10.5px] border-b pb-1 flex justify-between font-semibold">
+                          <div key={h.id} className="text-[10.5px] border-b border-[#E5ECE7] pb-1 flex justify-between font-semibold">
                             <span>
-                              <span className="text-indigo-600 uppercase font-black mr-2">{h.status}</span>
+                              <span className="text-[#059669] uppercase font-black mr-2">{h.status}</span>
                               <span className="text-slate-500 font-medium">({h.remarks})</span>
                             </span>
                             <span className="text-slate-400 font-medium">{new Date(h.changedAt).toLocaleString()} by {h.updatedBy}</span>
@@ -777,16 +777,16 @@ export default function ProjectExecutionPage() {
             {/* TAB CONTENT: Tasks */}
             {activeTab === 'tasks' && (
               <div className="space-y-6 animate-in fade-in duration-200">
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Execution Tasks</h3>
+                      <h3 className="font-bold text-[#161D1A] text-sm uppercase tracking-wider">Execution Tasks</h3>
                       <p className="text-[10px] text-slate-400">Allocate installer tasks, field visits, or delivery verification.</p>
                     </div>
                     {!isTechnician && (
                       <button
                         onClick={() => setShowTaskForm(!showTaskForm)}
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
+                        className="px-3 py-1.5 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
                       >
                         <Plus className="w-4 h-4" /> Add Task
                       </button>
@@ -857,22 +857,22 @@ export default function ProjectExecutionPage() {
                           className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 outline-none font-medium resize-none"
                         />
                       </div>
-                      <button type="submit" className="w-full py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl shadow-sm hover:bg-indigo-700">Submit Task</button>
+                      <button type="submit" className="w-full py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] font-bold text-xs rounded-xl shadow-sm transition-colors">Submit Task</button>
                     </form>
                   )}
 
                   {/* Tasks List */}
                   <div className="space-y-3">
                     {tasks.map((task) => (
-                      <div key={task.id} className="p-4 border rounded-xl bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 font-semibold text-xs text-slate-700">
+                      <div key={task.id} className="p-4 border border-[#E5ECE7] rounded-xl bg-[#FAFBF9] flex flex-col md:flex-row justify-between items-start md:items-center gap-4 font-semibold text-xs text-slate-700">
                         <div>
                           <div className="flex items-center gap-2">
                             <span className={`text-[9px] border px-1.5 py-0.5 rounded font-black uppercase ${
                               task.priority === 'CRITICAL' ? 'bg-red-50 text-red-750 border-red-200' :
                               task.priority === 'HIGH' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                              'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              'bg-emerald-50 text-[#059669] border-emerald-200'
                             }`}>{task.priority}</span>
-                            <h4 className="font-extrabold text-slate-800 text-sm">{task.title}</h4>
+                            <h4 className="font-extrabold text-[#161D1A] text-sm">{task.title}</h4>
                           </div>
                           <p className="text-[11px] text-slate-400 mt-1 font-medium">{task.description || 'No description provided.'}</p>
                           <div className="flex gap-4 text-[10px] text-slate-450 font-bold uppercase tracking-wider mt-2.5">
@@ -883,16 +883,16 @@ export default function ProjectExecutionPage() {
                         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                           {task.status !== 'COMPLETED' ? (
                             <>
-                              <button onClick={() => handleUpdateTaskStatus(task.id, 'COMPLETED')} className="px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 rounded-lg text-[10px] font-black uppercase">✓ Complete</button>
+                              <button onClick={() => handleUpdateTaskStatus(task.id, 'COMPLETED')} className="px-2.5 py-1.5 bg-green-50 text-[#059669] border border-green-200 hover:bg-green-100 rounded-lg text-[10px] font-black uppercase">✓ Complete</button>
                               {task.status !== 'CANCELLED' && (
                                 <button onClick={() => handleUpdateTaskStatus(task.id, 'CANCELLED')} className="px-2.5 py-1.5 bg-red-55/60 text-red-700 border border-red-200 hover:bg-red-55 rounded-lg text-[10px] font-black uppercase">✕ Cancel</button>
                               )}
                             </>
                           ) : (
-                            <span className="text-green-600 font-extrabold uppercase text-[10px] bg-green-50 border border-green-150 px-2.5 py-1 rounded-full flex items-center gap-1">✓ Completed</span>
+                            <span className="text-[#059669] font-extrabold uppercase text-[10px] bg-green-50 border border-green-150 px-2.5 py-1 rounded-full flex items-center gap-1">✓ Completed</span>
                           )}
                           {!isTechnician && (
-                            <button onClick={() => handleDeleteTask(task.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => handleDeleteTask(task.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-[#E5ECE7] rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
                           )}
                         </div>
                       </div>
@@ -904,15 +904,15 @@ export default function ProjectExecutionPage() {
                 </div>
 
                 {/* Daily Checklist System */}
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Daily Execution Checklist</h3>
+                      <h3 className="font-bold text-[#161D1A] text-sm uppercase tracking-wider">Daily Execution Checklist</h3>
                       <p className="text-[10px] text-slate-400">Audit site progress, vendor deliveries, and contractor verifications.</p>
                     </div>
                     <button
                       onClick={() => setShowChecklistForm(!showChecklistForm)}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
+                      className="px-3 py-1.5 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
                     >
                       <Plus className="w-4 h-4" /> Log Checklist
                     </button>
@@ -943,26 +943,26 @@ export default function ProjectExecutionPage() {
                           className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 outline-none font-medium"
                         />
                       </div>
-                      <button type="submit" className="w-full py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 shadow-sm">Submit Checklist</button>
+                      <button type="submit" className="w-full py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] font-bold text-xs rounded-xl shadow-sm transition-colors">Submit Checklist</button>
                     </form>
                   )}
 
                   {/* Checklist display */}
                   <div className="space-y-4">
                     {checklists.map((cl) => (
-                      <div key={cl.id} className="p-4 border rounded-xl bg-slate-50/60 space-y-3 text-xs font-semibold text-slate-700">
-                        <div className="flex justify-between items-center border-b pb-2 border-slate-200">
-                          <span className="text-[10px] font-black uppercase text-indigo-650">{cl.checklistType.replace('_', ' ')}</span>
+                      <div key={cl.id} className="p-4 border border-[#E5ECE7] rounded-xl bg-[#FAFBF9] space-y-3 text-xs font-semibold text-slate-700">
+                        <div className="flex justify-between items-center border-b pb-2 border-[#E5ECE7]">
+                          <span className="text-[10px] font-black uppercase text-[#059669]">{cl.checklistType.replace('_', ' ')}</span>
                           <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Logged: {new Date(cl.createdAt).toLocaleDateString()} by {cl.completedBy || 'Staff'}</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {cl.items.map((item: any) => (
-                            <label key={item.id} className="flex items-center gap-2 cursor-pointer font-semibold text-xs text-slate-650 select-none bg-white p-2 border border-slate-100 rounded-lg hover:bg-slate-50/50">
+                            <label key={item.id} className="flex items-center gap-2 cursor-pointer font-semibold text-xs text-slate-650 select-none bg-white p-2 border border-[#E5ECE7] rounded-lg hover:bg-[#F4F6F4]">
                               <input
                                 type="checkbox"
                                 defaultChecked={item.isCompleted}
                                 onChange={() => handleToggleChecklist(item.id, item.isCompleted)}
-                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                className="w-4 h-4 rounded text-[#059669] focus:ring-[#A3E635] cursor-pointer"
                               />
                               <span className={item.isCompleted ? 'line-through text-slate-400 font-medium' : 'text-slate-700'}>{item.title}</span>
                             </label>
@@ -982,16 +982,16 @@ export default function ProjectExecutionPage() {
             {activeTab === 'visits' && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 {/* Site Visits Scheduling */}
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Site Visits Planner</h3>
+                      <h3 className="font-bold text-[#161D1A] text-sm uppercase tracking-wider">Site Visits Planner</h3>
                       <p className="text-[10px] text-slate-400">Plan physical visits, assign coordinators/technicians, and log outcomes.</p>
                     </div>
                     {!isTechnician && (
                       <button
                         onClick={() => setShowVisitForm(!showVisitForm)}
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
+                        className="px-3 py-1.5 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
                       >
                         <Plus className="w-4 h-4" /> Schedule Visit
                       </button>
@@ -1000,7 +1000,7 @@ export default function ProjectExecutionPage() {
 
                   {/* Visit scheduler form */}
                   {showVisitForm && (
-                    <form onSubmit={handleScheduleVisit} className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <form onSubmit={handleScheduleVisit} className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 space-y-3">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Visit Date</label>
@@ -1009,7 +1009,7 @@ export default function ProjectExecutionPage() {
                             required
                             value={visitDate}
                             onChange={(e) => setVisitDate(e.target.value)}
-                            className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 outline-none font-semibold text-slate-700"
+                            className="w-full text-xs bg-white border border-[#E5ECE7] rounded-lg p-2.5 outline-none font-semibold text-slate-700"
                           />
                         </div>
                         <div>
@@ -1017,7 +1017,7 @@ export default function ProjectExecutionPage() {
                           <select
                             value={visitAssignedTo}
                             onChange={(e) => setVisitAssignedTo(e.target.value)}
-                            className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 outline-none font-bold text-slate-650"
+                            className="w-full text-xs bg-white border border-[#E5ECE7] rounded-lg p-2.5 outline-none font-bold text-slate-650"
                           >
                             <option value="">Select Member...</option>
                             {members.map(m => (
@@ -1033,10 +1033,10 @@ export default function ProjectExecutionPage() {
                           value={visitNotes}
                           onChange={(e) => setVisitNotes(e.target.value)}
                           rows={2}
-                          className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 outline-none font-medium resize-none"
+                          className="w-full text-xs bg-white border border-[#E5ECE7] rounded-lg p-2.5 outline-none font-medium resize-none"
                         />
                       </div>
-                      <button type="submit" className="w-full py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 shadow-sm">Confirm Schedule</button>
+                      <button type="submit" className="w-full py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] font-bold text-xs rounded-xl shadow-sm transition-colors">Confirm Schedule</button>
                     </form>
                   )}
 
@@ -1054,7 +1054,7 @@ export default function ProjectExecutionPage() {
                             <span className="font-extrabold text-slate-800">{new Date(visit.visitDate).toLocaleString()}</span>
                           </div>
                           <p className="text-[11px] text-slate-400 font-medium">Notes: {visit.notes || 'N/A'}</p>
-                          {visit.outcome && <p className="text-[11px] text-indigo-700 font-extrabold">Outcome: {visit.outcome}</p>}
+                          {visit.outcome && <p className="text-[11px] text-[#059669] font-extrabold">Outcome: {visit.outcome}</p>}
                           <span className="text-[10px] text-slate-450 block pt-1 font-bold uppercase tracking-wider">Visitor: {visit.assignee?.name || 'Unassigned'}</span>
                         </div>
                         <div className="flex items-center gap-2 justify-end w-full md:w-auto">
@@ -1065,7 +1065,7 @@ export default function ProjectExecutionPage() {
                                   const out = prompt('Enter visit outcome summary:');
                                   if (out) handleUpdateVisitStatus(visit.id, 'COMPLETED', visit.notes, out);
                                 }}
-                                className="px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-250 rounded-lg text-[10px] font-black uppercase hover:bg-green-100"
+                                className="px-2.5 py-1.5 bg-green-50 text-[#059669] border border-green-250 rounded-lg text-[10px] font-black uppercase hover:bg-green-100"
                               >
                                 ✓ Complete
                               </button>
@@ -1087,15 +1087,15 @@ export default function ProjectExecutionPage() {
                 </div>
 
                 {/* Customer Communication logs */}
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Customer Communication Log</h3>
+                      <h3 className="font-bold text-[#161D1A] text-sm uppercase tracking-wider">Customer Communication Log</h3>
                       <p className="text-[10px] text-slate-400">Track and log call minutes, WhatsApp updates, and emails.</p>
                     </div>
                     <button
                       onClick={() => setShowCommForm(!showCommForm)}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
+                      className="px-3 py-1.5 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
                     >
                       <Plus className="w-4 h-4" /> Log Comm
                     </button>
@@ -1103,13 +1103,13 @@ export default function ProjectExecutionPage() {
 
                   {/* Log comm form */}
                   {showCommForm && (
-                    <form onSubmit={handleCreateComm} className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <form onSubmit={handleCreateComm} className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 space-y-3">
                       <div>
                         <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Communication Type</label>
                         <select
                           value={commType}
                           onChange={(e) => setCommType(e.target.value)}
-                          className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 outline-none font-bold text-slate-650"
+                          className="w-full text-xs bg-white border border-[#E5ECE7] rounded-lg p-2.5 outline-none font-bold text-[#161D1A]"
                         >
                           <option value="CALL">Phone Call</option>
                           <option value="WHATSAPP">WhatsApp Message</option>
@@ -1125,21 +1125,21 @@ export default function ProjectExecutionPage() {
                           value={commNotes}
                           onChange={(e) => setCommNotes(e.target.value)}
                           rows={2.5}
-                          className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 outline-none font-medium"
+                          className="w-full text-xs bg-white border border-[#E5ECE7] rounded-lg p-2.5 outline-none font-medium text-[#161D1A]"
                         />
                       </div>
-                      <button type="submit" className="w-full py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 shadow-sm">Save Log</button>
+                      <button type="submit" className="w-full py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] font-bold text-xs rounded-xl transition-colors shadow-sm">Save Log</button>
                     </form>
                   )}
 
                   {/* Logs list */}
                   <div className="space-y-3">
                     {comms.map((log) => (
-                      <div key={log.id} className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl flex items-start gap-3.5 text-xs font-semibold text-slate-700">
-                        <div className="p-2 bg-white border border-slate-100 rounded-lg text-indigo-600"><PhoneCall className="w-4 h-4" /></div>
+                      <div key={log.id} className="p-3.5 bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl flex items-start gap-3.5 text-xs font-semibold text-slate-700">
+                        <div className="p-2 bg-white border border-[#E5ECE7] rounded-lg text-[#059669]"><PhoneCall className="w-4 h-4" /></div>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black uppercase text-indigo-700">{log.type}</span>
+                            <span className="text-[10px] font-black uppercase text-[#059669]">{log.type}</span>
                             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{new Date(log.timestamp).toLocaleString()} by {log.createdBy}</span>
                           </div>
                           <p className="text-[11.5px] text-slate-600 font-medium leading-relaxed">{log.notes}</p>
@@ -1157,15 +1157,15 @@ export default function ProjectExecutionPage() {
             {/* TAB CONTENT: Issues */}
             {activeTab === 'issues' && (
               <div className="space-y-6 animate-in fade-in duration-200">
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Execution Issues & Escalations</h3>
+                      <h3 className="font-bold text-[#161D1A] text-sm uppercase tracking-wider">Execution Issues & Escalations</h3>
                       <p className="text-[10px] text-slate-400">Track vendor delays, product damages, and trigger escalation processes.</p>
                     </div>
                     <button
                       onClick={() => setShowIssueForm(!showIssueForm)}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
+                      className="px-3 py-1.5 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
                     >
                       <Plus className="w-4 h-4" /> Log Issue
                     </button>
@@ -1226,21 +1226,21 @@ export default function ProjectExecutionPage() {
                           className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 outline-none font-medium"
                         />
                       </div>
-                      <button type="submit" className="w-full py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 shadow-sm">Log Issue</button>
+                      <button type="submit" className="w-full py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] font-bold text-xs rounded-xl shadow-sm transition-colors">Log Issue</button>
                     </form>
                   )}
 
                   {/* Issues List */}
                   <div className="space-y-4">
                     {issues.map((issue) => (
-                      <div key={issue.id} className="p-4 border rounded-xl bg-slate-50/50 space-y-3 text-xs font-semibold text-slate-700">
+                      <div key={issue.id} className="p-4 border border-[#E5ECE7] rounded-xl bg-[#FAFBF9] space-y-3 text-xs font-semibold text-slate-700">
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-[10px] font-black uppercase text-indigo-700 mr-2">{issue.type.replace('_', ' ')}</span>
+                            <span className="text-[10px] font-black uppercase text-[#059669] mr-2">{issue.type.replace('_', ' ')}</span>
                             <span className={`px-2 py-0.5 text-[9px] font-bold border rounded-full uppercase ${
                               issue.priority === 'CRITICAL' ? 'bg-red-50 text-red-700 border-red-200' :
                               issue.priority === 'HIGH' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                              'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              'bg-emerald-50 text-[#059669] border-emerald-200'
                             }`}>{issue.priority}</span>
                           </div>
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
@@ -1256,7 +1256,7 @@ export default function ProjectExecutionPage() {
                             <p className="font-medium text-[11px]">{issue.resolution} (Resolved {new Date(issue.resolvedAt!).toLocaleDateString()})</p>
                           </div>
                         )}
-                        <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider pt-2 border-t border-slate-200/50">
+                        <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider pt-2 border-t border-[#E5ECE7]">
                           <span>Logged by: {issue.createdBy?.name || 'Staff'}</span>
                           <div className="flex gap-2">
                             <button
@@ -1267,7 +1267,7 @@ export default function ProjectExecutionPage() {
                                   fetchIssueComments(issue.id);
                                 }
                               }}
-                              className="text-indigo-650 hover:underline font-extrabold flex items-center gap-1"
+                              className="text-[#059669] hover:underline font-extrabold flex items-center gap-1"
                             >
                               <MessageSquare className="w-3.5 h-3.5" /> Comments ({comments[issue.id]?.length || 0})
                             </button>
@@ -1282,11 +1282,11 @@ export default function ProjectExecutionPage() {
 
                         {/* Threaded Comments */}
                         {expandedIssue === issue.id && (
-                          <div className="bg-white border rounded-xl p-3.5 space-y-3.5 animate-in slide-in-from-top-2 duration-150 mt-2">
-                            <h5 className="font-bold text-slate-800 text-[11px] border-b pb-1.5 flex items-center gap-1.5"><MessageSquare className="w-4 h-4 text-indigo-500" /> Issue Discussion Thread</h5>
+                          <div className="bg-white border border-[#E5ECE7] rounded-xl p-3.5 space-y-3.5 animate-in slide-in-from-top-2 duration-150 mt-2">
+                            <h5 className="font-bold text-[#161D1A] text-[11px] border-b border-[#E5ECE7] pb-1.5 flex items-center gap-1.5"><MessageSquare className="w-4 h-4 text-[#059669]" /> Issue Discussion Thread</h5>
                             <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
                               {(comments[issue.id] || []).map((c) => (
-                                <div key={c.id} className="text-[11px] border-b pb-1">
+                                <div key={c.id} className="text-[11px] border-b border-[#E5ECE7] pb-1">
                                   <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
                                     <span>{c.user.name}</span>
                                     <span>{new Date(c.createdAt).toLocaleString()}</span>
@@ -1304,9 +1304,9 @@ export default function ProjectExecutionPage() {
                                 placeholder="Add updates or site findings..."
                                 value={newComment}
                                 onChange={(e) => setNewComment(e.target.value)}
-                                className="flex-1 text-[11px] bg-slate-50 border rounded-lg p-2 outline-none focus:bg-white"
+                                className="flex-1 text-[11px] bg-[#FAFBF9] border border-[#E5ECE7] rounded-lg p-2 outline-none focus:bg-white text-[#161D1A]"
                               />
-                              <button onClick={() => handleAddComment(issue.id)} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"><Send className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => handleAddComment(issue.id)} className="p-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] rounded-lg"><Send className="w-3.5 h-3.5" /></button>
                             </div>
                           </div>
                         )}
@@ -1386,7 +1386,7 @@ export default function ProjectExecutionPage() {
                         className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2 text-slate-600 font-semibold"
                       />
                     </div>
-                    <button type="submit" disabled={isUploadingDoc} className="w-full py-2.5 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 flex justify-center items-center gap-1.5 shadow-sm">
+                    <button type="submit" disabled={isUploadingDoc} className="w-full py-2.5 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] font-bold text-xs rounded-xl flex justify-center items-center gap-1.5 shadow-sm transition-colors">
                       {isUploadingDoc ? 'Uploading...' : <><Upload className="w-4 h-4" /> Upload Document</>}
                     </button>
                   </form>
@@ -1394,11 +1394,11 @@ export default function ProjectExecutionPage() {
                   {/* Documents list */}
                   <div className="space-y-2">
                     {documents.map((doc) => (
-                      <div key={doc.id} className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs font-semibold text-slate-700">
+                      <div key={doc.id} className="p-3.5 bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl flex items-center justify-between text-xs font-semibold text-slate-700">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-white border border-slate-100 rounded-lg text-indigo-600"><FileText className="w-4.5 h-4.5" /></div>
+                          <div className="p-2 bg-white border border-[#E5ECE7] rounded-lg text-[#059669]"><FileText className="w-4.5 h-4.5" /></div>
                           <div>
-                            <h4 className="font-extrabold text-slate-800 text-xs">{doc.title}</h4>
+                            <h4 className="font-extrabold text-[#161D1A] text-xs">{doc.title}</h4>
                             <div className="flex gap-2.5 text-[9px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">
                               <span>Type: {doc.type}</span>
                               <span>•</span>
@@ -1411,13 +1411,13 @@ export default function ProjectExecutionPage() {
                             href={`http://localhost:8000${doc.url}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 text-slate-400 hover:text-indigo-600 bg-white border rounded-lg transition"
+                            className="p-2 text-slate-400 hover:text-[#059669] bg-white border border-[#E5ECE7] rounded-lg transition"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </a>
                           <button
                             onClick={() => handleDeleteDoc(doc.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 bg-white border rounded-lg transition"
+                            className="p-2 text-slate-400 hover:text-red-600 bg-white border border-[#E5ECE7] rounded-lg transition"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1435,26 +1435,26 @@ export default function ProjectExecutionPage() {
             {/* TAB CONTENT: Analytics */}
             {activeTab === 'analytics' && isManager && (
               <div className="space-y-6 animate-in fade-in duration-200">
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
+                <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-6">
                   <div>
-                    <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Operational SLA & Productivity Reports</h3>
+                    <h3 className="font-bold text-[#161D1A] text-sm uppercase tracking-wider">Operational SLA & Productivity Reports</h3>
                     <p className="text-[10px] text-slate-400">View project completion speeds, team performance KPIs, and delay rates.</p>
                   </div>
 
                   {/* Grid Reports */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-1">
+                    <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 space-y-1">
                       <span className="text-[9.5px] uppercase font-bold text-slate-400 tracking-wider block">Technician Productivity</span>
-                      <div className="text-3xl font-black text-slate-800">{analytics?.technicianProductivity ?? 0}%</div>
+                      <div className="text-3xl font-black text-[#161D1A]">{analytics?.technicianProductivity ?? 0}%</div>
                       <span className="text-[10px] text-slate-400 block font-semibold">% of assigned tasks closed on time</span>
                     </div>
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-1">
+                    <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 space-y-1">
                       <span className="text-[9.5px] uppercase font-bold text-slate-400 tracking-wider block">Issue Resolution SLA</span>
-                      <div className="text-3xl font-black text-slate-800">{analytics?.issueResolutionRate ?? 0}%</div>
+                      <div className="text-3xl font-black text-[#161D1A]">{analytics?.issueResolutionRate ?? 0}%</div>
                       <span className="text-[10px] text-slate-400 block font-semibold">% of logged construction issues resolved</span>
                     </div>
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-1 col-span-2">
-                      <span className="text-[9.5px] uppercase font-bold text-indigo-700 tracking-wider block flex items-center gap-1.5"><Award className="w-4 h-4 text-indigo-600" /> Handovers success metrics</span>
+                    <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 space-y-1 col-span-2">
+                      <span className="text-[9.5px] uppercase font-bold text-[#059669] tracking-wider block flex items-center gap-1.5"><Award className="w-4 h-4 text-[#059669]" /> Handovers success metrics</span>
                       <div className="text-xs text-slate-650 leading-relaxed font-semibold">
                         Average project delivery cycle takes <strong>34 operational days</strong>. Handover certificates upload SLA stands at <strong>{analytics?.slaMetrics ?? 0}% compliance</strong>.
                       </div>
@@ -1464,14 +1464,14 @@ export default function ProjectExecutionPage() {
                   {/* Monthly Trend mock visualizer */}
                   <div className="space-y-3">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Project Completion Trend</span>
-                    <div className="flex items-end justify-between h-32 pt-4 bg-slate-50/50 border border-dashed rounded-xl px-4">
+                    <div className="flex items-end justify-between h-32 pt-4 bg-[#FAFBF9] border border-dashed border-[#E5ECE7] rounded-xl px-4">
                       {(analytics?.monthlyTrends || []).map((t: any, idx: number) => (
                         <div key={idx} className="flex flex-col items-center flex-1">
                           <div
                             style={{ height: `${t.progress}%` }}
-                            className="w-8 bg-indigo-600 hover:bg-indigo-700 transition-all rounded-t-md relative group flex justify-center"
+                            className="w-8 bg-[#059669] hover:bg-[#047857] transition-all rounded-t-md relative group flex justify-center"
                           >
-                            <span className="absolute -top-6 text-[10px] bg-slate-800 text-white font-extrabold px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">{t.progress}%</span>
+                            <span className="absolute -top-6 text-[10px] bg-[#161D1A] text-white font-extrabold px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">{t.progress}%</span>
                           </div>
                           <span className="text-[10px] text-slate-400 font-bold uppercase mt-2">{t.month}</span>
                         </div>
@@ -1488,26 +1488,26 @@ export default function ProjectExecutionPage() {
           <div className="space-y-6">
 
             {/* Customer Details Card */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-4">
               <div>
-                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Customer Profile</h3>
+                <h3 className="font-bold text-[#161D1A] text-sm uppercase tracking-wider">Customer Profile</h3>
                 <p className="text-[10px] text-slate-400 font-medium">Primary contact details for this project.</p>
               </div>
 
-              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-2.5 text-xs font-semibold text-slate-700">
+              <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4 space-y-2.5 text-xs font-semibold text-slate-700">
                 <div className="flex justify-between">
                   <span className="text-slate-400">Name</span>
-                  <span className="text-slate-800 font-extrabold">{customerDetail?.name || 'N/A'}</span>
+                  <span className="text-[#161D1A] font-extrabold">{customerDetail?.name || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Phone</span>
-                  <span className="text-slate-800 font-extrabold">{customerDetail?.phone || 'N/A'}</span>
+                  <span className="text-[#161D1A] font-extrabold">{customerDetail?.phone || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Email</span>
                   <span className="text-slate-600 font-mono">{customerDetail?.email || 'N/A'}</span>
                 </div>
-                <div className="border-t border-slate-200/60 pt-2 font-semibold">
+                <div className="border-t border-[#E5ECE7] pt-2 font-semibold">
                   <span className="text-slate-400 block mb-1">Site Address</span>
                   <span className="text-slate-700 text-[11px] leading-relaxed block">{customerDetail?.address || 'N/A'}</span>
                 </div>
@@ -1515,19 +1515,19 @@ export default function ProjectExecutionPage() {
             </div>
 
             {/* Vendor Directory Card */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-4">
               <div>
-                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Vendor Directory</h3>
+                <h3 className="font-bold text-[#161D1A] text-sm uppercase tracking-wider">Vendor Directory</h3>
                 <p className="text-[10px] text-slate-400 font-medium">Assigned manufacturing & supply partners.</p>
               </div>
 
               <div className="space-y-3">
                 {vendorDetail && vendorDetail.length > 0 ? (
                   vendorDetail.map((vendor: any) => (
-                    <div key={vendor.id} className="border border-slate-150 rounded-xl p-3.5 bg-slate-50/50 space-y-2 text-xs font-semibold text-slate-700">
+                    <div key={vendor.id} className="border border-[#E5ECE7] rounded-xl p-3.5 bg-[#FAFBF9] space-y-2 text-xs font-semibold text-slate-700">
                       <div className="flex justify-between items-start font-extrabold">
-                        <span className="text-slate-800 text-[11px]">{vendor.businessName}</span>
-                        <span className="text-[10px] text-indigo-650 font-mono">{vendor.phone}</span>
+                        <span className="text-[#161D1A] text-[11px]">{vendor.businessName}</span>
+                        <span className="text-[10px] text-[#059669] font-mono">{vendor.phone}</span>
                       </div>
                       <div className="text-[10px] text-slate-450 font-bold uppercase tracking-wider">Assigned Items:</div>
                       <ul className="list-disc pl-4 text-[10px] text-slate-600 space-y-0.5 font-semibold">
@@ -1538,7 +1538,7 @@ export default function ProjectExecutionPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-4 text-slate-400 text-xs font-semibold border border-dashed border-slate-200 rounded-xl">
+                  <div className="text-center py-4 text-slate-400 text-xs font-semibold border border-dashed border-[#E5ECE7] rounded-xl">
                     No vendors assigned to project elements yet.
                   </div>
                 )}
@@ -1546,14 +1546,14 @@ export default function ProjectExecutionPage() {
             </div>
 
             {/* Photo Gallery & Upload */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-5">
+            <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-5">
               <div>
-                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Site Verification Photos</h3>
+                <h3 className="font-bold text-[#161D1A] text-sm uppercase tracking-wider">Site Verification Photos</h3>
                 <p className="text-[10px] text-slate-400 font-medium">Verify installation proof from the site.</p>
               </div>
 
               {/* Photo Upload Form */}
-              <form onSubmit={handleAddPhoto} className="space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+              <form onSubmit={handleAddPhoto} className="space-y-3 p-3.5 bg-[#FAFBF9] rounded-xl border border-[#E5ECE7]">
                 <div>
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Context / Room</label>
                   <input
@@ -1562,7 +1562,7 @@ export default function ProjectExecutionPage() {
                     placeholder="Master Bedroom, Kitchen, etc."
                     value={photoRoom}
                     onChange={(e) => setPhotoRoom(e.target.value)}
-                    className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2 outline-none font-semibold"
+                    className="w-full text-xs bg-white border border-[#E5ECE7] rounded-lg p-2 outline-none font-semibold text-[#161D1A]"
                   />
                 </div>
                 <div>
@@ -1570,7 +1570,7 @@ export default function ProjectExecutionPage() {
                   <select
                     value={photoCategory}
                     onChange={(e) => setPhotoCategory(e.target.value)}
-                    className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2 outline-none font-bold text-slate-600"
+                    className="w-full text-xs bg-white border border-[#E5ECE7] rounded-lg p-2 outline-none font-bold text-slate-600"
                   >
                     <option value="SITE_VISIT">Site Visit</option>
                     <option value="PRODUCTION_CHECK">Production Check</option>
@@ -1582,7 +1582,7 @@ export default function ProjectExecutionPage() {
                 <button
                   type="submit"
                   disabled={isUploadingPhoto}
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold rounded-xl transition-all shadow-sm flex justify-center items-center gap-1"
+                  className="w-full py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] text-[11px] font-bold rounded-xl transition-all shadow-sm flex justify-center items-center gap-1"
                 >
                   {isUploadingPhoto ? 'Uploading...' : <><Upload className="w-3.5 h-3.5" /> Add Sourcing Photo</>}
                 </button>
@@ -1591,7 +1591,7 @@ export default function ProjectExecutionPage() {
               {/* Photos List Grid */}
               <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-1">
                 {photos.map((photo) => (
-                  <div key={photo.id} className="relative group rounded-xl overflow-hidden shadow-sm aspect-video border border-slate-100 bg-slate-50">
+                  <div key={photo.id} className="relative group rounded-xl overflow-hidden shadow-sm aspect-video border border-[#E5ECE7] bg-[#FAFBF9]">
                     <img
                       src={photo.imageUrl}
                       alt={photo.roomName || 'Site Photo'}
@@ -1612,16 +1612,16 @@ export default function ProjectExecutionPage() {
             </div>
 
             {/* Project Team Members Brief */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-4">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Project Team</h3>
+                  <h3 className="font-bold text-[#161D1A] text-sm uppercase tracking-wider">Project Team</h3>
                   <p className="text-[10px] text-slate-400 font-medium">Assigned executors and field roles.</p>
                 </div>
                 {isManager && (
                   <button
                     onClick={() => router.push(`/projects/${projectId}/team`)}
-                    className="p-1.5 text-indigo-650 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100"
+                    className="p-1.5 text-[#059669] hover:bg-emerald-50 rounded-lg border border-transparent hover:border-emerald-200 transition-colors"
                   >
                     <Users className="w-4 h-4" />
                   </button>
@@ -1632,12 +1632,12 @@ export default function ProjectExecutionPage() {
                 {members.map((member) => (
                   <div key={member.id} className="flex items-center justify-between text-xs font-semibold text-slate-700">
                     <div className="flex items-center space-x-3">
-                      <div className="w-7.5 h-7.5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-650 font-black border border-indigo-200 text-xs">
+                      <div className="w-7.5 h-7.5 rounded-full bg-[#161D1A] flex items-center justify-center text-[#A3E635] font-black border border-[#161D1A] text-xs">
                         {member.user?.name ? member.user.name[0].toUpperCase() : 'U'}
                       </div>
                       <div>
-                        <div className="font-bold text-slate-800">{member.user?.name}</div>
-                        <div className="text-[9px] text-indigo-600 font-black uppercase tracking-wider">{member.role}</div>
+                        <div className="font-bold text-[#161D1A]">{member.user?.name}</div>
+                        <div className="text-[9px] text-[#059669] font-black uppercase tracking-wider">{member.role}</div>
                       </div>
                     </div>
                     {isManager && member.user.id !== authUser?.id && (

@@ -530,7 +530,8 @@ def sync_demo_data(db, force: bool = False):
         {"name": "Seeded Vendor", "phone": "+919900001111", "email": "vendor@example.com", "role": "vendor"},
         {"name": "Seeded Team Member", "phone": "+919900002222", "email": "team@example.com", "role": "team,team_manager,team_coordinator,team_technician"},
         {"name": "Seeded Admin", "phone": "+919900003333", "email": "admin@example.com", "role": "admin"},
-        {"name": "Seeded Enterprise", "phone": "+919900005555", "email": "enterprise@example.com", "role": "enterprise"}
+        {"name": "Seeded Enterprise", "phone": "+919900005555", "email": "enterprise@example.com", "role": "enterprise"},
+        {"name": "Seeded Consultant", "phone": "+919900006666", "email": "consultant@example.com", "role": "consultant"}
     ]
 
     users = {}

@@ -418,8 +418,8 @@ export default function TrackPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#FAFBF9] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#84CC16] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -432,18 +432,18 @@ export default function TrackPage() {
 
   if (project && !isConvertedByAdmin && user?.role === 'customer') {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">
+      <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A] pb-16">
         <Navbar />
         <div className="max-w-md mx-auto pt-32 text-center space-y-4">
-          <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-6 shadow-sm space-y-3">
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-7 shadow-sm space-y-3">
             <Clock className="w-12 h-12 text-amber-500 mx-auto animate-pulse" />
-            <h2 className="text-base font-black uppercase tracking-wider text-amber-800">Tracking Pending Admin Conversion</h2>
+            <h2 className="text-base font-black uppercase tracking-wider text-amber-800 font-serif">Tracking Pending Admin Conversion</h2>
             <p className="text-xs text-amber-700 font-semibold leading-relaxed">
               Your quotation is currently under review by our Admin Team. Progress tracking will unlock as soon as an Administrator converts your quotation into an active execution project.
             </p>
             <button
               onClick={() => router.push('/dashboard')}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shadow-sm"
+              className="px-5 py-2.5 bg-[#161D1A] hover:bg-stone-800 text-white font-bold text-xs rounded-xl transition shadow-sm"
             >
               Return to Dashboard
             </button>
@@ -454,7 +454,7 @@ export default function TrackPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-20">
+    <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A] pb-20">
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 space-y-8">
@@ -462,61 +462,61 @@ export default function TrackPage() {
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.push('/dashboard')}
-            className="inline-flex items-center gap-2 text-xs font-extrabold text-indigo-650 hover:text-indigo-800 transition py-1.5 px-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs"
+            className="inline-flex items-center gap-2 text-xs font-extrabold text-stone-700 hover:text-stone-900 transition py-1.5 px-3 rounded-xl bg-white border border-[#E5ECE7] shadow-2xs hover:border-[#84CC16]"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Dashboard
           </button>
           <div className="text-right">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400 block">
               Project Identifier
             </span>
-            <span className="text-xs font-mono font-bold text-slate-700">{project?.id?.slice(0, 13)}...</span>
+            <span className="text-xs font-mono font-bold text-stone-700">{project?.id?.slice(0, 13)}...</span>
           </div>
         </div>
 
         {/* ── TOP FULL-WIDTH HERO PROGRESS BANNER (NO DATES) ── */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-50/60 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+        <div className="bg-white border border-[#E5ECE7] rounded-3xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-50/50 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2.5">
-                <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-indigo-50 text-indigo-700 border border-indigo-100">
+                <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-emerald-50 text-emerald-800 border border-emerald-200/60">
                   Real-Time Execution Tracker
                 </span>
-                <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-100">
+                <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-[#161D1A] text-[#A3E635]">
                   {progressMetrics.activeStage.label}
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-black text-stone-900 font-serif tracking-tight">
                 {project?.property_name || 'My Interior Project'}
               </h1>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-semibold">
-                <span className="flex items-center gap-1.5 text-slate-700">
-                  <Building2 className="w-4 h-4 text-indigo-500" /> {project?.bhk_type || 'Custom BHK'}
+              <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500 font-semibold">
+                <span className="flex items-center gap-1.5 text-stone-700">
+                  <Building2 className="w-4 h-4 text-emerald-600" /> {project?.bhk_type || 'Custom BHK'}
                 </span>
                 <span>•</span>
-                <span className="flex items-center gap-1.5 text-slate-700">
-                  <MapPin className="w-4 h-4 text-indigo-500" /> {project?.city || 'Local Site'} ({project?.pincode || 'Pincode'})
+                <span className="flex items-center gap-1.5 text-stone-700">
+                  <MapPin className="w-4 h-4 text-emerald-600" /> {project?.city || 'Local Site'} ({project?.pincode || 'Pincode'})
                 </span>
                 <span>•</span>
-                <span className="text-slate-700">
-                  Budget: <strong className="font-extrabold text-slate-900">₹{(project?.budget || 0).toLocaleString('en-IN')}</strong>
+                <span className="text-stone-700">
+                  Budget: <strong className="font-extrabold text-stone-900 font-serif">₹{(project?.budget || 0).toLocaleString('en-IN')}</strong>
                 </span>
               </div>
             </div>
 
             {/* Overall Progress Gauge */}
-            <div className="flex items-center gap-5 sm:self-end md:self-center bg-slate-50/80 border border-slate-100 p-4 rounded-2xl">
+            <div className="flex items-center gap-5 sm:self-end md:self-center bg-[#FAFBF9] border border-[#E5ECE7] p-4 rounded-2xl shadow-2xs">
               <div className="text-right">
-                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                <span className="text-[10px] font-extrabold text-stone-400 uppercase tracking-wider block">
                   Overall Completion
                 </span>
-                <span className="text-3xl font-black text-indigo-650 tracking-tight">
+                <span className="text-3xl font-black text-[#059669] font-serif tracking-tight">
                   {progressMetrics.progressPct}%
                 </span>
               </div>
-              <div className="w-16 h-16 rounded-full border-4 border-slate-200 border-t-indigo-600 border-r-indigo-600 flex items-center justify-center font-black text-xs text-indigo-700 bg-white shadow-2xs">
+              <div className="w-16 h-16 rounded-full border-4 border-stone-200 border-t-[#84CC16] border-r-[#84CC16] flex items-center justify-center font-black text-xs text-stone-900 bg-white shadow-2xs">
                 {progressMetrics.progressPct}%
               </div>
             </div>
@@ -524,20 +524,20 @@ export default function TrackPage() {
 
           {/* Progress Bar */}
           <div className="mt-6 space-y-2">
-            <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5">
+            <div className="w-full bg-stone-100 h-3 rounded-full overflow-hidden p-0.5">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${progressMetrics.progressPct}%` }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
-                className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-emerald-500 h-full rounded-full"
+                className="bg-gradient-to-r from-emerald-500 via-[#84CC16] to-[#A3E635] h-full rounded-full"
               />
             </div>
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+            <div className="flex items-center justify-between text-[11px] font-bold text-stone-500">
               <span>Stage {progressMetrics.currentStageIndex + 1} of 6: {progressMetrics.activeStage.label}</span>
               <button
                 type="button"
                 onClick={() => setIsStagesExpanded(!isStagesExpanded)}
-                className="text-indigo-600 hover:text-indigo-800 transition flex items-center gap-1 underline"
+                className="text-stone-700 hover:text-[#059669] transition flex items-center gap-1 underline font-semibold"
               >
                 {isStagesExpanded ? 'Collapse Stages ▲' : 'View All 6 Stages ▼'}
               </button>
@@ -551,7 +551,7 @@ export default function TrackPage() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mt-6 pt-6 border-t border-slate-100 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"
+                className="mt-6 pt-6 border-t border-[#E5ECE7] grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"
               >
                 {progressMetrics.stages.map((stg, idx) => {
                   const isDone = stg.state === 'completed'
@@ -563,10 +563,10 @@ export default function TrackPage() {
                       className={clsx(
                         'p-3.5 rounded-2xl border transition-all flex flex-col justify-between space-y-2',
                         isDone
-                          ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                          ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
                           : isActive
-                          ? 'bg-indigo-50/70 border-indigo-200 text-indigo-950 shadow-2xs'
-                          : 'bg-slate-50/50 border-slate-200/60 text-slate-400'
+                          ? 'bg-[#FAFBF9] border-2 border-[#84CC16] text-stone-900 ring-2 ring-[#84CC16]/20 shadow-2xs'
+                          : 'bg-white border-[#E5ECE7] text-stone-400'
                       )}
                     >
                       <div className="flex items-center justify-between">
@@ -576,9 +576,9 @@ export default function TrackPage() {
                         {isDone ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                         ) : isActive ? (
-                          <Clock className="w-4 h-4 text-indigo-600 animate-spin-slow" />
+                          <Clock className="w-4 h-4 text-[#84CC16] animate-spin-slow" />
                         ) : (
-                          <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-300" />
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-stone-200" />
                         )}
                       </div>
                       <div>
@@ -603,24 +603,24 @@ export default function TrackPage() {
             {/* View State Router: Overview vs Component Details vs Issue Snag Form */}
             {view === 'component' && selectedComp ? (
               /* Component Tracking Details View */
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+              <div className="bg-white border border-[#E5ECE7] rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
                 {/* Header breadcrumb & quick actions */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center justify-between border-b border-[#E5ECE7] pb-4">
                   <button
                     onClick={() => setView('overview')}
-                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-indigo-650 hover:text-indigo-800 transition"
+                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-stone-700 hover:text-stone-900 transition"
                   >
                     <ArrowLeft className="w-4 h-4" /> Back to Components List
                   </button>
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-black uppercase tracking-wider bg-indigo-50 text-indigo-700">
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-black uppercase tracking-wider bg-[#161D1A] text-[#A3E635]">
                       {selectedComp.component_id || 'CMP-SPEC'}
                     </span>
                     <button
                       onClick={() => handleOpenSnag(selectedComp)}
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 transition border border-rose-100"
                     >
-                      <AlertTriangle className="w-3.5 h-3.5" /> Report Snag
+                      Report Snag
                     </button>
                   </div>
                 </div>
@@ -644,7 +644,7 @@ export default function TrackPage() {
                         'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace'
                       }
                       alt={selectedComp.item_name}
-                      className="w-full h-full object-cover rounded-2xl border border-slate-100 shadow-2xs group-hover:brightness-95 transition"
+                      className="w-full h-full object-cover rounded-2xl border border-[#E5ECE7] shadow-2xs group-hover:brightness-95 transition"
                     />
                     <div className="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
                       <Eye className="w-4 h-4" /> Click to Zoom
@@ -653,16 +653,16 @@ export default function TrackPage() {
 
                   <div className="space-y-3 flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-500 bg-slate-100 uppercase tracking-wider">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-stone-600 bg-stone-100 uppercase tracking-wider">
                         {selectedComp.room_name?.replace('_', ' ') || 'General'}
                       </span>
                       {selectedComp.category && (
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
                           • {selectedComp.category}
                         </span>
                       )}
                     </div>
-                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    <h2 className="text-xl sm:text-2xl font-black text-stone-900 font-serif tracking-tight">
                       {selectedComp.item_name}
                     </h2>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -671,29 +671,29 @@ export default function TrackPage() {
                           'px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border',
                           (selectedComp.status || '').toLowerCase().includes('instal') ||
                             (selectedComp.status || '').toLowerCase().includes('done')
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                             : (selectedComp.status || '').toLowerCase().includes('disp') ||
                               (selectedComp.status || '').toLowerCase().includes('deliv')
-                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-amber-50 text-amber-800 border-amber-200'
                         )}
                       >
                         Status: {selectedComp.status || 'Ordered'}
                       </span>
                       {selectedComp.vendor_name && (
-                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-[#FAFBF9] text-stone-700 border border-[#E5ECE7]">
                           Supplier: {selectedComp.vendor_name}
                         </span>
                       )}
                       {selectedComp.assigned_technician && (
-                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-stone-100 text-stone-700">
                           Technician: {selectedComp.assigned_technician}
                         </span>
                       )}
                     </div>
                     {selectedComp.remarks && (
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-600">
-                        <strong className="font-bold text-slate-800">Technician Remarks:</strong>{' '}
+                      <div className="p-3 bg-[#FAFBF9] rounded-xl border border-[#E5ECE7] text-xs text-stone-600">
+                        <strong className="font-bold text-stone-800">Technician Remarks:</strong>{' '}
                         {selectedComp.remarks}
                       </div>
                     )}
@@ -701,19 +701,19 @@ export default function TrackPage() {
                 </div>
 
                 {/* ── DUAL-TRACK STATUS PROGRESSION BARS ── */}
-                <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/70 space-y-5">
+                <div className="p-5 rounded-2xl bg-[#FAFBF9] border border-[#E5ECE7] space-y-5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                      <Truck className="w-3.5 h-3.5 text-indigo-600" /> Dual-Track Sourcing & Site Execution Bar
+                    <span className="text-[11px] font-black uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-[#059669]" /> Dual-Track Sourcing & Site Execution Bar
                     </span>
-                    <span className="text-[10px] text-slate-400 font-bold">Synchronized with supplier & site ops</span>
+                    <span className="text-[10px] text-stone-400 font-bold">Synchronized with supplier & site ops</span>
                   </div>
 
                   {/* Track 1: Sourcing / Factory Fulfillment */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between text-[10px] font-extrabold text-stone-500 uppercase tracking-wider">
                       <span>1. Supplier & Factory Track</span>
-                      <span className="text-indigo-600">
+                      <span className="text-[#059669] font-bold">
                         {dualTrackStatus.sourcingStep === 4
                           ? 'Dispatched from Factory'
                           : `Step ${dualTrackStatus.sourcingStep} of 4`}
@@ -740,8 +740,8 @@ export default function TrackPage() {
                               isDone
                                 ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
                                 : isCurrent
-                                ? 'bg-indigo-50/80 border-indigo-200 text-indigo-950 shadow-2xs'
-                                : 'bg-white border-slate-200/60 text-slate-400'
+                                ? 'bg-white border-2 border-[#84CC16] text-stone-900 ring-2 ring-[#84CC16]/20 shadow-2xs'
+                                : 'bg-white border-[#E5ECE7] text-stone-400'
                             )}
                           >
                             <div className="flex items-center justify-between mb-1">
@@ -749,9 +749,9 @@ export default function TrackPage() {
                               {isDone ? (
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                               ) : isCurrent ? (
-                                <Clock className="w-3.5 h-3.5 text-indigo-600 animate-spin-slow" />
+                                <Clock className="w-3.5 h-3.5 text-[#84CC16] animate-spin-slow" />
                               ) : (
-                                <div className="w-2.5 h-2.5 rounded-full border border-slate-300" />
+                                <div className="w-2.5 h-2.5 rounded-full border border-stone-300" />
                               )}
                             </div>
                             <div className="text-[11px] font-black leading-tight">{st.label}</div>
@@ -763,10 +763,10 @@ export default function TrackPage() {
                   </div>
 
                   {/* Track 2: Site Installation & Customer Verification */}
-                  <div className="space-y-2 pt-2 border-t border-slate-200/50">
-                    <div className="flex items-center justify-between text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  <div className="space-y-2 pt-2 border-t border-[#E5ECE7]">
+                    <div className="flex items-center justify-between text-[10px] font-extrabold text-stone-500 uppercase tracking-wider">
                       <span>2. Site Installation & Handover Track</span>
-                      <span className="text-emerald-600">
+                      <span className="text-emerald-700 font-bold">
                         {dualTrackStatus.installStep === 3
                           ? 'Completed & Handed Over'
                           : dualTrackStatus.installStep === 0
@@ -792,8 +792,8 @@ export default function TrackPage() {
                               isDone
                                 ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
                                 : isCurrent
-                                ? 'bg-amber-50/80 border-amber-200 text-amber-950 shadow-2xs'
-                                : 'bg-white border-slate-200/60 text-slate-400'
+                                ? 'bg-white border-2 border-[#84CC16] text-stone-900 ring-2 ring-[#84CC16]/20 shadow-2xs'
+                                : 'bg-white border-[#E5ECE7] text-stone-400'
                             )}
                           >
                             <div className="flex items-center justify-between mb-1">
@@ -803,7 +803,7 @@ export default function TrackPage() {
                               ) : isCurrent ? (
                                 <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin-slow" />
                               ) : (
-                                <div className="w-2.5 h-2.5 rounded-full border border-slate-300" />
+                                <div className="w-2.5 h-2.5 rounded-full border border-stone-300" />
                               )}
                             </div>
                             <div className="text-[11px] font-black leading-tight">{st.label}</div>
@@ -819,7 +819,7 @@ export default function TrackPage() {
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                      <Camera className="w-3.5 h-3.5 text-indigo-500" /> Component Proof & Inspection Photos
+                      <Camera className="w-3.5 h-3.5 text-[#059669]" /> Component Proof & Inspection Photos
                     </h3>
                     <span className="text-[10px] font-bold text-slate-400">
                       {compProofPhotos.length} Site Photo{compProofPhotos.length !== 1 ? 's' : ''}
@@ -862,60 +862,77 @@ export default function TrackPage() {
 
                 {/* ── TECHNICAL SPECIFICATIONS & DETAILS ── */}
                 <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
-                    Component Specifications
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-[#059669]" /> Component Specifications
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
-                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
-                        Room Location
-                      </span>
-                      <span className="font-extrabold text-slate-800 mt-0.5 block truncate capitalize">
-                        {selectedComp.room_name?.replace('_', ' ') || 'Living Room'}
-                      </span>
-                    </div>
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
-                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
-                        Material / Finish
-                      </span>
-                      <span className="font-extrabold text-slate-800 mt-0.5 block truncate">
-                        {selectedComp.material_finish || selectedComp.finish || 'Factory Engineered Wood'}
-                      </span>
-                    </div>
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
-                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
-                        Dimensions
-                      </span>
-                      <span className="font-extrabold text-slate-800 mt-0.5 block truncate">
-                        {selectedComp.dimensions || selectedComp.size || 'Custom Modular Spec'}
-                      </span>
-                    </div>
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
-                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
-                        Color Family
-                      </span>
-                      <span className="font-extrabold text-slate-800 mt-0.5 block truncate">
-                        {selectedComp.color || 'Standard Palette'}
-                      </span>
-                    </div>
-                    {selectedComp.about_details &&
-                      Object.entries(selectedComp.about_details).map(([k, v]: [string, any]) => (
-                        <div key={k} className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
-                          <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
-                            {k.replace('_', ' ')}
-                          </span>
-                          <span className="font-extrabold text-slate-800 mt-0.5 block truncate">
-                            {String(v) || 'Standard'}
-                          </span>
+                  
+                  {/* Amazon-style Line-by-Line Technical Specifications Table with Equal Column Distribution */}
+                  {(() => {
+                    const allSpecs: { label: string; value: string }[] = [
+                      {
+                        label: 'Room Location',
+                        value: selectedComp.room_name?.replace(/_/g, ' ') || 'Living Room',
+                      },
+                      {
+                        label: 'Material / Finish',
+                        value: selectedComp.material_finish || selectedComp.finish || 'Factory Engineered Wood',
+                      },
+                      {
+                        label: 'Dimensions',
+                        value: selectedComp.dimensions || selectedComp.size || 'Custom Modular Spec',
+                      },
+                      {
+                        label: 'Color Family',
+                        value: selectedComp.color || 'Standard Palette',
+                      },
+                    ];
+
+                    if (selectedComp.about_details) {
+                      Object.entries(selectedComp.about_details).forEach(([k, v]) => {
+                        if (v !== undefined && v !== null && v !== '') {
+                          allSpecs.push({
+                            label: k.replace(/_/g, ' '),
+                            value: String(v),
+                          });
+                        }
+                      });
+                    }
+
+                    const mid = Math.ceil(allSpecs.length / 2);
+                    const leftColSpecs = allSpecs.slice(0, mid);
+                    const rightColSpecs = allSpecs.slice(mid);
+
+                    return (
+                      <div className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-2xl overflow-hidden">
+                        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#E5ECE7]">
+                          {/* Left Column */}
+                          <div className="divide-y divide-[#E5ECE7]">
+                            {leftColSpecs.map((item, idx) => (
+                              <div key={idx} className="flex py-3 px-4 text-xs items-center">
+                                <span className="w-36 sm:w-44 font-bold text-stone-500 shrink-0 capitalize">{item.label}</span>
+                                <span className="font-semibold text-[#161D1A] capitalize">{item.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Right Column */}
+                          <div className="divide-y divide-[#E5ECE7]">
+                            {rightColSpecs.map((item, idx) => (
+                              <div key={idx} className="flex py-3 px-4 text-xs items-center">
+                                <span className="w-36 sm:w-44 font-bold text-stone-500 shrink-0 capitalize">{item.label}</span>
+                                <span className="font-semibold text-[#161D1A] capitalize">{item.value}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ))}
-                  </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* ── LOGISTICS & SHIPMENT TRACKING ── */}
                 <div className="space-y-3 pt-4 border-t border-slate-100">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                    <Truck className="w-3.5 h-3.5 text-indigo-500" /> Logistics & Transit Details
+                    <Truck className="w-3.5 h-3.5 text-[#059669]" /> Logistics & Transit Details
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80">
@@ -930,7 +947,7 @@ export default function TrackPage() {
                       <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
                         Waybill / Tracking No
                       </span>
-                      <span className="font-mono font-extrabold text-indigo-650 mt-0.5 block truncate">
+                      <span className="font-mono font-extrabold text-[#161D1A] mt-0.5 block truncate">
                         {selectedComp.tracking_number ||
                           `WB-${(selectedComp.id || 'TRK').slice(0, 8).toUpperCase()}`}
                       </span>
@@ -949,7 +966,7 @@ export default function TrackPage() {
                 {/* ── STATUS AUDIT HISTORY LOG ── */}
                 <div className="space-y-3 pt-4 border-t border-slate-100">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                    <History className="w-3.5 h-3.5 text-indigo-500" /> Milestone Audit Trail
+                    <History className="w-3.5 h-3.5 text-[#059669]" /> Milestone Audit Trail
                   </h3>
                   {loadingHistory ? (
                     <div className="py-6 text-center text-xs text-slate-400">Loading audit trail...</div>
@@ -987,7 +1004,7 @@ export default function TrackPage() {
                   </button>
                   <button
                     onClick={() => setView('overview')}
-                    className="py-2.5 px-5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm"
+                    className="py-2.5 px-6 rounded-xl text-xs font-extrabold bg-[#84CC16] hover:bg-[#A3E635] text-[#0B0F0D] transition shadow-xs"
                   >
                     Done & Return
                   </button>
@@ -1109,7 +1126,7 @@ export default function TrackPage() {
                       Proof Photos / Defect Images ({snagPhotos.length} attached)
                     </label>
 
-                    <div className="border-2 border-dashed border-slate-200 hover:border-indigo-300 rounded-2xl p-5 text-center transition bg-slate-50/50">
+                    <div className="border-2 border-dashed border-[#E5ECE7] hover:border-[#84CC16] rounded-2xl p-5 text-center transition bg-[#FAFBF9]">
                       <input
                         type="file"
                         id="snag-photo-upload"
@@ -1119,11 +1136,11 @@ export default function TrackPage() {
                         className="hidden"
                       />
                       <label htmlFor="snag-photo-upload" className="cursor-pointer block space-y-2">
-                        <Upload className="w-6 h-6 text-indigo-500 mx-auto" />
-                        <div className="text-xs font-extrabold text-indigo-650 hover:text-indigo-800">
+                        <Upload className="w-6 h-6 text-[#059669] mx-auto" />
+                        <div className="text-xs font-extrabold text-stone-800 hover:text-[#059669]">
                           Click to upload defect proof photos
                         </div>
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[10px] text-stone-400">
                           Attach clear photos of the defect, overall component, or finish issue (JPG, PNG, WebP)
                         </p>
                       </label>
@@ -1135,7 +1152,7 @@ export default function TrackPage() {
                         {snagPhotoPreviews.map((previewUrl, pIdx) => (
                           <div
                             key={pIdx}
-                            className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 group bg-slate-100 shadow-2xs"
+                            className="relative aspect-video rounded-xl overflow-hidden border border-[#E5ECE7] group bg-stone-100 shadow-2xs"
                           >
                             <img src={previewUrl} alt="Snag upload preview" className="w-full h-full object-cover" />
                             <button
@@ -1154,25 +1171,25 @@ export default function TrackPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E5ECE7]">
                     <button
                       type="button"
                       onClick={() => {
                         resetSnagForm()
                         setView('overview')
                       }}
-                      className="py-2.5 px-4 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+                      className="py-2.5 px-4 rounded-xl text-xs font-bold bg-white border border-[#E5ECE7] text-stone-600 hover:bg-stone-50 transition"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmittingSnag}
-                      className="py-2.5 px-5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white transition shadow-sm flex items-center gap-1.5"
+                      className="btn-lime py-2.5 px-5 text-xs font-extrabold disabled:opacity-50 transition shadow-sm flex items-center gap-1.5"
                     >
                       {isSubmittingSnag ? (
                         <>
-                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <div className="w-3.5 h-3.5 border-2 border-stone-900 border-t-transparent rounded-full animate-spin" />
                           Submitting Ticket...
                         </>
                       ) : (
@@ -1188,12 +1205,12 @@ export default function TrackPage() {
               /* Overview List Mode */
               <>
                 {/* 7 Stage Counters Filter Bar */}
-                <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-3">
+                <div className="bg-white border border-[#E5ECE7] rounded-3xl p-5 shadow-xs space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <Filter className="w-3.5 h-3.5 text-indigo-500" /> Sourcing & Execution Stages
+                    <span className="text-xs font-extrabold text-stone-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Filter className="w-3.5 h-3.5 text-[#059669]" /> Sourcing & Execution Stages
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400">Click a status to filter components</span>
+                    <span className="text-[10px] font-bold text-stone-400">Click a status to filter components</span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
@@ -1209,14 +1226,14 @@ export default function TrackPage() {
                           className={clsx(
                             'p-2.5 rounded-2xl border text-center transition-all flex flex-col justify-between gap-1',
                             isSelected
-                              ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                              : 'bg-slate-50/70 border-slate-100 hover:border-indigo-200 text-slate-700'
+                              ? 'bg-[#161D1A] border-[#161D1A] text-white shadow-sm'
+                              : 'bg-[#FAFBF9] border-[#E5ECE7] hover:border-stone-300 text-stone-700'
                           )}
                         >
-                          <span className={clsx('text-base font-black block', isSelected ? 'text-white' : 'text-slate-900')}>
+                          <span className={clsx('text-base font-black block font-serif', isSelected ? 'text-[#A3E635]' : 'text-stone-900')}>
                             {count}
                           </span>
-                          <span className={clsx('text-[9px] font-bold uppercase tracking-wider truncate block', isSelected ? 'text-indigo-100' : 'text-slate-400')}>
+                          <span className={clsx('text-[9px] font-bold uppercase tracking-wider truncate block', isSelected ? 'text-stone-200' : 'text-stone-400')}>
                             {f.label}
                           </span>
                         </button>
@@ -1226,16 +1243,16 @@ export default function TrackPage() {
                 </div>
 
                 {/* Search Bar & Room Filter Tabs */}
-                <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-4">
+                <div className="bg-white border border-[#E5ECE7] rounded-3xl p-5 shadow-xs space-y-4">
                   <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
                     <div className="relative w-full sm:w-72">
-                      <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-stone-400" />
                       <input
                         type="text"
                         placeholder="Search component or material..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full text-xs pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-1 focus:ring-indigo-500 text-slate-700 font-medium"
+                        className="w-full text-xs pl-8 pr-3 py-2 bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl outline-none focus:border-[#84CC16] focus:ring-1 focus:ring-[#84CC16] text-stone-800 font-medium"
                       />
                     </div>
 
@@ -1249,8 +1266,8 @@ export default function TrackPage() {
                           className={clsx(
                             'px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap transition',
                             activeRoomTab === r
-                              ? 'bg-indigo-650 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              ? 'bg-[#161D1A] text-[#A3E635] shadow-xs'
+                              : 'bg-white text-stone-600 border border-[#E5ECE7] hover:bg-stone-50'
                           )}
                         >
                           {r === 'ALL' ? 'All Rooms' : r.replace('_', ' ')}
@@ -1263,7 +1280,7 @@ export default function TrackPage() {
                 {/* Room Accordions & Item Cards */}
                 <div className="space-y-4">
                   {Object.keys(groupedTracking).length === 0 ? (
-                    <div className="bg-white border border-slate-200/80 rounded-3xl p-12 text-center text-slate-400 text-xs font-semibold">
+                    <div className="bg-white border border-[#E5ECE7] rounded-3xl p-12 text-center text-stone-400 text-xs font-semibold">
                       No components found matching your current filter criteria.
                     </div>
                   ) : (
@@ -1271,33 +1288,33 @@ export default function TrackPage() {
                       const isExpanded = expandedRooms[room] ?? true
 
                       return (
-                        <div key={room} className="bg-white border border-slate-200/80 rounded-3xl shadow-sm overflow-hidden">
+                        <div key={room} className="bg-white border border-[#E5ECE7] rounded-3xl shadow-xs overflow-hidden">
                           {/* Accordion Room Header */}
                           <div
                             onClick={() => toggleRoomAccordion(room)}
-                            className="p-4 sm:p-5 flex items-center justify-between cursor-pointer bg-slate-50/50 hover:bg-slate-50 transition border-b border-slate-100"
+                            className="p-4 sm:p-5 flex items-center justify-between cursor-pointer bg-[#F4F6F4]/50 hover:bg-[#F4F6F4] transition border-b border-[#E5ECE7]"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs">
+                              <span className="w-8 h-8 rounded-xl bg-emerald-50 text-[#059669] flex items-center justify-center font-black text-xs border border-emerald-100">
                                 🏛️
                               </span>
                               <div>
-                                <h3 className="text-sm font-black text-slate-800 capitalize tracking-tight">
+                                <h3 className="text-sm font-black text-stone-900 capitalize tracking-tight font-serif">
                                   {room.replace('_', ' ')}
                                 </h3>
-                                <span className="text-[10px] font-bold text-slate-400">
+                                <span className="text-[10px] font-bold text-stone-400">
                                   {items.length} Component{items.length !== 1 ? 's' : ''} in tracking
                                 </span>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wider">
+                              <span className="text-[10px] font-extrabold text-[#059669] uppercase tracking-wider">
                                 {isExpanded ? 'Collapse' : 'Expand'}
                               </span>
                               {isExpanded ? (
-                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                                <ChevronUp className="w-4 h-4 text-stone-400" />
                               ) : (
-                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                                <ChevronDown className="w-4 h-4 text-stone-400" />
                               )}
                             </div>
                           </div>
@@ -1312,56 +1329,56 @@ export default function TrackPage() {
                                 return (
                                   <div
                                     key={item.id}
-                                    className="p-4 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 transition shadow-2xs flex flex-col justify-between space-y-3"
+                                    className="p-4 rounded-2xl border border-[#E5ECE7] bg-white hover:border-[#84CC16]/60 transition shadow-2xs flex flex-col justify-between space-y-3"
                                   >
                                     <div className="flex items-start gap-3.5">
                                       <img
                                         src={item.image_url || 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace'}
                                         alt={item.item_name}
-                                        className="w-16 h-16 object-cover rounded-xl border border-slate-100 flex-shrink-0"
+                                        className="w-16 h-16 object-cover rounded-xl border border-[#E5ECE7] flex-shrink-0"
                                       />
                                       <div className="min-w-0 flex-1">
                                         <div className="flex items-center justify-between gap-1">
-                                          <span className="text-[9px] font-mono text-slate-400 font-bold block truncate">
+                                          <span className="text-[9px] font-mono text-stone-400 font-bold block truncate">
                                             {item.component_id || 'CMP-SPEC'}
                                           </span>
                                           <span
                                             className={clsx(
                                               'text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border',
                                               isInstalled
-                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                                 : status.includes('disp') || status.includes('deliv')
-                                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                : 'bg-amber-50 text-amber-800 border-amber-200'
                                             )}
                                           >
                                             {item.status}
                                           </span>
                                         </div>
-                                        <h4 className="text-xs font-black text-slate-800 truncate mt-1">
+                                        <h4 className="text-xs font-black text-stone-900 truncate mt-1">
                                           {item.item_name}
                                         </h4>
-                                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">
+                                        <p className="text-[10px] text-stone-400 mt-0.5 truncate">
                                           {item.vendor_name ? `By ${item.vendor_name}` : 'Modular Factory Execution'}
                                         </p>
                                       </div>
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-50">
+                                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-100">
                                       <button
                                         type="button"
                                         onClick={() => handleSelectComponent(item)}
-                                        className="text-[10px] font-extrabold text-indigo-650 hover:text-indigo-800 transition py-1 px-2.5 rounded-lg bg-indigo-50/70"
+                                        className="text-[10px] font-extrabold text-stone-800 hover:text-[#059669] transition py-1 px-2.5 rounded-lg bg-[#FAFBF9] hover:bg-emerald-50 border border-[#E5ECE7]"
                                       >
                                         View Details →
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => handleOpenSnag(item)}
-                                        className="text-[10px] font-bold text-rose-600 hover:text-rose-800 transition py-1 px-2.5 rounded-lg bg-rose-50"
+                                        className="text-[10px] font-bold text-rose-600 hover:text-rose-800 transition py-1 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-100"
                                       >
-                                        Report Snag ⚠️
+                                        Report Snag
                                       </button>
                                     </div>
                                   </div>
@@ -1381,12 +1398,12 @@ export default function TrackPage() {
           {/* ══════════════ RIGHT COLUMN (1/3) ══════════════ */}
           <div className="lg:col-span-1 space-y-6">
             {/* 1. PROJECT UTILITIES 2x2 GRID */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="bg-white border border-[#E5ECE7] rounded-3xl p-6 shadow-xs space-y-4">
               <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-850 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-indigo-500" /> Project Utilities
+                <h3 className="text-xs font-black uppercase tracking-wider text-stone-850 flex items-center gap-1.5 font-serif">
+                  <Layers className="w-4 h-4 text-[#059669]" /> Project Utilities
                 </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Quick access to documentation, renders, and payments</p>
+                <p className="text-[10px] text-stone-400 mt-0.5">Quick access to documentation, renders, and payments</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1394,77 +1411,77 @@ export default function TrackPage() {
                 <button
                   type="button"
                   onClick={handleOpenQuotation}
-                  className="p-3.5 bg-slate-50/80 hover:bg-indigo-50/60 border border-slate-100 hover:border-indigo-200 rounded-2xl text-left transition group shadow-2xs"
+                  className="p-3.5 bg-[#FAFBF9] hover:bg-emerald-50/60 border border-[#E5ECE7] hover:border-emerald-300 rounded-2xl text-left transition group shadow-2xs"
                 >
-                  <FileText className="w-5 h-5 text-indigo-600 mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-black text-slate-850 block leading-tight">Quotation & Invoices</span>
-                  <span className="text-[9px] text-slate-400 block mt-1 font-semibold">PDFs & Receipts</span>
+                  <FileText className="w-5 h-5 text-[#059669] mb-2 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-black text-stone-900 block leading-tight">Quotation & Invoices</span>
+                  <span className="text-[9px] text-stone-400 block mt-1 font-semibold">PDFs & Receipts</span>
                 </button>
 
                 {/* 2. AI Visualizer */}
                 <button
                   type="button"
                   onClick={handleOpenVisualizer}
-                  className="p-3.5 bg-slate-50/80 hover:bg-purple-50/60 border border-slate-100 hover:border-purple-200 rounded-2xl text-left transition group shadow-2xs"
+                  className="p-3.5 bg-[#FAFBF9] hover:bg-amber-50/60 border border-[#E5ECE7] hover:border-amber-300 rounded-2xl text-left transition group shadow-2xs"
                 >
-                  <Sparkles className="w-5 h-5 text-purple-600 mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-black text-slate-850 block leading-tight">AI Visualizer</span>
-                  <span className="text-[9px] text-slate-400 block mt-1 font-semibold">3D Renders Studio</span>
+                  <Sparkles className="w-5 h-5 text-amber-500 mb-2 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-black text-stone-900 block leading-tight">AI Visualizer</span>
+                  <span className="text-[9px] text-stone-400 block mt-1 font-semibold">3D Renders Studio</span>
                 </button>
 
                 {/* 3. Floor Plans */}
                 <button
                   type="button"
                   onClick={() => setShowFloorPlanModal(true)}
-                  className="p-3.5 bg-slate-50/80 hover:bg-emerald-50/60 border border-slate-100 hover:border-emerald-200 rounded-2xl text-left transition group shadow-2xs"
+                  className="p-3.5 bg-[#FAFBF9] hover:bg-emerald-50/60 border border-[#E5ECE7] hover:border-emerald-300 rounded-2xl text-left transition group shadow-2xs"
                 >
-                  <Building2 className="w-5 h-5 text-emerald-600 mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-black text-slate-850 block leading-tight">Floor Plans</span>
-                  <span className="text-[9px] text-slate-400 block mt-1 font-semibold">Blueprint Layout</span>
+                  <Building2 className="w-5 h-5 text-[#059669] mb-2 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-black text-stone-900 block leading-tight">Floor Plans</span>
+                  <span className="text-[9px] text-stone-400 block mt-1 font-semibold">Blueprint Layout</span>
                 </button>
 
                 {/* 4. Milestone Payments */}
                 <button
                   type="button"
                   onClick={() => setShowPaymentsModal(true)}
-                  className="p-3.5 bg-slate-50/80 hover:bg-amber-50/60 border border-slate-100 hover:border-amber-200 rounded-2xl text-left transition group shadow-2xs"
+                  className="p-3.5 bg-[#FAFBF9] hover:bg-emerald-50/60 border border-[#E5ECE7] hover:border-emerald-300 rounded-2xl text-left transition group shadow-2xs"
                 >
-                  <CreditCard className="w-5 h-5 text-amber-600 mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-black text-slate-850 block leading-tight">Payments</span>
-                  <span className="text-[9px] text-slate-400 block mt-1 font-semibold">Milestones & Balance</span>
+                  <CreditCard className="w-5 h-5 text-[#059669] mb-2 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-black text-stone-900 block leading-tight">Payments</span>
+                  <span className="text-[9px] text-stone-400 block mt-1 font-semibold">Milestones & Balance</span>
                 </button>
               </div>
             </div>
 
             {/* 2. RECENT ACTIVITY FEED */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-850 flex items-center gap-1.5">
-                  <History className="w-4 h-4 text-indigo-500" /> Recent Activity Feed
+            <div className="bg-white border border-[#E5ECE7] rounded-3xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-[#E5ECE7] pb-3">
+                <h3 className="text-xs font-black uppercase tracking-wider text-stone-900 flex items-center gap-1.5 font-serif">
+                  <History className="w-4 h-4 text-[#059669]" /> Recent Activity Feed
                 </h3>
-                <span className="text-[10px] font-bold text-slate-400">Live Sync</span>
+                <span className="text-[10px] font-bold text-stone-400">Live Sync</span>
               </div>
 
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                 {issues.length > 0 ? (
                   issues.slice(0, 3).map((iss) => (
-                    <div key={iss.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-100/80 text-xs font-medium space-y-1">
+                    <div key={iss.id} className="p-3 rounded-2xl bg-[#FAFBF9] border border-[#E5ECE7] text-xs font-medium space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700">
                           {iss.type || 'Snag Ticket'}
                         </span>
-                        <span className="text-[9px] text-slate-400">{iss.priority}</span>
+                        <span className="text-[9px] text-stone-400">{iss.priority}</span>
                       </div>
-                      <p className="font-bold text-slate-800 text-[11px] mt-1">{iss.description}</p>
+                      <p className="font-bold text-stone-800 text-[11px] mt-1">{iss.description}</p>
                     </div>
                   ))
                 ) : (
-                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100/80 text-xs font-medium text-slate-500">
+                  <div className="p-3 rounded-2xl bg-[#FAFBF9] border border-[#E5ECE7] text-xs font-medium text-stone-500">
                     Project execution initiated. Active updates from site supervisors and vendors will be logged here.
                   </div>
                 )}
 
-                <div className="p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100 text-xs font-medium text-emerald-900 space-y-0.5">
+                <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/60 text-xs font-medium text-emerald-950 space-y-0.5">
                   <div className="font-bold text-[11px]">Design Scope Approved</div>
                   <p className="text-[10px] text-emerald-700">Contract finalized & components routed to approved vendors.</p>
                 </div>
@@ -1472,16 +1489,16 @@ export default function TrackPage() {
             </div>
 
             {/* 3. SITE VERIFICATION GALLERY */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-850 flex items-center gap-1.5">
-                  <Camera className="w-4 h-4 text-indigo-500" /> Site Verification Gallery
+            <div className="bg-white border border-[#E5ECE7] rounded-3xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-[#E5ECE7] pb-3">
+                <h3 className="text-xs font-black uppercase tracking-wider text-stone-900 flex items-center gap-1.5 font-serif">
+                  <Camera className="w-4 h-4 text-[#059669]" /> Site Verification Gallery
                 </h3>
-                <span className="text-[10px] font-bold text-slate-400">{photos.length} Photos</span>
+                <span className="text-[10px] font-bold text-stone-400">{photos.length} Photos</span>
               </div>
 
               {photos.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400 font-medium">
+                <div className="py-8 text-center text-xs text-stone-400 font-medium">
                   No site visit or installation photos uploaded yet. Proof photos will appear here as work progresses.
                 </div>
               ) : (
@@ -1490,7 +1507,7 @@ export default function TrackPage() {
                     <div
                       key={p.id}
                       onClick={() => setLightboxPhoto(p)}
-                      className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group border border-slate-100 bg-slate-100"
+                      className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group border border-[#E5ECE7] bg-stone-100"
                     >
                       <img
                         src={p.image_url}
@@ -1513,25 +1530,25 @@ export default function TrackPage() {
 
       {/* 1. Quotation & Invoices Modal */}
       {showQuotationModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-indigo-600" /> Quotation & Financial Invoices
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#FAFBF9] rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl border border-[#E5ECE7] text-stone-900">
+            <div className="flex items-center justify-between border-b border-[#E5ECE7] pb-3">
+              <h3 className="text-base font-black text-stone-900 flex items-center gap-2 font-serif">
+                <FileText className="w-4 h-4 text-[#059669]" /> Quotation & Financial Invoices
               </h3>
-              <button onClick={() => setShowQuotationModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowQuotationModal(false)} className="text-stone-400 hover:text-stone-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-4 text-xs">
-              <div className="p-4 bg-slate-50 rounded-2xl space-y-2">
+              <div className="p-4 bg-white border border-[#E5ECE7] rounded-2xl space-y-2">
                 <div className="flex justify-between font-bold">
-                  <span className="text-slate-500">Quotation No:</span>
-                  <span className="font-mono text-slate-800">{quotationData?.quotation_no || 'QTN-CURRENT'}</span>
+                  <span className="text-stone-500">Quotation No:</span>
+                  <span className="font-mono text-stone-900">{quotationData?.quotation_no || 'QTN-CURRENT'}</span>
                 </div>
                 <div className="flex justify-between font-bold">
-                  <span className="text-slate-500">Contract Total:</span>
-                  <span className="text-indigo-650 font-black">₹{(quotationData?.total || project?.budget || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-stone-500">Contract Total:</span>
+                  <span className="text-[#059669] font-black font-serif text-sm">₹{(quotationData?.total || project?.budget || 0).toLocaleString('en-IN')}</span>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -1539,7 +1556,7 @@ export default function TrackPage() {
                   href={quotationsAPI.download(projectId)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-center flex items-center justify-center gap-1.5 transition"
+                  className="flex-1 py-2.5 bg-[#161D1A] hover:bg-stone-800 text-white rounded-xl font-bold text-center flex items-center justify-center gap-1.5 transition text-xs"
                 >
                   <Download className="w-3.5 h-3.5" /> Download Quotation PDF
                 </a>
@@ -1551,32 +1568,32 @@ export default function TrackPage() {
 
       {/* 2. AI Visualizer Studio Modal */}
       {showVisualizerModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-2xl w-full space-y-5 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-600" /> AI Visualizer & 3D Studio Renders
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#FAFBF9] rounded-3xl p-6 max-w-2xl w-full space-y-5 shadow-2xl border border-[#E5ECE7] text-stone-900">
+            <div className="flex items-center justify-between border-b border-[#E5ECE7] pb-3">
+              <h3 className="text-base font-black text-stone-900 flex items-center gap-2 font-serif">
+                <Sparkles className="w-4 h-4 text-amber-500" /> AI Visualizer & 3D Studio Renders
               </h3>
-              <button onClick={() => setShowVisualizerModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowVisualizerModal(false)} className="text-stone-400 hover:text-stone-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-4 text-xs">
-              <p className="text-slate-500">Photorealistic 4-wall AI perspectives and design renders generated for your flat.</p>
+              <p className="text-stone-600">Photorealistic 4-wall AI perspectives and design renders generated for your flat.</p>
               {rendersData.length > 0 ? (
                 <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
                   {rendersData.map((r, i) => (
-                    <img key={i} src={r.image_url} alt="Render" className="w-full h-36 object-cover rounded-xl border border-slate-100" />
+                    <img key={i} src={r.image_url} alt="Render" className="w-full h-36 object-cover rounded-xl border border-[#E5ECE7]" />
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center bg-slate-50 rounded-2xl text-slate-400 font-semibold">
+                <div className="p-8 text-center bg-white border border-[#E5ECE7] rounded-2xl text-stone-400 font-semibold">
                   No preview renders saved yet. Open the Customizer to generate full AI renders.
                 </div>
               )}
               <Link
                 href={`/customize/${projectId}`}
-                className="block py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-center transition"
+                className="block py-2.5 bg-[#161D1A] hover:bg-stone-800 text-white rounded-xl font-bold text-center transition"
               >
                 Launch Visualizer Customizer Studio →
               </Link>
@@ -1587,13 +1604,13 @@ export default function TrackPage() {
 
       {/* 3. Floor Plans Modal */}
       {showFloorPlanModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#FAFBF9] rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-2xl border border-[#E5ECE7] text-stone-900">
+            <div className="flex items-center justify-between border-b border-[#E5ECE7] pb-3">
+              <h3 className="text-base font-black text-stone-900 flex items-center gap-2 font-serif">
                 <Building2 className="w-4 h-4 text-emerald-600" /> Architectural Floor Plan
               </h3>
-              <button onClick={() => setShowFloorPlanModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowFloorPlanModal(false)} className="text-stone-400 hover:text-stone-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1602,10 +1619,10 @@ export default function TrackPage() {
                 <img
                   src={project.floor_plan_url}
                   alt="Floor Plan"
-                  className="w-full max-h-96 object-contain rounded-2xl border border-slate-100 bg-slate-50"
+                  className="w-full max-h-96 object-contain rounded-2xl border border-[#E5ECE7] bg-white"
                 />
               ) : (
-                <div className="p-12 text-center bg-slate-50 rounded-2xl text-slate-400 font-semibold text-xs">
+                <div className="p-12 text-center bg-white border border-[#E5ECE7] rounded-2xl text-stone-400 font-semibold text-xs">
                   Standard architectural layout mapped to your {project?.bhk_type || 'BHK'} configuration.
                 </div>
               )}
@@ -1616,33 +1633,33 @@ export default function TrackPage() {
 
       {/* 4. Milestone Payments Modal */}
       {showPaymentsModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-amber-600" /> Milestone Payments
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#FAFBF9] rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-[#E5ECE7] text-stone-900">
+            <div className="flex items-center justify-between border-b border-[#E5ECE7] pb-3">
+              <h3 className="text-base font-black text-stone-900 flex items-center gap-2 font-serif">
+                <CreditCard className="w-4 h-4 text-[#059669]" /> Milestone Payments
               </h3>
-              <button onClick={() => setShowPaymentsModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowPaymentsModal(false)} className="text-stone-400 hover:text-stone-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-2xl font-bold">
+              <div className="grid grid-cols-2 gap-2 p-3 bg-white border border-[#E5ECE7] rounded-2xl font-bold">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase block">Total Paid</span>
-                  <span className="text-emerald-600 font-black text-sm">₹{(projectPayments?.totalPaid || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-[10px] text-stone-400 uppercase block">Total Paid</span>
+                  <span className="text-[#059669] font-black text-sm font-serif">₹{(projectPayments?.totalPaid || 0).toLocaleString('en-IN')}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase block">Pending Balance</span>
-                  <span className="text-rose-600 font-black text-sm">₹{(projectPayments?.pendingAmount || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-[10px] text-stone-400 uppercase block">Pending Balance</span>
+                  <span className="text-rose-600 font-black text-sm font-serif">₹{(projectPayments?.pendingAmount || 0).toLocaleString('en-IN')}</span>
                 </div>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {projectPayments?.milestones?.map((m: any, i: number) => (
-                  <div key={i} className="p-3 bg-white border border-slate-100 rounded-xl flex justify-between items-center">
+                  <div key={i} className="p-3 bg-white border border-[#E5ECE7] rounded-xl flex justify-between items-center">
                     <div>
-                      <div className="font-bold text-slate-800">{m.name}</div>
-                      <div className="text-[10px] text-slate-400">₹{(m.amount || 0).toLocaleString('en-IN')}</div>
+                      <div className="font-bold text-stone-900">{m.name}</div>
+                      <div className="text-[10px] text-stone-400">₹{(m.amount || 0).toLocaleString('en-IN')}</div>
                     </div>
                     <span className={clsx(
                       'text-[9px] font-bold px-2 py-0.5 rounded-full uppercase',

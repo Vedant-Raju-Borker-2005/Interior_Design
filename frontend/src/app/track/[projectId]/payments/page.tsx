@@ -79,51 +79,51 @@ export default function ProjectPaymentsPage() {
   const reference = projectPayments?.quotationNo
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A]">
       <Navbar />
 
       <div className="max-w-4xl mx-auto px-4 pt-24 pb-16 space-y-6">
         {/* Back navigation */}
-        <button onClick={() => router.back()} className="btn-ghost flex items-center gap-1 text-slate-500 font-bold text-xs hover:text-slate-800 transition">
+        <button onClick={() => router.back()} className="btn-ghost flex items-center gap-1 text-stone-600 font-bold text-xs hover:text-stone-900 transition">
           <ArrowLeft className="w-4 h-4" /> Back to Tracking
         </button>
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{isFullPayment ? 'Payment' : 'Milestone Payments'}</h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-serif">{isFullPayment ? 'Payment' : 'Milestone Payments'}</h1>
+            <p className="text-xs text-stone-500 mt-1">
               {isFullPayment
                 ? 'Your interiors are booked once the full quotation amount is received.'
                 : 'Track contract transactions, pay milestone advances, and view payment receipts.'}
             </p>
           </div>
-          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold text-[10px] uppercase tracking-wider">
-            <ShieldCheck className="w-4 h-4" /> Secured by SSL
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-800 font-bold text-[10px] uppercase tracking-wider">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" /> Secured by SSL
           </span>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { label: 'Contract Value', value: projectPayments?.contractValue ?? 0, color: 'text-slate-850 bg-white border-slate-100' },
-            { label: 'Total Paid', value: projectPayments?.totalPaid ?? 0, color: 'text-emerald-600 bg-white border-slate-100' },
-            { label: 'Pending Balance', value: projectPayments?.pendingAmount ?? 0, color: 'text-indigo-600 bg-white border-slate-100' },
+            { label: 'Contract Value', value: projectPayments?.contractValue ?? 0, color: 'text-stone-900 font-serif' },
+            { label: 'Total Paid', value: projectPayments?.totalPaid ?? 0, color: 'text-[#059669] font-serif' },
+            { label: 'Pending Balance', value: projectPayments?.pendingAmount ?? 0, color: 'text-stone-700 font-serif' },
           ].map((card) => (
-            <div key={card.label} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">{card.label}</span>
-              <span className={clsx('text-2.5xl font-black block', card.color)}>{formatINR(card.value)}</span>
+            <div key={card.label} className="bg-white rounded-3xl p-5 border border-[#E5ECE7] shadow-xs relative overflow-hidden">
+              <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider block mb-1">{card.label}</span>
+              <span className={clsx('text-2xl font-black block', card.color)}>{formatINR(card.value)}</span>
             </div>
           ))}
         </div>
 
         {/* Timeline of Milestones */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
-          <h3 className="font-extrabold text-slate-800 text-base">{isFullPayment ? 'Amount due' : 'Payment Milestones Checklist'}</h3>
+        <div className="bg-white rounded-3xl border border-[#E5ECE7] shadow-xs p-6 sm:p-7 space-y-6">
+          <h3 className="font-extrabold text-stone-900 text-base font-serif">{isFullPayment ? 'Amount due' : 'Payment Milestones Checklist'}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+                <tr className="border-b border-[#E5ECE7] text-stone-500 font-bold uppercase tracking-wider pb-3">
                   <th className="pb-3">Stage</th>
                   <th className="pb-3 text-right">Amount</th>
                   <th className="pb-3">Status</th>
@@ -131,30 +131,30 @@ export default function ProjectPaymentsPage() {
                   <th className="pb-3 text-right">Documents</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 font-semibold text-slate-700">
+              <tbody className="divide-y divide-stone-100 font-semibold text-stone-700">
                 {projectPayments?.milestones?.map((m: any, idx: number) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition">
+                  <tr key={idx} className="hover:bg-[#FAFBF9] transition">
                     <td className="py-4">
                       <div>
-                        <div className="font-bold text-slate-800">{m.name}</div>
-                        {m.date && <div className="text-[10px] text-slate-400 font-normal mt-0.5">Paid on: {new Date(m.date).toLocaleDateString()}</div>}
+                        <div className="font-bold text-stone-900">{m.name}</div>
+                        {m.date && <div className="text-[10px] text-stone-400 font-normal mt-0.5">Paid on: {new Date(m.date).toLocaleDateString()}</div>}
                       </div>
                     </td>
-                    <td className="py-4 text-right font-extrabold text-slate-850">
+                    <td className="py-4 text-right font-black text-stone-900 font-serif">
                       {formatINR(m.amount)}
                     </td>
                     <td className="py-4">
                       <span className={clsx(
                         'px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border flex items-center gap-1 w-fit',
                         m.status === 'paid'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                          : 'bg-amber-50 text-amber-700 border-amber-100'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
                       )}>
-                        {m.status === 'paid' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                        {m.status === 'paid' ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Clock className="w-3 h-3 text-amber-600" />}
                         {m.status}
                       </span>
                     </td>
-                    <td className="py-4 font-mono text-[10px] text-slate-400">
+                    <td className="py-4 font-mono text-[10px] text-stone-500">
                       {m.transactionId ?? '—'}
                     </td>
                     <td className="py-4 text-right space-x-1.5">
@@ -165,7 +165,7 @@ export default function ProjectPaymentsPage() {
                               href={`${API_BASE_URL}${m.invoiceUrl}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-850 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition"
+                              className="text-[10px] font-bold text-stone-800 hover:text-[#059669] bg-stone-100 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition"
                             >
                               <Download className="w-3 h-3" /> Invoice
                             </a>
@@ -175,7 +175,7 @@ export default function ProjectPaymentsPage() {
                               href={`${API_BASE_URL}${m.receiptUrl}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition"
+                              className="text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition"
                             >
                               <Download className="w-3 h-3" /> Receipt
                             </a>
@@ -184,7 +184,7 @@ export default function ProjectPaymentsPage() {
                       ) : (
                         <button
                           onClick={() => setCheckoutMilestone(m)}
-                          className="text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-lg shadow-sm hover:shadow transition"
+                          className="btn-lime text-[11px] font-extrabold px-4 py-2 shadow-sm"
                         >
                           {isFullPayment ? 'Pay online' : 'Pay Advance'}
                         </button>
@@ -197,17 +197,17 @@ export default function ProjectPaymentsPage() {
           </div>
         </div>
 
-        {/* Offline payment — feedback 1.9: most customers pay by bank transfer */}
+        {/* Offline payment */}
         {isFullPayment && (projectPayments?.pendingAmount ?? 0) > 0 && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-            <h3 className="font-extrabold text-slate-800 text-base mb-1">Prefer to pay by bank transfer?</h3>
-            <p className="text-xs text-slate-500 mb-4">
+          <div className="bg-white rounded-3xl border border-[#E5ECE7] shadow-xs p-6 sm:p-7">
+            <h3 className="font-extrabold text-stone-900 text-base mb-1 font-serif">Prefer to pay by bank transfer?</h3>
+            <p className="text-xs text-stone-600 mb-4 leading-relaxed">
               Transfer {formatINR(projectPayments?.pendingAmount ?? 0)} and use
-              {reference ? <> <span className="font-mono font-bold text-indigo-700">{reference}</span></> : ' your quotation number'} as
+              {reference ? <> <span className="font-mono font-bold text-[#059669]">{reference}</span></> : ' your quotation number'} as
               the payment reference. Our team confirms receipt and marks your quotation as paid — you’ll see it here.
             </p>
             {offline?.configured ? (
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs bg-slate-50 border border-slate-100 rounded-xl p-4">
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs bg-[#FAFBF9] border border-[#E5ECE7] rounded-2xl p-4">
                 {[
                   ['Account name', offline.account_name],
                   ['Account number', offline.account_number],
@@ -217,13 +217,13 @@ export default function ProjectPaymentsPage() {
                   ['Reference', reference],
                 ].filter(([, v]) => v).map(([k, v]) => (
                   <div key={k as string} className="flex justify-between gap-3">
-                    <dt className="text-slate-400 font-semibold">{k}</dt>
-                    <dd className="font-mono font-bold text-slate-800 select-all">{v}</dd>
+                    <dt className="text-stone-500 font-semibold">{k}</dt>
+                    <dd className="font-mono font-bold text-stone-900 select-all">{v}</dd>
                   </div>
                 ))}
               </dl>
             ) : (
-              <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-4">
+              <p className="text-xs text-stone-600 bg-[#FAFBF9] border border-[#E5ECE7] rounded-2xl p-4">
                 Our team will share the account details with you by phone or email.
               </p>
             )}
@@ -231,46 +231,46 @@ export default function ProjectPaymentsPage() {
         )}
 
         {/* Information Callout */}
-        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-3 text-xs text-indigo-900 leading-relaxed font-medium">
-          <HelpCircle className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+        <div className="bg-emerald-50/70 border border-emerald-200/60 rounded-3xl p-5 flex gap-3 text-xs text-stone-700 leading-relaxed font-medium">
+          <HelpCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
           {isFullPayment ? (
             <div>
-              <span className="font-extrabold block text-indigo-950 mb-0.5">How payment works:</span>
+              <span className="font-extrabold block text-emerald-950 mb-0.5 font-serif">How payment works:</span>
               Interiors are paid for in full, once. After payment is confirmed, your project is reviewed by our team,
               allocated to a supplier, and your premium photoreal renders are unlocked.
             </div>
           ) : (
             <div>
-              <span className="font-extrabold block text-indigo-950 mb-0.5">Milestone Structure:</span>
+              <span className="font-extrabold block text-emerald-950 mb-0.5 font-serif">Milestone Structure:</span>
               Booking Advance initiates structural designing. Sourcing begins on 40% production setup advance. Delivery advance prepares dispatch validation. Handover is released upon final sign-off.
             </div>
           )}
         </div>
       </div>
 
-      {/* Sleek Mockup Checkout Modal */}
+      {/* Sleek Checkout Modal */}
       {checkoutMilestone && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setCheckoutMilestone(null)} />
+          <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" onClick={() => setCheckoutMilestone(null)} />
           
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden relative z-10 p-6 space-y-6">
+          <div className="bg-[#FAFBF9] w-full max-w-md rounded-3xl shadow-2xl border border-[#E5ECE7] overflow-hidden relative z-10 p-6 space-y-6 text-stone-900">
             <button
               onClick={() => setCheckoutMilestone(null)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+              className="absolute top-4 right-4 p-1.5 rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 transition"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div>
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Complete Payment</h2>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
+              <h2 className="text-xl font-extrabold text-stone-900 tracking-tight font-serif">Complete Payment</h2>
+              <p className="text-[10px] text-stone-400 font-semibold uppercase tracking-wider mt-0.5">
                 Milestone: {checkoutMilestone.name}
               </p>
             </div>
 
-            <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-650">Amount Payable</span>
-              <span className="text-xl font-black text-indigo-650">{formatINR(checkoutMilestone.amount)}</span>
+            <div className="bg-white border border-[#E5ECE7] p-4 rounded-2xl flex items-center justify-between">
+              <span className="text-xs font-bold text-stone-600">Amount Payable</span>
+              <span className="text-xl font-black text-[#059669] font-serif">{formatINR(checkoutMilestone.amount)}</span>
             </div>
 
             {/* Payment Method Selector */}
@@ -283,8 +283,8 @@ export default function ProjectPaymentsPage() {
                   className={clsx(
                     'py-2 px-1 rounded-xl text-[10px] font-bold text-center border-2 capitalize transition',
                     paymentMethod === method
-                      ? 'border-indigo-500 bg-indigo-50/50 text-indigo-700'
-                      : 'border-slate-100 hover:border-slate-200 text-slate-500'
+                      ? 'border-[#84CC16] bg-emerald-50/50 text-[#132A1C] shadow-2xs'
+                      : 'border-[#E5ECE7] hover:border-stone-300 text-stone-600 bg-white'
                   )}
                 >
                   {method === 'offline' ? 'Offline / NEFT' : method}
@@ -294,13 +294,13 @@ export default function ProjectPaymentsPage() {
 
             {/* Subforms based on method */}
             {paymentMethod === 'offline' && (
-              <div className="space-y-3 bg-amber-500/5 border border-amber-500/20 p-4 rounded-xl">
+              <div className="space-y-3 bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl">
                 <div className="text-xs text-amber-900 font-bold">Offline / Bank Transfer Payment</div>
-                <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                <p className="text-[11px] text-stone-600 font-medium leading-relaxed">
                   Make your payment directly to our bank account or via UPI, then enter your UTR / Transfer Reference number below.
                 </p>
                 <div>
-                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-[9px] font-bold text-stone-500 uppercase tracking-wider mb-1">
                     Transaction / UTR / Reference No.
                   </label>
                   <input
@@ -308,41 +308,40 @@ export default function ProjectPaymentsPage() {
                     placeholder="e.g. UTR123456789 or NEFT-88921"
                     value={offlineRef}
                     onChange={(e) => setOfflineRef(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                    className="w-full text-xs border border-stone-200 rounded-xl p-2.5 font-bold text-stone-800 outline-none focus:border-[#84CC16] focus:ring-1 focus:ring-[#84CC16] bg-white"
                   />
                 </div>
               </div>
             )}
 
-            {/* Subforms based on method */}
             {paymentMethod === 'card' && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Card Number</label>
+                  <label className="block text-[9px] font-bold text-stone-400 uppercase tracking-wider mb-1">Card Number</label>
                   <input
                     type="text"
                     value={cardNumber}
                     onChange={(e) => setCardNumber(e.target.value)}
-                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold tracking-widest text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50"
+                    className="w-full text-xs border border-stone-200 rounded-xl p-2.5 font-bold tracking-widest text-stone-800 outline-none focus:border-[#84CC16] focus:ring-1 focus:ring-[#84CC16] bg-white"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Expiry</label>
+                    <label className="block text-[9px] font-bold text-stone-400 uppercase tracking-wider mb-1">Expiry</label>
                     <input
                       type="text"
                       value={cardExpiry}
                       onChange={(e) => setCardExpiry(e.target.value)}
-                      className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50"
+                      className="w-full text-xs border border-stone-200 rounded-xl p-2.5 font-bold text-stone-800 outline-none focus:border-[#84CC16] focus:ring-1 focus:ring-[#84CC16] bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">CVV</label>
+                    <label className="block text-[9px] font-bold text-stone-400 uppercase tracking-wider mb-1">CVV</label>
                     <input
                       type="password"
                       value={cardCvv}
                       onChange={(e) => setCardCvv(e.target.value)}
-                      className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50"
+                      className="w-full text-xs border border-stone-200 rounded-xl p-2.5 font-bold text-stone-800 outline-none focus:border-[#84CC16] focus:ring-1 focus:ring-[#84CC16] bg-white"
                     />
                   </div>
                 </div>
@@ -350,19 +349,19 @@ export default function ProjectPaymentsPage() {
             )}
 
             {paymentMethod === 'upi' && (
-              <div className="space-y-2 text-center py-2 bg-slate-50 border border-slate-100 rounded-xl">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Scan QR or enter VPA</span>
-                <div className="w-24 h-24 bg-slate-200 rounded-lg mx-auto flex items-center justify-center text-[10px] font-bold text-slate-400 border border-slate-300">
+              <div className="space-y-2 text-center py-3 bg-white border border-[#E5ECE7] rounded-2xl">
+                <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider block">Scan QR or enter VPA</span>
+                <div className="w-24 h-24 bg-stone-100 rounded-xl mx-auto flex items-center justify-center text-[10px] font-bold text-stone-400 border border-stone-200">
                   MOCK QR CODE
                 </div>
-                <span className="text-xs font-bold text-slate-700">pay@interiorai</span>
+                <span className="text-xs font-bold text-stone-800">pay@interiorai</span>
               </div>
             )}
 
             {paymentMethod === 'netbanking' && (
               <div className="space-y-2">
-                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Select Bank</label>
-                <select className="w-full text-xs border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 bg-slate-50">
+                <label className="block text-[9px] font-bold text-stone-400 uppercase tracking-wider mb-1">Select Bank</label>
+                <select className="w-full text-xs border border-stone-200 rounded-xl p-2.5 font-bold text-stone-800 bg-white">
                   <option>State Bank of India</option>
                   <option>HDFC Bank</option>
                   <option>ICICI Bank</option>
@@ -374,10 +373,10 @@ export default function ProjectPaymentsPage() {
             <button
               onClick={handlePay}
               disabled={processingPayment}
-              className="w-full py-3 bg-indigo-650 hover:bg-indigo-750 text-white font-extrabold rounded-xl text-xs shadow-glow-indigo transition flex items-center justify-center gap-1.5"
+              className="btn-lime w-full py-3 text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md"
             >
               {processingPayment ? (
-                <><div className="spinner w-4 h-4 border-white" /> Processing…</>
+                <><div className="spinner w-4 h-4 border-stone-900" /> Processing…</>
               ) : (
                 <><CreditCard className="w-4 h-4" /> Pay {formatINR(checkoutMilestone.amount)} Secured</>
               )}
