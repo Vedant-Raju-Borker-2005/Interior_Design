@@ -162,10 +162,10 @@ export default function AdminApprovalsPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full text-[#161D1A]">
       <div className="mb-8 flex flex-wrap justify-between items-end gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Project Approvals</h1>
+          <h1 className="text-2xl font-black text-[#161D1A] tracking-tight">Project Approvals</h1>
           <p className="text-slate-500 mt-1">Approve or reject incoming projects, then allocate each approved project to a supplier.</p>
         </div>
         <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
@@ -180,8 +180,8 @@ export default function AdminApprovalsPage() {
             key={t}
             onClick={() => setTab(t)}
             className={clsx(
-              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
-              tab === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50',
+              'px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors',
+              tab === t ? 'bg-[#161D1A] text-[#A3E635] border-[#161D1A]' : 'bg-white text-stone-600 border-[#E5ECE7] hover:bg-stone-50',
             )}
           >
             {t === 'PENDING' ? 'Awaiting decision' : t === 'APPROVED' ? 'Approved' : 'Rejected'} ({counts[t] ?? 0})
@@ -189,10 +189,10 @@ export default function AdminApprovalsPage() {
         ))}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-[#E5ECE7] rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+            <thead className="bg-[#F4F6F4] border-b border-[#E5ECE7] text-stone-500 font-bold text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-5 py-4 font-medium">Project</th>
                 <th className="px-5 py-4 font-medium">Customer</th>
@@ -215,7 +215,7 @@ export default function AdminApprovalsPage() {
                     <div className="font-medium text-slate-900">{p.property_name}</div>
                     <div className="text-xs text-slate-400">
                       {p.bhk_type} · {p.city}
-                      {p.total_units > 1 && <span className="ml-1 text-indigo-600 font-semibold">· {p.total_units} units (B2B)</span>}
+                      {p.total_units > 1 && <span className="ml-1 text-[#65A30D] font-bold">· {p.total_units} units (B2B)</span>}
                     </div>
                   </td>
                   <td className="px-5 py-4">
@@ -246,7 +246,7 @@ export default function AdminApprovalsPage() {
                       )}
                       {p.approval_status === 'APPROVED' && (
                         <button disabled={busy} onClick={() => { setAllocating(p); setVendorId(p.allocated_vendor_id || ''); }}
-                          className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><Truck className="w-4 h-4" /> {p.allocated_vendor_id ? 'Re-allocate' : 'Allocate'}</button>
+                          className="text-[#65A30D] hover:text-[#4d7c0f] font-bold flex items-center gap-1"><Truck className="w-4 h-4" /> {p.allocated_vendor_id ? 'Re-allocate' : 'Allocate'}</button>
                       )}
                       <button onClick={() => openPricing(p)} className="text-slate-600 hover:text-slate-900 flex items-center gap-1"><Percent className="w-4 h-4" /> Pricing</button>
                       <button onClick={() => openHistory(p)} className="text-slate-400 hover:text-slate-700" title="Decision history"><History className="w-4 h-4" /></button>

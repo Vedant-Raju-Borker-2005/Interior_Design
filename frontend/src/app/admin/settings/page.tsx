@@ -82,15 +82,15 @@ export default function AdminSettingsPage() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">IT Box / Settings</h1>
+        <h1 className="text-2xl font-bold text-[#161D1A] tracking-tight">IT Box / Settings</h1>
         <p className="text-slate-500 mt-1">System configuration, user roles and permissions</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl mb-8 w-max">
+      <div className="flex gap-1 p-1 bg-[#F4F6F4] border border-[#E5ECE7] rounded-xl mb-8 w-max">
         {SECTIONS.map(s => (
           <button key={s.id} onClick={() => setTab(s.id as any)}
-            className={`px-5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${tab === s.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            className={`px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${tab === s.id ? 'bg-[#161D1A] text-[#A3E635] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
             <s.icon className="w-4 h-4" />
             {s.label}
           </button>
@@ -101,13 +101,13 @@ export default function AdminSettingsPage() {
       {tab === 'system' && (
         <div className="space-y-6">
           {/* Update setting */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2"><Key className="w-5 h-5 text-indigo-500" /> Update System Setting</h3>
+          <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm">
+            <h3 className="font-semibold text-[#161D1A] mb-4 flex items-center gap-2"><Key className="w-5 h-5 text-[#059669]" /> Update System Setting</h3>
             <div className="flex gap-3 flex-wrap mb-3">
               <select
                 value={editKey}
                 onChange={e => { setEditKey(e.target.value); }}
-                className="flex-1 min-w-[220px] px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                className="flex-1 min-w-[220px] px-3 py-2 bg-white border border-[#E5ECE7] rounded-lg text-sm text-[#161D1A] focus:outline-none focus:ring-2 focus:ring-[#A3E635]/20 focus:border-[#A3E635]"
               >
                 <option value="">-- Select setting key --</option>
                 {KNOWN_SETTINGS.map(s => (
@@ -115,10 +115,10 @@ export default function AdminSettingsPage() {
                 ))}
               </select>
               <input type="text" placeholder="Or type custom key" value={editKey} onChange={e => setEditKey(e.target.value)}
-                className="flex-1 min-w-[180px] px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+                className="flex-1 min-w-[180px] px-3 py-2 bg-white border border-[#E5ECE7] rounded-lg text-sm text-[#161D1A] focus:outline-none focus:ring-2 focus:ring-[#A3E635]/20 focus:border-[#A3E635]" />
               <input type="text" placeholder="New value" value={editVal} onChange={e => setEditVal(e.target.value)}
-                className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
-              <button onClick={handleUpdateSetting} className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors whitespace-nowrap">
+                className="flex-1 min-w-[200px] px-3 py-2 bg-white border border-[#E5ECE7] rounded-lg text-sm text-[#161D1A] focus:outline-none focus:ring-2 focus:ring-[#A3E635]/20 focus:border-[#A3E635]" />
+              <button onClick={handleUpdateSetting} className="px-5 py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] rounded-lg text-sm font-semibold transition-colors whitespace-nowrap">
                 Update
               </button>
             </div>
@@ -128,19 +128,19 @@ export default function AdminSettingsPage() {
           </div>
 
           {/* Existing settings table */}
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <span className="font-semibold text-slate-900">Current System Settings</span>
+          <div className="bg-white border border-[#E5ECE7] rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-5 py-4 border-b border-[#E5ECE7] flex items-center justify-between bg-[#FAFBF9]">
+              <span className="font-semibold text-[#161D1A]">Current System Settings</span>
               <div className="flex gap-2">
-                <button onClick={() => setCategoryFilter('')} className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${!categoryFilter ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>All</button>
+                <button onClick={() => setCategoryFilter('')} className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-colors ${!categoryFilter ? 'bg-[#161D1A] text-[#A3E635] border-[#161D1A]' : 'bg-white text-slate-600 border-[#E5ECE7] hover:bg-[#F4F6F4]'}`}>All</button>
                 {Array.from(new Set(settings.map((s: any) => s.category).filter(Boolean))).map((cat: any) => (
-                  <button key={cat} onClick={() => setCategoryFilter(cat)} className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${categoryFilter === cat ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>{cat}</button>
+                  <button key={cat} onClick={() => setCategoryFilter(cat)} className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-colors ${categoryFilter === cat ? 'bg-[#161D1A] text-[#A3E635] border-[#161D1A]' : 'bg-white text-slate-600 border-[#E5ECE7] hover:bg-[#F4F6F4]'}`}>{cat}</button>
                 ))}
               </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                <thead className="bg-[#F4F6F4] border-b border-[#E5ECE7] text-slate-500">
                   <tr>
                     <th className="px-5 py-3 font-medium">Key</th>
                     <th className="px-5 py-3 font-medium">Value</th>
@@ -154,10 +154,10 @@ export default function AdminSettingsPage() {
                     <tr><td colSpan={3} className="py-8 text-center text-slate-500">No system settings configured</td></tr>
                   ) : (
                     settings.filter((s: any) => !categoryFilter || s.category === categoryFilter).map((s: any) => (
-                      <tr key={s.id || s.key} className="hover:bg-slate-50/50">
-                        <td className="px-5 py-3 font-mono text-xs text-slate-700">{s.key}</td>
+                      <tr key={s.id || s.key} className="hover:bg-[#FAFBF9]/80">
+                        <td className="px-5 py-3 font-mono text-xs text-[#161D1A] font-semibold">{s.key}</td>
                         <td className="px-5 py-3 text-slate-600">{s.value}</td>
-                        <td className="px-5 py-3"><span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full">{s.category}</span></td>
+                        <td className="px-5 py-3"><span className="px-2 py-0.5 bg-emerald-50 text-[#059669] border border-emerald-200 text-xs rounded-full">{s.category}</span></td>
                       </tr>
                     ))
                   )}
@@ -170,28 +170,28 @@ export default function AdminSettingsPage() {
 
       {/* Roles & Permissions */}
       {tab === 'roles' && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-8">
+        <div className="bg-white border border-[#E5ECE7] rounded-2xl p-6 shadow-sm space-y-8">
           <div>
-            <h3 className="font-semibold text-slate-900 mb-1">Assign Admin Role</h3>
+            <h3 className="font-semibold text-[#161D1A] mb-1">Assign Admin Role</h3>
             <p className="text-slate-500 text-sm mb-5">Grant or change admin roles for platform users.</p>
             <div className="flex gap-3 flex-wrap">
               <input type="text" placeholder="User ID" value={roleUserId} onChange={e => setRoleUserId(e.target.value)}
-                className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+                className="flex-1 min-w-[200px] px-3 py-2 bg-white border border-[#E5ECE7] rounded-lg text-sm text-[#161D1A] focus:outline-none focus:ring-2 focus:ring-[#A3E635]/20 focus:border-[#A3E635]" />
               <select value={roleName} onChange={e => setRoleName(e.target.value)}
-                className="min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                className="min-w-[200px] px-3 py-2 bg-white border border-[#E5ECE7] rounded-lg text-sm text-[#161D1A] focus:outline-none focus:ring-2 focus:ring-[#A3E635]/20 focus:border-[#A3E635]">
                 <option value="SUPER_ADMIN">Super Admin</option>
                 <option value="OPERATIONS_ADMIN">Operations Admin</option>
                 <option value="SALES_ADMIN">Sales Admin</option>
                 <option value="FINANCE_ADMIN">Finance Admin</option>
               </select>
-              <button onClick={handleAssignRole} className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+              <button onClick={handleAssignRole} className="px-5 py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] rounded-lg text-sm font-semibold transition-colors">
                 Assign Role
               </button>
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-6">
-            <h3 className="font-semibold text-slate-900 mb-4">Role Reference</h3>
+          <div className="border-t border-[#E5ECE7] pt-6">
+            <h3 className="font-semibold text-[#161D1A] mb-4">Role Reference</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { role: 'SUPER_ADMIN', desc: 'Full platform access. All modules.' },
@@ -199,8 +199,8 @@ export default function AdminSettingsPage() {
                 { role: 'SALES_ADMIN', desc: 'Manage customers, quotations, projects.' },
                 { role: 'FINANCE_ADMIN', desc: 'Manage pricing rules, payments, reports.' },
               ].map(r => (
-                <div key={r.role} className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                  <div className="font-semibold text-slate-900 text-sm mb-1">{r.role}</div>
+                <div key={r.role} className="bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl p-4">
+                  <div className="font-semibold text-[#161D1A] text-sm mb-1">{r.role}</div>
                   <div className="text-xs text-slate-500">{r.desc}</div>
                 </div>
               ))}
@@ -211,11 +211,11 @@ export default function AdminSettingsPage() {
 
       {/* Audit Log */}
       {tab === 'audit' && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-slate-100 font-semibold text-slate-900">System Audit Log</div>
+        <div className="bg-white border border-[#E5ECE7] rounded-2xl overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-[#E5ECE7] font-semibold text-[#161D1A] bg-[#FAFBF9]">System Audit Log</div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+              <thead className="bg-[#F4F6F4] border-b border-[#E5ECE7] text-slate-500">
                 <tr>
                   <th className="px-5 py-3 font-medium">Action</th>
                   <th className="px-5 py-3 font-medium">Entity</th>
@@ -230,8 +230,8 @@ export default function AdminSettingsPage() {
                   <tr><td colSpan={4} className="py-8 text-center text-slate-500">No audit logs</td></tr>
                 ) : (
                   auditLogs.slice(0, 100).map((log: any) => (
-                    <tr key={log.id} className="hover:bg-slate-50/50">
-                      <td className="px-5 py-3"><span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs rounded-full font-mono">{log.action}</span></td>
+                    <tr key={log.id} className="hover:bg-[#FAFBF9]/80">
+                      <td className="px-5 py-3"><span className="px-2 py-0.5 bg-[#161D1A] text-[#A3E635] text-xs rounded-full font-mono">{log.action}</span></td>
                       <td className="px-5 py-3 text-slate-600 text-xs">{log.entity_type}</td>
                       <td className="px-5 py-3 font-mono text-xs text-slate-400">{log.entity_id?.substring(0, 10)}</td>
                       <td className="px-5 py-3 text-slate-500 text-xs">{log.timestamp ? new Date(log.timestamp).toLocaleString() : '-'}</td>
