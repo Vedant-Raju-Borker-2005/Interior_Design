@@ -145,26 +145,26 @@ export default function BulkPricingCard({
   })
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
+    <div className="bg-white rounded-3xl border border-[#E5ECE7] shadow-xs p-6 space-y-6">
       
       {/* Header with Title and Savings Pill */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5ECE7] pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-black text-slate-800 text-lg tracking-tight">Project Bulk Pricing & Ledger</h3>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
+            <h3 className="font-black text-stone-900 text-lg tracking-tight font-serif">Project Bulk Pricing & Ledger</h3>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700">
               {data.units_priced} of {data.units_total} unit{data.units_total === 1 ? '' : 's'} itemized
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-stone-500 mt-1">
             Transparent unit pricing with base showroom benchmark, customization deltas, and project volume discounts.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
           {discounted && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-black shadow-xs">
-              <Tag className="w-3.5 h-3.5" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-black shadow-2xs">
+              <Tag className="w-3.5 h-3.5 text-[#059669]" />
               <span>Bulk Discount {data.savings_percent ? `· ${data.savings_percent}%` : ''} ({inr(data.discount_amount)} saved)</span>
             </span>
           )}
@@ -175,8 +175,8 @@ export default function BulkPricingCard({
               className={clsx(
                 "px-3.5 py-1.5 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition",
                 showConfig
-                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                  : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:text-indigo-650"
+                  ? "bg-[#161D1A] text-white border-[#161D1A] shadow-xs"
+                  : "bg-white text-stone-700 border-stone-200 hover:border-[#84CC16] hover:text-stone-900"
               )}
             >
               <Sliders className="w-3.5 h-3.5" />
@@ -188,23 +188,23 @@ export default function BulkPricingCard({
 
       {/* Collapsible Discount Configuration Drawer */}
       {showConfig && (
-        <form onSubmit={handleApplyDiscount} className="bg-indigo-50/40 border border-indigo-150 rounded-2xl p-5 space-y-4">
+        <form onSubmit={handleApplyDiscount} className="bg-emerald-50/40 border border-emerald-200/60 rounded-2xl p-5 space-y-4">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-black text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Sliders className="w-4 h-4 text-indigo-650" /> Configure Project-Level Volume Discount
+            <span className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5 font-serif">
+              <Sliders className="w-4 h-4 text-[#059669]" /> Configure Project-Level Volume Discount
             </span>
-            <span className="text-[11px] text-slate-500 font-medium">Catalog product prices remain unaltered</span>
+            <span className="text-[11px] text-stone-500 font-medium">Catalog product prices remain unaltered</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+              <label className="block text-[10px] font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                 Discount Mode
               </label>
               <select
                 value={discountType}
                 onChange={e => setDiscountType(e.target.value)}
-                className="select w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-semibold text-slate-800 outline-none"
+                className="select w-full px-3 py-2 text-xs rounded-xl border border-stone-200 bg-white font-semibold text-stone-800 outline-none focus:border-[#84CC16]"
               >
                 <option value="PERCENT">Percentage Discount (%)</option>
                 <option value="FLAT_PER_UNIT">Flat Discount Per Unit (₹ / unit)</option>
@@ -213,7 +213,7 @@ export default function BulkPricingCard({
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+              <label className="block text-[10px] font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                 Discount Value {discountType === 'PERCENT' ? '(%)' : '(₹)'}
               </label>
               <input
@@ -224,25 +224,25 @@ export default function BulkPricingCard({
                 value={discountValue}
                 onChange={e => setDiscountValue(e.target.value ? Number(e.target.value) : '')}
                 placeholder={discountType === 'PERCENT' ? 'e.g. 15' : 'e.g. 100000'}
-                className="input w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-bold text-slate-900 outline-none"
+                className="input w-full px-3 py-2 text-xs rounded-xl border border-stone-200 bg-white font-bold text-stone-900 outline-none focus:border-[#84CC16]"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                Agreement Note <span className="text-slate-400 font-normal">(optional)</span>
+              <label className="block text-[10px] font-bold text-stone-600 uppercase tracking-wider mb-1.5">
+                Agreement Note <span className="text-stone-400 font-normal">(optional)</span>
               </label>
               <input
                 type="text"
                 value={discountNote}
                 onChange={e => setDiscountNote(e.target.value)}
                 placeholder="e.g. Volume deal 15% discount for tower units"
-                className="input w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium text-slate-800 outline-none"
+                className="input w-full px-3 py-2 text-xs rounded-xl border border-stone-200 bg-white font-medium text-stone-800 outline-none focus:border-[#84CC16]"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-indigo-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-emerald-100">
             {discounted && (
               <button
                 type="button"
@@ -256,14 +256,14 @@ export default function BulkPricingCard({
             <button
               type="button"
               onClick={() => setShowConfig(false)}
-              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition"
+              className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-xl transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={savingDiscount}
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 disabled:opacity-50"
+              className="btn-lime px-5 py-2 text-xs font-extrabold flex items-center gap-1.5 shadow-sm disabled:opacity-50"
             >
               <Check className="w-3.5 h-3.5" /> {savingDiscount ? 'Applying...' : 'Apply Volume Discount'}
             </button>
@@ -273,36 +273,36 @@ export default function BulkPricingCard({
 
       {/* 2.2 — Side-by-Side Transparent Pricing (Original vs Discounted vs Savings) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-2xl bg-slate-50 border border-slate-200/80 p-4">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        <div className="rounded-2xl bg-[#FAFBF9] border border-[#E5ECE7] p-4">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
             Average Original Price / Unit
           </div>
-          <div className={clsx('text-xl font-black mt-1', discounted ? 'text-slate-400 line-through' : 'text-slate-800')}>
+          <div className={clsx('text-xl font-black mt-1 font-serif', discounted ? 'text-stone-400 line-through' : 'text-stone-800')}>
             {inr(data.original_unit_price)}
           </div>
-          <span className="text-[10px] text-slate-400 block mt-0.5">Catalog base benchmark</span>
+          <span className="text-[10px] text-stone-400 block mt-0.5">Catalog base benchmark</span>
         </div>
 
-        <div className="rounded-2xl bg-indigo-50/80 border border-indigo-150 p-4">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+        <div className="rounded-2xl bg-white border-2 border-[#84CC16] p-4 ring-2 ring-[#84CC16]/20 shadow-2xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-stone-900">
             {discounted ? 'Discounted Price / Unit' : 'Effective Price / Unit'}
           </div>
-          <div className="text-xl font-black mt-1 text-indigo-700">
+          <div className="text-xl font-black mt-1 text-[#059669] font-serif">
             {inr(data.discounted_unit_price)}
           </div>
-          <span className="text-[10px] text-indigo-500 block mt-0.5">
+          <span className="text-[10px] text-stone-500 block mt-0.5">
             {discounted ? `Net after applied volume discount` : `Standard rate per unit`}
           </span>
         </div>
 
-        <div className="rounded-2xl bg-emerald-50/80 border border-emerald-150 p-4">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+        <div className="rounded-2xl bg-emerald-50/80 border border-emerald-200/60 p-4">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
             Volume Savings / Unit
           </div>
-          <div className="text-xl font-black mt-1 text-emerald-600">
+          <div className="text-xl font-black mt-1 text-emerald-700 font-serif">
             {inr(data.savings_per_unit)}
           </div>
-          <span className="text-[10px] text-emerald-600 font-semibold block mt-0.5">
+          <span className="text-[10px] text-emerald-800 font-bold block mt-0.5">
             {data.savings_percent ? `${data.savings_percent}% net savings per flat` : '0% discount active'}
           </span>
         </div>
@@ -315,7 +315,7 @@ export default function BulkPricingCard({
             <button
               type="button"
               onClick={() => setShowTable(!showTable)}
-              className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 hover:text-indigo-650"
+              className="text-xs font-black text-stone-900 uppercase tracking-wider flex items-center gap-1.5 hover:text-[#059669] font-serif"
             >
               <span>Unit Customization & Pricing Breakdown ({filteredLines.length} Units)</span>
               {showTable ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -323,22 +323,22 @@ export default function BulkPricingCard({
 
             {showTable && (
               <div className="relative w-full sm:w-64">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-stone-400" />
                 <input
                   type="text"
                   placeholder="Filter by flat, BHK, or buyer..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 outline-none text-slate-800"
+                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-stone-200 focus:border-[#84CC16] outline-none text-stone-800 bg-[#FAFBF9]"
                 />
               </div>
             )}
           </div>
 
           {showTable && (
-            <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-2xs">
+            <div className="overflow-x-auto border border-[#E5ECE7] rounded-2xl shadow-2xs">
               <table className="w-full text-xs">
-                <thead className="bg-slate-50 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <thead className="bg-[#F4F6F4] text-[10px] font-extrabold uppercase tracking-wider text-stone-600 border-b border-[#E5ECE7]">
                   <tr>
                     <th className="text-left px-4 py-3">Flat / Unit</th>
                     <th className="text-left px-3 py-3">BHK</th>
@@ -350,55 +350,55 @@ export default function BulkPricingCard({
                     <th className="text-center px-3 py-3">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-stone-100 bg-white">
                   {filteredLines.map((l, idx) => {
                     const delta = l.customization_delta ?? 0
-                    const statusPill = STATUS_PILLS[l.status] || { bg: 'bg-slate-100 text-slate-600', text: l.status }
+                    const statusPill = STATUS_PILLS[l.status] || { bg: 'bg-stone-100 text-stone-600', text: l.status }
 
                     return (
-                      <tr key={l.flat_id || l.project_id || idx} className="hover:bg-slate-50/60 transition">
+                      <tr key={l.flat_id || l.project_id || idx} className="hover:bg-[#FAFBF9] transition">
                         <td className="px-4 py-3">
-                          <div className="font-extrabold text-slate-850 text-slate-800 flex items-center gap-1.5">
-                            <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+                          <div className="font-extrabold text-stone-900 flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5 text-[#059669]" />
                             <span>{l.unit}</span>
                             {l.typology_name && (
-                              <span className="text-[9px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded">
+                              <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100">
                                 {l.typology_name}
                               </span>
                             )}
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[140px]">
+                          <div className="text-[10px] text-stone-400 mt-0.5 truncate max-w-[140px]">
                             {l.customer_name ? (
-                              <span className="text-slate-600 font-semibold">{l.customer_name}</span>
+                              <span className="text-stone-700 font-semibold">{l.customer_name}</span>
                             ) : (
                               <span className="italic">Unassigned Buyer</span>
                             )}
                           </div>
                         </td>
 
-                        <td className="px-3 py-3 text-slate-600 font-semibold">
+                        <td className="px-3 py-3 text-stone-600 font-semibold">
                           {l.bhk_type}
                         </td>
 
-                        <td className="px-3 py-3 text-right text-slate-500 font-medium">
+                        <td className="px-3 py-3 text-right text-stone-500 font-medium">
                           {inr(l.base_price || l.original_price)}
                         </td>
 
                         <td className="px-3 py-3 text-right font-bold">
                           {delta > 0 ? (
-                            <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[11px]">
+                            <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded text-[11px] border border-amber-200/60">
                               +{inr(delta)}
                             </span>
                           ) : delta < 0 ? (
-                            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px]">
+                            <span className="text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px] border border-emerald-200/60">
                               −{inr(Math.abs(delta))}
                             </span>
                           ) : (
-                            <span className="text-slate-400 font-normal">—</span>
+                            <span className="text-stone-400 font-normal">—</span>
                           )}
                         </td>
 
-                        <td className={clsx('px-3 py-3 text-right font-semibold', l.discount > 0 ? 'text-slate-400 line-through' : 'text-slate-700')}>
+                        <td className={clsx('px-3 py-3 text-right font-semibold', l.discount > 0 ? 'text-stone-400 line-through' : 'text-stone-700')}>
                           {inr(l.original_price)}
                         </td>
 
@@ -406,7 +406,7 @@ export default function BulkPricingCard({
                           {l.discount > 0 ? `− ${inr(l.discount)}` : '—'}
                         </td>
 
-                        <td className="px-4 py-3 text-right font-black text-slate-900 text-sm">
+                        <td className="px-4 py-3 text-right font-black text-stone-900 text-sm font-serif">
                           {inr(l.discounted_price)}
                         </td>
 
@@ -426,32 +426,32 @@ export default function BulkPricingCard({
       )}
 
       {/* Project Total Financials Breakdown */}
-      <dl className="text-xs grid grid-cols-2 gap-y-2 bg-slate-50 rounded-2xl p-5 border border-slate-100">
-        <dt className="text-slate-500 font-medium">Project Value Before Discount</dt>
-        <dd className="text-right font-bold text-slate-800">{inr(data.original_total)}</dd>
+      <dl className="text-xs grid grid-cols-2 gap-y-2 bg-[#FAFBF9] rounded-2xl p-5 border border-[#E5ECE7]">
+        <dt className="text-stone-500 font-medium">Project Value Before Discount</dt>
+        <dd className="text-right font-bold text-stone-800">{inr(data.original_total)}</dd>
 
         {discounted && (
           <>
-            <dt className="text-emerald-700 font-bold flex items-center gap-1">
+            <dt className="text-emerald-800 font-bold flex items-center gap-1">
               <Tag className="w-3 h-3 text-emerald-600" /> Bulk Volume Savings
             </dt>
             <dd className="text-right font-black text-emerald-600">− {inr(data.discount_amount)}</dd>
-            <dt className="text-slate-500 font-medium">Net Taxable Project Subtotal</dt>
-            <dd className="text-right font-bold text-slate-700">{inr(data.discounted_total)}</dd>
+            <dt className="text-stone-500 font-medium">Net Taxable Project Subtotal</dt>
+            <dd className="text-right font-bold text-stone-700">{inr(data.discounted_total)}</dd>
           </>
         )}
 
-        <dt className="text-slate-500 font-medium">GST ({data.gst_rate}%)</dt>
-        <dd className="text-right font-bold text-slate-700">{inr(data.gst_amount)}</dd>
+        <dt className="text-stone-500 font-medium">GST ({data.gst_rate}%)</dt>
+        <dd className="text-right font-bold text-stone-700">{inr(data.gst_amount)}</dd>
 
-        <dt className="font-extrabold text-slate-900 text-sm pt-2 border-t border-slate-200">Total Project Value</dt>
-        <dd className="text-right font-black text-indigo-700 text-lg pt-2 border-t border-slate-200">
+        <dt className="font-extrabold text-stone-900 text-sm pt-2 border-t border-[#E5ECE7] font-serif">Total Project Value</dt>
+        <dd className="text-right font-black text-[#059669] text-lg pt-2 border-t border-[#E5ECE7] font-serif">
           {inr(data.grand_total)}
         </dd>
       </dl>
 
       {data.discount_note && (
-        <p className="text-[11px] text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+        <p className="text-[11px] text-stone-600 bg-[#FAFBF9] px-4 py-2 rounded-xl border border-[#E5ECE7]">
           <strong>Volume Agreement Note:</strong> {data.discount_note}
         </p>
       )}

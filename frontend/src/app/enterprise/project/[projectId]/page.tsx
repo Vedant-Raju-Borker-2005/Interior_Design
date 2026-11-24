@@ -293,37 +293,37 @@ export default function EnterpriseProjectPage() {
   })
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A] flex flex-col">
       <Navbar />
       <div className="flex-1 max-w-6xl w-full mx-auto px-4 pt-28 pb-16 space-y-8">
         
         {/* Header section */}
         {project && (
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="bg-white rounded-3xl p-6 border border-[#E5ECE7] shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div className="space-y-2">
               <button
                 onClick={() => router.push('/enterprise/dashboard')}
-                className="flex items-center gap-1.5 text-xs text-slate-500 font-bold hover:text-indigo-650 transition"
+                className="flex items-center gap-1.5 text-xs text-stone-500 font-bold hover:text-[#161D1A] transition"
               >
                 <ArrowLeft className="w-4 h-4" /> Developments Dashboard
               </button>
-              <h1 className="text-2xl font-black text-slate-800 tracking-tight">{project.property_name}</h1>
-              <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-400">
-                <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-slate-400" /> {project.city}</span>
-                <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-slate-400" /> Ready starting: {project.earliest_start_date}</span>
-                <span className="flex items-center gap-1.5"><Activity className="w-4 h-4 text-slate-400" /> Total inventory: {project.total_units} units</span>
+              <h1 className="text-2xl font-black text-[#161D1A] tracking-tight">{project.property_name}</h1>
+              <div className="flex flex-wrap gap-4 text-xs font-semibold text-stone-500">
+                <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-stone-400" /> {project.city}</span>
+                <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-stone-400" /> Ready starting: {project.earliest_start_date}</span>
+                <span className="flex items-center gap-1.5"><Activity className="w-4 h-4 text-stone-400" /> Total inventory: {project.total_units} units</span>
               </div>
             </div>
 
             {/* Quick stats view */}
             <div className="flex gap-4">
-              <div className="px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-center">
-                <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">Active</span>
-                <span className="font-extrabold text-indigo-700 text-sm">{project.stats?.started || 0} units</span>
+              <div className="px-4 py-2 bg-stone-50 border border-[#E5ECE7] rounded-xl text-center">
+                <span className="text-[9px] uppercase font-bold text-stone-500 block tracking-wider">Active</span>
+                <span className="font-extrabold text-[#161D1A] text-sm">{project.stats?.started || 0} units</span>
               </div>
-              <div className="px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center">
-                <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">Completed</span>
-                <span className="font-extrabold text-emerald-700 text-sm">{project.stats?.completed || 0} units</span>
+              <div className="px-4 py-2 bg-emerald-50 border border-emerald-200/60 rounded-xl text-center">
+                <span className="text-[9px] uppercase font-bold text-[#059669] block tracking-wider">Completed</span>
+                <span className="font-extrabold text-[#059669] text-sm">{project.stats?.completed || 0} units</span>
               </div>
             </div>
           </div>
@@ -333,16 +333,16 @@ export default function EnterpriseProjectPage() {
         {project && <BulkPricingCard projectId={projectId as string} />}
 
         {/* Project Typologies Shelf */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+        <div className="bg-white rounded-3xl p-6 border border-[#E5ECE7] shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#E5ECE7] pb-4">
             <div>
-              <h2 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
-                <Layout className="w-5 h-5 text-indigo-650" /> Project Typologies & Prototypes
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+              <h2 className="text-base font-black text-[#161D1A] tracking-tight flex items-center gap-2">
+                <Layout className="w-5 h-5 text-[#059669]" /> Project Typologies & Prototypes
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#059669] border border-emerald-200/60">
                   {typologies.length} Defined
                 </span>
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-stone-500 mt-0.5">
                 Standardized architectural prototypes with layout blueprints and flat allocations.
               </p>
             </div>
@@ -351,7 +351,7 @@ export default function EnterpriseProjectPage() {
               <button
                 type="button"
                 onClick={() => setShowAddTypologyModal(true)}
-                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+                className="px-3.5 py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition"
               >
                 <Plus className="w-3.5 h-3.5" /> Add New Typology
               </button>
@@ -362,7 +362,7 @@ export default function EnterpriseProjectPage() {
                   setShowViewAssignedModal(true)
                 }}
                 disabled={typologies.length === 0}
-                className="px-3.5 py-2 bg-white border border-slate-200 hover:border-indigo-300 text-slate-700 hover:text-indigo-650 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition disabled:opacity-40"
+                className="px-3.5 py-2 bg-white border border-[#E5ECE7] hover:border-stone-400 text-stone-700 hover:text-[#161D1A] rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition disabled:opacity-40"
               >
                 <Eye className="w-3.5 h-3.5" /> View Assigned Typologies
               </button>
@@ -373,7 +373,7 @@ export default function EnterpriseProjectPage() {
                   setShowAssignFlatsModal(true)
                 }}
                 disabled={typologies.length === 0}
-                className="px-3.5 py-2 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition disabled:opacity-40"
+                className="px-3.5 py-2 bg-[#161D1A] text-[#A3E635] hover:bg-[#0B0F0D] rounded-xl text-xs font-bold flex items-center gap-1.5 transition disabled:opacity-40"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" /> Assign to Flats
               </button>
@@ -382,12 +382,12 @@ export default function EnterpriseProjectPage() {
 
           {/* Typologies Horizontal Scrollable Shelf */}
           {typologies.length === 0 ? (
-            <div className="text-center py-8 px-4 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
-              <p className="text-slate-500 text-xs font-medium">No typologies defined yet for this development.</p>
+            <div className="text-center py-8 px-4 border border-dashed border-[#E5ECE7] rounded-2xl bg-[#FAFBF9]">
+              <p className="text-stone-500 text-xs font-medium">No typologies defined yet for this development.</p>
               <button
                 type="button"
                 onClick={() => setShowAddTypologyModal(true)}
-                className="mt-3 text-xs font-bold text-indigo-600 hover:underline inline-flex items-center gap-1"
+                className="mt-3 text-xs font-bold text-[#059669] hover:underline inline-flex items-center gap-1"
               >
                 <Plus className="w-3.5 h-3.5" /> Add your first typology prototype
               </button>
@@ -400,41 +400,41 @@ export default function EnterpriseProjectPage() {
                 return (
                   <div
                     key={typ.id}
-                    className="min-w-[260px] max-w-[280px] p-4 rounded-2xl border border-slate-200 bg-slate-50/40 hover:bg-white hover:border-indigo-300 transition-all flex flex-col justify-between shrink-0 shadow-xs"
+                    className="min-w-[260px] max-w-[280px] p-4 rounded-2xl border border-[#E5ECE7] bg-white hover:border-stone-400 transition-all flex flex-col justify-between shrink-0 shadow-xs"
                   >
                     <div className="flex gap-3 items-start">
                       {imgUrl ? (
                         <img
                           src={imgUrl}
                           alt={typ.name}
-                          className="w-14 h-14 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0 bg-white"
+                          className="w-14 h-14 rounded-xl object-cover border border-[#E5ECE7] shadow-2xs shrink-0 bg-white"
                         />
                       ) : (
-                        <div className="w-14 h-14 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-indigo-500">
+                        <div className="w-14 h-14 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0 text-[#059669]">
                           <Layout className="w-6 h-6" />
                         </div>
                       )}
                       <div className="overflow-hidden">
-                        <span className="font-extrabold text-slate-800 text-sm block truncate" title={typ.name}>
+                        <span className="font-extrabold text-[#161D1A] text-sm block truncate" title={typ.name}>
                           {typ.name}
                         </span>
-                        <span className="text-[11px] font-semibold text-slate-500 block mt-0.5">
+                        <span className="text-[11px] font-semibold text-stone-500 block mt-0.5">
                           {typ.carpet_area_sqft ? `${typ.carpet_area_sqft.toLocaleString()} sq.ft` : 'Carpet Area: N/A'}
                         </span>
-                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full inline-block mt-1.5">
+                        <span className="text-[10px] font-bold text-[#059669] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full inline-block mt-1.5">
                           {assignedCount} {assignedCount === 1 ? 'Flat' : 'Flats'} Assigned
                         </span>
                       </div>
                     </div>
 
-                    <div className="mt-3 pt-3 border-t border-slate-200/60 flex justify-between items-center text-xs">
+                    <div className="mt-3 pt-3 border-t border-[#E5ECE7] flex justify-between items-center text-xs">
                       <button
                         type="button"
                         onClick={() => {
                           setActiveTypologyId(typ.id)
                           setShowViewAssignedModal(true)
                         }}
-                        className="text-slate-500 hover:text-indigo-650 font-bold text-[11px] flex items-center gap-1"
+                        className="text-stone-500 hover:text-[#161D1A] font-bold text-[11px] flex items-center gap-1"
                       >
                         <Eye className="w-3 h-3" /> Check Flats
                       </button>
@@ -444,7 +444,7 @@ export default function EnterpriseProjectPage() {
                           setActiveTypologyId(typ.id)
                           setShowAssignFlatsModal(true)
                         }}
-                        className="text-indigo-600 hover:text-indigo-800 font-extrabold text-[11px] flex items-center gap-1"
+                        className="text-[#059669] hover:text-emerald-800 font-extrabold text-[11px] flex items-center gap-1"
                       >
                         Assign <CheckCircle2 className="w-3 h-3" />
                       </button>
@@ -465,8 +465,8 @@ export default function EnterpriseProjectPage() {
               className={clsx(
                 'px-4 py-2 rounded-xl text-xs font-bold transition flex-shrink-0',
                 activeFilter === filter
-                  ? 'bg-indigo-650 text-white shadow-sm font-black'
-                  : 'bg-white text-slate-650 hover:bg-slate-100 border border-slate-200'
+                  ? 'bg-[#161D1A] text-[#A3E635] shadow-xs font-black'
+                  : 'bg-white text-stone-600 hover:bg-stone-50 border border-[#E5ECE7]'
               )}
             >
               {filter}
@@ -476,19 +476,19 @@ export default function EnterpriseProjectPage() {
 
         {/* BHK Group lists */}
         {loading ? (
-          <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
-            <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-slate-500 text-sm">Fetching units list...</p>
+          <div className="text-center py-20 bg-white rounded-3xl border border-[#E5ECE7] shadow-xs">
+            <div className="w-10 h-10 border-4 border-stone-200 border-t-[#84CC16] rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-stone-500 text-sm">Fetching units list...</p>
           </div>
         ) : Object.keys(bhkGroups).length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl border border-slate-150 shadow-sm">
-            <p className="text-slate-400 text-xs italic">No flats found matching selected status filter.</p>
+          <div className="text-center py-20 bg-white rounded-3xl border border-[#E5ECE7] shadow-xs">
+            <p className="text-stone-400 text-xs italic">No flats found matching selected status filter.</p>
           </div>
         ) : (
           <div className="space-y-8">
             {Object.keys(bhkGroups).sort().map((bhkKey) => (
               <div key={bhkKey} className="space-y-4">
-                <h3 className="text-xs font-extrabold text-indigo-700 uppercase tracking-wider border-l-4 border-indigo-600 pl-2">
+                <h3 className="text-xs font-extrabold text-[#161D1A] uppercase tracking-wider border-l-4 border-[#84CC16] pl-2">
                   {bhkKey} Units ({bhkGroups[bhkKey].length})
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
@@ -499,38 +499,38 @@ export default function EnterpriseProjectPage() {
                         key={flat.id}
                         onClick={() => setSelectedFlat(flat)}
                         className={clsx(
-                          'p-4 rounded-xl border-2 text-left cursor-pointer transition flex flex-col justify-between h-32 hover:scale-[1.02] shadow-sm hover:shadow-md bg-white',
+                          'p-4 rounded-xl border-2 text-left cursor-pointer transition flex flex-col justify-between h-32 hover:scale-[1.02] shadow-xs bg-white',
                           col.border,
-                          'hover:border-indigo-400'
+                          'hover:border-[#161D1A]'
                         )}
                       >
                         <div>
                           <div className="flex justify-between items-center">
-                            <span className="font-extrabold text-slate-850 text-slate-800 text-sm">Flat {flat.flat_number}</span>
+                            <span className="font-extrabold text-[#161D1A] text-sm">Flat {flat.flat_number}</span>
                             <span className={clsx("w-2 h-2 rounded-full", col.bg.replace('bg-', 'bg-').replace('/50', ''))} style={{ backgroundColor: flat.status === 'Completed' ? '#10B981' : flat.status === 'Unassigned' ? '#94A3B8' : '#F59E0B' }} />
                           </div>
                           
                           {flat.customer_name ? (
-                            <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold mt-2 truncate">
-                              <User className="w-3 h-3 text-slate-400" />
+                            <div className="flex items-center gap-1 text-[10px] text-stone-500 font-bold mt-2 truncate">
+                              <User className="w-3 h-3 text-stone-400" />
                               <span>{flat.customer_name}</span>
                             </div>
                           ) : (
-                            <span className="block text-[9px] text-slate-400 italic mt-2">Unassigned</span>
+                            <span className="block text-[9px] text-stone-400 italic mt-2">Unassigned</span>
                           )}
                         </div>
 
                         <div>
                           {flat.typology_name ? (
-                            <span className="block text-[8px] font-bold text-indigo-700 bg-indigo-50/80 px-1.5 py-0.5 rounded truncate mb-1" title={flat.typology_name}>
+                            <span className="block text-[8px] font-bold text-[#059669] bg-emerald-50/80 border border-emerald-200/40 px-1.5 py-0.5 rounded truncate mb-1" title={flat.typology_name}>
                               📐 {flat.typology_name}
                             </span>
                           ) : flat.floor_plan_name ? (
-                            <span className="block text-[8px] text-indigo-700 font-medium truncate mb-1" title={flat.floor_plan_name}>
+                            <span className="block text-[8px] text-[#059669] font-medium truncate mb-1" title={flat.floor_plan_name}>
                               Plan: {flat.floor_plan_name}
                             </span>
                           ) : (
-                            <span className="block text-[8px] text-slate-400 italic mb-1">
+                            <span className="block text-[8px] text-stone-400 italic mb-1">
                               No Typology
                             </span>
                           )}
@@ -629,24 +629,24 @@ export default function EnterpriseProjectPage() {
                     </div>
                   </div>
                   <div className="flex justify-end gap-2">
-                    <button onClick={() => setIsEditingFlat(false)} className="px-3 py-1 bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold rounded-lg">
+                    <button onClick={() => setIsEditingFlat(false)} className="px-3.5 py-1.5 bg-[#F4F6F4] hover:bg-stone-200 text-[#161D1A] font-bold rounded-lg border border-[#E5ECE7] text-xs transition">
                       Cancel
                     </button>
-                    <button onClick={handleSaveFlatConfig} disabled={submittingFlatEdit} className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg">
+                    <button onClick={handleSaveFlatConfig} disabled={submittingFlatEdit} className="px-4 py-1.5 bg-[#84CC16] hover:bg-[#A3E635] text-[#0B0F0D] font-black rounded-lg shadow-xs text-xs transition">
                       {submittingFlatEdit ? 'Saving...' : 'Save'}
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center bg-slate-50 border border-slate-100 p-3.5 rounded-xl">
+                  <div className="flex justify-between items-center bg-[#FAFBF9] border border-[#E5ECE7] p-3.5 rounded-xl">
                     <div>
-                      <span className="text-slate-450 block text-[9px] uppercase font-bold tracking-wider">Assigned Typology Prototype</span>
-                      <span className="font-bold text-slate-800 text-xs">
+                      <span className="text-stone-400 block text-[9px] uppercase font-bold tracking-wider">Assigned Typology Prototype</span>
+                      <span className="font-bold text-[#161D1A] text-xs">
                         {selectedFlat.typology_name ? `📐 ${selectedFlat.typology_name}` : 'No typology prototype assigned'}
                       </span>
                     </div>
-                    <button onClick={handleFlatEditStart} className="text-indigo-600 hover:text-indigo-800 font-bold">
+                    <button onClick={handleFlatEditStart} className="text-[#161D1A] hover:text-[#059669] font-black text-xs underline decoration-2 decoration-[#84CC16]/60 transition">
                       Edit unit setup
                     </button>
                   </div>
@@ -753,10 +753,10 @@ export default function EnterpriseProjectPage() {
                         onClick={handleAssignCustomer}
                         disabled={!assignName.trim() || !assignEmail.trim()}
                         className={clsx(
-                          "w-full py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5",
+                          "w-full py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 shadow-xs flex items-center justify-center gap-1.5",
                           (assignName.trim() && assignEmail.trim())
-                            ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 shadow-md cursor-pointer hover:scale-[1.01]"
-                            : "bg-slate-200 text-slate-500 border border-slate-300 cursor-not-allowed"
+                            ? "bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] cursor-pointer hover:scale-[1.01]"
+                            : "bg-stone-200 text-stone-500 border border-stone-300 cursor-not-allowed"
                         )}
                       >
                         <User className="w-3.5 h-3.5" />
@@ -769,26 +769,26 @@ export default function EnterpriseProjectPage() {
 
               {/* Invitation Token controls */}
               {selectedFlat.customer_name && (
-                <div className="space-y-3 border-t border-slate-100 pt-4">
-                  <h4 className="font-extrabold text-slate-850 text-sm">Invitation Management</h4>
+                <div className="space-y-3 border-t border-[#E5ECE7] pt-4">
+                  <h4 className="font-extrabold text-[#161D1A] text-sm">Invitation Management</h4>
                   {selectedFlat.status === 'Not Invited' ? (
                     <button
                       onClick={handleGenerateInvite}
-                      className="py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm"
+                      className="py-2 px-4 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] font-bold rounded-xl shadow-xs"
                     >
                       Generate Invitation Link
                     </button>
                   ) : selectedFlat.invitation_token ? (
                     <div className="space-y-2">
-                      <span className="text-[9px] uppercase text-slate-450 block font-bold tracking-wider">Invitation Link</span>
-                      <div className="flex gap-2 items-center bg-slate-50 p-2 rounded-lg border border-slate-200">
-                        <Link2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                        <span className="text-[10px] text-slate-600 truncate flex-1 font-medium">
+                      <span className="text-[9px] uppercase text-stone-500 block font-bold tracking-wider">Invitation Link</span>
+                      <div className="flex gap-2 items-center bg-[#FAFBF9] p-2 rounded-lg border border-[#E5ECE7]">
+                        <Link2 className="w-4 h-4 text-stone-400 flex-shrink-0" />
+                        <span className="text-[10px] text-stone-600 truncate flex-1 font-medium">
                           {window.location.origin}/invite?token={selectedFlat.invitation_token}
                         </span>
                         <button
                           onClick={() => handleCopyLink(selectedFlat.invitation_token)}
-                          className="p-1.5 bg-white hover:bg-slate-100 rounded border border-slate-200 text-slate-650"
+                          className="p-1.5 bg-white hover:bg-stone-50 rounded border border-[#E5ECE7] text-stone-700"
                           title="Copy invitation link"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -796,17 +796,17 @@ export default function EnterpriseProjectPage() {
                       </div>
                       <button
                         onClick={handleRevokeInvite}
-                        className="text-red-500 font-bold hover:underline flex items-center gap-1 mt-1 text-[11px]"
+                        className="text-rose-600 font-bold hover:underline flex items-center gap-1 mt-1 text-[11px]"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Revoke invitation link
                       </button>
                     </div>
                   ) : (
-                    <div className="bg-emerald-50 text-emerald-850 p-3.5 rounded-xl border border-emerald-200 flex gap-2.5 items-center leading-normal">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                    <div className="bg-emerald-50 text-emerald-900 p-3.5 rounded-xl border border-emerald-200/60 flex gap-2.5 items-center leading-normal">
+                      <CheckCircle2 className="w-5 h-5 text-[#059669] flex-shrink-0" />
                       <div>
                         <span className="font-bold">Invitation Accepted</span>
-                        <span className="block text-[10px] text-emerald-700 mt-0.5">The buyer has accepted the invitation, linked their account, and initiated space customization.</span>
+                        <span className="block text-[10px] text-emerald-800 mt-0.5">The buyer has accepted the invitation, linked their account, and initiated space customization.</span>
                       </div>
                     </div>
                   )}
@@ -821,11 +821,11 @@ export default function EnterpriseProjectPage() {
 
       {/* 1. Add New Typology Modal */}
       {showAddTypologyModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="font-extrabold text-slate-800 text-base flex items-center gap-2">
-                <Plus className="w-4 h-4 text-indigo-650" /> Add New Typology Prototype
+        <div className="fixed inset-0 bg-[#0B0F0D]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden flex flex-col border border-[#E5ECE7]">
+            <div className="bg-[#F4F6F4] px-6 py-4 border-b border-[#E5ECE7] flex justify-between items-center">
+              <h3 className="font-extrabold text-[#161D1A] text-base flex items-center gap-2">
+                <Plus className="w-4 h-4 text-[#059669]" /> Add New Typology Prototype
               </h3>
               <button
                 type="button"
@@ -836,7 +836,7 @@ export default function EnterpriseProjectPage() {
                   setNewTypFile(null)
                   setNewTypPreview(null)
                 }}
-                className="text-slate-400 hover:text-slate-600 text-xl font-bold"
+                className="text-stone-400 hover:text-stone-600 text-xl font-bold"
               >
                 &times;
               </button>
@@ -844,7 +844,7 @@ export default function EnterpriseProjectPage() {
 
             <form onSubmit={handleCreateTypology} className="p-6 space-y-4 text-xs">
               <div>
-                <label className="block text-slate-700 font-bold uppercase tracking-wider text-[10px] mb-1.5">
+                <label className="block text-stone-700 font-bold uppercase tracking-wider text-[10px] mb-1.5">
                   Typology Name *
                 </label>
                 <input
@@ -853,25 +853,25 @@ export default function EnterpriseProjectPage() {
                   placeholder="e.g. Typology D or Penthouse Elite"
                   value={newTypName}
                   onChange={e => setNewTypName(e.target.value)}
-                  className="input w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 font-semibold text-slate-800 outline-none"
+                  className="input w-full px-3.5 py-2.5 rounded-xl border border-[#E5ECE7] focus:border-[#84CC16] font-semibold text-[#161D1A] outline-none bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold uppercase tracking-wider text-[10px] mb-1.5">
-                  Carpet Area (Sq.Ft) <span className="text-slate-400 font-normal">(optional)</span>
+                <label className="block text-stone-700 font-bold uppercase tracking-wider text-[10px] mb-1.5">
+                  Carpet Area (Sq.Ft) <span className="text-stone-400 font-normal">(optional)</span>
                 </label>
                 <input
                   type="number"
                   placeholder="e.g. 1350"
                   value={newTypSqft}
                   onChange={e => setNewTypSqft(e.target.value ? Number(e.target.value) : '')}
-                  className="input w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 font-semibold text-slate-800 outline-none"
+                  className="input w-full px-3.5 py-2.5 rounded-xl border border-[#E5ECE7] focus:border-[#84CC16] font-semibold text-[#161D1A] outline-none bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold uppercase tracking-wider text-[10px] mb-1.5">
+                <label className="block text-stone-700 font-bold uppercase tracking-wider text-[10px] mb-1.5">
                   Blueprint / Floor Plan Drawing
                 </label>
                 <div className="space-y-2">
@@ -883,30 +883,30 @@ export default function EnterpriseProjectPage() {
                       setNewTypFile(file)
                       setNewTypPreview(file ? URL.createObjectURL(file) : null)
                     }}
-                    className="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer w-full"
+                    className="text-xs text-stone-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-[#059669] hover:file:bg-emerald-100 cursor-pointer w-full"
                   />
                   {newTypPreview && (
                     <img
                       src={newTypPreview}
                       alt="Preview"
-                      className="w-20 h-20 rounded-xl object-cover border border-slate-200"
+                      className="w-20 h-20 rounded-xl object-cover border border-[#E5ECE7]"
                     />
                   )}
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+              <div className="flex justify-end gap-2 pt-4 border-t border-[#E5ECE7]">
                 <button
                   type="button"
                   onClick={() => setShowAddTypologyModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingTypology || !newTypName.trim()}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+                  className="px-5 py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] font-bold rounded-xl disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
                 >
                   {submittingTypology ? 'Saving...' : 'Create Typology'}
                 </button>
@@ -918,28 +918,28 @@ export default function EnterpriseProjectPage() {
 
       {/* 2. View Assigned Typologies 2-Column Modal */}
       {showViewAssignedModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+        <div className="fixed inset-0 bg-[#0B0F0D]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[85vh] border border-[#E5ECE7]">
+            <div className="bg-[#F4F6F4] px-6 py-4 border-b border-[#E5ECE7] flex justify-between items-center">
               <div>
-                <h3 className="font-extrabold text-slate-800 text-base flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-indigo-650" /> View Assigned Typologies
+                <h3 className="font-extrabold text-[#161D1A] text-base flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-[#059669]" /> View Assigned Typologies
                 </h3>
-                <p className="text-[11px] text-slate-500">Inspect prototype specifications and units assigned to each layout.</p>
+                <p className="text-[11px] text-stone-500">Inspect prototype specifications and units assigned to each layout.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowViewAssignedModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-xl font-bold"
+                className="text-stone-400 hover:text-stone-600 text-xl font-bold"
               >
                 &times;
               </button>
             </div>
 
-            <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+            <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-[#E5ECE7]">
               {/* Left Column: Typology Selector & Preview (5 cols) */}
-              <div className="md:col-span-5 p-5 overflow-y-auto space-y-4 bg-slate-50/50">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              <div className="md:col-span-5 p-5 overflow-y-auto space-y-4 bg-[#FAFBF9]">
+                <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider">
                   Select Typology Prototype
                 </label>
                 <div className="space-y-2">
@@ -954,28 +954,28 @@ export default function EnterpriseProjectPage() {
                         className={clsx(
                           'w-full p-3 rounded-xl border text-left transition flex items-center gap-3',
                           isSelected
-                            ? 'bg-white border-indigo-600 shadow-sm ring-1 ring-indigo-600'
-                            : 'bg-white/60 border-slate-200 hover:border-slate-300 text-slate-700'
+                            ? 'bg-white border-[#84CC16] shadow-xs ring-1 ring-[#84CC16]'
+                            : 'bg-white/60 border-[#E5ECE7] hover:border-stone-300 text-stone-700'
                         )}
                       >
                         {t.floor_plan?.file_url ? (
                           <img
                             src={t.floor_plan.file_url}
                             alt={t.name}
-                            className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
+                            className="w-10 h-10 rounded-lg object-cover border border-[#E5ECE7] shrink-0"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center shrink-0">
                             <Layout className="w-5 h-5" />
                           </div>
                         )}
                         <div className="overflow-hidden flex-1">
-                          <span className="font-extrabold text-slate-800 text-xs block truncate">{t.name}</span>
-                          <span className="text-[10px] text-slate-500 block">
+                          <span className="font-extrabold text-[#161D1A] text-xs block truncate">{t.name}</span>
+                          <span className="text-[10px] text-stone-500 block">
                             {t.carpet_area_sqft ? `${t.carpet_area_sqft.toLocaleString()} sq.ft` : 'Area N/A'}
                           </span>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-700">
                           {count}
                         </span>
                       </button>
@@ -989,23 +989,23 @@ export default function EnterpriseProjectPage() {
                   if (!current) return null
                   const count = flats.filter(f => f.typology_id === current.id).length
                   return (
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3 mt-4">
+                    <div className="bg-white p-4 rounded-2xl border border-[#E5ECE7] space-y-3 mt-4">
                       {current.floor_plan?.file_url && (
                         <img
                           src={current.floor_plan.file_url}
                           alt={current.name}
-                          className="w-full h-32 object-contain bg-slate-50 rounded-xl border border-slate-100 p-1"
+                          className="w-full h-32 object-contain bg-[#FAFBF9] rounded-xl border border-[#E5ECE7] p-1"
                         />
                       )}
                       <div>
-                        <span className="font-black text-slate-900 text-sm block">{current.name}</span>
+                        <span className="font-black text-[#161D1A] text-sm block">{current.name}</span>
                         <div className="flex justify-between items-center mt-1 text-xs">
-                          <span className="text-slate-500">Total Units:</span>
-                          <span className="font-bold text-slate-800">{count} flats</span>
+                          <span className="text-stone-500">Total Units:</span>
+                          <span className="font-bold text-[#161D1A]">{count} flats</span>
                         </div>
                         <div className="flex justify-between items-center mt-1 text-xs">
-                          <span className="text-slate-500">Carpet Area:</span>
-                          <span className="font-bold text-slate-800">
+                          <span className="text-stone-500">Carpet Area:</span>
+                          <span className="font-bold text-[#161D1A]">
                             {current.carpet_area_sqft ? `${current.carpet_area_sqft.toLocaleString()} sq.ft` : 'N/A'}
                           </span>
                         </div>
@@ -1024,8 +1024,8 @@ export default function EnterpriseProjectPage() {
 
                   return (
                     <>
-                      <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                        <span className="font-extrabold text-slate-800 text-xs uppercase tracking-wider">
+                      <div className="flex justify-between items-center border-b border-[#E5ECE7] pb-3">
+                        <span className="font-extrabold text-[#161D1A] text-xs uppercase tracking-wider">
                           Flats linked to {current.name} ({assignedFlats.length})
                         </span>
                         <button
@@ -1034,7 +1034,7 @@ export default function EnterpriseProjectPage() {
                             setShowViewAssignedModal(false)
                             setShowAssignFlatsModal(true)
                           }}
-                          className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
+                          className="text-xs font-bold text-[#059669] hover:underline flex items-center gap-1"
                         >
                           Modify Allocations <ArrowLeft className="w-3 h-3 rotate-180" />
                         </button>
@@ -1042,9 +1042,9 @@ export default function EnterpriseProjectPage() {
 
                       {assignedFlats.length === 0 ? (
                         <div className="text-center py-16 px-4">
-                          <Layout className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                          <p className="text-xs text-slate-500 font-semibold">No flats assigned to {current.name} yet.</p>
-                          <p className="text-[11px] text-slate-400 mt-1">
+                          <Layout className="w-10 h-10 text-stone-300 mx-auto mb-2" />
+                          <p className="text-xs text-stone-500 font-semibold">No flats assigned to {current.name} yet.</p>
+                          <p className="text-[11px] text-stone-400 mt-1">
                             Click 'Modify Allocations' or 'Assign to Flats' to assign units to this prototype.
                           </p>
                         </div>
@@ -1053,19 +1053,19 @@ export default function EnterpriseProjectPage() {
                           {assignedFlats.map(flat => (
                             <div
                               key={flat.id}
-                              className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-1.5"
+                              className="p-3 rounded-xl border border-[#E5ECE7] bg-white shadow-2xs space-y-1.5"
                             >
                               <div className="flex justify-between items-center">
-                                <span className="font-extrabold text-slate-800 text-xs">Flat {flat.flat_number}</span>
-                                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                                <span className="font-extrabold text-[#161D1A] text-xs">Flat {flat.flat_number}</span>
+                                <span className="text-[10px] font-bold text-[#059669] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded">
                                   {flat.bhk_type}
                                 </span>
                               </div>
-                              <div className="text-[11px] text-slate-500 truncate">
+                              <div className="text-[11px] text-stone-500 truncate">
                                 {flat.customer_name ? (
-                                  <span className="font-semibold text-slate-700">{flat.customer_name}</span>
+                                  <span className="font-semibold text-stone-700">{flat.customer_name}</span>
                                 ) : (
-                                  <span className="italic text-slate-400">Buyer Unassigned</span>
+                                  <span className="italic text-stone-400">Buyer Unassigned</span>
                                 )}
                               </div>
                               <span className={clsx(
@@ -1085,11 +1085,11 @@ export default function EnterpriseProjectPage() {
               </div>
             </div>
 
-            <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-end">
+            <div className="bg-[#F4F6F4] px-6 py-3 border-t border-[#E5ECE7] flex justify-end">
               <button
                 type="button"
                 onClick={() => setShowViewAssignedModal(false)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs"
+                className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold rounded-xl text-xs"
               >
                 Close
               </button>
@@ -1100,29 +1100,29 @@ export default function EnterpriseProjectPage() {
 
       {/* 3. Assign to Flats Multi-Column BHK Modal */}
       {showAssignFlatsModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+        <div className="fixed inset-0 bg-[#0B0F0D]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-4xl rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[90vh] border border-[#E5ECE7]">
+            <div className="bg-[#F4F6F4] px-6 py-4 border-b border-[#E5ECE7] flex justify-between items-center">
               <div>
-                <h3 className="font-extrabold text-slate-800 text-base flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-indigo-650" /> Assign Flats to Typologies
+                <h3 className="font-extrabold text-[#161D1A] text-base flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-[#059669]" /> Assign Flats to Typologies
                 </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-stone-500 mt-0.5">
                   Pick an active typology below, then click any flat row to link or unassign it.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAssignFlatsModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-xl font-bold"
+                className="text-stone-400 hover:text-stone-600 text-xl font-bold"
               >
                 &times;
               </button>
             </div>
 
             {/* Typology Pill Selector Header */}
-            <div className="bg-slate-100/70 px-6 py-3 border-b border-slate-200 flex items-center gap-2 overflow-x-auto scrollbar-hide">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0 mr-1">
+            <div className="bg-stone-100/70 px-6 py-3 border-b border-[#E5ECE7] flex items-center gap-2 overflow-x-auto scrollbar-hide">
+              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider shrink-0 mr-1">
                 Active Typology:
               </span>
               {typologies.map((t) => {
@@ -1136,12 +1136,12 @@ export default function EnterpriseProjectPage() {
                     className={clsx(
                       "px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-xs",
                       isSelected
-                        ? "bg-indigo-600 text-white shadow-indigo-200"
-                        : "bg-white text-slate-700 hover:bg-slate-200 border border-slate-200"
+                        ? "bg-[#161D1A] text-[#A3E635]"
+                        : "bg-white text-stone-700 hover:bg-stone-200 border border-[#E5ECE7]"
                     )}
                   >
                     <span>{t.name}</span>
-                    <span className={clsx("px-1.5 py-0.2 rounded-full text-[10px]", isSelected ? "bg-indigo-700 text-white" : "bg-slate-100 text-slate-600")}>
+                    <span className={clsx("px-1.5 py-0.2 rounded-full text-[10px]", isSelected ? "bg-stone-800 text-white" : "bg-stone-100 text-stone-600")}>
                       {count}
                     </span>
                   </button>
@@ -1158,7 +1158,7 @@ export default function EnterpriseProjectPage() {
 
                 if (uniqueBhks.length === 0) {
                   return (
-                    <div className="text-center py-12 text-slate-400 text-xs">
+                    <div className="text-center py-12 text-stone-400 text-xs">
                       No flats generated yet for this project.
                     </div>
                   )
@@ -1174,12 +1174,12 @@ export default function EnterpriseProjectPage() {
                     {uniqueBhks.map((bhk) => {
                       const bhkFlats = flats.filter(f => f.bhk_type === bhk)
                       return (
-                        <div key={bhk} className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200 space-y-3 flex flex-col">
-                          <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                            <span className="font-black text-slate-800 text-xs uppercase tracking-wider">
+                        <div key={bhk} className="bg-[#FAFBF9] rounded-2xl p-4 border border-[#E5ECE7] space-y-3 flex flex-col">
+                          <div className="flex justify-between items-center border-b border-[#E5ECE7] pb-2">
+                            <span className="font-black text-[#161D1A] text-xs uppercase tracking-wider">
                               {bhk} Flats
                             </span>
-                            <span className="text-[10px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                            <span className="text-[10px] font-bold text-stone-500 bg-white px-2 py-0.5 rounded-full border border-[#E5ECE7]">
                               {bhkFlats.length} Units
                             </span>
                           </div>
@@ -1196,16 +1196,16 @@ export default function EnterpriseProjectPage() {
                                   className={clsx(
                                     "p-3 rounded-xl border text-xs cursor-pointer transition-all duration-150 flex items-center justify-between select-none shadow-2xs hover:scale-[1.01]",
                                     isCurrentTyp
-                                      ? "border-emerald-500 bg-emerald-50/80 text-emerald-950 font-bold ring-1 ring-emerald-500"
+                                      ? "border-[#059669] bg-emerald-50/80 text-emerald-950 font-bold ring-1 ring-[#059669]"
                                       : isOtherTyp
-                                      ? "border-slate-200 bg-white text-slate-700 hover:border-indigo-300"
-                                      : "border-dashed border-slate-300 bg-white/70 text-slate-500 hover:border-indigo-400"
+                                      ? "border-[#E5ECE7] bg-white text-stone-700 hover:border-stone-400"
+                                      : "border-dashed border-stone-300 bg-white/70 text-stone-500 hover:border-[#161D1A]"
                                   )}
                                 >
                                   <div>
                                     <span className="font-extrabold text-sm block">Flat {flat.flat_number}</span>
                                     {flat.customer_name && (
-                                      <span className="text-[10px] text-slate-500 block font-normal truncate max-w-[120px]">
+                                      <span className="text-[10px] text-stone-500 block font-normal truncate max-w-[120px]">
                                         {flat.customer_name}
                                       </span>
                                     )}
@@ -1213,15 +1213,15 @@ export default function EnterpriseProjectPage() {
 
                                   <div className="text-right">
                                     {isCurrentTyp ? (
-                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white shadow-2xs">
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#059669] text-white shadow-2xs">
                                         ✓ {currentActiveTyp?.name}
                                       </span>
                                     ) : flat.typology_name ? (
-                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-stone-100 text-stone-700 border border-[#E5ECE7]">
                                         {flat.typology_name}
                                       </span>
                                     ) : (
-                                      <span className="px-2 py-0.5 rounded text-[10px] font-medium text-slate-400 border border-dashed border-slate-200">
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-medium text-stone-400 border border-dashed border-[#E5ECE7]">
                                         Not Assigned
                                       </span>
                                     )}
@@ -1238,14 +1238,14 @@ export default function EnterpriseProjectPage() {
               })()}
             </div>
 
-            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-between items-center text-xs">
-              <span className="text-slate-500 text-[11px]">
+            <div className="bg-[#F4F6F4] px-6 py-4 border-t border-[#E5ECE7] flex justify-between items-center text-xs">
+              <span className="text-stone-500 text-[11px]">
                 Clicking an already assigned flat to the active typology will unassign it.
               </span>
               <button
                 type="button"
                 onClick={() => setShowAssignFlatsModal(false)}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm"
+                className="px-5 py-2 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] font-bold rounded-xl shadow-xs"
               >
                 Done
               </button>
