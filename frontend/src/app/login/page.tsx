@@ -144,6 +144,12 @@ export default function LoginPage() {
       router.push('/vendor/dashboard')
     } else if (role === 'consultant') {
       router.push('/consultant')
+    } else if (role === 'team_manager') {
+      router.push('/team/manager')
+    } else if (role === 'team_coordinator') {
+      router.push('/team/coordinator')
+    } else if (role === 'team_technician') {
+      router.push('/team/technician')
     } else if (role.startsWith('team_')) {
       router.push('/team')
     } else if (role === 'admin') {
@@ -367,12 +373,14 @@ export default function LoginPage() {
       if (activeRole.startsWith('team')) return '+919900002222'
       if (activeRole === 'admin') return '+919900003333'
       if (activeRole === 'enterprise') return '+919900005555'
+      if (activeRole === 'consultant') return '+919900006666'
     } else {
       if (activeRole === 'customer') return 'customer@example.com'
       if (activeRole === 'vendor') return 'vendor@example.com'
       if (activeRole.startsWith('team')) return 'team@example.com'
       if (activeRole === 'admin') return 'admin@example.com'
       if (activeRole === 'enterprise') return 'enterprise@example.com'
+      if (activeRole === 'consultant') return 'consultant@example.com'
     }
     return ''
   }

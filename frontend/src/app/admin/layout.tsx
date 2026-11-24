@@ -20,9 +20,86 @@ import {
   ClipboardCheck,
   FileSearch,
   Handshake,
-  ChevronDown,
-  ChevronRight
+  ArrowLeft
 } from 'lucide-react';
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: any;
+}
+
+interface ModuleConfig {
+  title: string;
+  items: NavItem[];
+}
+
+const MODULE_CONFIGS: Record<string, ModuleConfig> = {
+  customer: {
+    title: 'Customer Management',
+    items: [
+      { href: '/admin/customers', label: 'Customer Directory', icon: Users },
+      { href: '/admin/quotations', label: 'Quotations Search', icon: FileSearch },
+    ]
+  },
+  enterprise: {
+    title: 'Enterprise Management',
+    items: [
+      { href: '/admin/enterprise', label: 'Enterprise Partners', icon: Building },
+    ]
+  },
+  vendor: {
+    title: 'Vendor Governance',
+    items: [
+      { href: '/admin/vendors', label: 'Vendor Directory & KYC', icon: Briefcase },
+    ]
+  },
+  team: {
+    title: 'Project Team',
+    items: [
+      { href: '/admin/project-team', label: 'Team Roles & Onboarding', icon: Users },
+    ]
+  },
+  project: {
+    title: 'Project Control',
+    items: [
+      { href: '/admin/projects', label: 'Project Directory', icon: LayoutDashboard },
+      { href: '/admin/approvals', label: 'Project Approvals', icon: ClipboardCheck },
+    ]
+  },
+  special: {
+    title: 'Special Services',
+    items: [
+      { href: '/admin/special-services', label: 'Consultations & Requests', icon: Handshake },
+    ]
+  },
+  settings: {
+    title: 'IT Box & Settings',
+    items: [
+      { href: '/admin/settings', label: 'System Settings', icon: Settings },
+      { href: '/admin/audit-log', label: 'Audit Trail', icon: ShieldCheck },
+      { href: '/admin/activity-log', label: 'Developer Activity', icon: Activity },
+    ]
+  },
+  masterdata: {
+    title: 'Master Catalog',
+    items: [
+      { href: '/admin/master-data', label: 'Catalog CRUD & CSV', icon: Database },
+    ]
+  },
+  reports: {
+    title: 'Reports & Analytics',
+    items: [
+      { href: '/admin/reports', label: 'Operational CSV Reports', icon: BarChart3 },
+    ]
+  },
+  ai: {
+    title: 'AI Engine',
+    items: [
+      { href: '/admin/ai-engine', label: 'Model Customization', icon: Bot },
+    ]
+  }
+};
 
 export default function AdminLayout({
   children,
@@ -34,14 +111,6 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
-  // Customer dropdown state
-  const isCustomerPath = pathname === '/admin/customers' || pathname === '/admin/quotations';
-  const [customerOpen, setCustomerOpen] = useState(isCustomerPath);
-
-  // Project Management dropdown state
-  const isProjectPath = pathname.startsWith('/admin/projects') || pathname === '/admin/approvals';
-  const [projectOpen, setProjectOpen] = useState(isProjectPath);
-
   useEffect(() => {
     setMounted(true);
     if (mounted && (!isLoggedIn || user?.role !== 'admin')) {
@@ -49,309 +118,93 @@ export default function AdminLayout({
     }
   }, [isLoggedIn, user, mounted, router]);
 
-  useEffect(() => {
-    if (isCustomerPath) setCustomerOpen(true);
-    if (isProjectPath) setProjectOpen(true);
-  }, [pathname, isCustomerPath, isProjectPath]);
-
   if (!mounted || !isLoggedIn || user?.role !== 'admin') {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">Authenticating...</div>;
+    return <div className="min-h-screen bg-[#FAFBF9] flex items-center justify-center text-stone-500">Authenticating...</div>;
   }
 
-  const customerSubItems = [
-    { href: '/admin/customers', label: 'Customer Directory', icon: Users },
-    { href: '/admin/quotations', label: 'Quotations Search', icon: FileSearch },
-  ];
+  // Determine active module based on current pathname
+  const getActiveModule = (): ModuleConfig => {
+    if (pathname.startsWith('/admin/customers') || pathname.startsWith('/admin/quotations')) return MODULE_CONFIGS.customer;
+    if (pathname.startsWith('/admin/enterprise')) return MODULE_CONFIGS.enterprise;
+    if (pathname.startsWith('/admin/vendors')) return MODULE_CONFIGS.vendor;
+    if (pathname.startsWith('/admin/project-team')) return MODULE_CONFIGS.team;
+    if (pathname.startsWith('/admin/projects') || pathname.startsWith('/admin/approvals')) return MODULE_CONFIGS.project;
+    if (pathname.startsWith('/admin/special-services')) return MODULE_CONFIGS.special;
+    if (pathname.startsWith('/admin/settings') || pathname.startsWith('/admin/audit-log') || pathname.startsWith('/admin/activity-log')) return MODULE_CONFIGS.settings;
+    if (pathname.startsWith('/admin/master-data')) return MODULE_CONFIGS.masterdata;
+    if (pathname.startsWith('/admin/reports')) return MODULE_CONFIGS.reports;
+    if (pathname.startsWith('/admin/ai-engine')) return MODULE_CONFIGS.ai;
+    return MODULE_CONFIGS.customer;
+  };
 
-  const projectSubItems = [
-    { href: '/admin/projects', label: 'Project Directory', icon: LayoutDashboard },
-    { href: '/admin/approvals', label: 'Project Approvals', icon: ClipboardCheck },
-  ];
+  const activeModule = getActiveModule();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A] flex flex-col">
       <Navbar />
       <div className="flex flex-1 pt-16 h-[calc(100vh-64px)] overflow-hidden">
-        {/* Sidebar - Hide on root /admin page */}
+        {/* Contextual Isolated Sidebar - Hide on root /admin hub */}
         {pathname !== '/admin' && (
-          <aside className="w-64 bg-indigo-950 text-indigo-100 flex-shrink-0 flex flex-col overflow-y-auto border-r border-indigo-900/50 hidden md:flex">
-            <div className="p-4 py-6 border-b border-indigo-900/50">
-              <h2 className="text-white font-semibold text-lg flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-indigo-400" />
-                Admin Portal
-              </h2>
-              <p className="text-xs text-indigo-300 mt-1">Manage operations & governance</p>
-            </div>
-            
-            <nav className="flex-1 py-4 px-3 space-y-1">
-              {/* Dashboard */}
+          <aside className="w-64 bg-white text-[#161D1A] flex-shrink-0 flex flex-col overflow-y-auto border-r border-[#E5ECE7] hidden md:flex">
+            {/* Top Back Navigation: Arrow-Only Header */}
+            <div className="p-4 py-5 border-b border-[#E5ECE7] flex items-center justify-between">
               <Link
                 href="/admin"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname === '/admin'
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
+                className="p-2 rounded-xl text-stone-600 hover:text-[#161D1A] hover:bg-[#F4F6F4] border border-[#E5ECE7] transition-all flex items-center justify-center shadow-2xs group"
+                title="Back to Admin Hub"
               >
-                <LayoutDashboard className="w-4 h-4 text-indigo-300" />
-                Dashboard
+                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
               </Link>
-
-              {/* Customer Management Dropdown */}
-              <div className="space-y-1">
-                <div 
-                  className={clsx(
-                    "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all select-none",
-                    isCustomerPath 
-                      ? "bg-indigo-900/80 text-white border border-indigo-700/50" 
-                      : "text-indigo-200 hover:text-white hover:bg-white/10"
-                  )}
-                  onClick={() => setCustomerOpen(!customerOpen)}
-                >
-                  <div className="flex items-center gap-3">
-                    <Users className="w-4 h-4 text-indigo-300" />
-                    <span>Customer Management</span>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCustomerOpen(!customerOpen);
-                    }}
-                    className="p-0.5 text-indigo-300 hover:text-white rounded"
-                  >
-                    {customerOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                  </button>
-                </div>
-
-                {/* Sub-items list */}
-                {customerOpen && (
-                  <div className="pl-4 pr-1 py-1 space-y-1 bg-indigo-900/30 rounded-lg border border-indigo-800/30 my-1">
-                    {customerSubItems.map((sub) => {
-                      const SubIcon = sub.icon;
-                      const isSubActive = pathname === sub.href;
-                      return (
-                        <Link
-                          key={sub.href}
-                          href={sub.href}
-                          className={clsx(
-                            "flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all",
-                            isSubActive
-                              ? "bg-indigo-600 text-white font-semibold shadow-sm"
-                              : "text-indigo-300 hover:text-white hover:bg-indigo-800/50"
-                          )}
-                        >
-                          <SubIcon className={clsx("w-3.5 h-3.5", isSubActive ? "text-white" : "text-indigo-400")} />
-                          {sub.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
+              <div className="text-right">
+                <div className="text-xs font-black text-[#161D1A] uppercase tracking-wider">{activeModule.title}</div>
+                <div className="text-[10px] text-stone-400 font-medium">Admin Workspace</div>
               </div>
-
-              {/* Enterprise Management */}
-              <Link
-                href="/admin/enterprise"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/enterprise')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <Building className="w-4 h-4 text-indigo-300" />
-                Enterprise
-              </Link>
-
-              {/* Vendor Management */}
-              <Link
-                href="/admin/vendors"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/vendors')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <Briefcase className="w-4 h-4 text-indigo-300" />
-                Vendors
-              </Link>
-
-              {/* Project Team */}
-              <Link
-                href="/admin/project-team"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/project-team')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <Users className="w-4 h-4 text-indigo-300" />
-                Project Team
-              </Link>
-
-              {/* Project Management Dropdown */}
-              <div className="space-y-1">
-                <div 
-                  className={clsx(
-                    "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all select-none",
-                    isProjectPath 
-                      ? "bg-indigo-900/80 text-white border border-indigo-700/50" 
-                      : "text-indigo-200 hover:text-white hover:bg-white/10"
-                  )}
-                  onClick={() => setProjectOpen(!projectOpen)}
-                >
-                  <div className="flex items-center gap-3">
-                    <LayoutDashboard className="w-4 h-4 text-indigo-300" />
-                    <span>Project Management</span>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setProjectOpen(!projectOpen);
-                    }}
-                    className="p-0.5 text-indigo-300 hover:text-white rounded"
+            </div>
+            
+            {/* Direct Flattened Navigation Links */}
+            <nav className="flex-1 py-4 px-3 space-y-1.5">
+              {activeModule.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={clsx(
+                      "flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold transition-all duration-200 relative",
+                      isActive
+                        ? "bg-[#F4F6F4] text-[#161D1A] font-extrabold shadow-2xs"
+                        : "text-stone-600 hover:bg-[#F4F6F4] hover:text-[#161D1A]"
+                    )}
                   >
-                    {projectOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                  </button>
-                </div>
-
-                {projectOpen && (
-                  <div className="pl-4 pr-1 py-1 space-y-1 bg-indigo-900/30 rounded-lg border border-indigo-800/30 my-1">
-                    {projectSubItems.map((sub) => {
-                      const SubIcon = sub.icon;
-                      const isSubActive = pathname === sub.href;
-                      return (
-                        <Link
-                          key={sub.href}
-                          href={sub.href}
-                          className={clsx(
-                            "flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all",
-                            isSubActive
-                              ? "bg-indigo-600 text-white font-semibold shadow-sm"
-                              : "text-indigo-300 hover:text-white hover:bg-indigo-800/50"
-                          )}
-                        >
-                          <SubIcon className={clsx("w-3.5 h-3.5", isSubActive ? "text-white" : "text-indigo-400")} />
-                          {sub.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Special Services (NEW BOX & SIDEBAR MATCH) */}
-              <Link
-                href="/admin/special-services"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/special-services')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <Handshake className="w-4 h-4 text-indigo-300" />
-                Special Services
-              </Link>
-
-              {/* IT Box / Settings */}
-              <Link
-                href="/admin/settings"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/settings')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <Settings className="w-4 h-4 text-indigo-300" />
-                IT Box / Settings
-              </Link>
-
-              {/* Master Data */}
-              <Link
-                href="/admin/master-data"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/master-data')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <Database className="w-4 h-4 text-indigo-300" />
-                Master Data
-              </Link>
-
-              {/* Reports & Analytics */}
-              <Link
-                href="/admin/reports"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/reports')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <BarChart3 className="w-4 h-4 text-indigo-300" />
-                Reports & Analytics
-              </Link>
-
-              {/* AI Engine */}
-              <Link
-                href="/admin/ai-engine"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/ai-engine')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <Bot className="w-4 h-4 text-indigo-300" />
-                AI Engine
-              </Link>
-
-              {/* Activity Log */}
-              <Link
-                href="/admin/activity-log"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/activity-log')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <Activity className="w-4 h-4 text-indigo-300" />
-                Activity Log
-              </Link>
-
-              {/* Audit Log */}
-              <Link
-                href="/admin/audit-log"
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  pathname.startsWith('/admin/audit-log')
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" 
-                    : "text-indigo-200 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <ShieldCheck className="w-4 h-4 text-indigo-300" />
-                Audit Log
-              </Link>
+                    <Icon className={clsx("w-4 h-4 shrink-0", isActive ? "text-[#65A30D]" : "text-stone-400")} />
+                    <span className="truncate">{item.label}</span>
+                    {isActive && (
+                      <div className="absolute left-0 w-1.5 h-6 bg-[#84CC16] rounded-r-md"></div>
+                    )}
+                  </Link>
+                );
+              })}
             </nav>
+
+            {/* Bottom Quick Return */}
+            <div className="p-4 border-t border-[#E5ECE7] bg-[#FAFBF9]">
+              <Link
+                href="/admin"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white border border-[#E5ECE7] hover:border-[#84CC16] text-xs font-bold text-stone-600 hover:text-[#161D1A] transition shadow-2xs"
+              >
+                <LayoutDashboard className="w-4 h-4 text-stone-400" />
+                <span>Admin Hub Home</span>
+              </Link>
+            </div>
           </aside>
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 relative">
+        <main className="flex-1 overflow-y-auto bg-[#FAFBF9] relative">
           {children}
         </main>
       </div>
     </div>
   );
 }
-
