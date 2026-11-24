@@ -240,8 +240,8 @@ export default function VendorAssignmentsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Project Fulfillment Portal</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-3xl font-black text-[#161D1A] tracking-tight">Project Fulfillment Portal</h1>
+          <p className="text-sm text-stone-500 mt-1">
             Track product assignments lifecycle status, coordinate shipping transits, and claim payment milestones.
           </p>
         </div>
@@ -250,52 +250,52 @@ export default function VendorAssignmentsPage() {
       {/* KPI Cards Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+        <div className="bg-white border border-[#E5ECE7] rounded-2xl p-5 shadow-xs flex items-center gap-4">
+          <div className="p-3 bg-[#F4F6F4] text-[#161D1A] rounded-xl">
             <DollarSign className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Order Pipeline</span>
-            <span className="text-xl font-extrabold text-slate-850 mt-1 block">
+            <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block">Total Order Pipeline</span>
+            <span className="text-xl font-extrabold text-[#161D1A] mt-1 block">
               {formatCurrency(kpis.totalOrderValue)}
             </span>
           </div>
         </div>
 
         {/* KPI 2 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+        <div className="bg-white border border-[#E5ECE7] rounded-2xl p-5 shadow-xs flex items-center gap-4">
+          <div className="p-3 bg-emerald-50 text-[#059669] rounded-xl border border-emerald-200/60">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Amount Received</span>
-            <span className="text-xl font-extrabold text-emerald-600 mt-1 block">
+            <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block">Total Amount Received</span>
+            <span className="text-xl font-extrabold text-[#059669] mt-1 block">
               {formatCurrency(kpis.paidAmount)}
             </span>
           </div>
         </div>
 
         {/* KPI 3 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+        <div className="bg-white border border-[#E5ECE7] rounded-2xl p-5 shadow-xs flex items-center gap-4">
+          <div className="p-3 bg-amber-50 text-amber-700 rounded-xl border border-amber-200">
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Outstanding Balance</span>
-            <span className="text-xl font-extrabold text-amber-600 mt-1 block">
+            <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block">Outstanding Balance</span>
+            <span className="text-xl font-extrabold text-amber-700 mt-1 block">
               {formatCurrency(kpis.pendingAmount)}
             </span>
           </div>
         </div>
 
         {/* KPI 4 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+        <div className="bg-white border border-[#E5ECE7] rounded-2xl p-5 shadow-xs flex items-center gap-4 overflow-hidden">
+          <div className="p-3 bg-stone-50 text-stone-700 rounded-xl border border-[#E5ECE7] shrink-0">
             <Layers className="w-6 h-6" />
           </div>
-          <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Upcoming Milestone</span>
-            <span className="text-sm font-extrabold text-slate-700 mt-2 block truncate max-w-[180px]">
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block truncate">Upcoming Milestone</span>
+            <span className="text-xs sm:text-sm font-extrabold text-[#161D1A] mt-1 block leading-tight break-words">
               {kpis.upcomingMilestone}
             </span>
           </div>
@@ -303,16 +303,16 @@ export default function VendorAssignmentsPage() {
       </div>
 
       {/* Filter and search bar controls */}
-      <div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="bg-white border border-[#E5ECE7] rounded-2xl p-5 shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex gap-2 w-full md:w-auto flex-wrap">
           {['ALL', 'PRODUCTION', 'READY', 'DISPATCHED'].map((st) => (
             <button
               key={st}
               onClick={() => setFilterStatus(st)}
-              className={`px-3 py-2 text-xs font-bold rounded-xl transition border uppercase tracking-wider ${
+              className={`px-3.5 py-2 text-xs font-bold rounded-xl transition border uppercase tracking-wider ${
                 filterStatus === st
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                  : 'bg-white text-slate-550 hover:bg-slate-50 border-slate-200'
+                  ? 'bg-[#161D1A] text-[#A3E635] border-[#161D1A] shadow-xs'
+                  : 'bg-white text-stone-600 hover:bg-[#F4F6F4] border-[#E5ECE7]'
               }`}
             >
               {st.replace('_', ' ')}
@@ -321,13 +321,13 @@ export default function VendorAssignmentsPage() {
         </div>
 
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
           <input
             type="text"
             placeholder="Search by project name, SKU, item..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl text-xs focus:outline-none focus:bg-white text-slate-800 transition"
+            className="w-full pl-10 pr-4 py-2.5 bg-[#FAFBF9] border border-[#E5ECE7] focus:border-[#84CC16] rounded-xl text-xs focus:outline-none focus:bg-white text-[#161D1A] transition"
           />
         </div>
       </div>
@@ -335,46 +335,46 @@ export default function VendorAssignmentsPage() {
       {/* Main Grouped List View */}
       <div className="space-y-6">
         {groupedProjects.map((project) => (
-          <div key={project.id} className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition duration-300">
+          <div key={project.id} className="bg-white border border-[#E5ECE7] rounded-2xl overflow-hidden shadow-xs hover:border-stone-400 transition duration-300">
             {/* Project Card Header */}
-            <div className="bg-slate-50/80 border-b border-slate-200/60 p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="bg-[#FAFBF9] border-b border-[#E5ECE7] p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="bg-emerald-50 text-[#059669] border border-emerald-200/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                     Project File
                   </span>
-                  <span className="text-xs font-mono text-slate-450">ID: {project.id}</span>
+                  <span className="text-xs font-mono text-stone-400">ID: {project.id}</span>
                 </div>
-                <h2 className="text-lg font-black text-slate-800 tracking-tight">{project.projectName}</h2>
+                <h2 className="text-lg font-black text-[#161D1A] tracking-tight">{project.projectName}</h2>
               </div>
               
               <div className="grid grid-cols-2 lg:flex lg:items-center gap-x-6 gap-y-2 text-xs">
                 <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-slate-400" />
+                  <User className="w-4 h-4 text-stone-400" />
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Customer</span>
-                    <span className="font-extrabold text-slate-700">{project.customerName}</span>
+                    <span className="text-[10px] uppercase font-bold text-stone-500 block tracking-wider">Customer</span>
+                    <span className="font-extrabold text-[#161D1A]">{project.customerName}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-slate-400" />
+                  <Phone className="w-4 h-4 text-stone-400" />
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Phone</span>
-                    <span className="font-extrabold text-slate-700">{project.customerPhone}</span>
+                    <span className="text-[10px] uppercase font-bold text-stone-500 block tracking-wider">Phone</span>
+                    <span className="font-extrabold text-[#161D1A]">{project.customerPhone}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-slate-400" />
+                  <MapPin className="w-4 h-4 text-stone-400" />
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Site Location</span>
-                    <span className="font-extrabold text-slate-700">{project.city} ({project.pincode})</span>
+                    <span className="text-[10px] uppercase font-bold text-stone-500 block tracking-wider">Site Location</span>
+                    <span className="font-extrabold text-[#161D1A]">{project.city} ({project.pincode})</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-slate-400" />
+                  <Clock className="w-4 h-4 text-stone-400" />
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Target Arrival</span>
-                    <span className="font-extrabold text-indigo-650">{project.expectedDeliveryDate}</span>
+                    <span className="text-[10px] uppercase font-bold text-stone-500 block tracking-wider">Target Arrival</span>
+                    <span className="font-extrabold text-[#059669]">{project.expectedDeliveryDate}</span>
                   </div>
                 </div>
               </div>
@@ -554,13 +554,13 @@ export default function VendorAssignmentsPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-slate-200">
+                <div className="flex border-b border-[#E5ECE7]">
                   <button
                     onClick={() => setActiveTab('status')}
                     className={`flex-1 pb-3 text-xs font-black uppercase tracking-wider text-center border-b-2 transition ${
                       activeTab === 'status' 
-                        ? 'border-indigo-600 text-indigo-650' 
-                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                        ? 'border-[#84CC16] text-[#161D1A]' 
+                        : 'border-transparent text-stone-400 hover:text-stone-600'
                     }`}
                   >
                     Order Sourcing Checklist
@@ -569,8 +569,8 @@ export default function VendorAssignmentsPage() {
                     onClick={() => setActiveTab('shipment')}
                     className={`flex-1 pb-3 text-xs font-black uppercase tracking-wider text-center border-b-2 transition ${
                       activeTab === 'shipment' 
-                        ? 'border-indigo-600 text-indigo-650' 
-                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                        ? 'border-[#84CC16] text-[#161D1A]' 
+                        : 'border-transparent text-stone-400 hover:text-stone-600'
                     }`}
                   >
                     Shipment Tracking
@@ -579,8 +579,8 @@ export default function VendorAssignmentsPage() {
                     onClick={() => setActiveTab('milestones')}
                     className={`flex-1 pb-3 text-xs font-black uppercase tracking-wider text-center border-b-2 transition ${
                       activeTab === 'milestones' 
-                        ? 'border-indigo-600 text-indigo-650' 
-                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                        ? 'border-[#84CC16] text-[#161D1A]' 
+                        : 'border-transparent text-stone-400 hover:text-stone-600'
                     }`}
                   >
                     Milestone Payouts

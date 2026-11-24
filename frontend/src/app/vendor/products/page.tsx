@@ -40,25 +40,25 @@ function CategoryDropdown({
         type="button"
         onClick={() => setOpen(!open)}
         className={clsx(
-          "w-full flex items-center justify-between text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-left outline-none focus:ring-1 focus:ring-indigo-500 transition shadow-xs",
+          "w-full flex items-center justify-between text-xs font-bold text-stone-700 bg-white border border-[#E5ECE7] rounded-xl px-3 py-2 text-left outline-none focus:border-[#84CC16] transition shadow-xs",
           className
         )}
       >
-        <span className={clsx("truncate", !value && "text-slate-400 font-normal")}>
+        <span className={clsx("truncate", !value && "text-stone-400 font-normal")}>
           {value === 'All' ? 'All Categories' : (value || placeholder)}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
+        <ChevronDown className="w-3.5 h-3.5 text-stone-400 shrink-0 ml-1" />
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-1 space-y-1">
+        <div className="absolute left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto bg-white border border-[#E5ECE7] rounded-xl shadow-xl z-50 p-1 space-y-1">
           {includeAll && (
             <button
               type="button"
               onClick={() => { onChange('All'); setOpen(false) }}
               className={clsx(
                 "w-full text-left text-xs font-bold px-3 py-1.5 rounded-lg transition",
-                value === 'All' ? "bg-indigo-50 text-indigo-700 font-extrabold" : "text-slate-700 hover:bg-slate-50"
+                value === 'All' ? "bg-emerald-50 text-[#059669] font-extrabold" : "text-stone-700 hover:bg-[#F4F6F4]"
               )}
             >
               All Categories
@@ -67,7 +67,7 @@ function CategoryDropdown({
 
           {Object.entries(SUBCATEGORY_MAP).map(([pCat, subs]) => (
             <div key={pCat} className="space-y-0.5">
-              <div className="text-[10px] font-extrabold text-slate-400 uppercase px-3 pt-1.5 pb-0.5 tracking-wider bg-slate-50/50 rounded-md">
+              <div className="text-[10px] font-extrabold text-stone-400 uppercase px-3 pt-1.5 pb-0.5 tracking-wider bg-[#F4F6F4] rounded-md">
                 {pCat}
               </div>
               {subs.map(s => (
@@ -77,11 +77,11 @@ function CategoryDropdown({
                   onClick={() => { onChange(s); setOpen(false) }}
                   className={clsx(
                     "w-full text-left text-xs font-medium pl-5 pr-3 py-1.5 rounded-lg transition flex items-center justify-between",
-                    value === s ? "bg-indigo-600 text-white font-bold" : "text-slate-700 hover:bg-indigo-50"
+                    value === s ? "bg-[#161D1A] text-[#A3E635] font-bold" : "text-stone-700 hover:bg-[#F4F6F4]"
                   )}
                 >
                   <span>{s}</span>
-                  {value === s && <Check className="w-3.5 h-3.5 text-white" />}
+                  {value === s && <Check className="w-3.5 h-3.5 text-[#A3E635]" />}
                 </button>
               ))}
             </div>
@@ -483,38 +483,38 @@ export default function VendorProductsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Product Catalog</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Manage items, variants, and stock.</p>
+          <h1 className="text-2xl font-black text-[#161D1A] tracking-tight">Product Catalog</h1>
+          <p className="text-xs text-stone-500 mt-0.5">Manage items, variants, and stock.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={async () => { await loadProducts(); toast.success('Catalog refreshed 🔄') }}
-            className="px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
+            className="px-3.5 py-2.5 bg-white border border-[#E5ECE7] hover:bg-[#F4F6F4] text-[#161D1A] font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition"
           >
-            <RotateCw className="w-3.5 h-3.5 text-slate-500" /> Refresh
+            <RotateCw className="w-3.5 h-3.5 text-stone-500" /> Refresh
           </button>
           <button onClick={() => { setEditingProduct(null); setShowModal(true) }}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition">
+            className="px-4 py-2.5 bg-[#A3E635] hover:bg-[#84CC16] text-[#0B0F0D] font-black rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition">
             <Plus className="w-4 h-4" /> Add Product
           </button>
         </div>
       </div>
 
       {/* Search and Filters Panel */}
-      <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="bg-white border border-[#E5ECE7] rounded-2xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="space-y-1">
-          <label className="text-[10px] text-slate-400 font-bold uppercase">Search</label>
+          <label className="text-[10px] text-stone-500 font-bold uppercase">Search</label>
           <input
             type="text"
             placeholder="Search name or SKU..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-250 rounded-xl text-xs text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl text-xs text-[#161D1A] focus:border-[#84CC16] focus:outline-none"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] text-slate-400 font-bold uppercase">Category</label>
+          <label className="text-[10px] text-stone-500 font-bold uppercase">Category</label>
           <CategoryDropdown
             value={filterCategory}
             onChange={val => setFilterCategory(val)}
@@ -522,24 +522,24 @@ export default function VendorProductsPage() {
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] text-slate-400 font-bold uppercase">Color</label>
+          <label className="text-[10px] text-stone-500 font-bold uppercase">Color</label>
           <select
             value={filterColor}
             onChange={e => setFilterColor(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-250 rounded-xl text-xs text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl text-xs text-[#161D1A] focus:border-[#84CC16] focus:outline-none"
           >
             <option value="All">All Colors</option>
             {uniqueColors.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] text-slate-400 font-bold uppercase">Max Price (₹)</label>
+          <label className="text-[10px] text-stone-500 font-bold uppercase">Max Price (₹)</label>
           <input
             type="number"
             placeholder="Max price..."
             value={maxPriceFilter}
             onChange={e => setMaxPriceFilter(e.target.value ? Number(e.target.value) : '')}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-250 rounded-xl text-xs text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-[#FAFBF9] border border-[#E5ECE7] rounded-xl text-xs text-[#161D1A] focus:border-[#84CC16] focus:outline-none"
           />
         </div>
       </div>
