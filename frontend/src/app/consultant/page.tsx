@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useAuthStore } from '@/stores/authStore'
-import { specialServicesAPI, projectsAPI } from '@/lib/api'
+import { specialServicesAPI } from '@/lib/api'
 
 const FLOW = ['ASSIGNED', 'CONTACTED', 'IN_PROGRESS', 'COMPLETED'] as const
 type FlowStep = typeof FLOW[number]
@@ -47,6 +47,7 @@ export default function ConsultantPortalPage() {
   const [leads, setLeads] = useState<any[]>([])
   const [ledger, setLedger] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [noProfile, setNoProfile] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   const [filter, setFilter] = useState<'active' | 'completed' | 'all'>('active')
@@ -58,56 +59,17 @@ export default function ConsultantPortalPage() {
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true)
     try {
-      const [l, e] = await Promise.allSettled([
+      const [l, e] = await Promise.all([
         specialServicesAPI.leads(),
         specialServicesAPI.earnings(),
       ])
-
-      let loadedLeads: any[] = []
-      if (l.status === 'fulfilled' && l.value.data?.leads) {
-        loadedLeads = l.value.data.leads
-      }
-      if (e.status === 'fulfilled') {
-        setLedger(e.value.data)
-      }
-
-      // If no special service leads assigned, fall back to live customer projects
-      if (loadedLeads.length === 0) {
-        try {
-          const projRes = await projectsAPI.list()
-          const projects = Array.isArray(projRes.data?.projects)
-            ? projRes.data.projects
-            : (Array.isArray(projRes.data) ? projRes.data : [])
-
-          loadedLeads = projects.map((p: any, idx: number) => ({
-            id: p.id,
-            lead_no: `LEAD-${p.id.substring(0, 6).toUpperCase()}`,
-            service_type: 'Design & Budget Consultation',
-            customer_name: p.customer_name || `Homeowner (${p.city || 'Bangalore'})`,
-            customer_phone: p.customer_phone || '+919900004444',
-            customer_email: p.customer_email || 'customer@example.com',
-            city: p.city || 'Bangalore',
-            bhk_type: p.bhk_type || '3BHK',
-            property_name: p.property_name || 'Prestige Residence',
-            service_value: p.budget || 1200000,
-            consultant_payout: Math.round((p.budget || 1200000) * 0.05),
-            commission_rate: 15,
-            status: idx % 3 === 0 ? 'CONTACTED' : idx % 3 === 1 ? 'ASSIGNED' : 'COMPLETED',
-            payout_status: idx % 3 === 2 ? 'PAID' : 'PENDING',
-            requirements: `Preferred vibe: ${p.style_preferences?.[0] || 'Modern'}. Budget cap: ₹${((p.budget || 1200000) / 100000).toFixed(1)}L.`,
-            events: [
-              { status: 'ASSIGNED', note: 'Consultant matched with homeowner inquiry', at: p.created_at || new Date().toISOString() }
-            ]
-          }))
-        } catch (projErr) {
-          console.error('Failed to load project leads fallback:', projErr)
-        }
-      }
-
-      setLeads(loadedLeads)
+      setLeads(l.data?.leads || [])
+      setLedger(e.data)
+      setNoProfile(false)
     } catch (err: any) {
-      if (err?.response?.status === 401) router.push('/login')
-      else toast.error('Could not load consultation leads')
+      if (err?.response?.status === 403) setNoProfile(true)
+      else if (err?.response?.status === 401) router.push('/login')
+      else toast.error(err?.response?.data?.detail || 'Could not load consultation leads')
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -126,18 +88,17 @@ export default function ConsultantPortalPage() {
 
   const advance = async (lead: any, status: FlowStep) => {
     const d = draft(lead.id)
+    if (status === 'COMPLETED' && !(Number(d.value) > 0) && !(lead.service_value > 0)) {
+      toast.error('Enter the final service value so commission can be calculated')
+      return
+    }
     setBusy(lead.id)
     try {
-      try {
-        await specialServicesAPI.updateStatus(lead.id, {
-          status,
-          note: d.note || undefined,
-          service_value: d.value ? Number(d.value) : undefined,
-        })
-      } catch {
-        // Local state update if running on mock/fallback
-        setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status } : l))
-      }
+      await specialServicesAPI.updateStatus(lead.id, {
+        status,
+        note: d.note || undefined,
+        service_value: d.value ? Number(d.value) : undefined,
+      })
       toast.success(`${lead.lead_no} → ${STATUS_META[status]?.label || status}`)
       setDrafts(prev => ({ ...prev, [lead.id]: { note: '', value: '' } }))
       load(true)
@@ -163,6 +124,24 @@ export default function ConsultantPortalPage() {
   const completedCount = leads.filter(l => l.status === 'COMPLETED').length
   const totalEarnings = leads.reduce((acc, l) => acc + (l.consultant_payout || 0), 0)
   const pendingPayout = leads.filter(l => l.status === 'COMPLETED' && l.payout_status !== 'PAID').reduce((acc, l) => acc + (l.consultant_payout || 0), 0)
+
+  if (!loading && noProfile) {
+    return (
+      <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A]">
+        <Navbar />
+        <div className="max-w-lg mx-auto px-4 pt-32 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-black text-[#161D1A] mb-2">No Consultant Profile Found</h2>
+          <p className="text-stone-600 text-sm leading-relaxed">
+            This account does not have a consultant profile. Ask the InteriorAI admin team to onboard
+            you as a partner consultant using your registered phone number or email.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFBF9] text-[#161D1A]">

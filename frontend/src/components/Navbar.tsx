@@ -74,12 +74,15 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Hide customer/general nav links on the dedicated Consultant Workspace
+  const hideNavLinks = pathname?.startsWith('/consultant')
+
   // Build role-aware navigation links
-  const navLinks = [
+  const navLinks = hideNavLinks ? [] : [
     { href: '/', label: 'Home', icon: Home },
   ]
 
-  if (isLoggedIn) {
+  if (!hideNavLinks && isLoggedIn) {
     const role = user?.role || 'customer'
     if (role === 'admin') {
       navLinks.push({ href: '/admin', label: 'Admin Portal', icon: LayoutDashboard })
@@ -87,6 +90,8 @@ export default function Navbar() {
       navLinks.push({ href: '/enterprise/dashboard', label: 'Enterprise Portal', icon: LayoutDashboard })
     } else if (role === 'vendor') {
       navLinks.push({ href: '/vendor/dashboard', label: 'Vendor Hub', icon: Briefcase })
+    } else if (role === 'consultant') {
+      navLinks.push({ href: '/consultant', label: 'Consultant Workspace', icon: Briefcase })
     } else if (role === 'team') {
       navLinks.push({ href: '/team', label: 'Project Team', icon: BarChart3 })
     } else {
@@ -94,7 +99,9 @@ export default function Navbar() {
     }
   }
 
-  navLinks.push({ href: '/support', label: 'Support', icon: HelpCircle })
+  if (!hideNavLinks) {
+    navLinks.push({ href: '/support', label: 'Support', icon: HelpCircle })
+  }
 
   const rawName = user?.name || 'User'
   const displayName = cleanDisplayName(rawName)
@@ -131,6 +138,7 @@ export default function Navbar() {
             </Link>
 
             {/* Sliding Drawer Trigger (Desktop) */}
+            {!hideNavLinks && (
             <div className="hidden md:flex items-center gap-2 pl-2">
               <button
                 type="button"
@@ -179,6 +187,7 @@ export default function Navbar() {
                 )}
               </AnimatePresence>
             </div>
+            )}
           </div>
 
           {/* Right: Notification Center & Profile Avatar Dropdown */}

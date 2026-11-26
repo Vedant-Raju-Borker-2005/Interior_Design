@@ -595,6 +595,71 @@ def sync_demo_data(db, force: bool = False):
             vendor.status = "APPROVED"
             db.commit()
 
+    # 2b. Ensure Seeded Consultant profile & demo leads exist for Dev Mode preview
+    from .models import Consultant, ServiceLead
+    consultant_user = users.get("consultant")
+    if consultant_user:
+        seeded_consultant = db.query(Consultant).filter(Consultant.user_id == consultant_user.id).first()
+        if not seeded_consultant:
+            seeded_consultant = Consultant(
+                id=str(uuid.uuid4()),
+                user_id=consultant_user.id,
+                name=consultant_user.name,
+                company_name="Atelier Demo Studio",
+                email=consultant_user.email,
+                phone=consultant_user.phone,
+                city="Bangalore",
+                services=["3d_rendering", "custom_design", "consultation"],
+                commission_rate=15.0,
+                status="ACTIVE",
+                notes="Seeded demo consultant profile for Dev Mode preview",
+            )
+            db.add(seeded_consultant)
+            db.commit()
+            db.refresh(seeded_consultant)
+        if db.query(ServiceLead).filter(ServiceLead.consultant_id == seeded_consultant.id).count() == 0:
+            demo_leads = [
+                ServiceLead(
+                    id=str(uuid.uuid4()),
+                    lead_no="SL-DEMO-01",
+                    service_type="3d_rendering",
+                    customer_name="Ananya Sharma",
+                    customer_phone="+919845011223",
+                    customer_email="ananya.sharma@example.com",
+                    city="Bangalore",
+                    requirements="3BHK Japandi living & dining 3D walkthrough with warm oak finishes.",
+                    consultant_id=seeded_consultant.id,
+                    assigned_at=datetime.datetime.utcnow(),
+                    status="ASSIGNED",
+                    service_value=45000.0,
+                    commission_rate=15.0,
+                    platform_earning=6750.0,
+                    consultant_payout=38250.0,
+                    payout_status="PENDING",
+                ),
+                ServiceLead(
+                    id=str(uuid.uuid4()),
+                    lead_no="SL-DEMO-02",
+                    service_type="consultation",
+                    customer_name="Rohan Deshmukh",
+                    customer_phone="+919820033445",
+                    customer_email="rohan.d@example.com",
+                    city="Pune",
+                    requirements="Master suite lighting & modular wardrobe material consultation.",
+                    consultant_id=seeded_consultant.id,
+                    assigned_at=datetime.datetime.utcnow() - datetime.timedelta(days=4),
+                    completed_at=datetime.datetime.utcnow() - datetime.timedelta(days=1),
+                    status="COMPLETED",
+                    service_value=20000.0,
+                    commission_rate=15.0,
+                    platform_earning=3000.0,
+                    consultant_payout=17000.0,
+                    payout_status="PAID",
+                ),
+            ]
+            db.add_all(demo_leads)
+            db.commit()
+
     # 3. Auto-assign all existing projects to the team user and the vendor
 
     all_projects = db.query(Project).all()

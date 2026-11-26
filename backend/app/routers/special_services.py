@@ -197,6 +197,45 @@ def list_consultants(
     return {"consultants": [_consultant_out(c, db) for c in rows]}
 
 
+def _normalize_contact(phone: Optional[str], email: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+    clean_phone = phone.replace(" ", "").strip() if phone else None
+    clean_email = email.strip().lower() if email else None
+    return clean_phone or None, clean_email or None
+
+
+def _sync_consultant_user(consultant: Consultant, db: Session) -> None:
+    """Ensure the consultant has a linked User account with the `consultant` role."""
+    if not (consultant.email or consultant.phone):
+        return
+    account = None
+    if consultant.user_id:
+        account = db.query(User).filter(User.id == consultant.user_id).first()
+    if account is None and consultant.email:
+        account = db.query(User).filter(User.email == consultant.email).first()
+    if account is None and consultant.phone:
+        account = db.query(User).filter(User.phone == consultant.phone).first()
+    if account is None:
+        account = User(
+            name=consultant.name,
+            email=consultant.email,
+            phone=consultant.phone,
+            city=consultant.city,
+            role="consultant",
+            status="active",
+        )
+        db.add(account)
+        db.flush()
+    else:
+        roles = _roles(account)
+        if "consultant" not in roles:
+            account.role = ",".join(roles + ["consultant"])
+        if consultant.phone and not account.phone:
+            account.phone = consultant.phone
+        if consultant.email and not account.email:
+            account.email = consultant.email
+    consultant.user_id = account.id
+
+
 @router.post("/consultants", summary="5.2 — onboard a consultant")
 def create_consultant(
     req: ConsultantReq,
@@ -208,11 +247,12 @@ def create_consultant(
     if unknown:
         raise HTTPException(400, f"Unknown service types: {', '.join(unknown)}")
 
+    clean_phone, clean_email = _normalize_contact(req.phone, req.email)
     consultant = Consultant(
         name=req.name,
         company_name=req.company_name,
-        email=req.email,
-        phone=req.phone,
+        email=clean_email,
+        phone=clean_phone,
         city=req.city,
         services=req.services,
         commission_rate=req.commission_rate,
@@ -220,32 +260,7 @@ def create_consultant(
         notes=req.notes,
         onboarded_by=user.id,
     )
-    # 5.4 — the consultant needs a sign-in to see their own leads. Reuse an
-    # existing account with the same email/phone; otherwise create one. Either
-    # way the account gains the `consultant` role, which is what the login
-    # portal guard checks.
-    if req.email or req.phone:
-        account = None
-        if req.email:
-            account = db.query(User).filter(User.email == req.email).first()
-        if account is None and req.phone:
-            account = db.query(User).filter(User.phone == req.phone).first()
-        if account is None:
-            account = User(
-                name=req.name,
-                email=req.email,
-                phone=req.phone,
-                city=req.city,
-                role="consultant",
-                status="active",
-            )
-            db.add(account)
-            db.flush()
-        else:
-            roles = _roles(account)
-            if "consultant" not in roles:
-                account.role = ",".join(roles + ["consultant"])
-        consultant.user_id = account.id
+    _sync_consultant_user(consultant, db)
 
     db.add(consultant)
     db.commit()
@@ -264,8 +279,11 @@ def update_consultant(
     c = db.query(Consultant).filter(Consultant.id == consultant_id).first()
     if not c:
         raise HTTPException(404, "Consultant not found")
-    for field, value in req.model_dump().items():
+    data = req.model_dump()
+    data["phone"], data["email"] = _normalize_contact(data.get("phone"), data.get("email"))
+    for field, value in data.items():
         setattr(c, field, value)
+    _sync_consultant_user(c, db)
     db.commit()
     db.refresh(c)
     return _consultant_out(c, db)
