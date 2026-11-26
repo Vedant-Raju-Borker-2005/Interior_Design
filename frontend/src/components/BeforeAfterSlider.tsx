@@ -44,7 +44,7 @@ export default function BeforeAfterSlider({
       {/* ── Section Header (Clean & Luxurious) ────────────────────────── */}
       <div className="text-center sm:text-left space-y-1">
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#161D1A] tracking-tight">
-          Architectural Alchemy: From Raw Concrete to Turnkey Luxury
+          Every Bare Room Holds a Finished Masterpiece
         </h2>
       </div>
 

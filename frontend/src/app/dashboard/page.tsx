@@ -876,19 +876,19 @@ function DashboardContent() {
               className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
             />
 
-            {/* Glassmorphism Card */}
+            {/* Editorial Alabaster Confirmation Card */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full max-w-md bg-gradient-to-b from-[#2e313d]/95 to-[#0e1013]/95 backdrop-blur-2xl border border-slate-700/40 rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.85)] relative z-10 text-center text-slate-200"
+              className="w-full max-w-md bg-[#FAFBF9] border border-stone-200 rounded-3xl p-6 shadow-[0_24px_60px_rgba(22,29,26,0.18)] relative z-10 text-center text-[#161D1A]"
             >
-              <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
-                <AlertCircle className="w-6 h-6 text-red-400" />
+              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-200">
+                <AlertCircle className="w-6 h-6 text-red-600" />
               </div>
 
-              <h3 className="text-lg font-black text-white mb-2">Delete Project</h3>
-              <p className="text-slate-300/90 text-xs mb-6 leading-relaxed max-w-sm mx-auto">
+              <h3 className="text-lg font-black text-[#161D1A] mb-2">Delete Project</h3>
+              <p className="text-stone-600 text-xs mb-6 leading-relaxed max-w-sm mx-auto">
                 This action is permanent. All designs, custom components, and files will be lost.
               </p>
 
@@ -897,7 +897,7 @@ function DashboardContent() {
                   type="button"
                   onClick={() => setProjectToDelete(null)}
                   disabled={deletingProject}
-                  className="px-5 py-2.5 rounded-xl border border-slate-700/50 bg-[#161820] hover:bg-[#20232e] text-slate-300 hover:text-white text-xs font-bold transition duration-200"
+                  className="px-5 py-2.5 rounded-xl border border-stone-200 bg-stone-100 hover:bg-stone-200 text-[#161D1A] text-xs font-bold transition duration-200"
                 >
                   Cancel
                 </button>

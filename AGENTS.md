@@ -88,7 +88,7 @@ graph TD
 
    * **Colors Explorer**: Interactive color explorer featuring pure 3D glossy liquid paint droplets with specular highlight sheen, pinpoint glints, organic cast shadows, and hover tooltips for shade names.
 
-   * **Step-Themed 3D Claymorphic Action Buttons**: Dedicated sculpted claymorphic toy-shaped buttons with embossed navigation labels across all 6 steps (`step_0_house.webp`, `step_1_blueprint.webp`, `step_2_chest.webp`, `step_3_compass.webp` [pure circular dial], `step_4_sofa.webp`, `step_5_paint_can.webp`).
+   * **Step-Themed 3D Claymorphic Action Buttons**: Dedicated sculpted 3D action buttons with embossed navigation labels across all 6 steps (`step_0.webp` [3D door], `step_1.webp` [measuring tape], `step_2.webp` [gold coin], `step_3.webp` [color wheel], `step_4.webp` [velvet sofa], `step_5.webp` [paint can & brush]).
 
    * **Architectural Floor Plan Preview Lightbox**: Edge-to-edge dark container modal (max-h 74vh) providing a clean, high-resolution blueprint preview with upper close control.
 

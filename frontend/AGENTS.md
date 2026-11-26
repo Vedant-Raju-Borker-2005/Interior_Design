@@ -152,7 +152,7 @@ The frontend is a single-page application built with Next.js 14 (App Router), Re
 
 
 
-* `FurnitureButton.tsx`: Dedicated 3D sculpted claymorphic action buttons for Onboarding Steps 0–5 (`step_0_house.webp`, `step_1_blueprint.webp`, `step_2_chest.webp`, `step_3_compass.webp` [enlarged 3D compass dial], `step_4_sofa.webp`, `step_5_paint_can.webp`), with tactile squish physics and luxury memory-foam pill fallback for general buttons.
+* `FurnitureButton.tsx`: Dedicated 3D sculpted action buttons for Onboarding Steps 0–5 (`step_0.webp`, `step_1.webp`, `step_2.webp`, `step_3.webp`, `step_4.webp`, `step_5.webp`), with tactile squish physics and luxury memory-foam pill fallback for general buttons.
 
 * `BeforeAfterSlider.tsx`: Interactive full-width transformation slider showcasing raw concrete Indian apartment shells transitioning into finished turnkey luxury living spaces, with a smooth 11.5s automatic scanning period and clean, watermark-free visuals.
 

@@ -52,7 +52,7 @@
 
   * **Curated Architectural Palette**: Editorial Alabaster canvas (#FAFBF9), Frosted Pine Slate (#161D1A), Luminous Lime (#A3E635 / #84CC16), Mint Emerald (#10B981), Brushed Champagne Gold (#E2B870), and Solarium Yellow (#FDE047), creating a bright, airy, high-end showroom aesthetic.
 
-  * **Signature 3D Claymorphic Action Buttons (`<FurnitureButton>`)**: In Onboarding, each step features a dedicated 3D glossy claymorphic toy-shaped action button with beveled edges and embossed navigation text (Glossy Lime Villa for Property, 3D Architectural Blueprint Block for BHK, Claymorphic Treasure Chest for Budget, Navigational Compass Dial [enlarged circular dial] for Design Vibe, Modernist Lounge Sofa for Materials, and Ceramic Paint Jar for Colors). On hero CTA and portfolio pages, renders a plush neo-architectural luxury pill button with tactile memory-foam compression physics.
+  * **Signature 3D Action Buttons (`<FurnitureButton>`)**: In Onboarding, each step features a dedicated 3D sculpted action button with embossed navigation text (`step_0.webp` Green Door for Property, `step_1.webp` Measuring Tape for BHK, `step_2.webp` Gold Coin for Budget, `step_3.webp` Color Wheel for Design Vibe, `step_4.webp` Velvet Sofa for Materials, and `step_5.webp` Paint Can & Brush for Colors). On hero CTA and portfolio pages, renders a plush neo-architectural luxury pill button with tactile memory-foam compression physics.
 
   * **Architectural Floor Plan Preview Lightbox**: Edge-to-edge dark container modal (max-h 74vh) providing a clean, distraction-free architectural blueprint preview with upper close control.
 

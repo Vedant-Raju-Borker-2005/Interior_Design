@@ -6,13 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Sparkles } from 'lucide-react'
 import clsx from 'clsx'
 
-export const STEP_BUTTON_IMAGES: Record<number, { src: string; alt: string; label: string }> = {
-  0: { src: '/images/buttons/step_0_house.webp', alt: 'Property & Location - Next Step', label: 'Next Step' },
-  1: { src: '/images/buttons/step_1_blueprint.webp', alt: 'Scope & BHK - Next Step', label: 'Next Step' },
-  2: { src: '/images/buttons/step_2_chest.webp', alt: 'Budget & Timeline - Next Step', label: 'Next Step' },
-  3: { src: '/images/buttons/step_3_compass.webp', alt: 'Design Vibe - Next Step', label: 'Next Step' },
-  4: { src: '/images/buttons/step_4_sofa.webp', alt: 'Material & Fabric - Next Step', label: 'Next Step' },
-  5: { src: '/images/buttons/step_5_paint_can.webp', alt: 'Colors - Find My Packages', label: 'Find My Packages' },
+export const STEP_BUTTON_IMAGES: Record<number, { src: string; alt: string; label: string; imgClass?: string }> = {
+  0: { src: '/images/buttons/step_0.webp', alt: 'Property & Location - Next Step', label: 'Next Step', imgClass: 'scale-[1.03] -translate-x-[2%]' },
+  1: { src: '/images/buttons/step_1.webp', alt: 'Scope & BHK - Next Step', label: 'Next Step' },
+  2: { src: '/images/buttons/step_2.webp', alt: 'Budget & Timeline - Next Step', label: 'Next Step' },
+  3: { src: '/images/buttons/step_3.webp', alt: 'Design Vibe - Next Step', label: 'Next Step' },
+  4: { src: '/images/buttons/step_4.webp', alt: 'Material & Fabric - Next Step', label: 'Next Step', imgClass: 'scale-[0.95]' },
+  5: { src: '/images/buttons/step_5.webp', alt: 'Colors - Find My Packages', label: 'Find My Packages' },
 }
 
 interface FurnitureButtonProps {
@@ -103,17 +103,20 @@ export default function FurnitureButton({
         }
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         className={clsx(
-          'relative inline-flex items-center justify-center focus:outline-none select-none transition-all duration-200 cursor-pointer p-0 bg-transparent border-0',
+          'relative inline-flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#84CC16] focus-visible:ring-offset-2 rounded-2xl select-none transition-transform duration-200 cursor-pointer p-0 bg-transparent border-0',
           disabled && 'opacity-35 cursor-not-allowed pointer-events-none grayscale-[40%]',
           className
         )}
         aria-label={stepAsset.alt}
       >
-        <div className="relative h-[62px] sm:h-[72px] md:h-[76px] w-auto inline-flex items-center justify-center filter drop-shadow-[0_6px_16px_rgba(132,204,22,0.30)] hover:drop-shadow-[0_8px_24px_rgba(132,204,22,0.45)] transition-all">
+        <div className="relative h-[70px] sm:h-[80px] md:h-[88px] w-auto inline-flex items-center justify-center filter drop-shadow-[0_10px_14px_rgba(22,29,26,0.22)] drop-shadow-[0_4px_10px_rgba(132,204,22,0.22)] hover:drop-shadow-[0_16px_22px_rgba(22,29,26,0.28)] hover:drop-shadow-[0_6px_16px_rgba(132,204,22,0.34)] transition-[filter] duration-200">
           <img
             src={stepAsset.src}
             alt={stepAsset.alt}
-            className="h-full w-auto max-w-[240px] object-contain block pointer-events-none select-none"
+            className={clsx(
+              'h-full w-auto max-w-[240px] object-contain block pointer-events-none select-none',
+              stepAsset.imgClass
+            )}
             draggable={false}
           />
         </div>
